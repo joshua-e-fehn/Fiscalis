@@ -4,23 +4,15 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { clerkMiddleware, getAuth } from "@hono/clerk-auth";
 
+import accounts from "./accounts";
+
 export const runtime = "edge";
 
 const app = new Hono().basePath("/api");
 
-app.get("/hello", clerkMiddleware(), (c) => {
-  const user = getAuth(c);
-  if (!user?.userId) {
-    return c.json({
-      message: "Hello Next.js! ;)",
-    });
-  } else {
-    return c.json({
-      message: "Hello Next.js! ;)",
-      userId: user.userId,
-    });
-  }
-});
+const routes = app.route("/accounts", accounts);
 
 export const GET = handle(app);
 export const POST = handle(app);
+
+export type AppType = typeof routes;

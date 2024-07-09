@@ -1,0 +1,1 @@
+ALTER TABLE "precious_metal_prices" ADD COLUMN "palladium" numeric(10, 2) NOT NULL;

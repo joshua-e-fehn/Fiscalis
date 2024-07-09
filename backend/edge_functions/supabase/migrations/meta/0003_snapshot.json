@@ -1,0 +1,101 @@
+{
+  "id": "90fd6ec9-f7cd-4f3c-948a-cdaff2b371ad",
+  "prevId": "d8980c9f-3033-4633-96f5-7583c08c7780",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.currency_exchange_rates": {
+      "name": "currency_exchange_rates",
+      "schema": "",
+      "columns": {
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "from_eur_to_usd": {
+          "name": "from_eur_to_usd",
+          "type": "numeric(10, 4)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.precious_metal_prices": {
+      "name": "precious_metal_prices",
+      "schema": "",
+      "columns": {
+        "timestamp": {
+          "name": "timestamp",
+          "type": "timestamp",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "gold_eur": {
+          "name": "gold_eur",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "gold_usd": {
+          "name": "gold_usd",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "silver_eur": {
+          "name": "silver_eur",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "silver_usd": {
+          "name": "silver_usd",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platinum_eur": {
+          "name": "platinum_eur",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "platinum_usd": {
+          "name": "platinum_usd",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "palladium_eur": {
+          "name": "palladium_eur",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "palladium_usd": {
+          "name": "palladium_usd",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

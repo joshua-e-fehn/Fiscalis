@@ -9,6 +9,7 @@ import {
 } from "@clerk/nextjs";
 import "./globals.css";
 import HeaderComponent from "@/components/atomic/organisms/header";
+import QueryProvider from "@/providers/queryProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
@@ -25,8 +26,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={inter.className}>
-          <HeaderComponent />
-          {children}
+          <QueryProvider>
+            <HeaderComponent />
+            {children}
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>

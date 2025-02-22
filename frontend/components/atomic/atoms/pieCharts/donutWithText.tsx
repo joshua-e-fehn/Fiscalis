@@ -29,7 +29,7 @@ interface PieChartDonutWithTextProps {
   subTitle?: string;
   subDescription?: string;
   isFinancial?: boolean;
-  currency?: string;
+  currencyChar?: string;
   size?: "sm" | "md" | "lg" | "xl";
   customSize?: {
     width: number;
@@ -112,7 +112,7 @@ export function PieChartDonutWithText({
   subTitle,
   subDescription,
   isFinancial = false,
-  currency = "€",
+  currencyChar = "€",
   size = "md",
   customSize,
 }: PieChartDonutWithTextProps) {
@@ -167,7 +167,7 @@ export function PieChartDonutWithText({
                           y={viewBox.cy}
                           className={`fill-foreground ${chartSize.fontSizeTotalTitle} font-bold`}
                         >
-                          {(isFinancial ? currency : "") +
+                          {(isFinancial ? currencyChar : "") +
                             totalQuantity.toLocaleString()}
                         </tspan>
                         <tspan

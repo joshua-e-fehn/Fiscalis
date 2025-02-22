@@ -1,0 +1,17 @@
+{
+  "name": "services",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "financeService": "bun ./finance/financeService.ts",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
-import { MetalChartData } from "@/types/metals";
+import { MetalChartData } from "@/lib/types/rawMaterials";
 import { PeriodDuration } from "@/../services/finance/financeService";
 import { formatDate } from "@/lib/utils/date";
 

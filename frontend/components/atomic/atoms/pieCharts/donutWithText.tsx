@@ -24,6 +24,7 @@ interface PieChartDonutWithTextProps {
   chartConfig: ChartConfig;
   dataKey: string;
   nameKey: string;
+  labelKey: string;
   title: string;
   description: string;
   subTitle?: string;
@@ -63,7 +64,7 @@ const CHART_SIZES = {
   },
   md: {
     width: 400,
-    height: 500,
+    height: 525,
     innerRadius: 90,
     fontSizeTitle: "text-4xl",
     fontSizeDescription: "text-lg",
@@ -76,7 +77,7 @@ const CHART_SIZES = {
   },
   lg: {
     width: 500,
-    height: 600,
+    height: 650,
     innerRadius: 120,
     fontSizeTitle: "text-5xl",
     fontSizeDescription: "text-xl",
@@ -89,7 +90,7 @@ const CHART_SIZES = {
   },
   xl: {
     width: 600,
-    height: 700,
+    height: 750,
     innerRadius: 150,
     fontSizeTitle: "text-6xl",
     fontSizeDescription: "text-2xl",
@@ -107,6 +108,7 @@ export function PieChartDonutWithText({
   chartConfig,
   dataKey,
   nameKey,
+  labelKey,
   title,
   description,
   subTitle,
@@ -127,7 +129,8 @@ export function PieChartDonutWithText({
 
   return (
     <Card
-      className={`flex flex-col min-w-[${chartSize.width}px] max-w-[${chartSize.width}px]]`}
+      className={`flex flex-col`}
+      style={{ width: `${chartSize.width}px`, height: `${chartSize.height}px` }}
     >
       <CardHeader className="items-center pb-0">
         <CardTitle className={`${chartSize.fontSizeTitle}`}>{title}</CardTitle>
@@ -143,7 +146,7 @@ export function PieChartDonutWithText({
           <PieChart>
             <ChartTooltip
               cursor={false}
-              content={<ChartTooltipContent hideLabel />}
+              content={<ChartTooltipContent labelKey={labelKey} />}
             />
             <Pie
               data={chartData}

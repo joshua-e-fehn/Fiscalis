@@ -7,13 +7,16 @@ const DAYS_PER_YEAR = 365.25; // Average number of days per year considering lea
 const DAYS_PER_WEEK = 7;
 const WEEKS_PER_YEAR = 52;
 const MONTHS_PER_YEAR = 12;
+const QUARTER_PER_YEAR = 4;
+const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE;
 const MS_PER_HOUR = MS_PER_SECOND * SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
 const MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY;
 const MS_PER_WEEK = MS_PER_DAY * DAYS_PER_WEEK;
 const MS_PER_YEAR = MS_PER_DAY * DAYS_PER_YEAR;
 const MS_PER_MONTH = MS_PER_YEAR / MONTHS_PER_YEAR;
+const MS_PER_QUARTER = MS_PER_YEAR / QUARTER_PER_YEAR;
 
-export type PeriodDuration =
+export type TimeRange =
   | "Hour"
   | "Day"
   | "Week"
@@ -22,7 +25,16 @@ export type PeriodDuration =
   | "YTD"
   | "ALL";
 
-export function getTimePeriodInMilliseconds(periodDuration: PeriodDuration) {
+export type TimeInterval =
+  | "minute"
+  | "hour"
+  | "day"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year";
+
+export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
   const localNow = new Date();
   const localStartOf2025 = new Date(2025, 0, 1); // January 1, 2025
   const standardNow = new Date(
@@ -36,7 +48,7 @@ export function getTimePeriodInMilliseconds(periodDuration: PeriodDuration) {
     localStartOfYear.getTime() + localStartOfYear.getTimezoneOffset() * 60000
   );
 
-  switch (periodDuration) {
+  switch (timeRange) {
     case "Hour":
       return MS_PER_HOUR;
     case "Day":
@@ -56,17 +68,46 @@ export function getTimePeriodInMilliseconds(periodDuration: PeriodDuration) {
   }
 }
 
-function millisecondsToPeriodDuration(
+export function getTimeIntervalInMilliseconds(timeRange: TimeInterval) {
+  switch (timeRange) {
+    case "minute":
+      return MS_PER_MINUTE;
+    case "hour":
+      return MS_PER_HOUR;
+    case "day":
+      return MS_PER_DAY;
+    case "week":
+      return MS_PER_WEEK;
+    case "month":
+      return MS_PER_MONTH;
+    case "quarter":
+      return MS_PER_QUARTER;
+    case "year":
+      return MS_PER_YEAR;
+    default:
+      return MS_PER_YEAR;
+  }
+}
+
+function millisecondsToTimeIntervals(
   milliseconds: number,
-  periodDuration: PeriodDuration
+  timeInterval: TimeInterval
 ): number {
-  switch (periodDuration) {
-    case "Month":
-      return (milliseconds / MS_PER_YEAR) * MONTHS_PER_YEAR;
-    case "Week":
-      return ((milliseconds / MS_PER_YEAR) * DAYS_PER_YEAR) / DAYS_PER_WEEK;
-    case "Day":
-      return (milliseconds / MS_PER_YEAR) * DAYS_PER_YEAR;
+  switch (timeInterval) {
+    case "minute":
+      return milliseconds / MS_PER_MINUTE;
+    case "hour":
+      return milliseconds / MS_PER_HOUR;
+    case "day":
+      return milliseconds / MS_PER_DAY;
+    case "week":
+      return milliseconds / MS_PER_WEEK;
+    case "month":
+      return milliseconds / MS_PER_MONTH;
+    case "quarter":
+      return milliseconds / MS_PER_QUARTER;
+    case "year":
+      return milliseconds / MS_PER_YEAR;
     default:
       return milliseconds / MS_PER_YEAR;
   }
@@ -80,90 +121,43 @@ export interface capitalPointInTime {
 export function calculateAverageCompoundInterest(
   pointA: capitalPointInTime,
   pointB: capitalPointInTime,
-  interestPeriodDuration?: PeriodDuration
+  interestInterval: TimeInterval = "year"
 ): Number {
   const priceDifferenceInPercent =
     pointB.capitalValue.valueOf() / pointA.capitalValue.valueOf();
   const timeDifference = pointB.time.getTime() - pointA.time.getTime();
-  let timeDifferenceInPeriodDuration;
-  switch (interestPeriodDuration) {
-    case "Month":
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Month"
-      );
-      break;
-    case "Week":
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Week"
-      );
-      break;
-    case "Day":
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Day"
-      );
-      break;
-    default:
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Year"
-      );
-      break;
-  }
+  const timeDifferenceInTimeIntervals = millisecondsToTimeIntervals(
+    timeDifference,
+    interestInterval
+  );
   return (
-    Math.pow(priceDifferenceInPercent, 1 / timeDifferenceInPeriodDuration) - 1
+    Math.pow(priceDifferenceInPercent, 1 / timeDifferenceInTimeIntervals) - 1
   );
 }
 
 export function calculateAverageInterest(
   pointA: capitalPointInTime,
   pointB: capitalPointInTime,
-  interestPeriodDuration?: PeriodDuration
+  interestInterval: TimeInterval = "year"
 ): Number {
   const priceDifference =
     pointB.capitalValue.valueOf() - pointA.capitalValue.valueOf();
   const timeDifference = pointB.time.getTime() - pointA.time.getTime();
-  let timeDifferenceInPeriodDuration;
-  switch (interestPeriodDuration) {
-    case "Month":
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Month"
-      );
-      break;
-    case "Week":
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Week"
-      );
-      break;
-    case "Day":
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Day"
-      );
-      break;
-    default:
-      timeDifferenceInPeriodDuration = millisecondsToPeriodDuration(
-        timeDifference,
-        "Year"
-      );
-      break;
-  }
+  const timeDifferenceInTimeIntervals = millisecondsToTimeIntervals(
+    timeDifference,
+    interestInterval
+  );
   return (
     priceDifference /
     pointA.capitalValue.valueOf() /
-    timeDifferenceInPeriodDuration
+    timeDifferenceInTimeIntervals
   );
 }
 
 export function calculateCapitalGainDurationWithCompoundInterest(
   startCapital: number,
   endCapital: number,
-  interestRate: number,
-  interestPeriodDuration?: PeriodDuration
+  interestRate: number
 ): number {
   return Math.log(endCapital - startCapital) / Math.log(1 + interestRate);
 }
@@ -171,8 +165,7 @@ export function calculateCapitalGainDurationWithCompoundInterest(
 export function calculateCapitalGainDurationWithInterest(
   startCapital: number,
   endCapital: number,
-  interestRate: number,
-  interestPeriodDuration?: PeriodDuration
+  interestRate: number
 ): number {
   return (endCapital - startCapital) / (startCapital * interestRate);
 }
@@ -180,35 +173,31 @@ export function calculateCapitalGainDurationWithInterest(
 export function calculateEndCapitalValueWithCompoundInterest(
   startCapital: number,
   interestRate: number,
-  interestPeriodAmount: number,
-  interestPeriodDuration?: PeriodDuration
+  interestIntervalAmount: number
 ) {
-  return startCapital * Math.pow(1 + interestRate, interestPeriodAmount);
+  return startCapital * Math.pow(1 + interestRate, interestIntervalAmount);
 }
 
 export function calculateEndCapitalValueWithInterest(
   startCapital: number,
   interestRate: number,
-  interestPeriodAmount: number,
-  interestPeriodDuration?: PeriodDuration
+  interestIntervalAmount: number
 ) {
-  return startCapital + startCapital * interestRate * interestPeriodAmount;
+  return startCapital + startCapital * interestRate * interestIntervalAmount;
 }
 
 export function calculateStartCapitalValueWithCompoundInterest(
   endCapital: number,
   interestRate: number,
-  interestPeriodAmount: number,
-  interestPeriodDuration?: PeriodDuration
+  interestIntervalAmount: number
 ) {
-  return endCapital / Math.pow(1 + interestRate, interestPeriodAmount);
+  return endCapital / Math.pow(1 + interestRate, interestIntervalAmount);
 }
 
 export function calculateStartCapitalValueWithInterest(
   endCapital: number,
   interestRate: number,
-  interestPeriodAmount: number,
-  interestPeriodDuration?: PeriodDuration
+  interestIntervalAmount: number
 ) {
-  return endCapital / (1 + interestRate * interestPeriodAmount);
+  return endCapital / (1 + interestRate * interestIntervalAmount);
 }

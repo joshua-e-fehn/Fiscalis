@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
-import { MetalChartData } from "@/lib/types/rawMaterials";
+import { MetalChartData } from "@/lib/types/metals";
 import { PeriodDuration } from "@/../services/finance/financeService";
 import { formatDate } from "@/lib/utils/date";
 
@@ -49,7 +49,9 @@ export const PriceChart = memo(function PriceChart({
         />
         <YAxis
           domain={["auto", "auto"]}
-          tickFormatter={(value) => `${value.toFixed(2)}${currency}`}
+          tickFormatter={(value) =>
+            `${currency === "eur" ? "€" : "$"}${value.toFixed(2)}`
+          }
         />
         <ChartTooltip
           cursor={false}

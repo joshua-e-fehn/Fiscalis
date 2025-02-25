@@ -11,10 +11,10 @@ import {
   CardDescription,
 } from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
-import { getGoldPrices } from "@/lib/supabase/rawMaterials";
+import { getHistoricalMetalPrices } from "@/lib/supabase/metals";
 import { PeriodDuration } from "@/../services/finance/financeService";
 import { PriceChart } from "@/components/atomic/organisms/PriceChart";
-import { MetalCurrency, MetalChartData } from "@/lib/types/rawMaterials";
+import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
 import { formatDate } from "@/lib/utils/date";
 
 const chartConfig = {
@@ -36,11 +36,12 @@ const timeRangeButtons: Array<[PeriodDuration, string]> = [
 
 export default function MetalsPage() {
   const [timeRange, setTimeRange] = React.useState<PeriodDuration>("Week");
-  const [currency, setCurrency] = React.useState<MetalCurrency>("EUR");
+  const [currency, setCurrency] = React.useState<MetalCurrency>("eur");
+  const [metal, setMetal] = React.useState<MetalType>("gold");
 
   const { data, isLoading, error } = useQuery<MetalChartData[]>({
-    queryKey: ["goldPrices", timeRange, currency],
-    queryFn: () => getGoldPrices(timeRange, currency),
+    queryKey: ["metalPrices", timeRange, currency],
+    queryFn: () => getHistoricalMetalPrices(metal, timeRange, currency),
     // You can set options for refetching, cacheTime etc.
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true, // Refetch on window focus
@@ -72,10 +73,10 @@ export default function MetalsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() =>
-                    setCurrency(currency === "EUR" ? "USD" : "EUR")
+                    setCurrency(currency === "eur" ? "usd" : "eur")
                   }
                 >
-                  {currency === "EUR" ? (
+                  {currency === "eur" ? (
                     <Euro className="h-4 w-4" />
                   ) : (
                     <DollarSign className="h-4 w-4" />

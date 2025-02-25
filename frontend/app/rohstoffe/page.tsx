@@ -11,8 +11,8 @@ import {
   CardDescription,
 } from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
-import { getHistoricalMetalPrices } from "@/lib/supabase/metals";
-import { PeriodDuration } from "@/../services/finance/financeService";
+import { getMetalPricesHistorical } from "@/lib/supabase/metals";
+import { TimeRange } from "@/../services/finance/financeService";
 import { PriceChart } from "@/components/atomic/organisms/PriceChart";
 import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
 import { formatDate } from "@/lib/utils/date";
@@ -24,7 +24,7 @@ const chartConfig = {
   },
 } as const;
 
-const timeRangeButtons: Array<[PeriodDuration, string]> = [
+const timeRangeButtons: Array<[TimeRange, string]> = [
   ["Hour", "1H"],
   ["Day", "1D"],
   ["Week", "1W"],
@@ -35,13 +35,13 @@ const timeRangeButtons: Array<[PeriodDuration, string]> = [
 ];
 
 export default function MetalsPage() {
-  const [timeRange, setTimeRange] = React.useState<PeriodDuration>("Week");
+  const [timeRange, setTimeRange] = React.useState<TimeRange>("Week");
   const [currency, setCurrency] = React.useState<MetalCurrency>("eur");
   const [metal, setMetal] = React.useState<MetalType>("gold");
 
   const { data, isLoading, error } = useQuery<MetalChartData[]>({
     queryKey: ["metalPrices", timeRange, currency],
-    queryFn: () => getHistoricalMetalPrices(metal, timeRange, currency),
+    queryFn: () => getMetalPricesHistorical(metal, timeRange, currency),
     // You can set options for refetching, cacheTime etc.
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true, // Refetch on window focus

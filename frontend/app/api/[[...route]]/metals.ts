@@ -8,8 +8,9 @@ import { precious_metal_prices } from "@/db/drizzle/schema";
 import { desc, sql } from "drizzle-orm";
 
 import {
-  getTimePeriodInMilliseconds,
-  PeriodDuration,
+  getTimeRangeInMilliseconds,
+  TimeRange,
+  TimeInterval,
 } from "@/../services/finance/financeService";
 import {
   MetalChartData,
@@ -18,7 +19,7 @@ import {
   metalColumns,
 } from "@/lib/types/metals";
 
-const periodDurationEnum = z.enum([
+const timeRangeEnum = z.enum([
   "Hour",
   "Day",
   "Week",
@@ -26,7 +27,17 @@ const periodDurationEnum = z.enum([
   "Year",
   "YTD",
   "ALL",
-] as const satisfies readonly PeriodDuration[]);
+] as const satisfies readonly TimeRange[]);
+
+const timeIntervalEnum = z.enum([
+  "minute",
+  "hour",
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "year",
+] as const satisfies readonly TimeInterval[]);
 
 const metalEnum = z.enum([
   "gold",
@@ -40,18 +51,35 @@ const currencyEnum = z.enum([
 ] as const satisfies readonly MetalCurrency[]);
 
 const ParamsSchema = {
-  price: z.object({
+  metal: z.object({
     metal: metalEnum,
+  }),
+  priceLatest: z.object({
     currency: currencyEnum,
   }),
-  priceChart: z.object({
-    metal: metalEnum,
-    timeRange: periodDurationEnum,
+  pricesHistorical: z.object({
+    timeRange: timeRangeEnum,
+    currency: currencyEnum,
+  }),
+  pricesRange: z.object({
+    startDate: z
+      .string()
+      .datetime()
+      .describe(
+        'ISO 8601 date string in standard time (e.g., "2025-02-25T00:00:00Z")'
+      ),
+    endDate: z
+      .string()
+      .datetime()
+      .describe(
+        'ISO 8601 date string in standard time (e.g., "2025-02-25T23:59:59Z")'
+      ),
+    aggregationInterval: timeIntervalEnum,
     currency: currencyEnum,
   }),
 };
 
-function getAggregationInterval(range: PeriodDuration) {
+function getAggregationInterval(range: TimeRange) {
   if (range === "Hour") return "minute";
   if (range === "Day") return "hour";
   if (range === "Week") return "day";
@@ -64,10 +92,12 @@ function getAggregationInterval(range: PeriodDuration) {
 
 const app = new Hono()
   .get(
-    "/:metal/prices/latest/:currency",
-    zValidator("param", ParamsSchema.price),
+    "/:metal/prices/latest",
+    zValidator("param", ParamsSchema.metal),
+    zValidator("query", ParamsSchema.priceLatest),
     async (c): Promise<Response> => {
-      const { metal, currency } = c.req.valid("param");
+      const { metal } = c.req.valid("param");
+      const { currency } = c.req.valid("query");
       try {
         const prices = await db
           .select({
@@ -97,14 +127,16 @@ const app = new Hono()
     }
   )
   .get(
-    "/:metal/prices/historical/:timeRange/:currency",
-    zValidator("param", ParamsSchema.priceChart),
+    "/:metal/prices/historical",
+    zValidator("param", ParamsSchema.metal),
+    zValidator("query", ParamsSchema.pricesHistorical),
     async (c): Promise<Response> => {
-      const { metal, timeRange, currency } = c.req.valid("param");
+      const { metal } = c.req.valid("param");
+      const { timeRange, currency } = c.req.valid("query");
       try {
         const now = new Date();
         const localStartTime = new Date(
-          now.getTime() - getTimePeriodInMilliseconds(timeRange)
+          now.getTime() - getTimeRangeInMilliseconds(timeRange)
         );
         // Convert the local start time to UTC by adding the local timezone offset (in ms)
         const startTime = new Date(
@@ -139,6 +171,10 @@ const app = new Hono()
           .where(sql`sub.rn = 1`)
           .orderBy(sql`sub.truncated_timestamp`);
 
+        if (prices.length === 0) {
+          return c.json<MetalChartData[]>([], 404);
+        }
+
         const chartData: MetalChartData[] = prices.map((p) => {
           const standardTime = new Date(p.timestamp as Date);
           const localTime = new Date(
@@ -154,6 +190,63 @@ const app = new Hono()
       } catch (error) {
         console.error(
           `Error fetching ${metal} ${currency} prices for a time range of "${timeRange}": `,
+          error
+        );
+        return c.json({ error: "Internal Server Error" }, 500);
+      }
+    }
+  )
+  .get(
+    "/:metal/prices/range",
+    zValidator("param", ParamsSchema.metal),
+    zValidator("query", ParamsSchema.pricesRange),
+    async (c): Promise<Response> => {
+      const { metal } = c.req.valid("param");
+      const { startDate, endDate, aggregationInterval, currency } =
+        c.req.valid("query");
+
+      try {
+        const prices = await db
+          .select({
+            timestamp: sql`sub.truncated_timestamp`.as("timestamp"),
+            price: sql`sub.price`.as("price"),
+          })
+          .from(
+            sql`
+            (
+              SELECT
+                date_trunc(${aggregationInterval}::text, ${
+              precious_metal_prices.timestamp
+            }) AS truncated_timestamp,
+                ${metalColumns[currency][metal]} AS price,
+                row_number() OVER (
+                  PARTITION BY date_trunc(${aggregationInterval}::text, ${
+              precious_metal_prices.timestamp
+            })
+                  ORDER BY ${precious_metal_prices.timestamp} DESC
+                ) AS rn
+              FROM ${precious_metal_prices}
+              WHERE ${precious_metal_prices.timestamp} >= ${new Date(startDate)}
+              AND ${precious_metal_prices.timestamp} <= ${new Date(endDate)}
+            ) sub
+          `
+          )
+          .where(sql`sub.rn = 1`)
+          .orderBy(sql`sub.truncated_timestamp`);
+
+        if (prices.length === 0) {
+          return c.json<MetalChartData[]>([], 404);
+        }
+
+        const chartData: MetalChartData[] = prices.map((p) => ({
+          date: new Date(p.timestamp as Date),
+          price: Number(p.price),
+        }));
+
+        return c.json<MetalChartData[]>(chartData, 200);
+      } catch (error) {
+        console.error(
+          `Error fetching ${metal} ${currency} prices for range ${startDate} to ${endDate}: `,
           error
         );
         return c.json({ error: "Internal Server Error" }, 500);

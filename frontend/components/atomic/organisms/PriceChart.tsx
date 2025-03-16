@@ -7,12 +7,12 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
 import { MetalChartData } from "@/lib/types/metals";
-import { PeriodDuration } from "@/../services/finance/financeService";
+import { TimeRange } from "@/../services/finance/financeService";
 import { formatDate } from "@/lib/utils/date";
 
 interface PriceChartProps {
   chartData: MetalChartData[];
-  timeRange: PeriodDuration;
+  timeRange: TimeRange;
   currency: string;
   chartConfig: ChartConfig;
   dataKey: string;

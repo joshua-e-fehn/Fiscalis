@@ -28,7 +28,6 @@ import { Button } from "@/components/ui/shadcn/button";
 import { AppSidebar } from "@/components/atomic/organisms/navigationSidebar";
 
 import "./globals.css";
-import HeaderComponent from "@/components/atomic/organisms/header";
 import QueryProvider from "@/providers/queryProvider";
 const inter = Inter({ subsets: ["latin"] });
 

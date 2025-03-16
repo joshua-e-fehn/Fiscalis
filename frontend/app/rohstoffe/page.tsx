@@ -54,7 +54,7 @@ export default function MetalsPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <Card className="w-full relative z-10 p-4">
+      <Card className="w-full relative p-4">
         <CardHeader>
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
             <div className="grid flex-1 gap-1 text-center sm:text-left">

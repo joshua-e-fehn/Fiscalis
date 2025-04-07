@@ -3,19 +3,30 @@
 import * as React from "react";
 import {
   AudioWaveform,
+  Banknote,
+  Bitcoin,
   BookOpen,
-  Bot,
+  Building2,
+  Calculator,
+  ChartCandlestick,
+  ChartLine,
+  ChartNoAxesCombined,
   Command,
   Frame,
   GalleryVerticalEnd,
+  GemIcon,
+  House,
+  Landmark,
   Map,
+  MapIcon,
   PieChart,
+  ReceiptText,
   Settings2,
-  SquareTerminal,
+  Star,
+  Wallet,
 } from "lucide-react";
 
-import { NavigationPortfolio } from "@/components/atomic/molecules/navigationPortfolio";
-import { NavigationProjects } from "@/components/atomic/molecules/navigationProjects";
+import { NavigationDropdown } from "@/components/atomic/molecules/navigationDropdown";
 import { NavigationUserMenu } from "@/components/atomic/molecules/navigationUserMenu";
 import { NavigationTeamSwitcher } from "@/components/atomic/molecules/navigationTeamSwitcher";
 import {
@@ -28,11 +39,6 @@ import {
 
 // This is sample data.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
       name: "Acme Inc",
@@ -53,66 +59,100 @@ const data = {
   navigationPortfolio: [
     {
       title: "Dashboard",
-      url: "#",
-      icon: SquareTerminal,
+      url: "/dashboard",
+      icon: House,
       isActive: true,
       items: [],
     },
     {
       title: "Investment Categories",
       url: "#",
-      icon: SquareTerminal,
+      icon: Wallet,
       isActive: true,
       items: [
         {
-          title: "Aktien",
+          title: "Equities",
           url: "#",
+          icon: ChartLine,
         },
         {
-          title: "Rohstoffe",
-          url: "/rohstoffe",
+          title: "Commodities",
+          url: "/commodities",
+          icon: GemIcon,
         },
         {
-          title: "Anleihen",
+          title: "Bonds",
           url: "#",
+          icon: ReceiptText,
         },
         {
-          title: "Immobilien",
+          title: "Real Estate",
           url: "#",
+          icon: Building2,
         },
         {
-          title: "Geldmarkt",
+          title: "Cash & Money Market",
           url: "#",
+          icon: Banknote,
         },
         {
-          title: "Kryptowährungen",
+          title: "Cryptocurrencies",
           url: "#",
+          icon: Bitcoin,
         },
         {
-          title: "Sammelstücke",
+          title: "Collectibles",
           url: "#",
+          icon: Star,
         },
       ],
     },
     {
       title: "Investment Strategies",
       url: "#",
-      icon: Bot,
+      icon: ChartNoAxesCombined,
       items: [
         {
-          title: "Genesis",
+          title: "Pies",
           url: "#",
-        },
-        {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
+          icon: PieChart,
         },
       ],
     },
+  ],
+  navigationIntegrations: [
+    {
+      title: "Banking",
+      url: "/banking",
+      icon: Landmark,
+      isActive: true,
+      items: [],
+    },
+    {
+      title: "Brokers",
+      url: "/brokers",
+      icon: ChartCandlestick,
+      isActive: true,
+      items: [],
+    },
+  ],
+  navigationTools: [
+    {
+      title: "Financial Calculators",
+      url: "/calculator",
+      icon: Calculator,
+      isActive: true,
+      items: [],
+    },
+    {
+      title: "World Map",
+      url: "/world-map",
+      icon: MapIcon,
+      isActive: true,
+      items: [],
+    },
+  ],
+  others: [
     {
       title: "Documentation",
       url: "#",
@@ -160,37 +200,37 @@ const data = {
       ],
     },
   ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function NavigationSidebar({
+  user,
+  ...props
+}: {
+  user: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+} & React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <NavigationTeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavigationPortfolio items={data.navigationPortfolio} />
-        <NavigationProjects projects={data.projects} />
+        <NavigationDropdown
+          groupLabel="Portfolio"
+          items={data.navigationPortfolio}
+        />
+        <NavigationDropdown groupLabel="Tools" items={data.navigationTools} />
+        <NavigationDropdown
+          groupLabel="Integrations"
+          items={data.navigationIntegrations}
+        />
+        <NavigationDropdown groupLabel="Others" items={data.others} />
       </SidebarContent>
       <SidebarFooter>
-        <NavigationUserMenu user={data.user} />
+        <NavigationUserMenu user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

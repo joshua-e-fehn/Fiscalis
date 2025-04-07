@@ -19,9 +19,11 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/shadcn/sidebar";
 
-export function NavigationPortfolio({
+export function NavigationDropdown({
+  groupLabel,
   items,
 }: {
+  groupLabel: string;
   items: {
     title: string;
     url: string;
@@ -30,12 +32,13 @@ export function NavigationPortfolio({
     items?: {
       title: string;
       url: string;
+      icon?: LucideIcon;
     }[];
   }[];
 }) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Portfolio</SidebarGroupLabel>
+      <SidebarGroupLabel>{groupLabel}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) =>
           item.items?.length ? (
@@ -63,6 +66,7 @@ export function NavigationPortfolio({
                             href={subItem.url}
                             prefetch={false}
                           >
+                            {subItem.icon && <subItem.icon />}
                             <span>{subItem.title}</span>
                           </Link>
                         </SidebarMenuSubButton>

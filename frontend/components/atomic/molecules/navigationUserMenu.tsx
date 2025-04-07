@@ -8,6 +8,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { useClerk } from "@clerk/nextjs";
 
 import {
   Avatar,
@@ -40,6 +41,14 @@ export function NavigationUserMenu({
   };
 }) {
   const { isMobile } = useSidebar();
+  const { openUserProfile, signOut } = useClerk();
+
+  const handleOpenUserProfile = () => {
+    openUserProfile();
+  };
+  const handleSignOut = () => {
+    signOut();
+  };
 
   return (
     <SidebarMenu>
@@ -52,7 +61,9 @@ export function NavigationUserMenu({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {user.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.name}</span>
@@ -88,7 +99,7 @@ export function NavigationUserMenu({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleOpenUserProfile}>
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>
@@ -102,7 +113,7 @@ export function NavigationUserMenu({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut}>
               <LogOut />
               Log out
             </DropdownMenuItem>

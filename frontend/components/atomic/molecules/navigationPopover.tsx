@@ -25,7 +25,7 @@ import {
   useSidebar,
 } from "@/components/ui/shadcn/sidebar";
 
-export function NavigationProjects({
+export function NavigationPopover({
   projects,
 }: {
   projects: {

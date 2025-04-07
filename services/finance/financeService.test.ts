@@ -3,7 +3,7 @@ import { it, expect } from "vitest";
 import {
   calculateAverageInterest,
   type capitalPointInTime,
-  getTimePeriodInMilliseconds,
+  getTimeIntervalInMilliseconds,
 } from "./financeService";
 
 it("should calculate average interest", () => {
@@ -13,7 +13,7 @@ it("should calculate average interest", () => {
   };
 
   const pointBTime = new Date(
-    pointA.time.getTime() + getTimePeriodInMilliseconds("Year")
+    pointA.time.getTime() + getTimeIntervalInMilliseconds("year")
   );
 
   const pointB: capitalPointInTime = {
@@ -21,6 +21,6 @@ it("should calculate average interest", () => {
     capitalValue: 1100,
   };
 
-  const interest = calculateAverageInterest(pointA, pointB, "Year");
+  const interest = calculateAverageInterest(pointA, pointB, "year");
   expect(interest).toBe(0.1);
 });

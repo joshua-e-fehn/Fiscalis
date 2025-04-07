@@ -5,15 +5,15 @@ const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 const DAYS_PER_YEAR = 365.25; // Average number of days per year considering leap years
 const DAYS_PER_WEEK = 7;
-const WEEKS_PER_YEAR = 52;
-const MONTHS_PER_YEAR = 12;
+const WEEKS_PER_YEAR = 52.178571428571429;
+const MONTHS_PER_YEAR = 12.175;
 const QUARTER_PER_YEAR = 4;
-const MS_PER_MINUTE = MS_PER_SECOND * SECONDS_PER_MINUTE;
-const MS_PER_HOUR = MS_PER_SECOND * SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
-const MS_PER_DAY = MS_PER_HOUR * HOURS_PER_DAY;
-const MS_PER_WEEK = MS_PER_DAY * DAYS_PER_WEEK;
-const MS_PER_YEAR = MS_PER_DAY * DAYS_PER_YEAR;
-const MS_PER_MONTH = MS_PER_YEAR / MONTHS_PER_YEAR;
+const MS_PER_MINUTE = 60000;
+const MS_PER_HOUR = 3600000;
+const MS_PER_DAY = 86400000;
+const MS_PER_WEEK = 604800000;
+const MS_PER_YEAR = 31557600000;
+const MS_PER_MONTH = 2592000000;
 const MS_PER_QUARTER = MS_PER_YEAR / QUARTER_PER_YEAR;
 
 export type TimeRange =
@@ -35,18 +35,7 @@ export type TimeInterval =
   | "year";
 
 export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
-  const localNow = new Date();
-  const localStartOf2025 = new Date(2025, 0, 1); // January 1, 2025
-  const standardNow = new Date(
-    localNow.getTime() + localNow.getTimezoneOffset() * 60000
-  );
-  const standardStartOf2025 = new Date(
-    localStartOf2025.getTime() + localStartOf2025.getTimezoneOffset() * 60000
-  );
-  const localStartOfYear = new Date(localNow.getFullYear(), 0, 1);
-  const standardStartOfYear = new Date(
-    localStartOfYear.getTime() + localStartOfYear.getTimezoneOffset() * 60000
-  );
+  const now = new Date();
 
   switch (timeRange) {
     case "Hour":
@@ -59,12 +48,19 @@ export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
       return MS_PER_MONTH;
     case "Year":
       return MS_PER_YEAR;
-    case "YTD":
-      return standardNow.getTime() - standardStartOfYear.getTime();
-    case "ALL":
-      return standardNow.getTime() - standardStartOf2025.getTime();
+    case "YTD": {
+      // Time from start of year until now in UTC
+      const currentYear = now.getUTCFullYear();
+      const startOfYearUTC = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
+      return now.getTime() - startOfYearUTC.getTime();
+    }
+    case "ALL": {
+      // From January 1, 2025 (UTC) until now
+      const startOf2025UTC = new Date(Date.UTC(2025, 0, 1, 0, 0, 0, 0));
+      return now.getTime() - startOf2025UTC.getTime();
+    }
     default:
-      return MS_PER_YEAR;
+      return MS_PER_DAY; // Default to 1 day
   }
 }
 
@@ -159,7 +155,7 @@ export function calculateCapitalGainDurationWithCompoundInterest(
   endCapital: number,
   interestRate: number
 ): number {
-  return Math.log(endCapital - startCapital) / Math.log(1 + interestRate);
+  return Math.log(endCapital / startCapital) / Math.log(1 + interestRate);
 }
 
 export function calculateCapitalGainDurationWithInterest(

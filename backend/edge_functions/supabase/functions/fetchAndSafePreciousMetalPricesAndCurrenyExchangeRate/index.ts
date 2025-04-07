@@ -57,7 +57,7 @@ Deno.serve(async (req: any) => {
       .from("precious_metal_prices")
       .insert([
         {
-          timestamp: now,
+          timestamp: now.toISOString,
           gold_eur: preciousMetalData["goldPriceEUR"],
           gold_usd: preciousMetalData["goldPriceUSD"],
           silver_eur: preciousMetalData["silverPriceEUR"],

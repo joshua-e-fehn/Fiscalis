@@ -44,17 +44,9 @@ export async function getMetalPricesRange(
   aggregationInterval: TimeInterval,
   currency: MetalCurrency
 ): Promise<MetalChartData[]> {
-  // Ensure dates are in UTC / standard time
-  const standardStartTime = new Date(
-    startDate.getTime() + startDate.getTimezoneOffset() * 60000
-  );
-  const standardEndTime = new Date(
-    endDate.getTime() + endDate.getTimezoneOffset() * 60000
-  );
-
   const params = new URLSearchParams({
-    startDate: standardStartTime.toISOString(), // Will be in standard time (UTC)
-    endDate: standardEndTime.toISOString(), // Will be in standard time (UTC)
+    startDate: startDate.toISOString(), // Will be in standard time (UTC)
+    endDate: endDate.toISOString(), // Will be in standard time (UTC)
     aggregationInterval,
     currency: currency.toLowerCase(),
   });

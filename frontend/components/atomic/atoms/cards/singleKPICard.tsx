@@ -3,7 +3,6 @@ import {
   CardHeader,
   CardTitle,
   CardContent,
-  CardDescription,
 } from "@/components/ui/shadcn/card";
 
 import { Euro } from "lucide-react";

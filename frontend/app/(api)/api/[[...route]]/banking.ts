@@ -54,7 +54,7 @@ async function getUserAccessToken(userId: string, itemId?: string) {
 const app = new Hono()
   // Create link token
   .post("/create-link-token", async (c) => {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -73,7 +73,7 @@ const app = new Hono()
     } catch (error: any) {
       console.error(
         "Error creating link token:",
-        error.response?.data || error
+        error.response?.data || error,
       );
       return c.json({ error: "Failed to create link token" }, 500);
     }
@@ -83,7 +83,7 @@ const app = new Hono()
     "/exchange-token",
     zValidator("json", ParamsSchema.exchangeTokenSchema),
     async (c) => {
-      const { userId } = auth();
+      const { userId } = await auth();
 
       if (!userId) {
         return c.json({ error: "Unauthorized" }, 401);
@@ -115,11 +115,11 @@ const app = new Hono()
         console.error("Error exchanging token:", error.response?.data || error);
         return c.json({ error: "Failed to exchange token" }, 500);
       }
-    }
+    },
   )
   // Get linked accounts
   .get("/accounts", async (c) => {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -165,12 +165,12 @@ const app = new Hono()
                 name: item.institutionName,
                 itemId: item.itemId,
               },
-            })
+            }),
           );
         } catch (error) {
           console.error(
             `Error fetching accounts for item ${item.itemId}:`,
-            error
+            error,
           );
           return [];
         }
@@ -187,7 +187,7 @@ const app = new Hono()
   })
   // Get account auth data (account and routing numbers)
   .get("/auth/:itemId?", async (c) => {
-    const { userId } = auth();
+    const { userId } = await auth();
     const itemId = c.req.param("itemId");
 
     if (!userId) {
@@ -209,7 +209,7 @@ const app = new Hono()
           mask: account.mask,
           type: account.type,
           subtype: account.subtype,
-        })
+        }),
       );
 
       const numbers = authResponse.data.numbers;
@@ -222,7 +222,7 @@ const app = new Hono()
   })
   // Get user identity information
   .get("/identity/:itemId?", async (c) => {
-    const { userId } = auth();
+    const { userId } = await auth();
     const itemId = c.req.param("itemId");
 
     if (!userId) {
@@ -245,7 +245,7 @@ const app = new Hono()
     } catch (error: any) {
       console.error(
         "Error fetching identity data:",
-        error.response?.data || error
+        error.response?.data || error,
       );
       return c.json({ error: "Failed to fetch identity data" }, 500);
     }
@@ -255,7 +255,7 @@ const app = new Hono()
     "/transactions",
     zValidator("query", ParamsSchema.transactionsSchema),
     async (c) => {
-      const { userId } = auth();
+      const { userId } = await auth();
       const { itemId, startDate, endDate } = c.req.valid("query");
 
       if (!userId) {
@@ -304,7 +304,7 @@ const app = new Hono()
                   id: item.institutionId,
                   name: item.institutionName,
                 },
-              })
+              }),
             );
 
             allTransactions.push(...enrichedTransactions);
@@ -321,7 +321,7 @@ const app = new Hono()
                 merchantName: transaction.merchant_name || null,
                 category: transaction.category?.[0] || null,
                 pending: transaction.pending,
-              })
+              }),
             );
 
             // Insert new transactions, ignoring duplicates
@@ -340,7 +340,7 @@ const app = new Hono()
           } catch (error: any) {
             console.error(
               `Error fetching transactions for item ${item.itemId}:`,
-              error.response?.data || error
+              error.response?.data || error,
             );
             // Continue with other items even if one fails
           }
@@ -348,7 +348,7 @@ const app = new Hono()
 
         // Sort transactions by date (most recent first)
         allTransactions.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
         );
 
         return c.json({ transactions: allTransactions });
@@ -356,11 +356,11 @@ const app = new Hono()
         console.error("Error fetching transactions:", error);
         return c.json({ error: "Failed to fetch transactions" }, 500);
       }
-    }
+    },
   )
   // Get transactions from database
   .get("/transactions/db", async (c) => {
-    const { userId } = auth();
+    const { userId } = await auth();
     const limit = Number(c.req.query("limit") || "50");
 
     if (!userId) {
@@ -384,7 +384,7 @@ const app = new Hono()
   })
   // Get account balances summary
   .get("/balances/summary", async (c) => {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -440,7 +440,7 @@ const app = new Hono()
         } catch (error) {
           console.error(
             `Error fetching balances for item ${item.itemId}:`,
-            error
+            error,
           );
         }
       }
@@ -456,7 +456,7 @@ const app = new Hono()
   })
   // Refresh transactions (webhook simulation / manual sync of last 30 days)
   .post("/transactions/refresh", async (c) => {
-    const { userId } = auth();
+    const { userId } = await auth();
 
     if (!userId) {
       return c.json({ error: "Unauthorized" }, 401);
@@ -502,7 +502,7 @@ const app = new Hono()
               merchantName: transaction.merchant_name || null,
               category: transaction.category?.[0] || null,
               pending: transaction.pending,
-            })
+            }),
           );
 
           // Insert transactions, count new ones
@@ -525,7 +525,7 @@ const app = new Hono()
         } catch (error) {
           console.error(
             `Error refreshing transactions for item ${item.itemId}:`,
-            error
+            error,
           );
         }
       }

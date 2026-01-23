@@ -55,7 +55,11 @@ export const PriceChart = memo(function PriceChart({
         />
         <ChartTooltip
           cursor={false}
-          labelFormatter={(label: any) => new Date(label).toLocaleDateString()}
+          labelFormatter={(label: any) =>
+            timeRange === "Hour" || timeRange === "Day"
+              ? formatDate(new Date(label), "short")
+              : formatDate(new Date(label), "date")
+          }
           content={<ChartTooltipContent indicator="line" />}
         />
         <Area

@@ -55,7 +55,7 @@ export function PlaidLinkButton() {
         resetStates();
       }
     },
-    [exchangeToken, resetStates]
+    [exchangeToken, resetStates],
   );
 
   // Initialize Plaid Link
@@ -77,8 +77,8 @@ export function PlaidLinkButton() {
   const buttonText = linkOpen
     ? "Connecting..."
     : accounts?.length
-    ? "Connect Another Bank"
-    : "Connect Your Bank";
+      ? "Connect Another Bank"
+      : "Connect Your Bank";
 
   // Show success state if needed
   if (showSuccess) {

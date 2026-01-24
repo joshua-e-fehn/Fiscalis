@@ -12,6 +12,7 @@ export default function BankingPage() {
           <h1 className="text-3xl font-bold">Banking Dashboard</h1>
           <PlaidLinkButton />
         </div>
+
         <BanksCard />
       </div>
     </div>

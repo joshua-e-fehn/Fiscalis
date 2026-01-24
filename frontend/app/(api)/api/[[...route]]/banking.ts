@@ -33,6 +33,12 @@ const ParamsSchema = {
     startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   }),
+  updateLinkTokenSchema: z.object({
+    itemId: z.string(),
+  }),
+  deleteItemSchema: z.object({
+    itemId: z.string(),
+  }),
 };
 
 // Helper function to get access token for a user
@@ -78,6 +84,53 @@ const app = new Hono()
       return c.json({ error: "Failed to create link token" }, 500);
     }
   })
+  // Create update link token for re-authentication
+  .post(
+    "/create-update-link-token",
+    zValidator("json", ParamsSchema.updateLinkTokenSchema),
+    async (c) => {
+      const { userId } = await auth();
+
+      if (!userId) {
+        return c.json({ error: "Unauthorized" }, 401);
+      }
+
+      const { itemId } = c.req.valid("json");
+
+      try {
+        // Get the access token for this item
+        const items = await db
+          .select()
+          .from(plaidItems)
+          .where(
+            and(eq(plaidItems.userId, userId), eq(plaidItems.itemId, itemId)),
+          );
+
+        if (items.length === 0) {
+          return c.json({ error: "Item not found" }, 404);
+        }
+
+        const accessToken = items[0].accessToken;
+
+        // Create a link token in update mode
+        const response = await plaidClient.linkTokenCreate({
+          user: { client_user_id: userId },
+          client_name: "Fiscalis",
+          country_codes: PLAID_COUNTRY_CODES,
+          language: "en",
+          access_token: accessToken, // This puts Link in update mode
+        });
+
+        return c.json({ linkToken: response.data.link_token });
+      } catch (error: any) {
+        console.error(
+          "Error creating update link token:",
+          error.response?.data || error,
+        );
+        return c.json({ error: "Failed to create update link token" }, 500);
+      }
+    },
+  )
   // Exchange public token for access token
   .post(
     "/exchange-token",
@@ -93,6 +146,29 @@ const app = new Hono()
         c.req.valid("json");
 
       try {
+        // Check if user already has a connection to this institution
+        if (institutionId) {
+          const existingItem = await db
+            .select()
+            .from(plaidItems)
+            .where(
+              and(
+                eq(plaidItems.userId, userId),
+                eq(plaidItems.institutionId, institutionId),
+              ),
+            );
+
+          if (existingItem.length > 0) {
+            return c.json(
+              {
+                error: "Duplicate connection",
+                message: `You already have a connection to ${institutionName || "this institution"}. Please use the existing connection or remove it first.`,
+              },
+              409,
+            );
+          }
+        }
+
         // Exchange the public token for an access token
         const exchangeResponse = await plaidClient.itemPublicTokenExchange({
           public_token: publicToken,
@@ -117,6 +193,60 @@ const app = new Hono()
       }
     },
   )
+  // Delete/remove a Plaid item
+  .delete("/items/:itemId", async (c) => {
+    const { userId } = await auth();
+    const itemId = c.req.param("itemId");
+
+    if (!userId) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    try {
+      // Get the item to verify ownership and get access token
+      const items = await db
+        .select()
+        .from(plaidItems)
+        .where(
+          and(eq(plaidItems.userId, userId), eq(plaidItems.itemId, itemId)),
+        );
+
+      if (items.length === 0) {
+        return c.json({ error: "Item not found" }, 404);
+      }
+
+      const accessToken = items[0].accessToken;
+
+      // Remove the item from Plaid
+      try {
+        await plaidClient.itemRemove({
+          access_token: accessToken,
+        });
+      } catch (plaidError: any) {
+        // Log but don't fail - item might already be invalid
+        console.log(
+          "Plaid item removal warning:",
+          plaidError.response?.data?.error_code || plaidError.message,
+        );
+      }
+
+      // Delete associated transactions for this user
+      // Note: In a production app, you'd want to track which transactions belong to which item
+      // For now, we just delete the item and leave transactions (they can be cleaned up later)
+
+      // Delete the item from our database
+      await db
+        .delete(plaidItems)
+        .where(
+          and(eq(plaidItems.userId, userId), eq(plaidItems.itemId, itemId)),
+        );
+
+      return c.json({ success: true, message: "Bank connection removed" });
+    } catch (error: any) {
+      console.error("Error removing item:", error);
+      return c.json({ error: "Failed to remove bank connection" }, 500);
+    }
+  })
   // Get linked accounts
   .get("/accounts", async (c) => {
     const { userId } = await auth();
@@ -133,8 +263,16 @@ const app = new Hono()
         .where(eq(plaidItems.userId, userId));
 
       if (items.length === 0) {
-        return c.json({ accounts: [] });
+        return c.json({ accounts: [], itemsNeedingReauth: [] });
       }
+
+      // Track items that need re-authentication
+      const itemsNeedingReauth: Array<{
+        itemId: string;
+        institutionId: string | null;
+        institutionName: string | null;
+        errorCode: string;
+      }> = [];
 
       // Fetch accounts for each item
       const accountsPromises = items.map(async (item) => {
@@ -167,11 +305,31 @@ const app = new Hono()
               },
             }),
           );
-        } catch (error) {
-          console.error(
-            `Error fetching accounts for item ${item.itemId}:`,
-            error,
-          );
+        } catch (error: any) {
+          const errorCode = error.response?.data?.error_code;
+
+          // Check if this is a re-auth error
+          if (
+            errorCode === "ITEM_LOGIN_REQUIRED" ||
+            errorCode === "PENDING_EXPIRATION"
+          ) {
+            console.log(
+              `Item ${item.itemId} (${item.institutionName}) needs re-authentication: ${errorCode}`,
+            );
+            itemsNeedingReauth.push({
+              itemId: item.itemId,
+              institutionId: item.institutionId,
+              institutionName: item.institutionName,
+              errorCode,
+            });
+          } else {
+            // Only log as error for unexpected errors
+            console.error(
+              `Error fetching accounts for item ${item.itemId}:`,
+              error.response?.data || error.message,
+            );
+          }
+
           return [];
         }
       });
@@ -179,7 +337,7 @@ const app = new Hono()
       const accountsArrays = await Promise.all(accountsPromises);
       const accounts = accountsArrays.flat();
 
-      return c.json({ accounts });
+      return c.json({ accounts, itemsNeedingReauth });
     } catch (error) {
       console.error("Error fetching accounts:", error);
       return c.json({ error: "Failed to fetch accounts" }, 500);

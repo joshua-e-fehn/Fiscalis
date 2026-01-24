@@ -28,6 +28,16 @@ export function useLinkToken() {
   });
 }
 
+// Update link token hook (for re-authentication)
+export function useUpdateLinkToken() {
+  return useMutation({
+    mutationFn: (itemId: string) => bankingApi.getUpdateLinkToken(itemId),
+    onError: (error) => {
+      console.error("Failed to create update link token:", error);
+    },
+  });
+}
+
 // Exchange token hook
 export function useExchangeToken() {
   const queryClient = useQueryClient();
@@ -53,6 +63,32 @@ export function useExchangeToken() {
   });
 }
 
+// Delete item hook
+export function useDeleteItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (itemId: string) => bankingApi.deleteItem(itemId),
+    onSuccess: () => {
+      // Invalidate accounts query to refetch without the deleted item
+      queryClient.invalidateQueries({ queryKey: bankingKeys.accounts() });
+      queryClient.invalidateQueries({ queryKey: bankingKeys.balances() });
+      queryClient.invalidateQueries({ queryKey: bankingKeys.transactions() });
+    },
+    onError: (error) => {
+      console.error("Failed to delete item:", error);
+    },
+  });
+}
+
+// Item needing re-authentication type
+export interface ItemNeedingReauth {
+  itemId: string;
+  institutionId: string | null;
+  institutionName: string | null;
+  errorCode: string;
+}
+
 // Get accounts hook
 export function useAccounts() {
   return useQuery({
@@ -60,6 +96,16 @@ export function useAccounts() {
     queryFn: bankingApi.getAccounts,
     staleTime: 5 * 60 * 1000, // 5 minutes
     select: (data) => data.accounts as PlaidAccount[],
+  });
+}
+
+// Get items needing re-authentication
+export function useItemsNeedingReauth() {
+  return useQuery({
+    queryKey: bankingKeys.accounts(),
+    queryFn: bankingApi.getAccounts,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    select: (data) => (data.itemsNeedingReauth || []) as ItemNeedingReauth[],
   });
 }
 
@@ -96,7 +142,7 @@ export function useTransactions(
   startDate: Date | string,
   endDate: Date | string,
   itemId?: string,
-  enabled = true
+  enabled = true,
 ) {
   // Standardize date format for query key
   const formatDate = (date: Date | string): string => {
@@ -111,7 +157,7 @@ export function useTransactions(
     queryKey: bankingKeys.transactionsDate(
       formattedStartDate,
       formattedEndDate,
-      itemId
+      itemId,
     ),
     queryFn: () => bankingApi.getTransactions(startDate, endDate, itemId),
     enabled,
@@ -209,14 +255,25 @@ export function useDashboardData() {
 // Helper hook for Plaid Link initialization
 export function usePlaidLink() {
   const linkToken = useLinkToken();
+  const updateLinkToken = useUpdateLinkToken();
   const exchangeToken = useExchangeToken();
+  const queryClient = useQueryClient();
 
-  const isLoading = linkToken.isPending || exchangeToken.isPending;
+  const isLoading =
+    linkToken.isPending || updateLinkToken.isPending || exchangeToken.isPending;
+
+  // Function to handle successful re-authentication
+  const onUpdateSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: bankingKeys.accounts() });
+    queryClient.invalidateQueries({ queryKey: bankingKeys.balances() });
+  };
 
   return {
     getLinkToken: linkToken.mutateAsync,
+    getUpdateLinkToken: updateLinkToken.mutateAsync,
     exchangeToken: exchangeToken.mutateAsync,
+    onUpdateSuccess,
     isLoading,
-    error: linkToken.error || exchangeToken.error,
+    error: linkToken.error || updateLinkToken.error || exchangeToken.error,
   };
 }

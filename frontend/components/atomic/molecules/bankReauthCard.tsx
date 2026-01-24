@@ -12,7 +12,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/shadcn/dropdown-menu";
 import {
@@ -26,46 +25,42 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/shadcn/alert-dialog";
 import { Button } from "@/components/ui/shadcn/button";
-import { Landmark, MoreHorizontal, RefreshCw, Unlink } from "lucide-react";
+import { Landmark, AlertCircle, MoreHorizontal, Unlink } from "lucide-react";
+import { ItemNeedingReauth, useDeleteItem } from "@/hooks/banking";
+import { PlaidUpdateButton } from "@/components/atomic/atoms/plaidUpdateButton";
 
-import { BankAccountCard } from "@/components/atomic/atoms/bankAccountCard";
-import { PlaidAccount } from "@/lib/types/banking";
-import { useDeleteItem } from "@/hooks/banking";
+interface BankReauthCardProps {
+  item: ItemNeedingReauth;
+}
 
-export function BankAccountsCard({
-  institutionAccounts,
-}: {
-  institutionAccounts: PlaidAccount[];
-}) {
+export function BankReauthCard({ item }: BankReauthCardProps) {
   const deleteItem = useDeleteItem();
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
-  if (!institutionAccounts || institutionAccounts.length === 0) {
-    return null;
-  }
-
-  const itemId = institutionAccounts[0]?.institution?.itemId;
-  const institutionName =
-    institutionAccounts[0]?.institution?.name || "this bank";
+  const institutionName = item.institutionName || "Unknown Bank";
 
   const handleDisconnect = () => {
-    if (!itemId) return;
-    deleteItem.mutate(itemId);
+    deleteItem.mutate(item.itemId);
     setShowDisconnectDialog(false);
   };
 
   return (
     <>
-      <Card className="mb-8">
+      <Card className="mb-8 border-yellow-200 dark:border-yellow-900 bg-yellow-50/50 dark:bg-yellow-950/20">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl flex flex-row items-center gap-2">
-                <Landmark className="h-7 w-7" /> {institutionName}
+                <div className="relative">
+                  <Landmark className="h-7 w-7" />
+                  <div className="absolute -top-1 -right-1 rounded-full bg-yellow-500 p-0.5">
+                    <AlertCircle className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+                <span>{institutionName}</span>
               </CardTitle>
-              <CardDescription className="mt-1.5">
-                You have connected {institutionAccounts.length} account
-                {institutionAccounts.length !== 1 ? "s" : ""}
+              <CardDescription className="mt-1.5 text-yellow-700 dark:text-yellow-400">
+                This connection needs to be re-authenticated
               </CardDescription>
             </div>
             <DropdownMenu>
@@ -77,16 +72,8 @@ export function BankAccountsCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => window.location.reload()}
-                  className="cursor-pointer"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh accounts
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
                   onClick={() => setShowDisconnectDialog(true)}
-                  disabled={deleteItem.isPending || !itemId}
+                  disabled={deleteItem.isPending}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <Unlink className="mr-2 h-4 w-4" />
@@ -96,10 +83,31 @@ export function BankAccountsCard({
             </DropdownMenu>
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {institutionAccounts.map((account) => (
-            <BankAccountCard key={account.id} account={account} />
-          ))}
+        <CardContent>
+          <Card className="border-yellow-200 dark:border-yellow-800 bg-white dark:bg-gray-900">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                      Connection Expired
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Your bank requires you to log in again for security
+                    purposes. Click reconnect to restore access to your
+                    accounts.
+                  </p>
+                </div>
+                <PlaidUpdateButton
+                  item={item}
+                  variant="default"
+                  size="default"
+                />
+              </div>
+            </CardContent>
+          </Card>
         </CardContent>
       </Card>
 
@@ -114,11 +122,7 @@ export function BankAccountsCard({
               Disconnect {institutionName}?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-left">
-              This will remove{" "}
-              {institutionAccounts.length === 1
-                ? "your connected account"
-                : `all ${institutionAccounts.length} accounts`}{" "}
-              from your dashboard.
+              This will remove the connection entirely from your dashboard.
               <br />
               <br />
               <span className="text-muted-foreground">

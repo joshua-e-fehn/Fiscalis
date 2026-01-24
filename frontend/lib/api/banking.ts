@@ -8,10 +8,22 @@ export async function getLinkToken() {
   return response.json();
 }
 
+export async function getUpdateLinkToken(itemId: string) {
+  const response = await fetch("/api/banking/create-update-link-token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itemId }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch update link token");
+  }
+  return response.json();
+}
+
 export async function exchangeToken(
   publicToken: string,
   institutionId?: string,
-  institutionName?: string
+  institutionName?: string,
 ) {
   const response = await fetch("/api/banking/exchange-token", {
     method: "POST",
@@ -20,7 +32,27 @@ export async function exchangeToken(
   });
 
   if (!response.ok) {
+    const data = await response.json();
+    if (response.status === 409) {
+      throw new Error(
+        data.message || "You already have a connection to this bank",
+      );
+    }
     throw new Error("Failed to exchange token");
+  }
+
+  return response.json();
+}
+
+export async function deleteItem(itemId: string) {
+  const response = await fetch(`/api/banking/items/${itemId}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    console.error("Delete item error:", response.status, errorData);
+    throw new Error(errorData.error || "Failed to remove bank connection");
   }
 
   return response.json();
@@ -63,7 +95,7 @@ export async function getIdentity(itemId?: string) {
 export async function getTransactions(
   startDate: Date | string,
   endDate: Date | string,
-  itemId?: string
+  itemId?: string,
 ) {
   // Convert dates to YYYY-MM-DD format if needed
   const formatDate = (date: Date | string): string => {
@@ -81,7 +113,7 @@ export async function getTransactions(
   }
 
   const response = await fetch(
-    `/api/banking/transactions?${params.toString()}`
+    `/api/banking/transactions?${params.toString()}`,
   );
 
   if (!response.ok) {

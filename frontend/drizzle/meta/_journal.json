@@ -36,6 +36,13 @@
       "when": 1743121209248,
       "tag": "0004_unique_snowbird",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769217555996,
+      "tag": "0005_light_shockwave",
+      "breakpoints": true
     }
   ]
 }

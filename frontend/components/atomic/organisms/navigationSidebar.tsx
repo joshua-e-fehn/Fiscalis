@@ -8,22 +8,22 @@ import {
   BookOpen,
   Building2,
   Calculator,
-  ChartCandlestick,
   ChartLine,
   ChartNoAxesCombined,
   Command,
-  Frame,
   GalleryVerticalEnd,
   GemIcon,
   House,
   Landmark,
-  Map,
   MapIcon,
   PieChart,
   ReceiptText,
   Settings2,
   Star,
+  CreditCard,
+  ChartCandlestick,
   Wallet,
+  HandCoins,
 } from "lucide-react";
 
 import { NavigationDropdown } from "@/components/atomic/molecules/navigationDropdown";
@@ -65,9 +65,15 @@ const data = {
       items: [],
     },
     {
-      title: "Investment Categories",
+      title: "Net Worth",
       url: "#",
       icon: Wallet,
+      items: [],
+    },
+    {
+      title: "Investments",
+      url: "#",
+      icon: ChartCandlestick,
       isActive: true,
       items: [
         {
@@ -108,6 +114,18 @@ const data = {
       ],
     },
     {
+      title: "Debt",
+      url: "#",
+      icon: CreditCard,
+      items: [
+        {
+          title: "Loans",
+          url: "#",
+          icon: HandCoins,
+        },
+      ],
+    },
+    {
       title: "Investment Strategies",
       url: "#",
       icon: ChartNoAxesCombined,
@@ -138,8 +156,15 @@ const data = {
   ],
   navigationTools: [
     {
-      title: "Financial Calculators",
-      url: "/calculator",
+      title: "Interest Calculators",
+      url: "/calculators/interest",
+      icon: Calculator,
+      isActive: true,
+      items: [],
+    },
+    {
+      title: "Loan Calculators",
+      url: "/calculators/loan",
       icon: Calculator,
       isActive: true,
       items: [],

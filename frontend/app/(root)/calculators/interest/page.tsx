@@ -51,7 +51,7 @@ export default function FinancialCalculatorsPage() {
       <div className="flex flex-col items-center mb-10">
         <div className="flex items-center gap-2 mb-4">
           <Calculator className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Financial Calculators</h1>
+          <h1 className="text-3xl font-bold">Interest Calculators</h1>
         </div>
         <p className="text-muted-foreground text-center max-w-2xl">
           Powerful financial tools to help you make better investment decisions.
@@ -126,12 +126,12 @@ function InterestRateCalculator() {
     const compoundInterest = calculateAverageCompoundInterest(
       pointA,
       pointB,
-      timeInterval
+      timeInterval,
     );
     const simpleInterest = calculateAverageInterest(
       pointA,
       pointB,
-      timeInterval
+      timeInterval,
     );
 
     return {
@@ -315,13 +315,13 @@ function TimeDurationCalculator() {
     const compoundDuration = calculateCapitalGainDurationWithCompoundInterest(
       startingCapital,
       targetCapital,
-      interestRateDecimal
+      interestRateDecimal,
     );
 
     const simpleDuration = calculateCapitalGainDurationWithInterest(
       startingCapital,
       targetCapital,
-      interestRateDecimal
+      interestRateDecimal,
     );
 
     return {
@@ -489,13 +489,13 @@ function FutureValueCalculator() {
     const compoundFutureValue = calculateEndCapitalValueWithCompoundInterest(
       startingCapital,
       interestRateDecimal,
-      timePeriod
+      timePeriod,
     );
 
     const simpleFutureValue = calculateEndCapitalValueWithInterest(
       startingCapital,
       interestRateDecimal,
-      timePeriod
+      timePeriod,
     );
 
     return {
@@ -672,13 +672,13 @@ function StartingValueCalculator() {
       calculateStartCapitalValueWithCompoundInterest(
         targetCapital,
         interestRateDecimal,
-        timePeriod
+        timePeriod,
       );
 
     const simpleStartingValue = calculateStartCapitalValueWithInterest(
       targetCapital,
       interestRateDecimal,
-      timePeriod
+      timePeriod,
     );
 
     return {

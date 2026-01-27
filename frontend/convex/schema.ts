@@ -173,6 +173,141 @@ export default defineSchema({
     .index("by_snaptrade_id", ["snaptradeActivityId"]),
 
   // ═══════════════════════════════════════════════════════════════
+  // LOANS (Debt Management)
+  // ═══════════════════════════════════════════════════════════════
+
+  loans: defineTable({
+    userId: v.string(), // Clerk user ID
+
+    // Basic Loan Information
+    name: v.string(), // User-friendly name (e.g., "Home Mortgage", "Car Loan")
+    loanType: v.union(
+      v.literal("ANNUITY"),
+      v.literal("CONSTANT_PRINCIPAL"),
+      v.literal("BULLET"),
+      v.literal("INTEREST_ONLY_THEN"),
+    ),
+
+    // Financial Details
+    originalPrincipal: v.number(), // Original loan amount
+    currentBalance: v.number(), // Current outstanding balance
+    annualInterestRate: v.number(), // Interest rate as decimal (e.g., 0.05 for 5%)
+    currency: v.string(), // ISO currency code
+
+    // Term & Schedule
+    termMonths: v.number(), // Original loan term in months
+    paymentFrequency: v.union(
+      v.literal("MONTHLY"),
+      v.literal("QUARTERLY"),
+      v.literal("SEMI_ANNUAL"),
+      v.literal("ANNUAL"),
+    ),
+    scheduledPayment: v.number(), // Regular payment amount
+
+    // Dates
+    startDate: v.string(), // Loan start date (ISO)
+    expectedEndDate: v.string(), // Original expected end date (ISO)
+    actualEndDate: v.optional(v.string()), // Actual end date if paid off
+    nextPaymentDate: v.string(), // Next scheduled payment date
+
+    // Interest-Only Specific
+    gracePeriods: v.optional(v.number()), // For INTEREST_ONLY_THEN type
+
+    // Prepayment Rules
+    maxAnnualPrepaymentRate: v.optional(v.number()), // Max prepayment as % of principal
+    prepaymentPenaltyRate: v.optional(v.number()), // Penalty rate for prepayment
+
+    // Contract Details
+    lender: v.optional(v.string()), // Bank/lender name
+    contractNumber: v.optional(v.string()), // Loan/contract number
+    collateral: v.optional(v.string()), // What secures the loan
+
+    // Status
+    status: v.union(
+      v.literal("active"),
+      v.literal("paid_off"),
+      v.literal("defaulted"),
+      v.literal("refinanced"),
+    ),
+
+    // Notes
+    notes: v.optional(v.string()), // Contract-specific comments/notes
+
+    // Metadata
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status", ["userId", "status"])
+    .index("by_next_payment", ["userId", "nextPaymentDate"]),
+
+  loanPayments: defineTable({
+    userId: v.string(),
+    loanId: v.id("loans"),
+
+    // Payment Details
+    paymentDate: v.string(), // When payment was made (ISO)
+    scheduledDate: v.optional(v.string()), // When it was supposed to be paid
+
+    amount: v.number(), // Total payment amount
+    principalPortion: v.number(), // Amount applied to principal
+    interestPortion: v.number(), // Amount applied to interest
+    feesPortion: v.optional(v.number()), // Any fees included
+
+    // Payment Type
+    paymentType: v.union(
+      v.literal("scheduled"), // Regular scheduled payment
+      v.literal("additional_principal"), // Extra principal added to scheduled payment
+      v.literal("prepayment"), // One-time unscheduled prepayment
+      v.literal("final"), // Final payoff payment
+      v.literal("partial"), // Partial payment (less than scheduled)
+      v.literal("late"), // Late payment
+    ),
+
+    // Balance Tracking
+    balanceAfterPayment: v.number(), // Remaining balance after this payment
+
+    // Notes
+    notes: v.optional(v.string()),
+
+    // Metadata
+    createdAt: v.number(),
+  })
+    .index("by_loan", ["loanId"])
+    .index("by_user", ["userId"])
+    .index("by_date", ["userId", "paymentDate"]),
+
+  loanScenarios: defineTable({
+    userId: v.string(),
+    loanId: v.id("loans"),
+
+    name: v.string(), // Scenario name
+    description: v.optional(v.string()),
+
+    // Scenario Configuration
+    extraMonthlyPayment: v.optional(v.number()),
+    oneTimePrepayments: v.optional(
+      v.array(
+        v.object({
+          date: v.string(),
+          amount: v.number(),
+        }),
+      ),
+    ),
+    newInterestRate: v.optional(v.number()), // For refinancing scenarios
+
+    // Calculated Results (cached)
+    projectedEndDate: v.optional(v.string()),
+    totalInterestSaved: v.optional(v.number()),
+    monthsSaved: v.optional(v.number()),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_loan", ["loanId"])
+    .index("by_user", ["userId"]),
+
+  // ═══════════════════════════════════════════════════════════════
   // USER SETTINGS
   // ═══════════════════════════════════════════════════════════════
 

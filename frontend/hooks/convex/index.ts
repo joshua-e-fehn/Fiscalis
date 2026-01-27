@@ -53,3 +53,26 @@ export {
   useRenameBrokerConnection,
   useBrokerPositionsByConnection,
 } from "./brokers";
+
+// Re-export all Convex loans hooks
+export {
+  // Query hooks
+  useLoans,
+  useActiveLoans,
+  useLoan,
+  useLoanWithPayments,
+  useLoanPayments,
+  useUpcomingPayments,
+  useLoanScenarios,
+  useLoansSummary,
+  // Mutation hooks
+  useCreateLoan,
+  useUpdateLoan,
+  useDeleteLoan,
+  useRecordPayment,
+  useUpdatePayment,
+  useDeletePayment,
+  useSaveScenario,
+  useUpdateScenario,
+  useDeleteScenario,
+} from "./loans";

@@ -570,7 +570,7 @@ function ExtraPaymentsSection({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Gift className="h-5 w-5 text-green-600" />
-          <h4 className="font-semibold">Extra Payments (Prepayments)</h4>
+          <h4 className="font-semibold">Prepayments</h4>
         </div>
         <div className="flex items-center gap-2">
           <Label
@@ -591,10 +591,10 @@ function ExtraPaymentsSection({
 
       {config.enabled && (
         <div className="space-y-4">
-          {/* Recurring Extra Payment */}
+          {/* Additional Principal */}
           <div className="space-y-2">
             <Label>
-              Recurring Extra Payment (every{" "}
+              Additional Principal (every{" "}
               {getIntervalLabel(paymentInterval).toLowerCase()})
             </Label>
             <div className="flex items-center gap-2">
@@ -623,17 +623,17 @@ function ExtraPaymentsSection({
             </p>
           </div>
 
-          {/* One-Time Extra Payments */}
+          {/* One-Time Prepayments */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>One-Time Extra Payments</Label>
+              <Label>One-Time Prepayments</Label>
               <Button variant="outline" size="sm" onClick={addOneTimePayment}>
                 <Plus className="h-4 w-4 mr-1" />
-                Add Payment
+                Add Prepayment
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Schedule specific extra payments in certain years (e.g., yearly
+              Schedule specific prepayments in certain years (e.g., yearly
               bonus, inheritance).
             </p>
 
@@ -797,7 +797,7 @@ function ResultsSummary({
         <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg p-4">
           <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
             <Gift className="h-5 w-5" />
-            Extra Payment Savings
+            Prepayment Savings
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>

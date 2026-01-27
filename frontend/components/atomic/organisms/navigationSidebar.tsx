@@ -120,7 +120,7 @@ const data = {
       items: [
         {
           title: "Loans",
-          url: "#",
+          url: "/debt/loans",
           icon: HandCoins,
         },
       ],

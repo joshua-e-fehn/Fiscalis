@@ -39,16 +39,28 @@ import {
 import { useDeleteBrokerConnection } from "@/hooks/convex/brokers";
 import { Id } from "@/convex/_generated/dataModel";
 
-// Broker connection type from Convex
+// Broker connection type from Convex (updated for SnapTrade)
 interface BrokerConnection {
   _id: Id<"brokerConnections">;
-  connectionName: string;
-  brokerType: string;
-  status: "connected" | "disconnected" | "error" | "pending";
-  accountId?: string;
-  username?: string;
+  // SnapTrade fields
+  brokerName: string;
+  brokerSlug: string;
+  brokerLogo?: string;
+  status:
+    | "connected"
+    | "disconnected"
+    | "error"
+    | "pending"
+    | "syncing"
+    | "reauth_required";
+  authorizationId?: string;
   lastSyncAt?: number;
   errorMessage?: string;
+  // Legacy fields (for backward compatibility - will be removed)
+  connectionName?: string;
+  brokerType?: string;
+  accountId?: string;
+  username?: string;
 }
 
 interface BrokerConnectionCardProps {
@@ -61,6 +73,12 @@ export function BrokerConnectionCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const deleteConnection = useDeleteBrokerConnection();
+
+  // Use SnapTrade fields with fallback to legacy fields
+  const displayName =
+    connection.brokerName || connection.connectionName || "Unknown Broker";
+  const brokerType =
+    connection.brokerSlug || connection.brokerType || "unknown";
 
   const handleDelete = async () => {
     try {
@@ -146,11 +164,11 @@ export function BrokerConnectionCard({
               </div>
               <div>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  {connection.connectionName}
+                  {displayName}
                   {getStatusIcon()}
                 </CardTitle>
                 <CardDescription className="text-sm">
-                  {formatBrokerType(connection.brokerType)}
+                  {formatBrokerType(brokerType)}
                 </CardDescription>
               </div>
             </div>

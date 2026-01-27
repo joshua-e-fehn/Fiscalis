@@ -47,6 +47,8 @@
     "react-map-gl": "^8.1.0",
     "react-plaid-link": "^3.6.1",
     "recharts": "^2.15.4",
+    "snaptrade-react": "^3.2.5",
+    "snaptrade-typescript-sdk": "^9.0.160",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.25.76"

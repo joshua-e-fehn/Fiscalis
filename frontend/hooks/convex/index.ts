@@ -19,15 +19,37 @@ export {
 
 // Re-export all Convex broker hooks
 export {
+  // SnapTrade user hooks
+  useSnaptradeUser,
+  useRegisterSnaptrade,
+  useDeleteSnaptradeUser,
+  // SnapTrade connection hooks
+  useCreateConnectUrl,
+  useHandleCallback,
+  useDeleteConnection,
+  useSnaptradeConnect,
+  // Connection queries
   useBrokerConnections,
   useBrokerConnection,
   useConnectionsNeedingAttention,
-  useCreateBrokerConnection,
-  useUpdateConnectionStatus,
-  useDeleteBrokerConnection,
-  useRenameBrokerConnection,
+  // Account queries
+  useBrokerAccounts,
+  // Position queries
   useBrokerPositions,
-  useBrokerPositionsByConnection,
   useBrokerPositionsBySymbol,
   usePortfolioSummary,
+  // Transaction queries
+  useBrokerTransactions,
+  // Sync hooks
+  useSyncPositions,
+  useSyncAll,
+  // Broker discovery hooks
+  useListBrokers,
+  useSearchBrokers,
+  // Legacy hooks (deprecated, will be removed in Phase 6)
+  useCreateBrokerConnection,
+  useDeleteBrokerConnection,
+  useUpdateConnectionStatus,
+  useRenameBrokerConnection,
+  useBrokerPositionsByConnection,
 } from "./brokers";

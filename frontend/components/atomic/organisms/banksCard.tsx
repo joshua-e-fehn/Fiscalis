@@ -1,6 +1,11 @@
 "use client";
 
-import { useAccounts, useItemsNeedingReauth } from "@/hooks/banking";
+import {
+  usePlaidAccounts,
+  useItemsNeedingReauth,
+  usePlaidItems,
+  useRefreshAccounts,
+} from "@/hooks/convex";
 import {
   Card,
   CardContent,
@@ -9,26 +14,41 @@ import {
   CardDescription,
 } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
-import { Building2, CreditCard, Plus } from "lucide-react";
+import { Building2, CreditCard, Plus, RefreshCw, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/shadcn/button";
 
 import { BankAccountsCard } from "@/components/atomic/molecules/bankAccountsCard";
 import { BankReauthCard } from "@/components/atomic/molecules/bankReauthCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
 
 export function BanksCard() {
-  const { data: accounts, isLoading, error } = useAccounts();
-  const { data: itemsNeedingReauth } = useItemsNeedingReauth();
+  const accounts = usePlaidAccounts();
+  const itemsNeedingReauth = useItemsNeedingReauth();
+  const items = usePlaidItems();
+  const refreshAccounts = useRefreshAccounts();
 
-  const institutionList = Array.from(
-    new Map(
-      accounts
-        ?.filter((account) => account.institution)
-        .map((account) => [account.institution?.itemId, account.institution]),
-    ).values(),
-  ).sort((a, b) => (a?.name ?? "").localeCompare(b?.name ?? ""));
+  // Loading state - Convex returns undefined while loading
+  const isLoading = accounts === undefined || items === undefined;
+  const error = null; // Convex throws on error, no error state
+
+  // Check if we have items but no accounts (need to sync)
+  const hasItems = items && items.length > 0;
+  const hasAccounts = accounts && accounts.length > 0;
+  const needsSync = hasItems && !hasAccounts;
+
+  // Group accounts by item (institution)
+  const accountsByItem = new Map<string, typeof accounts>();
+  if (accounts) {
+    for (const account of accounts) {
+      const itemId = account.itemId;
+      if (!accountsByItem.has(itemId)) {
+        accountsByItem.set(itemId, []);
+      }
+      accountsByItem.get(itemId)!.push(account);
+    }
+  }
 
   // Check if we have any content to show (accounts OR items needing reauth)
-  const hasAccounts = accounts && accounts.length > 0;
   const hasItemsNeedingReauth =
     itemsNeedingReauth && itemsNeedingReauth.length > 0;
   const hasAnyContent = hasAccounts || hasItemsNeedingReauth;
@@ -81,6 +101,44 @@ export function BanksCard() {
 
   // Empty state - no accounts and no items needing reauth
   if (!hasAnyContent) {
+    // If we have items but no accounts, offer to sync
+    if (needsSync) {
+      return (
+        <Card className="mb-8">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-4 mb-4">
+                <RefreshCw className="h-10 w-10 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Sync Your Accounts</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                You have {items?.length} bank connection
+                {items?.length !== 1 ? "s" : ""} but no accounts synced yet.
+                Click below to fetch your account data.
+              </p>
+              <Button
+                onClick={() => refreshAccounts.mutate()}
+                disabled={refreshAccounts.isLoading}
+                size="lg"
+              >
+                {refreshAccounts.isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Sync Accounts
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card className="mb-8">
         <CardContent className="pt-6">
@@ -117,17 +175,18 @@ export function BanksCard() {
 
         {/* Show connected accounts */}
         {hasAccounts &&
-          institutionList.map((institution) => {
-            const institutionAccounts = accounts.filter(
-              (account) => account.institution?.itemId === institution?.itemId,
-            );
-            if (institutionAccounts.length === 0) {
+          items &&
+          items.map((item) => {
+            const itemAccounts = accountsByItem.get(item.itemId) || [];
+            if (itemAccounts.length === 0) {
               return null;
             }
             return (
               <BankAccountsCard
-                key={institution?.itemId}
-                institutionAccounts={institutionAccounts}
+                key={item.itemId}
+                itemId={item.itemId}
+                institutionName={item.institutionName || "Unknown Bank"}
+                accounts={itemAccounts}
               />
             );
           })}

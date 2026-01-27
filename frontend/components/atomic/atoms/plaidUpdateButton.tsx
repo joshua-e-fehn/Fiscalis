@@ -5,9 +5,18 @@ import { usePlaidLink as usePlaidLinkReact } from "react-plaid-link";
 import { Button } from "@/components/ui/shadcn/button";
 import { Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import {
-  usePlaidLink as usePlaidHooks,
-  ItemNeedingReauth,
-} from "@/hooks/banking";
+  useCreateUpdateLinkToken,
+  useRefreshAccounts,
+} from "@/hooks/convex/banking";
+
+// Type for items needing reauth from Convex
+export interface ItemNeedingReauth {
+  itemId: string;
+  institutionId?: string;
+  institutionName?: string;
+  status: string;
+  errorCode?: string;
+}
 
 interface PlaidUpdateButtonProps {
   item: ItemNeedingReauth;
@@ -23,39 +32,41 @@ export function PlaidUpdateButton({
   size = "sm",
 }: PlaidUpdateButtonProps) {
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
 
-  const { getUpdateLinkToken, onUpdateSuccess } = usePlaidHooks();
+  const createUpdateLinkToken = useCreateUpdateLinkToken();
+  const refreshAccounts = useRefreshAccounts();
 
   // Get an update link token
   const handleReconnect = useCallback(async () => {
-    if (token || linkOpen || isLoading) return;
+    if (token || linkOpen || createUpdateLinkToken.isLoading) return;
 
-    setIsLoading(true);
     try {
-      const { linkToken } = await getUpdateLinkToken(item.itemId);
-      setToken(linkToken);
+      const result = await createUpdateLinkToken.mutate(item.itemId);
+      setToken(result.linkToken);
     } catch (error) {
       console.error("Failed to get update link token", error);
-      setIsLoading(false);
     }
-  }, [token, linkOpen, isLoading, getUpdateLinkToken, item.itemId]);
+  }, [token, linkOpen, createUpdateLinkToken, item.itemId]);
 
   // Reset states
   const resetStates = useCallback(() => {
     setLinkOpen(false);
-    setIsLoading(false);
     setToken(null);
   }, []);
 
   // Success handler for update mode
-  const handleSuccess = useCallback(() => {
-    // In update mode, no public_token is returned - just refresh data
-    onUpdateSuccess();
+  const handleSuccess = useCallback(async () => {
+    // In update mode, no public_token is returned
+    // Refresh accounts to update item status
+    try {
+      await refreshAccounts.mutate(item.itemId);
+    } catch (error) {
+      console.error("Failed to refresh accounts after reconnect", error);
+    }
     onSuccess?.();
     resetStates();
-  }, [onUpdateSuccess, onSuccess, resetStates]);
+  }, [refreshAccounts, item.itemId, onSuccess, resetStates]);
 
   // Initialize Plaid Link in update mode
   const { open, ready } = usePlaidLinkReact({
@@ -70,7 +81,8 @@ export function PlaidUpdateButton({
     if (token && ready) open();
   }, [token, ready, open]);
 
-  const isDisabled = isLoading || linkOpen || (!!token && !ready);
+  const isDisabled =
+    createUpdateLinkToken.isLoading || linkOpen || (!!token && !ready);
 
   return (
     <Button
@@ -80,7 +92,7 @@ export function PlaidUpdateButton({
       size={size}
       className="flex items-center gap-2"
     >
-      {isLoading ? (
+      {createUpdateLinkToken.isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin" />
       ) : (
         <RefreshCw className="h-4 w-4" />

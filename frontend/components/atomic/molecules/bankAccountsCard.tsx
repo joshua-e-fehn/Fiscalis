@@ -29,29 +29,49 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Landmark, MoreHorizontal, RefreshCw, Unlink } from "lucide-react";
 
 import { BankAccountCard } from "@/components/atomic/atoms/bankAccountCard";
-import { PlaidAccount } from "@/lib/types/banking";
-import { useDeleteItem } from "@/hooks/banking";
+import { useDeletePlaidItem, useRefreshAccounts } from "@/hooks/convex";
+
+// Type for Convex account data
+interface ConvexAccount {
+  _id: string;
+  accountId: string;
+  itemId: string;
+  name: string;
+  officialName?: string;
+  type: string;
+  subtype?: string;
+  mask?: string;
+  currentBalance?: number;
+  availableBalance?: number;
+  currency: string;
+}
+
+interface BankAccountsCardProps {
+  itemId: string;
+  institutionName: string;
+  accounts: ConvexAccount[];
+}
 
 export function BankAccountsCard({
-  institutionAccounts,
-}: {
-  institutionAccounts: PlaidAccount[];
-}) {
-  const deleteItem = useDeleteItem();
+  itemId,
+  institutionName,
+  accounts,
+}: BankAccountsCardProps) {
+  const deleteItem = useDeletePlaidItem();
+  const refreshAccounts = useRefreshAccounts();
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
-  if (!institutionAccounts || institutionAccounts.length === 0) {
+  if (!accounts || accounts.length === 0) {
     return null;
   }
 
-  const itemId = institutionAccounts[0]?.institution?.itemId;
-  const institutionName =
-    institutionAccounts[0]?.institution?.name || "this bank";
-
-  const handleDisconnect = () => {
-    if (!itemId) return;
-    deleteItem.mutate(itemId);
+  const handleDisconnect = async () => {
+    await deleteItem.mutate(itemId);
     setShowDisconnectDialog(false);
+  };
+
+  const handleRefresh = async () => {
+    await refreshAccounts.mutate(itemId);
   };
 
   return (
@@ -64,8 +84,8 @@ export function BankAccountsCard({
                 <Landmark className="h-7 w-7" /> {institutionName}
               </CardTitle>
               <CardDescription className="mt-1.5">
-                You have connected {institutionAccounts.length} account
-                {institutionAccounts.length !== 1 ? "s" : ""}
+                You have connected {accounts.length} account
+                {accounts.length !== 1 ? "s" : ""}
               </CardDescription>
             </div>
             <DropdownMenu>
@@ -77,16 +97,21 @@ export function BankAccountsCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
-                  onClick={() => window.location.reload()}
+                  onClick={handleRefresh}
+                  disabled={refreshAccounts.isLoading}
                   className="cursor-pointer"
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Refresh accounts
+                  <RefreshCw
+                    className={`mr-2 h-4 w-4 ${refreshAccounts.isLoading ? "animate-spin" : ""}`}
+                  />
+                  {refreshAccounts.isLoading
+                    ? "Refreshing..."
+                    : "Refresh accounts"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowDisconnectDialog(true)}
-                  disabled={deleteItem.isPending || !itemId}
+                  disabled={deleteItem.isLoading}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <Unlink className="mr-2 h-4 w-4" />
@@ -97,8 +122,8 @@ export function BankAccountsCard({
           </div>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {institutionAccounts.map((account) => (
-            <BankAccountCard key={account.id} account={account} />
+          {accounts.map((account) => (
+            <BankAccountCard key={account._id} account={account} />
           ))}
         </CardContent>
       </Card>
@@ -115,9 +140,9 @@ export function BankAccountsCard({
             </AlertDialogTitle>
             <AlertDialogDescription className="text-left">
               This will remove{" "}
-              {institutionAccounts.length === 1
+              {accounts.length === 1
                 ? "your connected account"
-                : `all ${institutionAccounts.length} accounts`}{" "}
+                : `all ${accounts.length} accounts`}{" "}
               from your dashboard.
               <br />
               <br />
@@ -133,7 +158,7 @@ export function BankAccountsCard({
               onClick={handleDisconnect}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteItem.isPending ? "Disconnecting..." : "Disconnect"}
+              {deleteItem.isLoading ? "Disconnecting..." : "Disconnect"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

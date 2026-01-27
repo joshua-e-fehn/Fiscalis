@@ -21,8 +21,45 @@ import {
   SelectValue,
 } from "@/components/ui/shadcn/select";
 import { Plus, TrendingUp } from "lucide-react";
-import { useCreateBrokerConnection } from "@/hooks/brokers";
-import { AVAILABLE_BROKERS, BrokerType } from "@/lib/types/brokers";
+import { useCreateBrokerConnection } from "@/hooks/convex/brokers";
+
+// Broker types
+type BrokerType =
+  | "interactive_brokers"
+  | "degiro"
+  | "trade_republic"
+  | "scalable_capital";
+
+const AVAILABLE_BROKERS = [
+  {
+    type: "interactive_brokers" as BrokerType,
+    name: "Interactive Brokers",
+    description: "Professional trading platform with global market access",
+    supported: true,
+    comingSoon: false,
+  },
+  {
+    type: "degiro" as BrokerType,
+    name: "DEGIRO",
+    description: "European low-cost broker",
+    supported: false,
+    comingSoon: true,
+  },
+  {
+    type: "trade_republic" as BrokerType,
+    name: "Trade Republic",
+    description: "German mobile broker",
+    supported: false,
+    comingSoon: true,
+  },
+  {
+    type: "scalable_capital" as BrokerType,
+    name: "Scalable Capital",
+    description: "Digital wealth management",
+    supported: false,
+    comingSoon: true,
+  },
+];
 
 export function AddBrokerButton() {
   const [open, setOpen] = useState(false);
@@ -35,13 +72,15 @@ export function AddBrokerButton() {
 
   const createConnection = useCreateBrokerConnection();
 
-  const selectedBroker = AVAILABLE_BROKERS.find((b) => b.type === brokerType);
+  const selectedBroker = AVAILABLE_BROKERS.find(
+    (b: (typeof AVAILABLE_BROKERS)[number]) => b.type === brokerType,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
-      await createConnection.mutateAsync({
+      await createConnection.mutate({
         brokerType,
         connectionName: connectionName || selectedBroker?.name || "My Broker",
         accountId: accountId || undefined,
@@ -104,22 +143,24 @@ export function AddBrokerButton() {
                   <SelectValue placeholder="Select a broker" />
                 </SelectTrigger>
                 <SelectContent>
-                  {AVAILABLE_BROKERS.map((broker) => (
-                    <SelectItem
-                      key={broker.type}
-                      value={broker.type}
-                      disabled={!broker.supported}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{broker.name}</span>
-                        {broker.comingSoon && (
-                          <span className="text-xs text-muted-foreground">
-                            (Coming Soon)
-                          </span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {AVAILABLE_BROKERS.map(
+                    (broker: (typeof AVAILABLE_BROKERS)[number]) => (
+                      <SelectItem
+                        key={broker.type}
+                        value={broker.type}
+                        disabled={!broker.supported}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{broker.name}</span>
+                          {broker.comingSoon && (
+                            <span className="text-xs text-muted-foreground">
+                              (Coming Soon)
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
               {selectedBroker && (
@@ -183,8 +224,8 @@ export function AddBrokerButton() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={createConnection.isPending}>
-              {createConnection.isPending ? "Adding..." : "Add Broker"}
+            <Button type="submit" disabled={createConnection.isLoading}>
+              {createConnection.isLoading ? "Adding..." : "Add Broker"}
             </Button>
           </DialogFooter>
         </form>

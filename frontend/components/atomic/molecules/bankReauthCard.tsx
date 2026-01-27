@@ -26,21 +26,24 @@ import {
 } from "@/components/ui/shadcn/alert-dialog";
 import { Button } from "@/components/ui/shadcn/button";
 import { Landmark, AlertCircle, MoreHorizontal, Unlink } from "lucide-react";
-import { ItemNeedingReauth, useDeleteItem } from "@/hooks/banking";
-import { PlaidUpdateButton } from "@/components/atomic/atoms/plaidUpdateButton";
+import { useDeletePlaidItem } from "@/hooks/convex/banking";
+import {
+  PlaidUpdateButton,
+  ItemNeedingReauth,
+} from "@/components/atomic/atoms/plaidUpdateButton";
 
 interface BankReauthCardProps {
   item: ItemNeedingReauth;
 }
 
 export function BankReauthCard({ item }: BankReauthCardProps) {
-  const deleteItem = useDeleteItem();
+  const deleteItem = useDeletePlaidItem();
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
   const institutionName = item.institutionName || "Unknown Bank";
 
-  const handleDisconnect = () => {
-    deleteItem.mutate(item.itemId);
+  const handleDisconnect = async () => {
+    await deleteItem.mutate(item.itemId);
     setShowDisconnectDialog(false);
   };
 
@@ -73,7 +76,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem
                   onClick={() => setShowDisconnectDialog(true)}
-                  disabled={deleteItem.isPending}
+                  disabled={deleteItem.isLoading}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <Unlink className="mr-2 h-4 w-4" />
@@ -137,7 +140,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
               onClick={handleDisconnect}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteItem.isPending ? "Disconnecting..." : "Disconnect"}
+              {deleteItem.isLoading ? "Disconnecting..." : "Disconnect"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

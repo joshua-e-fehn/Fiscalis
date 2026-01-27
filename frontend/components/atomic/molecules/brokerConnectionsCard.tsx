@@ -9,12 +9,16 @@ import {
 } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { TrendingUp } from "lucide-react";
-import { useBrokerConnections } from "@/hooks/brokers";
+import { useBrokerConnections } from "@/hooks/convex/brokers";
 import { BrokerConnectionCard } from "@/components/atomic/atoms/brokerConnectionCard";
 import { AddBrokerButton } from "@/components/atomic/atoms/addBrokerButton";
 
 export function BrokerConnectionsCard() {
-  const { data: connections, isLoading, error } = useBrokerConnections();
+  const connections = useBrokerConnections();
+
+  // Convex returns undefined while loading
+  const isLoading = connections === undefined;
+  const error = null; // Convex throws on error
 
   if (isLoading) {
     return (
@@ -85,9 +89,9 @@ export function BrokerConnectionsCard() {
       <CardContent>
         {hasConnections ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {connections.map((connection) => (
+            {connections.map((connection: (typeof connections)[number]) => (
               <BrokerConnectionCard
-                key={connection.id}
+                key={connection._id}
                 connection={connection}
               />
             ))}

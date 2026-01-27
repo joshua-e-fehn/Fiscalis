@@ -7,8 +7,22 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/shadcn/card";
-import { PlaidAccount } from "@/lib/types/banking";
 import { Building, CreditCard, Wallet } from "lucide-react";
+
+// Account type from Convex
+export interface ConvexAccount {
+  _id: string;
+  accountId: string;
+  name: string;
+  officialName?: string;
+  type: string;
+  subtype?: string;
+  mask?: string;
+  currentBalance?: number;
+  availableBalance?: number;
+  currency: string;
+  institutionName?: string;
+}
 
 // Account icon based on type
 const AccountIcon = ({ type }: { type: string }) => {
@@ -22,14 +36,17 @@ const AccountIcon = ({ type }: { type: string }) => {
   }
 };
 
-export function BankAccountCard({ account }: { account: PlaidAccount }) {
+export function BankAccountCard({ account }: { account: ConvexAccount }) {
+  const hasBalance = account.currentBalance !== undefined;
+  const currency = account.currency || "USD";
+
   return (
-    <Card key={account.id}>
+    <Card key={account._id}>
       <CardHeader className="flex flex-row items-center gap-2">
         <div>
           <CardTitle className="text-base">{account.name}</CardTitle>
           <CardDescription>
-            {account.institution?.name || "Bank Account"}
+            {account.officialName || account.subtype || "Bank Account"}
           </CardDescription>
         </div>
         <div className="ml-auto">
@@ -38,21 +55,23 @@ export function BankAccountCard({ account }: { account: PlaidAccount }) {
       </CardHeader>
       <CardContent>
         <div>
-          {account.balance && (
+          {hasBalance && (
             <>
               <p className="font-semibold text-2xl">
-                {account.balance.current.toLocaleString(undefined, {
+                {account.currentBalance!.toLocaleString(undefined, {
                   style: "currency",
-                  currency: account.balance.currency,
+                  currency,
                 })}
               </p>
-              <p className="text-sm text-muted-foreground">
-                Available:{" "}
-                {account.balance.available.toLocaleString(undefined, {
-                  style: "currency",
-                  currency: account.balance.currency,
-                })}
-              </p>
+              {account.availableBalance !== undefined && (
+                <p className="text-sm text-muted-foreground">
+                  Available:{" "}
+                  {account.availableBalance.toLocaleString(undefined, {
+                    style: "currency",
+                    currency,
+                  })}
+                </p>
+              )}
             </>
           )}
         </div>

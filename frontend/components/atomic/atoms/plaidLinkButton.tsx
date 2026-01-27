@@ -4,7 +4,11 @@ import { useState, useCallback, useEffect } from "react";
 import { usePlaidLink } from "react-plaid-link";
 import { Button } from "@/components/ui/shadcn/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
-import { usePlaidLink as usePlaidHooks, useAccounts } from "@/hooks/banking";
+import {
+  useCreateLinkToken,
+  useExchangeToken,
+  usePlaidAccounts,
+} from "@/hooks/convex";
 
 export function PlaidLinkButton() {
   const [token, setToken] = useState<string | null>(null);
@@ -12,8 +16,9 @@ export function PlaidLinkButton() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
 
-  const { getLinkToken, exchangeToken } = usePlaidHooks();
-  const { data: accounts, isLoading: accountsLoading } = useAccounts();
+  const createLinkToken = useCreateLinkToken();
+  const exchangeTokenHook = useExchangeToken();
+  const accounts = usePlaidAccounts();
 
   // Get a link token and open Plaid
   const handleConnectBank = useCallback(async () => {
@@ -21,13 +26,13 @@ export function PlaidLinkButton() {
 
     setIsLoading(true);
     try {
-      const { linkToken } = await getLinkToken();
-      setToken(linkToken);
+      const result = await createLinkToken.mutate();
+      setToken(result.linkToken);
     } catch (error) {
       console.error("Failed to get link token", error);
       setIsLoading(false);
     }
-  }, [token, linkOpen, isLoading, getLinkToken]);
+  }, [token, linkOpen, isLoading, createLinkToken]);
 
   // Reset all states
   const resetStates = useCallback(() => {
@@ -40,7 +45,7 @@ export function PlaidLinkButton() {
   const onSuccess = useCallback(
     async (public_token: string, metadata: any) => {
       try {
-        await exchangeToken({
+        await exchangeTokenHook.mutate({
           publicToken: public_token,
           institutionId: metadata.institution?.institution_id,
           institutionName: metadata.institution?.name,
@@ -55,7 +60,7 @@ export function PlaidLinkButton() {
         resetStates();
       }
     },
-    [exchangeToken, resetStates],
+    [exchangeTokenHook, resetStates],
   );
 
   // Initialize Plaid Link
@@ -72,11 +77,12 @@ export function PlaidLinkButton() {
   }, [token, ready, open]);
 
   // Determine button state and text
+  const accountsLoading = accounts === undefined;
   const isDisabled =
     isLoading || accountsLoading || linkOpen || (!!token && !ready);
   const buttonText = linkOpen
     ? "Connecting..."
-    : accounts?.length
+    : accounts && accounts.length > 0
       ? "Connect Another Bank"
       : "Connect Your Bank";
 

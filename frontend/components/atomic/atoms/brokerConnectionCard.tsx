@@ -36,11 +36,20 @@ import {
   CheckCircle2,
   Clock,
 } from "lucide-react";
-import { BrokerConnection } from "@/lib/types/brokers";
-import {
-  useDeleteBrokerConnection,
-  useSyncBrokerConnection,
-} from "@/hooks/brokers";
+import { useDeleteBrokerConnection } from "@/hooks/convex/brokers";
+import { Id } from "@/convex/_generated/dataModel";
+
+// Broker connection type from Convex
+interface BrokerConnection {
+  _id: Id<"brokerConnections">;
+  connectionName: string;
+  brokerType: string;
+  status: "connected" | "disconnected" | "error" | "pending";
+  accountId?: string;
+  username?: string;
+  lastSyncAt?: number;
+  errorMessage?: string;
+}
 
 interface BrokerConnectionCardProps {
   connection: BrokerConnection;
@@ -52,11 +61,10 @@ export function BrokerConnectionCard({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const deleteConnection = useDeleteBrokerConnection();
-  const syncConnection = useSyncBrokerConnection();
 
   const handleDelete = async () => {
     try {
-      await deleteConnection.mutateAsync(connection.id);
+      await deleteConnection.mutate(connection._id);
       setShowDeleteDialog(false);
     } catch (error) {
       console.error("Failed to delete broker:", error);
@@ -64,11 +72,8 @@ export function BrokerConnectionCard({
   };
 
   const handleSync = async () => {
-    try {
-      await syncConnection.mutateAsync(connection.id);
-    } catch (error) {
-      console.error("Failed to sync broker:", error);
-    }
+    // Sync functionality - just a placeholder for now
+    console.log("Sync requested for:", connection._id);
   };
 
   const getStatusIcon = () => {
@@ -119,7 +124,7 @@ export function BrokerConnectionCard({
       .join(" ");
   };
 
-  const formatDate = (date: Date | string | null) => {
+  const formatDate = (date: number | null | undefined) => {
     if (!date) return "Never";
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
@@ -158,16 +163,9 @@ export function BrokerConnectionCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={handleSync}
-                  disabled={syncConnection.isPending}
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 ${
-                      syncConnection.isPending ? "animate-spin" : ""
-                    }`}
-                  />
-                  {syncConnection.isPending ? "Syncing..." : "Sync Now"}
+                <DropdownMenuItem onClick={handleSync}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Sync Now
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -246,7 +244,7 @@ export function BrokerConnectionCard({
               onClick={handleDelete}
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
             >
-              {deleteConnection.isPending ? "Disconnecting..." : "Disconnect"}
+              {deleteConnection.isLoading ? "Disconnecting..." : "Disconnect"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

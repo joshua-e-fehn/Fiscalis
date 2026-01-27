@@ -8,12 +8,13 @@ This document provides a comprehensive overview of the Fiscalis application arch
 2. [Repository Structure](#repository-structure)
 3. [Technology Stack](#technology-stack)
 4. [Data Flow Architecture](#data-flow-architecture)
-5. [API Layer (Hono)](#api-layer-hono)
-6. [Database Layer (Drizzle + Neon)](#database-layer-drizzle--neon)
-7. [Client-Side Data Management](#client-side-data-management)
-8. [Authentication Flow (Clerk)](#authentication-flow-clerk)
-9. [External Integrations](#external-integrations)
-10. [Component Architecture](#component-architecture)
+5. [Convex Backend](#convex-backend)
+6. [API Layer (Hono)](#api-layer-hono)
+7. [Database Layer](#database-layer)
+8. [Client-Side Data Management](#client-side-data-management)
+9. [Authentication Flow (Clerk)](#authentication-flow-clerk)
+10. [External Integrations](#external-integrations)
+11. [Component Architecture](#component-architecture)
 
 ---
 
@@ -31,50 +32,67 @@ This document provides a comprehensive overview of the Fiscalis application arch
 │  │         │                  │                  │                             ││
 │  │         ▼                  ▼                  ▼                             ││
 │  │  ┌─────────────────────────────────────────────────────────────────────┐   ││
-│  │  │                    React Query (TanStack Query)                      │   ││
-│  │  │  ┌─────────────────────┐    ┌─────────────────────┐                 │   ││
-│  │  │  │   hooks/banking.ts  │    │   hooks/metals.ts   │                 │   ││
-│  │  │  │  - useAccounts()    │    │  - useMetalPrices() │                 │   ││
-│  │  │  │  - useTransactions()│    │  - useMetalLatest() │                 │   ││
-│  │  │  │  - usePlaidLink()   │    │                     │                 │   ││
-│  │  │  └─────────┬───────────┘    └──────────┬──────────┘                 │   ││
-│  │  └────────────┼───────────────────────────┼────────────────────────────┘   ││
-│  │               │                           │                                 ││
-│  │               ▼                           ▼                                 ││
-│  │  ┌─────────────────────────────────────────────────────────────────────┐   ││
-│  │  │                       lib/api/ (Fetch Wrappers)                      │   ││
-│  │  │  ┌─────────────────────┐    ┌─────────────────────┐                 │   ││
-│  │  │  │  lib/api/banking.ts │    │  lib/api/metals.ts  │                 │   ││
-│  │  │  └─────────┬───────────┘    └──────────┬──────────┘                 │   ││
-│  │  └────────────┼───────────────────────────┼────────────────────────────┘   ││
-│  └───────────────┼───────────────────────────┼─────────────────────────────────┘│
-│                  │                           │                                   │
-│                  ▼                           ▼                                   │
-│  ┌─────────────────────────────────────────────────────────────────────────────┐│
-│  │                    API Routes (Hono on Edge Runtime)                        ││
-│  │                     app/(api)/api/[[...route]]/                             ││
-│  │  ┌─────────────────────┐    ┌─────────────────────┐                        ││
-│  │  │     banking.ts      │    │      metals.ts      │                        ││
-│  │  │  /api/banking/*     │    │   /api/metals/*     │                        ││
-│  │  └─────────┬───────────┘    └──────────┬──────────┘                        ││
-│  └────────────┼───────────────────────────┼────────────────────────────────────┘│
-└───────────────┼───────────────────────────┼─────────────────────────────────────┘
-                │                           │
-                ▼                           ▼
-┌───────────────────────────┐    ┌─────────────────────────────────────────────────┐
-│      External APIs        │    │                  DATABASE                        │
-│  ┌─────────────────────┐  │    │  ┌─────────────────────────────────────────────┐│
-│  │      Plaid API      │  │    │  │              Neon PostgreSQL                ││
-│  │  - Link Tokens      │  │    │  │  ┌─────────────────────────────────────────┐││
-│  │  - Accounts         │  │    │  │  │          Drizzle ORM                    │││
-│  │  - Transactions     │  │    │  │  │  - precious_metal_prices                │││
-│  │  - Auth/Identity    │  │    │  │  │  - currency_exchange_rates              │││
-│  └─────────────────────┘  │    │  │  │  - plaid_items                          │││
-└───────────────────────────┘    │  │  │  - plaid_transactions                   │││
-                                 │  │  └─────────────────────────────────────────┘││
-                                 │  └─────────────────────────────────────────────┘│
-                                 └─────────────────────────────────────────────────┘
+│  │  │                        DATA LAYER                                    │   ││
+│  │  │  ┌───────────────────────────┐    ┌───────────────────────────┐     │   ││
+│  │  │  │   hooks/convex/           │    │   hooks/metals.ts         │     │   ││
+│  │  │  │  - usePlaidAccounts()     │    │  - useMetalPrices()       │     │   ││
+│  │  │  │  - usePlaidItems()        │    │  - useMetalLatest()       │     │   ││
+│  │  │  │  - useBrokerConnections() │    │                           │     │   ││
+│  │  │  │  (Convex real-time)       │    │  (React Query + Hono)     │     │   ││
+│  │  │  └───────────┬───────────────┘    └─────────────┬─────────────┘     │   ││
+│  │  └──────────────┼──────────────────────────────────┼───────────────────┘   ││
+│  └─────────────────┼──────────────────────────────────┼────────────────────────┘│
+│                    │                                  │                          │
+└────────────────────┼──────────────────────────────────┼──────────────────────────┘
+                     │                                  │
+                     ▼                                  ▼
+┌────────────────────────────────────┐    ┌────────────────────────────────────────┐
+│           CONVEX BACKEND           │    │         HONO API + NEON DB             │
+│  ┌──────────────────────────────┐  │    │  ┌──────────────────────────────────┐  │
+│  │   Real-time User Data        │  │    │  │    Time-series Data              │  │
+│  │  • plaidItems (encrypted)    │  │    │  │  • precious_metal_prices         │  │
+│  │  • plaidAccounts             │  │    │  │  • currency_exchange_rates       │  │
+│  │  • plaidTransactions         │  │    │  │                                  │  │
+│  │  • brokerConnections         │  │    │  │  /api/metals/*                   │  │
+│  │  • brokerPositions           │  │    │  └──────────────────────────────────┘  │
+│  └──────────────────────────────┘  │    │                                        │
+│                │                   │    │                │                       │
+│                ▼                   │    │                ▼                       │
+│  ┌──────────────────────────────┐  │    │  ┌──────────────────────────────────┐  │
+│  │       Plaid API              │  │    │  │       Neon PostgreSQL            │  │
+│  │  (via Convex actions)        │  │    │  │       (Drizzle ORM)              │  │
+│  └──────────────────────────────┘  │    │  └──────────────────────────────────┘  │
+└────────────────────────────────────┘    └────────────────────────────────────────┘
 ```
+
+### Hybrid Database Architecture
+
+Fiscalis uses a **hybrid architecture** with two backends optimized for different use cases:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         HYBRID DATABASE ARCHITECTURE                             │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│   CONVEX (Real-time, User Data)              NEON PostgreSQL (Time-series)      │
+│   ─────────────────────────────              ──────────────────────────────     │
+│   • plaidItems (encrypted tokens)            • precious_metal_prices             │
+│   • plaidAccounts (cached)                   • currency_exchange_rates           │
+│   • plaidTransactions                                                            │
+│   • brokerConnections                        Accessed via:                       │
+│   • brokerPositions                          • Hono API routes (/api/metals/*)   │
+│                                              • Drizzle ORM                       │
+│   Accessed via:                                                                  │
+│   • Convex hooks (useQuery, useMutation)                                         │
+│   • Convex actions (for Plaid API calls)                                         │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Why Hybrid?**
+
+- **Convex**: Provides real-time reactivity for user data (banking, brokers) with automatic cache invalidation and WebSocket subscriptions
+- **Neon**: Better suited for time-series data with periodic batch updates (metal prices, exchange rates) that doesn't need real-time sync
 
 ---
 
@@ -87,15 +105,26 @@ Fiscalis/
 │   │   ├── (api)/                 # API route group
 │   │   │   └── api/[[...route]]/  # Hono catch-all route
 │   │   │       ├── route.ts       # Hono app setup & exports
-│   │   │       ├── banking.ts     # Banking/Plaid endpoints
 │   │   │       └── metals.ts      # Precious metals endpoints
 │   │   ├── (auth)/                # Auth pages (sign-in, sign-up)
 │   │   ├── (root)/                # Protected app pages
 │   │   │   ├── dashboard/
 │   │   │   ├── banking/
+│   │   │   ├── brokers/
 │   │   │   ├── commodities/
-│   │   │   └── calculator/
+│   │   │   └── calculators/
 │   │   └── (website)/             # Public marketing pages
+│   │
+│   ├── convex/                    # Convex Backend
+│   │   ├── _generated/            # Auto-generated Convex types
+│   │   ├── actions/               # Convex actions (external API calls)
+│   │   │   └── plaid.ts           # Plaid API integration
+│   │   ├── lib/                   # Convex utilities
+│   │   │   └── encryption.ts      # AES-256-GCM encryption
+│   │   ├── auth.config.ts         # Clerk auth configuration
+│   │   ├── schema.ts              # Database schema definition
+│   │   ├── banking.ts             # Banking queries & mutations
+│   │   └── brokers.ts             # Broker queries & mutations
 │   │
 │   ├── components/                # UI Components
 │   │   ├── atomic/                # Atomic Design Pattern
@@ -106,62 +135,178 @@ Fiscalis/
 │   │       ├── shadcn/            # shadcn/ui components
 │   │       └── aceternity/        # Aceternity UI components
 │   │
-│   ├── db/                        # Database configuration
+│   ├── db/                        # Neon Database configuration
 │   │   └── drizzle/
 │   │       ├── drizzle.ts         # DB connection setup
-│   │       └── schema.ts          # Table definitions
+│   │       └── schema.ts          # Table definitions (time-series)
 │   │
-│   ├── hooks/                     # React Query hooks
-│   │   ├── banking.ts             # Banking data hooks
-│   │   └── metals.ts              # Metals data hooks
+│   ├── hooks/                     # Data fetching hooks
+│   │   ├── convex/                # Convex hooks (real-time)
+│   │   │   ├── banking.ts         # Plaid data hooks
+│   │   │   ├── brokers.ts         # Broker data hooks
+│   │   │   └── index.ts           # Hook exports
+│   │   └── metals.ts              # Metals data hooks (React Query)
 │   │
 │   ├── lib/                       # Utilities and helpers
 │   │   ├── api/                   # API fetch functions
-│   │   │   ├── banking.ts
-│   │   │   └── metals.ts
+│   │   │   └── metals.ts          # Metals API wrapper
 │   │   ├── types/                 # TypeScript type definitions
-│   │   │   ├── banking.ts
-│   │   │   └── metals.ts
+│   │   │   └── metals.ts          # Metals types
 │   │   ├── hono.ts                # Hono client setup
-│   │   ├── plaid.ts               # Plaid client setup
 │   │   └── utils.ts               # General utilities
 │   │
 │   ├── providers/                 # React Context Providers
-│   │   └── queryProvider.tsx      # TanStack Query provider
+│   │   └── queryProvider.tsx      # TanStack Query + Convex provider
 │   │
-│   └── proxy.ts                   # Next.js 16 Proxy (formerly middleware)
+│   └── proxy.ts                   # Next.js 16 Proxy (auth middleware)
 │
-├── services/                      # Shared services (frontend + backend)
+├── services/                      # Shared services
 │   └── finance/
 │       └── financeService.ts      # Financial calculations
 │
 └── backend/                       # Backend services
     └── edge_functions/            # Supabase Edge Functions
         └── supabase/
-            └── functions/         # Serverless functions
+            └── functions/         # Scheduled price fetching
 ```
 
 ---
 
 ## Technology Stack
 
-| Layer         | Technology           | Purpose                          |
-| ------------- | -------------------- | -------------------------------- |
-| **Framework** | Next.js 16           | React framework with App Router  |
-| **Runtime**   | Edge Runtime         | Serverless edge functions        |
-| **API**       | Hono                 | Lightweight, fast web framework  |
-| **Database**  | Neon PostgreSQL      | Serverless Postgres              |
-| **ORM**       | Drizzle              | Type-safe SQL ORM                |
-| **Auth**      | Clerk                | Authentication & user management |
-| **State**     | TanStack Query       | Server state management          |
-| **UI**        | shadcn/ui + Tailwind | Component library                |
-| **Banking**   | Plaid                | Bank account integration         |
+### Core Framework & Runtime
+
+| Technology       | Version | Purpose                              |
+| ---------------- | ------- | ------------------------------------ |
+| **Next.js**      | ^16.1.4 | React framework with App Router      |
+| **React**        | ^19.2.3 | UI library                           |
+| **TypeScript**   | ^5.9.3  | Type-safe JavaScript                 |
+| **Bun**          | latest  | JavaScript runtime & package manager |
+| **Edge Runtime** | -       | Serverless edge functions            |
+
+### Real-time Backend (Convex)
+
+| Technology             | Version | Purpose                                     |
+| ---------------------- | ------- | ------------------------------------------- |
+| **Convex**             | ^1.31.6 | Real-time backend for user data             |
+| **convex/react**       | -       | React hooks for Convex queries/mutations    |
+| **convex/react-clerk** | -       | Clerk authentication integration for Convex |
+
+### API Layer
+
+| Technology              | Version  | Purpose                                  |
+| ----------------------- | -------- | ---------------------------------------- |
+| **Hono**                | ^4.11.5  | Lightweight web framework for Edge       |
+| **@hono/clerk-auth**    | ^2.0.1   | Clerk authentication middleware for Hono |
+| **@hono/zod-validator** | ^0.2.2   | Zod validation middleware for Hono       |
+| **Zod**                 | ^3.25.76 | Schema validation & type inference       |
+
+### Database & ORM (Time-series Data)
+
+| Technology                   | Version | Purpose                        |
+| ---------------------------- | ------- | ------------------------------ |
+| **Neon PostgreSQL**          | -       | Serverless PostgreSQL database |
+| **@neondatabase/serverless** | ^0.9.5  | Neon serverless driver         |
+| **Drizzle ORM**              | ^0.31.4 | Type-safe SQL ORM              |
+| **Drizzle Kit**              | ^0.22.8 | Drizzle migrations & CLI       |
+
+### Authentication & Security
+
+| Technology         | Version  | Purpose                          |
+| ------------------ | -------- | -------------------------------- |
+| **Clerk**          | ^6.36.10 | Authentication & user management |
+| **@clerk/backend** | ^2.29.5  | Clerk backend SDK                |
+| **@clerk/nextjs**  | ^6.36.10 | Clerk Next.js integration        |
+
+### State Management & Data Fetching
+
+| Technology                         | Version  | Purpose                                    |
+| ---------------------------------- | -------- | ------------------------------------------ |
+| **TanStack Query**                 | ^5.90.20 | Server state for time-series data (metals) |
+| **@tanstack/react-query-devtools** | ^5.91.2  | Query DevTools for debugging               |
+
+### UI & Styling
+
+| Technology                   | Version  | Purpose                                  |
+| ---------------------------- | -------- | ---------------------------------------- |
+| **Tailwind CSS**             | ^3.4.19  | Utility-first CSS framework              |
+| **tailwindcss-animate**      | ^1.0.7   | Animation utilities for Tailwind         |
+| **tailwind-merge**           | ^2.6.0   | Merge Tailwind classes without conflicts |
+| **shadcn/ui**                | -        | Accessible component library             |
+| **Aceternity UI**            | -        | Modern UI components                     |
+| **Radix UI**                 | various  | Headless UI primitives                   |
+| **class-variance-authority** | ^0.7.1   | Variant-based component styling          |
+| **clsx**                     | ^2.1.1   | Conditional class names                  |
+| **Lucide React**             | ^0.479.0 | Icon library                             |
+| **Framer Motion**            | ^11.18.2 | Animation library                        |
+
+### Data Visualization & Maps
+
+| Technology       | Version | Purpose                           |
+| ---------------- | ------- | --------------------------------- |
+| **Recharts**     | ^2.15.4 | React charting library            |
+| **MapLibre GL**  | ^5.16.0 | Open-source map rendering         |
+| **react-map-gl** | ^8.1.0  | React wrapper for MapLibre/Mapbox |
+
+### Financial Integrations
+
+| Technology           | Version | Purpose                              |
+| -------------------- | ------- | ------------------------------------ |
+| **Plaid**            | ^31.1.0 | Banking & financial data aggregation |
+| **react-plaid-link** | ^3.6.1  | Plaid Link React component           |
+
+### Infrastructure & Deployment
+
+| Service    | Purpose                             |
+| ---------- | ----------------------------------- |
+| **Vercel** | Frontend hosting & Edge Functions   |
+| **Convex** | Real-time backend hosting           |
+| **Neon**   | Serverless PostgreSQL (time-series) |
+| **Clerk**  | Authentication service              |
+| **Plaid**  | Banking API provider                |
 
 ---
 
 ## Data Flow Architecture
 
-### Request Flow (Read Operation)
+### Banking Data Flow (Convex - Real-time)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              CLIENT SIDE                                      │
+│                                                                               │
+│  1. Component renders          2. Convex hook called     3. WebSocket sub    │
+│  ┌─────────────────┐          ┌─────────────────┐       ┌─────────────────┐  │
+│  │  <BankingPage>  │ ──────▶  │usePlaidAccounts()│ ────▶│  Real-time      │  │
+│  │   Component     │          │ (Convex useQuery)│       │  subscription   │  │
+│  └─────────────────┘          └─────────────────┘       └────────┬────────┘  │
+│                                                                   │          │
+└───────────────────────────────────────────────────────────────────┼──────────┘
+                                                                    │
+                                    WebSocket connection to Convex  │
+                                                                    │
+┌───────────────────────────────────────────────────────────────────┼──────────┐
+│                           CONVEX BACKEND                          ▼          │
+│                                                                              │
+│  4. Query handler              5. Auth check              6. DB Query       │
+│  ┌─────────────────┐          ┌─────────────────┐        ┌─────────────────┐│
+│  │  getAccounts()  │ ──────▶  │ ctx.auth.get    │ ─────▶ │  ctx.db.query() ││
+│  │  (banking.ts)   │          │ UserIdentity()  │        │  (Convex DB)    ││
+│  └─────────────────┘          └─────────────────┘        └─────────────────┘│
+│                                                                              │
+│  For Plaid API calls:                                                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Convex Actions (convex/actions/plaid.ts)                           │    │
+│  │  • createLinkToken() - Get Plaid Link token                         │    │
+│  │  • exchangeToken() - Exchange public token, store encrypted access  │    │
+│  │  • refreshAccounts() - Sync accounts from Plaid                     │    │
+│  │  • syncTransactions() - Fetch transactions from Plaid               │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Metals Data Flow (Hono + Neon - Traditional)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -169,104 +314,189 @@ Fiscalis/
 │                                                                               │
 │  1. Component renders          2. Hook called              3. API fn called   │
 │  ┌─────────────────┐          ┌─────────────────┐         ┌─────────────────┐│
-│  │   <BankingPage> │ ──────▶  │  useAccounts()  │ ──────▶ │  getAccounts()  ││
-│  │   Component     │          │  (React Query)  │         │  (lib/api)      ││
+│  │ <CommoditiesPage>│ ──────▶ │ useMetalPrices()│ ──────▶ │  getMetalPrices││
+│  │   Component     │          │ (React Query)   │         │  (lib/api)      ││
 │  └─────────────────┘          └─────────────────┘         └────────┬────────┘│
 │                                                                     │         │
 └─────────────────────────────────────────────────────────────────────┼─────────┘
                                                                       │
-                                    HTTP Request: GET /api/banking/accounts
+                               HTTP Request: GET /api/metals/gold/prices/latest
                                                                       │
 ┌─────────────────────────────────────────────────────────────────────┼─────────┐
 │                              SERVER SIDE                            ▼         │
 │                                                                               │
-│  4. Hono route handler         5. Auth check              6. DB Query        │
-│  ┌─────────────────┐          ┌─────────────────┐         ┌─────────────────┐│
-│  │  .get("/accounts")│ ──────▶│  await auth()   │ ──────▶ │  db.select()    ││
-│  │  (banking.ts)   │          │  (Clerk)        │         │  (Drizzle)      ││
-│  └─────────────────┘          └─────────────────┘         └────────┬────────┘│
-│                                                                     │         │
-│                               7. External API                       ▼         │
-│                              ┌─────────────────┐         ┌─────────────────┐ │
-│                              │ plaidClient     │ ◀────── │  plaidItems     │ │
-│                              │ .accountsGet()  │         │  (access_token) │ │
-│                              └────────┬────────┘         └─────────────────┘ │
-│                                       │                                       │
-└───────────────────────────────────────┼───────────────────────────────────────┘
-                                        │
-                                        ▼
-                              JSON Response to Client
+│  4. Hono route handler         5. DB Query                                   │
+│  ┌─────────────────┐          ┌─────────────────┐                            │
+│  │  .get("/latest")│ ──────▶  │  db.select()    │                            │
+│  │  (metals.ts)    │          │  (Drizzle/Neon) │                            │
+│  └─────────────────┘          └─────────────────┘                            │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow Layers Explained
+---
 
-#### Layer 1: React Components
+## Convex Backend
 
-```tsx
-// app/(root)/banking/page.tsx
-export default function BankingPage() {
-  const { data: accounts, isLoading } = useAccounts();
-
-  return <AccountsList accounts={accounts} />;
-}
-```
-
-#### Layer 2: React Query Hooks (`hooks/`)
+### Schema Definition
 
 ```typescript
-// hooks/banking.ts
-export function useAccounts() {
-  return useQuery({
-    queryKey: bankingKeys.accounts(), // Cache key
-    queryFn: bankingApi.getAccounts, // Data fetcher
-    staleTime: 5 * 60 * 1000, // Cache duration
-    select: (data) => data.accounts, // Transform response
-  });
-}
-```
+// convex/schema.ts
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
 
-#### Layer 3: API Functions (`lib/api/`)
+export default defineSchema({
+  // Banking (Plaid)
+  plaidItems: defineTable({
+    userId: v.string(), // Clerk user ID
+    accessToken: v.string(), // Encrypted with AES-256-GCM
+    itemId: v.string(), // Plaid item ID
+    institutionId: v.optional(v.string()),
+    institutionName: v.optional(v.string()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("error"),
+      v.literal("pending_reauth"),
+    ),
+    errorCode: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_item", ["itemId"]),
 
-```typescript
-// lib/api/banking.ts
-export async function getAccounts() {
-  const response = await fetch("/api/banking/accounts");
-  if (!response.ok) throw new Error("Failed to fetch accounts");
-  return response.json();
-}
-```
+  plaidAccounts: defineTable({
+    userId: v.string(),
+    itemId: v.string(),
+    accountId: v.string(),
+    name: v.string(),
+    type: v.string(),
+    subtype: v.optional(v.string()),
+    currentBalance: v.optional(v.number()),
+    availableBalance: v.optional(v.number()),
+    currency: v.string(),
+    lastSynced: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_item", ["itemId"]),
 
-#### Layer 4: Hono Route Handlers (`app/(api)/`)
+  plaidTransactions: defineTable({
+    userId: v.string(),
+    accountId: v.string(),
+    plaidTransactionId: v.string(),
+    amount: v.number(),
+    date: v.string(),
+    name: v.string(),
+    category: v.optional(v.string()),
+    pending: v.boolean(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_account", ["accountId"]),
 
-```typescript
-// app/(api)/api/[[...route]]/banking.ts
-const app = new Hono().get("/accounts", async (c) => {
-  const { userId } = await auth();
-  // ... fetch from Plaid + DB
-  return c.json({ accounts });
+  // Brokers
+  brokerConnections: defineTable({
+    userId: v.string(),
+    brokerType: v.string(),
+    connectionName: v.string(),
+    status: v.union(
+      v.literal("connected"),
+      v.literal("disconnected"),
+      v.literal("error"),
+      v.literal("pending"),
+    ),
+    accountId: v.optional(v.string()),
+    username: v.optional(v.string()),
+    lastSyncAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  brokerPositions: defineTable({
+    userId: v.string(),
+    connectionId: v.id("brokerConnections"),
+    symbol: v.string(),
+    name: v.optional(v.string()),
+    quantity: v.number(),
+    averageCost: v.optional(v.number()),
+    currentPrice: v.optional(v.number()),
+    marketValue: v.optional(v.number()),
+    currency: v.string(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_connection", ["connectionId"]),
 });
 ```
 
-#### Layer 5: Database (Drizzle)
+### Convex Hooks (Frontend)
 
 ```typescript
-// Query plaid items from database
-const items = await db
-  .select()
-  .from(plaidItems)
-  .where(eq(plaidItems.userId, userId));
+// hooks/convex/banking.ts
+import { useQuery, useMutation, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
+// Real-time subscription to accounts
+export function usePlaidAccounts() {
+  return useQuery(api.banking.getAccounts);
+}
+
+// Real-time subscription to items
+export function usePlaidItems() {
+  return useQuery(api.banking.getItems);
+}
+
+// Action to create Plaid Link token
+export function useCreateLinkToken() {
+  const createLinkToken = useAction(api.actions.plaid.createLinkToken);
+  // ... wrapper with loading state
+}
+
+// Action to refresh accounts from Plaid
+export function useRefreshAccounts() {
+  const refreshAccounts = useAction(api.actions.plaid.refreshAccounts);
+  // ... wrapper with loading state
+}
+```
+
+### Security: Access Token Encryption
+
+Plaid access tokens are encrypted at rest using AES-256-GCM:
+
+```typescript
+// convex/lib/encryption.ts
+import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+
+export function encrypt(text: string, key: string): string {
+  const iv = randomBytes(16);
+  const cipher = createCipheriv("aes-256-gcm", Buffer.from(key, "base64"), iv);
+  const encrypted = Buffer.concat([
+    cipher.update(text, "utf8"),
+    cipher.final(),
+  ]);
+  const authTag = cipher.getAuthTag();
+  return `${iv.toString("base64")}:${authTag.toString("base64")}:${encrypted.toString("base64")}`;
+}
+
+export function decrypt(encrypted: string, key: string): string {
+  const [ivStr, authTagStr, encryptedStr] = encrypted.split(":");
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(key, "base64"),
+    Buffer.from(ivStr, "base64"),
+  );
+  decipher.setAuthTag(Buffer.from(authTagStr, "base64"));
+  return (
+    decipher.update(Buffer.from(encryptedStr, "base64")) +
+    decipher.final("utf8")
+  );
+}
 ```
 
 ---
 
 ## API Layer (Hono)
 
-### Why Hono?
-
-- **Edge-first**: Designed for edge runtimes (Cloudflare, Vercel Edge)
-- **Type-safe**: Full TypeScript support with end-to-end type inference
-- **Fast**: Minimal overhead, excellent performance
-- **Familiar**: Express-like API
+Hono is used exclusively for time-series data (precious metals, currency rates).
 
 ### Route Structure
 
@@ -274,38 +504,20 @@ const items = await db
 // app/(api)/api/[[...route]]/route.ts
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
-
-import banking from "./banking";
 import metals from "./metals";
 
 export const runtime = "edge";
 
 const app = new Hono().basePath("/api");
 
-const routes = app
-  .route("/banking", banking) // /api/banking/*
-  .route("/metals", metals); // /api/metals/*
+const routes = app.route("/metals", metals);
 
 export const GET = handle(app);
 export const POST = handle(app);
+export const DELETE = handle(app);
 
-// Type export for client-side type inference
 export type AppType = typeof routes;
 ```
-
-### Banking Routes
-
-| Method | Endpoint                            | Purpose                                |
-| ------ | ----------------------------------- | -------------------------------------- |
-| POST   | `/api/banking/create-link-token`    | Generate Plaid Link token              |
-| POST   | `/api/banking/exchange-token`       | Exchange public token for access token |
-| GET    | `/api/banking/accounts`             | Get all linked bank accounts           |
-| GET    | `/api/banking/auth/:itemId?`        | Get account/routing numbers            |
-| GET    | `/api/banking/identity/:itemId?`    | Get account holder identity            |
-| GET    | `/api/banking/transactions`         | Get transactions from Plaid            |
-| GET    | `/api/banking/transactions/db`      | Get cached transactions from DB        |
-| GET    | `/api/banking/balances/summary`     | Get aggregated balance summary         |
-| POST   | `/api/banking/transactions/refresh` | Sync latest transactions               |
 
 ### Metals Routes
 
@@ -317,9 +529,9 @@ export type AppType = typeof routes;
 
 ---
 
-## Database Layer (Drizzle + Neon)
+## Database Layer
 
-### Connection Setup
+### Neon PostgreSQL (Time-series Data)
 
 ```typescript
 // db/drizzle/drizzle.ts
@@ -331,147 +543,79 @@ const sql = neon(process.env.DATABASE_URL!);
 export const db = drizzle(sql, { schema });
 ```
 
-### Schema Definitions
+### Schema (Time-series Only)
 
 ```typescript
 // db/drizzle/schema.ts
-
-// Precious metal prices (updated regularly by edge function)
 export const precious_metal_prices = pgTable("precious_metal_prices", {
   timestamp: timestamp("timestamp").primaryKey(),
   gold_eur: numeric("gold_eur"),
   gold_usd: numeric("gold_usd"),
   silver_eur: numeric("silver_eur"),
   silver_usd: numeric("silver_usd"),
-  // ... platinum, palladium
+  platinum_eur: numeric("platinum_eur"),
+  platinum_usd: numeric("platinum_usd"),
+  palladium_eur: numeric("palladium_eur"),
+  palladium_usd: numeric("palladium_usd"),
 });
 
-// Plaid connection tokens (per user)
-export const plaidItems = pgTable("plaid_items", {
-  id: serial("id").primaryKey(),
-  userId: text("user_id").notNull(), // Clerk user ID
-  accessToken: text("access_token").notNull(),
-  itemId: text("item_id").notNull(),
-  institutionId: text("institution_id"),
-  institutionName: text("institution_name"),
-  createdAt: timestamp("created_at").defaultNow(),
+export const currency_exchange_rates = pgTable("currency_exchange_rates", {
+  timestamp: timestamp("timestamp").primaryKey(),
+  from_eur_to_usd: numeric("from_eur_to_usd"),
 });
-
-// Cached transactions
-export const plaidTransactions = pgTable("plaid_transactions", {
-  id: serial("id").primaryKey(),
-  plaidTransactionId: text("plaid_transaction_id").notNull(),
-  userId: text("user_id").notNull(),
-  accountId: text("account_id").notNull(),
-  amount: numeric("amount"),
-  date: timestamp("date"),
-  name: text("name"),
-  // ... more fields
-});
-```
-
-### Entity Relationship Diagram
-
-```
-┌─────────────────────────────┐
-│    precious_metal_prices    │
-├─────────────────────────────┤
-│ PK timestamp                │
-│    gold_eur, gold_usd       │
-│    silver_eur, silver_usd   │
-│    platinum_eur, platinum_usd│
-│    palladium_eur, palladium_usd│
-└─────────────────────────────┘
-
-┌─────────────────────────────┐
-│   currency_exchange_rates   │
-├─────────────────────────────┤
-│ PK timestamp                │
-│    from_eur_to_usd          │
-└─────────────────────────────┘
-
-┌─────────────────────────────┐         ┌─────────────────────────────┐
-│        plaid_items          │         │     plaid_transactions      │
-├─────────────────────────────┤         ├─────────────────────────────┤
-│ PK id                       │         │ PK id                       │
-│    user_id ─────────────────┼────┬────│    user_id                  │
-│    access_token             │    │    │    plaid_transaction_id     │
-│    item_id                  │    │    │    account_id               │
-│    institution_id           │    │    │    amount, date, name       │
-│    institution_name         │    │    │    merchant_name, category  │
-│    created_at, updated_at   │    │    │    pending                  │
-└─────────────────────────────┘    │    │    synced_at, updated_at    │
-                                   │    └─────────────────────────────┘
-                                   │
-                              Both reference Clerk userId
 ```
 
 ---
 
 ## Client-Side Data Management
 
-### TanStack Query Setup
+### Provider Setup
 
 ```tsx
 // providers/queryProvider.tsx
-export default function QueryProvider({ children }: Props) {
+"use client";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ClerkProvider, useAuth } from "@clerk/nextjs";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
+
+const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+export default function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: {
-        staleTime: 60 * 1000, // 1 minute default
-      },
+      queries: { staleTime: 60 * 1000 },
     },
   });
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <ClerkProvider>
+      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </ConvexProviderWithClerk>
+    </ClerkProvider>
   );
 }
 ```
 
-### Query Key Pattern
+### Data Fetching Patterns
+
+**Convex (Banking, Brokers)** - Real-time subscriptions:
 
 ```typescript
-// hooks/banking.ts
-export const bankingKeys = {
-  all: ["banking"] as const,
-  accounts: () => [...bankingKeys.all, "accounts"] as const,
-  account: (id: string) => [...bankingKeys.accounts(), id] as const,
-  transactions: () => [...bankingKeys.all, "transactions"] as const,
-  transactionsDb: (limit?: number) =>
-    [...bankingKeys.transactions(), "db", limit] as const,
-  balances: () => [...bankingKeys.all, "balances"] as const,
-};
+// Automatic real-time updates via WebSocket
+const accounts = usePlaidAccounts(); // undefined while loading, then data
+const items = usePlaidItems();
 ```
 
-### Mutation Flow (Write Operation)
+**React Query (Metals)** - Traditional REST:
 
-```
-User clicks "Connect Bank"
-         │
-         ▼
-┌─────────────────────┐
-│  useLinkToken()     │  ──▶  POST /api/banking/create-link-token
-│  mutation           │       Returns: { linkToken }
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  Plaid Link Modal   │  ──▶  User authenticates with bank
-│  Opens              │       Returns: public_token
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  useExchangeToken() │  ──▶  POST /api/banking/exchange-token
-│  mutation           │       Stores access_token in DB
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│  queryClient        │  ──▶  Invalidate ['banking', 'accounts']
-│  .invalidateQueries │       Triggers refetch
-└─────────────────────┘
+```typescript
+// Cached with manual refetch
+const { data, isLoading } = useMetalPrices("gold", "1D");
 ```
 
 ---
@@ -481,35 +625,34 @@ User clicks "Connect Bank"
 ### Proxy (Edge Middleware)
 
 ```typescript
-// proxy.ts (formerly middleware.ts)
+// proxy.ts
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
 
 export const proxy = clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
-    await auth.protect(); // Redirect to sign-in if not authenticated
+    await auth.protect();
   }
 });
 ```
 
-### Server-Side Auth Check
+### Auth in Convex
 
 ```typescript
-// In Hono route handlers
-import { auth } from "@clerk/nextjs/server";
+// convex/banking.ts
+export const getAccounts = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
 
-.get("/accounts", async (c) => {
-  const { userId } = await auth();  // Get authenticated user
-
-  if (!userId) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-
-  // userId is used to scope data queries
-  const items = await db.select()
-    .from(plaidItems)
-    .where(eq(plaidItems.userId, userId));
+    const userId = identity.subject; // Clerk user ID
+    return await ctx.db
+      .query("plaidAccounts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+  },
 });
 ```
 
@@ -517,23 +660,43 @@ import { auth } from "@clerk/nextjs/server";
 
 ## External Integrations
 
-### Plaid Integration
+### Plaid Integration (via Convex Actions)
 
 ```typescript
-// lib/plaid.ts
-import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
+// convex/actions/plaid.ts
+import { PlaidApi, Configuration, PlaidEnvironments } from "plaid";
 
-const configuration = new Configuration({
-  basePath: PlaidEnvironments[process.env.PLAID_ENV || "sandbox"],
-  baseOptions: {
-    headers: {
-      "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID,
-      "PLAID-SECRET": process.env.PLAID_SECRET,
+const getPlaidClient = () => {
+  const configuration = new Configuration({
+    basePath: PlaidEnvironments[process.env.PLAID_ENV || "sandbox"],
+    baseOptions: {
+      headers: {
+        "PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID,
+        "PLAID-SECRET": process.env.PLAID_SECRET,
+      },
     },
+  });
+  return new PlaidApi(configuration);
+};
+
+export const createLinkToken = action({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const plaidClient = getPlaidClient();
+    const response = await plaidClient.linkTokenCreate({
+      user: { client_user_id: identity.subject },
+      client_name: "Fiscalis",
+      products: ["auth", "transactions"],
+      country_codes: ["US", "DE"],
+      language: "en",
+    });
+
+    return { linkToken: response.data.link_token };
   },
 });
-
-export const plaidClient = new PlaidApi(configuration);
 ```
 
 ### Plaid Link Flow
@@ -542,10 +705,10 @@ export const plaidClient = new PlaidApi(configuration);
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                            PLAID LINK FLOW                               │
 │                                                                          │
-│   Frontend                    Backend                     Plaid          │
-│   ─────────                   ───────                     ─────          │
+│   Frontend                    Convex                      Plaid          │
+│   ─────────                   ──────                      ─────          │
 │       │                          │                          │            │
-│       │  1. Create Link Token    │                          │            │
+│       │  1. useCreateLinkToken() │                          │            │
 │       │ ────────────────────────▶│                          │            │
 │       │                          │ 2. linkTokenCreate()     │            │
 │       │                          │ ────────────────────────▶│            │
@@ -559,18 +722,22 @@ export const plaidClient = new PlaidApi(configuration);
 │       │◀───────────────────────────────────────────────────  │            │
 │       │    onSuccess(public_token)                          │            │
 │       │                          │                          │            │
-│       │  4. Exchange Token       │                          │            │
+│       │  4. useExchangeToken()   │                          │            │
 │       │ ────────────────────────▶│                          │            │
 │       │  { publicToken }         │ 5. itemPublicTokenExchange│           │
 │       │                          │ ────────────────────────▶│            │
 │       │                          │◀──────────────────────── │            │
 │       │                          │    { access_token }      │            │
 │       │                          │                          │            │
-│       │                          │ 6. Store in plaid_items  │            │
-│       │                          │ ───────▶ DB              │            │
+│       │                          │ 6. Encrypt & store       │            │
+│       │                          │    in Convex DB          │            │
 │       │                          │                          │            │
 │       │◀──────────────────────── │                          │            │
 │       │    { success: true }     │                          │            │
+│       │                          │                          │            │
+│       │  7. Real-time update     │                          │            │
+│       │◀──────────────────────── │                          │            │
+│       │    (via WebSocket)       │                          │            │
 │       │                          │                          │            │
 └───────┴──────────────────────────┴──────────────────────────┴────────────┘
 ```
@@ -586,25 +753,26 @@ components/atomic/
 ├── atoms/           # Smallest, indivisible components
 │   ├── bankAccountCard.tsx
 │   ├── plaidLinkButton.tsx
-│   ├── cards/
-│   │   └── singleKPICard.tsx
-│   ├── pieCharts/
-│   │   └── donutWithText.tsx
-│   └── barCharts/
+│   ├── plaidUpdateButton.tsx
+│   ├── addBrokerButton.tsx
+│   ├── brokerConnectionCard.tsx
+│   └── cards/
+│       └── singleKPICard.tsx
 │
 ├── molecules/       # Combinations of atoms
-│   ├── bankAccountsCard.tsx    # Multiple bankAccountCard atoms
-│   ├── navigationDropdown.tsx
-│   └── navigationPopover.tsx
+│   ├── bankAccountsCard.tsx
+│   ├── bankReauthCard.tsx
+│   ├── brokerConnectionsCard.tsx
+│   └── navigationDropdown.tsx
 │
 └── organisms/       # Complex, self-contained sections
-    ├── banksCard.tsx           # Full banking overview section
-    ├── priceChart.tsx          # Complete price chart with controls
+    ├── banksCard.tsx
+    ├── priceChart.tsx
     ├── header.tsx
     └── navigationSidebar.tsx
 ```
 
-### Component → Hook → API Relationship
+### Component → Hook Relationship
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -624,35 +792,24 @@ components/atomic/
 │  └──────────────────────────────────┬──────────────────────────────┘   │
 │                                     │                                   │
 └─────────────────────────────────────┼───────────────────────────────────┘
-                                      │ uses
+                                      │ uses Convex hooks
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              HOOK LAYER                                  │
+│                           CONVEX HOOK LAYER                              │
 │                                                                          │
 │  ┌─────────────────────┐  ┌─────────────────────┐                       │
-│  │   useAccounts()     │  │   usePlaidLink()    │                       │
-│  │   useBalances()     │  │   useExchangeToken()│                       │
+│  │ usePlaidAccounts()  │  │ useCreateLinkToken()│                       │
+│  │ usePlaidItems()     │  │ useExchangeToken()  │                       │
+│  │ useRefreshAccounts()│  │ useDeletePlaidItem()│                       │
 │  └──────────┬──────────┘  └──────────┬──────────┘                       │
 │             │                        │                                   │
 └─────────────┼────────────────────────┼───────────────────────────────────┘
-              │ calls                  │ calls
+              │ WebSocket              │ HTTP (action)
               ▼                        ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              API LAYER                                   │
+│                           CONVEX BACKEND                                 │
 │                                                                          │
-│  ┌─────────────────────┐  ┌─────────────────────┐                       │
-│  │   getAccounts()     │  │   getLinkToken()    │                       │
-│  │   getBalances()     │  │   exchangeToken()   │                       │
-│  └──────────┬──────────┘  └──────────┬──────────┘                       │
-│             │                        │                                   │
-└─────────────┼────────────────────────┼───────────────────────────────────┘
-              │ fetch                  │ fetch
-              ▼                        ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           HONO ROUTES                                    │
-│                                                                          │
-│  GET /api/banking/accounts     POST /api/banking/create-link-token      │
-│  GET /api/banking/balances     POST /api/banking/exchange-token         │
+│  banking.ts (queries/mutations)     actions/plaid.ts (external API)     │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -661,19 +818,17 @@ components/atomic/
 
 ## Summary
 
-The Fiscalis architecture follows a clean separation of concerns:
+The Fiscalis architecture provides:
 
-1. **Components** handle UI rendering and user interactions
-2. **Hooks** manage server state with React Query (caching, refetching, mutations)
-3. **API functions** provide typed fetch wrappers
-4. **Hono routes** handle HTTP requests on the edge
-5. **Drizzle ORM** provides type-safe database access
-6. **External APIs** (Plaid) provide banking data
+1. **Real-time user data** via Convex with automatic WebSocket subscriptions
+2. **Time-series data** via Hono + Neon for commodities pricing
+3. **Secure storage** with AES-256-GCM encryption for sensitive tokens
+4. **Type safety** from database to UI with TypeScript throughout
+5. **Clean separation** between real-time (banking, brokers) and traditional (metals) data patterns
 
-This layered approach ensures:
+### Key Design Decisions
 
-- Type safety from database to UI
-- Efficient caching and data synchronization
-- Clear separation of concerns
-- Easy testing and maintenance
-- Optimal performance with edge runtime
+- **Convex for user data**: Automatic real-time sync eliminates manual cache invalidation
+- **Neon for time-series**: Traditional SQL better suited for historical price queries
+- **Clerk for auth**: Unified authentication across frontend, Convex, and Hono
+- **Atomic Design**: Scalable component architecture with clear hierarchy

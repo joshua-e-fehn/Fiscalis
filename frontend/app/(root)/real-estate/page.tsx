@@ -10,23 +10,24 @@ import {
 } from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
 import {
-  Coins,
-  Fuel,
-  Factory,
-  Wheat,
+  Home,
+  Building2,
+  BarChart3,
+  Users,
+  TreePine,
   ArrowRight,
   TrendingUp,
-  Atom,
+  MapPin,
 } from "lucide-react";
 
 /**
- * Commodities Overview Page
+ * Real Estate Overview Page
  *
- * Hub for all commodity types: Precious Metals, Energy, Industrial Metals, Agricultural, Rare Earth.
- * Currently only Precious Metals is implemented.
+ * Hub for all real estate investment types: Residential, Commercial, REITs,
+ * Crowdfunding, Land.
  */
 
-interface CommodityCategory {
+interface RealEstateCategory {
   title: string;
   description: string;
   href: string;
@@ -35,54 +36,56 @@ interface CommodityCategory {
   examples: string[];
 }
 
-const commodityCategories: CommodityCategory[] = [
+const realEstateCategories: RealEstateCategory[] = [
   {
-    title: "Precious Metals",
+    title: "Residential",
     description:
-      "Track gold, silver, platinum, and palladium prices with real-time charts",
-    href: "/commodities/metals",
-    icon: Coins,
-    implemented: true,
-    examples: ["Gold", "Silver", "Platinum", "Palladium"],
+      "Single-family homes, apartments, condos, and vacation properties",
+    href: "/real-estate/residential",
+    icon: Home,
+    implemented: false,
+    examples: ["Primary Home", "Rental Properties", "Vacation Homes", "Condos"],
   },
   {
-    title: "Energy",
-    description: "Oil, natural gas, and other energy commodity prices",
-    href: "/commodities/energy",
-    icon: Fuel,
+    title: "Commercial",
+    description:
+      "Office buildings, retail spaces, warehouses, and industrial properties",
+    href: "/real-estate/commercial",
+    icon: Building2,
     implemented: false,
-    examples: ["Crude Oil", "Natural Gas", "Heating Oil", "Gasoline"],
+    examples: ["Office Space", "Retail", "Warehouses", "Mixed-Use"],
   },
   {
-    title: "Industrial Metals",
-    description: "Base metals used in manufacturing and construction",
-    href: "/commodities/industrial",
-    icon: Factory,
+    title: "REITs",
+    description:
+      "Real Estate Investment Trusts - publicly traded real estate securities",
+    href: "/real-estate/reits",
+    icon: BarChart3,
     implemented: false,
-    examples: ["Copper", "Aluminum", "Zinc", "Nickel"],
+    examples: ["Equity REITs", "Mortgage REITs", "Hybrid REITs", "REIT ETFs"],
   },
   {
-    title: "Agricultural",
-    description: "Grains, softs, and other agricultural commodities",
-    href: "/commodities/agricultural",
-    icon: Wheat,
+    title: "Crowdfunding",
+    description: "Real estate investments through crowdfunding platforms",
+    href: "/real-estate/crowdfunding",
+    icon: Users,
     implemented: false,
-    examples: ["Wheat", "Corn", "Soybeans", "Coffee"],
+    examples: ["Fundrise", "CrowdStreet", "RealtyMogul", "Groundfloor"],
   },
   {
-    title: "Rare Earth",
-    description: "Strategic rare earth elements used in technology and defense",
-    href: "/commodities/rare-earth",
-    icon: Atom,
+    title: "Land",
+    description: "Raw land, farmland, and undeveloped property investments",
+    href: "/real-estate/land",
+    icon: TreePine,
     implemented: false,
-    examples: ["Neodymium", "Dysprosium", "Lithium", "Cobalt"],
+    examples: ["Raw Land", "Farmland", "Timber", "Development Land"],
   },
 ];
 
-const CommodityCategoryCard = ({
+const RealEstateCategoryCard = ({
   category,
 }: {
-  category: CommodityCategory;
+  category: RealEstateCategory;
 }) => {
   const Icon = category.icon;
 
@@ -141,7 +144,7 @@ const CommodityCategoryCard = ({
         {category.implemented ? (
           <Button asChild className="w-full">
             <Link href={category.href}>
-              View Prices
+              View Properties
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -155,44 +158,45 @@ const CommodityCategoryCard = ({
   );
 };
 
-export default function CommoditiesPage() {
+export default function RealEstatePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-6 md:px-24 gap-6">
+    <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
-      <div className="w-full">
-        <h1 className="text-3xl font-bold">Commodities</h1>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Real Estate</h1>
         <p className="text-muted-foreground mt-2">
-          Track real-time prices and manage your holdings across different
-          commodity types
+          Track your real estate investments - residential properties,
+          commercial holdings, REITs, and more.
         </p>
       </div>
 
-      {/* Category Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {commodityCategories.map((category) => (
-          <CommodityCategoryCard key={category.title} category={category} />
+      {/* Category Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {realEstateCategories.map((category) => (
+          <RealEstateCategoryCard key={category.title} category={category} />
         ))}
       </div>
 
-      {/* Quick Stats Section - Placeholder for future */}
-      <Card className="w-full mt-4">
+      {/* Summary Section */}
+      <Card className="bg-muted/50">
         <CardHeader>
-          <CardTitle>Market Overview</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            Property Portfolio
+          </CardTitle>
           <CardDescription>
-            Summary of your commodity holdings and market performance
+            Real estate provides diversification, rental income, and potential
+            appreciation. Track property values, rental yields, and equity
+            growth.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            <p>Portfolio summary will appear here once you add holdings.</p>
-            <Button asChild variant="link" className="mt-2">
-              <Link href="/commodities/metals/inventory">
-                Get started with Precious Metals →
-              </Link>
-            </Button>
-          </div>
+          <Button variant="outline" disabled>
+            Add Property
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

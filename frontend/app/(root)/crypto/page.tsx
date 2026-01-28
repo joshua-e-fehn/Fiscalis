@@ -10,23 +10,23 @@ import {
 } from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
 import {
+  Bitcoin,
   Coins,
-  Fuel,
-  Factory,
-  Wheat,
+  CircleDollarSign,
+  Layers,
   ArrowRight,
   TrendingUp,
-  Atom,
+  Wallet,
 } from "lucide-react";
 
 /**
- * Commodities Overview Page
+ * Cryptocurrencies Overview Page
  *
- * Hub for all commodity types: Precious Metals, Energy, Industrial Metals, Agricultural, Rare Earth.
- * Currently only Precious Metals is implemented.
+ * Hub for all crypto investment types: Bitcoin, Ethereum, Altcoins,
+ * Stablecoins, DeFi.
  */
 
-interface CommodityCategory {
+interface CryptoCategory {
   title: string;
   description: string;
   href: string;
@@ -35,55 +35,52 @@ interface CommodityCategory {
   examples: string[];
 }
 
-const commodityCategories: CommodityCategory[] = [
+const cryptoCategories: CryptoCategory[] = [
   {
-    title: "Precious Metals",
+    title: "Bitcoin",
     description:
-      "Track gold, silver, platinum, and palladium prices with real-time charts",
-    href: "/commodities/metals",
+      "The original cryptocurrency - track your BTC holdings and transactions",
+    href: "/crypto/bitcoin",
+    icon: Bitcoin,
+    implemented: false,
+    examples: ["BTC Spot", "Bitcoin ETFs", "Wrapped BTC", "Lightning Network"],
+  },
+  {
+    title: "Ethereum",
+    description: "ETH and the Ethereum ecosystem including ERC-20 tokens",
+    href: "/crypto/ethereum",
     icon: Coins,
-    implemented: true,
-    examples: ["Gold", "Silver", "Platinum", "Palladium"],
+    implemented: false,
+    examples: ["ETH", "ERC-20 Tokens", "Staked ETH", "Layer 2"],
   },
   {
-    title: "Energy",
-    description: "Oil, natural gas, and other energy commodity prices",
-    href: "/commodities/energy",
-    icon: Fuel,
+    title: "Altcoins",
+    description: "Other major cryptocurrencies and blockchain platforms",
+    href: "/crypto/altcoins",
+    icon: Coins,
     implemented: false,
-    examples: ["Crude Oil", "Natural Gas", "Heating Oil", "Gasoline"],
+    examples: ["Solana", "Cardano", "Polkadot", "Avalanche"],
   },
   {
-    title: "Industrial Metals",
-    description: "Base metals used in manufacturing and construction",
-    href: "/commodities/industrial",
-    icon: Factory,
+    title: "Stablecoins",
+    description: "Price-stable cryptocurrencies pegged to fiat currencies",
+    href: "/crypto/stablecoins",
+    icon: CircleDollarSign,
     implemented: false,
-    examples: ["Copper", "Aluminum", "Zinc", "Nickel"],
+    examples: ["USDT", "USDC", "DAI", "FRAX"],
   },
   {
-    title: "Agricultural",
-    description: "Grains, softs, and other agricultural commodities",
-    href: "/commodities/agricultural",
-    icon: Wheat,
+    title: "DeFi",
+    description:
+      "Decentralized finance - staking, liquidity pools, and yield farming",
+    href: "/crypto/defi",
+    icon: Layers,
     implemented: false,
-    examples: ["Wheat", "Corn", "Soybeans", "Coffee"],
-  },
-  {
-    title: "Rare Earth",
-    description: "Strategic rare earth elements used in technology and defense",
-    href: "/commodities/rare-earth",
-    icon: Atom,
-    implemented: false,
-    examples: ["Neodymium", "Dysprosium", "Lithium", "Cobalt"],
+    examples: ["Staking", "Liquidity Pools", "Yield Farming", "Lending"],
   },
 ];
 
-const CommodityCategoryCard = ({
-  category,
-}: {
-  category: CommodityCategory;
-}) => {
+const CryptoCategoryCard = ({ category }: { category: CryptoCategory }) => {
   const Icon = category.icon;
 
   return (
@@ -141,7 +138,7 @@ const CommodityCategoryCard = ({
         {category.implemented ? (
           <Button asChild className="w-full">
             <Link href={category.href}>
-              View Prices
+              View Holdings
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -155,44 +152,50 @@ const CommodityCategoryCard = ({
   );
 };
 
-export default function CommoditiesPage() {
+export default function CryptoPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-6 md:px-24 gap-6">
+    <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
-      <div className="w-full">
-        <h1 className="text-3xl font-bold">Commodities</h1>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Cryptocurrencies</h1>
         <p className="text-muted-foreground mt-2">
-          Track real-time prices and manage your holdings across different
-          commodity types
+          Track your crypto portfolio - Bitcoin, Ethereum, altcoins,
+          stablecoins, and DeFi positions.
         </p>
       </div>
 
-      {/* Category Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {commodityCategories.map((category) => (
-          <CommodityCategoryCard key={category.title} category={category} />
+      {/* Category Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {cryptoCategories.map((category) => (
+          <CryptoCategoryCard key={category.title} category={category} />
         ))}
       </div>
 
-      {/* Quick Stats Section - Placeholder for future */}
-      <Card className="w-full mt-4">
+      {/* Summary Section */}
+      <Card className="bg-muted/50">
         <CardHeader>
-          <CardTitle>Market Overview</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            Crypto Portfolio
+          </CardTitle>
           <CardDescription>
-            Summary of your commodity holdings and market performance
+            Connect your wallets and exchanges to automatically track all your
+            cryptocurrency holdings, transactions, and DeFi positions.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            <p>Portfolio summary will appear here once you add holdings.</p>
-            <Button asChild variant="link" className="mt-2">
-              <Link href="/commodities/metals/inventory">
-                Get started with Precious Metals →
-              </Link>
-            </Button>
-          </div>
+        <CardContent className="flex gap-3">
+          <Button variant="outline" disabled>
+            Connect Wallet
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/brokers">
+              Connect Broker
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

@@ -22,12 +22,16 @@ export const brokerStatusEnum = pgEnum("broker_status", [
 
 export const precious_metal_prices = pgTable("precious_metal_prices", {
   timestamp: timestamp("timestamp").primaryKey(),
+  // Base ounce prices
   gold_eur: numeric("gold_eur", { precision: 10, scale: 2 }).notNull(),
   gold_usd: numeric("gold_usd", { precision: 10, scale: 2 }).notNull(),
+  gold_chf: numeric("gold_chf", { precision: 10, scale: 2 }),
   silver_eur: numeric("silver_eur", { precision: 10, scale: 2 }).notNull(),
   silver_usd: numeric("silver_usd", { precision: 10, scale: 2 }).notNull(),
+  silver_chf: numeric("silver_chf", { precision: 10, scale: 2 }),
   platinum_eur: numeric("platinum_eur", { precision: 10, scale: 2 }).notNull(),
   platinum_usd: numeric("platinum_usd", { precision: 10, scale: 2 }).notNull(),
+  platinum_chf: numeric("platinum_chf", { precision: 10, scale: 2 }),
   palladium_eur: numeric("palladium_eur", {
     precision: 10,
     scale: 2,
@@ -36,6 +40,39 @@ export const precious_metal_prices = pgTable("precious_metal_prices", {
     precision: 10,
     scale: 2,
   }).notNull(),
+  palladium_chf: numeric("palladium_chf", { precision: 10, scale: 2 }),
+  // Gold per gram
+  gold_eur_gram: numeric("gold_eur_gram", { precision: 10, scale: 2 }),
+  gold_usd_gram: numeric("gold_usd_gram", { precision: 10, scale: 2 }),
+  gold_chf_gram: numeric("gold_chf_gram", { precision: 10, scale: 2 }),
+  // Gold per kilo
+  gold_eur_kilo: numeric("gold_eur_kilo", { precision: 12, scale: 2 }),
+  gold_usd_kilo: numeric("gold_usd_kilo", { precision: 12, scale: 2 }),
+  gold_chf_kilo: numeric("gold_chf_kilo", { precision: 12, scale: 2 }),
+  // Gold purity prices EUR (per gram at purity)
+  gold_eur_333: numeric("gold_eur_333", { precision: 10, scale: 2 }),
+  gold_eur_585: numeric("gold_eur_585", { precision: 10, scale: 2 }),
+  gold_eur_750: numeric("gold_eur_750", { precision: 10, scale: 2 }),
+  gold_eur_833: numeric("gold_eur_833", { precision: 10, scale: 2 }),
+  gold_eur_900: numeric("gold_eur_900", { precision: 10, scale: 2 }),
+  gold_eur_916: numeric("gold_eur_916", { precision: 10, scale: 2 }),
+  gold_eur_999: numeric("gold_eur_999", { precision: 10, scale: 2 }),
+  // Gold purity prices USD (per gram at purity)
+  gold_usd_333: numeric("gold_usd_333", { precision: 10, scale: 2 }),
+  gold_usd_585: numeric("gold_usd_585", { precision: 10, scale: 2 }),
+  gold_usd_750: numeric("gold_usd_750", { precision: 10, scale: 2 }),
+  gold_usd_833: numeric("gold_usd_833", { precision: 10, scale: 2 }),
+  gold_usd_900: numeric("gold_usd_900", { precision: 10, scale: 2 }),
+  gold_usd_916: numeric("gold_usd_916", { precision: 10, scale: 2 }),
+  gold_usd_999: numeric("gold_usd_999", { precision: 10, scale: 2 }),
+  // Gold purity prices CHF (per gram at purity)
+  gold_chf_333: numeric("gold_chf_333", { precision: 10, scale: 2 }),
+  gold_chf_585: numeric("gold_chf_585", { precision: 10, scale: 2 }),
+  gold_chf_750: numeric("gold_chf_750", { precision: 10, scale: 2 }),
+  gold_chf_833: numeric("gold_chf_833", { precision: 10, scale: 2 }),
+  gold_chf_900: numeric("gold_chf_900", { precision: 10, scale: 2 }),
+  gold_chf_916: numeric("gold_chf_916", { precision: 10, scale: 2 }),
+  gold_chf_999: numeric("gold_chf_999", { precision: 10, scale: 2 }),
 });
 
 export const currency_exchange_rates = pgTable("currency_exchange_rates", {
@@ -44,6 +81,7 @@ export const currency_exchange_rates = pgTable("currency_exchange_rates", {
     precision: 10,
     scale: 4,
   }).notNull(),
+  from_eur_to_chf: numeric("from_eur_to_chf", { precision: 10, scale: 4 }),
 });
 
 export const plaidItems = pgTable(

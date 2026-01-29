@@ -319,4 +319,170 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  // ═══════════════════════════════════════════════════════════════
+  // VAULT (Precious Metals)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Metal catalog - predefined coins/bars with default premiums
+  metalCatalog: defineTable({
+    name: v.string(), // "Krugerrand 1 oz"
+    metalType: v.union(
+      v.literal("gold"),
+      v.literal("silver"),
+      v.literal("platinum"),
+      v.literal("palladium"),
+    ),
+    category: v.union(v.literal("coin"), v.literal("bar")),
+    purity: v.number(), // 999.9, 916.7, etc.
+    weightGrams: v.number(), // Total weight
+    fineWeightGrams: v.number(), // Pure metal content
+    fineWeightOz: v.number(), // Pure metal in troy ounces
+    defaultBuyPremium: v.optional(v.number()), // 0.03 = 3% premium when buying (adds to spot price)
+    defaultSellPremium: v.optional(v.number()), // -0.02 = 2% below spot when selling (negative = below spot)
+    defaultPremium: v.optional(v.number()), // DEPRECATED - kept for migration
+    country: v.optional(v.string()), // "South Africa"
+    mint: v.optional(v.string()), // "South African Mint"
+    year: v.optional(v.string()), // "various" or specific year
+    diameter: v.optional(v.number()), // mm
+    thickness: v.optional(v.number()), // mm
+    imageUrl: v.optional(v.string()),
+    isPopular: v.boolean(),
+  })
+    .index("by_metal", ["metalType"])
+    .index("by_category", ["category"])
+    .index("by_metal_category", ["metalType", "category"])
+    .index("by_popular", ["isPopular"]),
+
+  // User's vault items
+  vaultItems: defineTable({
+    userId: v.string(),
+
+    // Item identification
+    catalogItemId: v.optional(v.id("metalCatalog")), // If from catalog
+    customName: v.optional(v.string()), // If custom item
+
+    // Metal details
+    metalType: v.union(
+      v.literal("gold"),
+      v.literal("silver"),
+      v.literal("platinum"),
+      v.literal("palladium"),
+    ),
+    category: v.union(
+      v.literal("coin"),
+      v.literal("bar"),
+      v.literal("jewelry"),
+      v.literal("scrap"),
+    ),
+    purity: v.number(), // Fineness (e.g., 999.9, 916.7)
+    weightGrams: v.number(), // Total weight in grams
+    fineWeightGrams: v.number(), // Pure metal weight in grams
+
+    // Holdings
+    quantity: v.number(),
+    buyPremium: v.optional(v.number()), // Premium applied when buying (e.g., 0.03 = 3% above spot)
+    sellPremium: v.optional(v.number()), // Premium/discount when selling (e.g., -0.02 = 2% below spot)
+    premium: v.optional(v.number()), // DEPRECATED - kept for migration
+
+    // Purchase info (supports backdated entries)
+    purchasePricePerUnit: v.optional(v.number()),
+    purchaseDate: v.optional(v.string()), // ISO date string
+    purchaseCurrency: v.optional(v.string()), // "EUR" | "USD" | "CHF"
+
+    // Storage & notes
+    storageLocation: v.optional(v.string()),
+    notes: v.optional(v.string()),
+
+    // Images (Phase 6 - future)
+    itemImageUrl: v.optional(v.string()),
+    invoiceImageUrl: v.optional(v.string()),
+
+    // Metadata
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_metal", ["userId", "metalType"])
+    .index("by_user_category", ["userId", "category"]),
+
+  // Transaction history - allows backdated entries
+  vaultTransactions: defineTable({
+    userId: v.string(),
+    vaultItemId: v.id("vaultItems"),
+
+    transactionType: v.union(
+      v.literal("buy"),
+      v.literal("sell"),
+      v.literal("gift_received"),
+      v.literal("gift_given"),
+    ),
+    quantity: v.number(),
+    pricePerUnit: v.number(),
+    currency: v.string(), // "EUR" | "USD" | "CHF"
+    transactionDate: v.string(), // ISO date string - can be any past date
+
+    // Spot price at transaction time (for accurate P/L calculation)
+    spotPriceAtTransaction: v.optional(v.number()),
+
+    notes: v.optional(v.string()),
+    invoiceImageUrl: v.optional(v.string()),
+
+    // Metadata
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_item", ["vaultItemId"])
+    .index("by_date", ["userId", "transactionDate"]),
+
+  // ═══════════════════════════════════════════════════════════════
+  // WORLD BANK INDICATORS (for World Map search)
+  // ═══════════════════════════════════════════════════════════════
+
+  // All World Bank indicators (synced weekly)
+  worldBankIndicators: defineTable({
+    code: v.string(), // e.g., "NY.GDP.MKTP.CD"
+    name: v.string(), // e.g., "GDP (current US$)"
+    description: v.optional(v.string()), // sourceNote from API
+    sourceId: v.optional(v.string()), // World Bank source ID (e.g., "2" for WDI)
+    sourceName: v.optional(v.string()), // e.g., "World Development Indicators"
+    topics: v.optional(v.array(v.string())), // Topic names
+
+    // Search optimization - lowercase versions for efficient searching
+    nameLower: v.string(), // Lowercase name for search
+    codeLower: v.string(), // Lowercase code for search
+
+    // Reliability tracking
+    timeoutCount: v.number(), // Number of consecutive timeouts when fetching data
+    status: v.union(
+      v.literal("ok"), // Working fine
+      v.literal("warning"), // 1-2 timeouts - may be slow/unreliable
+      v.literal("error"), // 3+ timeouts - consistently failing
+    ),
+    lastTestedAt: v.optional(v.number()), // When we last tested this indicator
+
+    // Metadata
+    syncedAt: v.number(), // When this indicator was last synced from World Bank
+  })
+    .index("by_code", ["code"])
+    .index("by_status", ["status"])
+    .index("by_name_lower", ["nameLower"])
+    .index("by_code_lower", ["codeLower"])
+    .searchIndex("search_indicators", {
+      searchField: "nameLower",
+      filterFields: ["status", "sourceId"],
+    }),
+
+  // Sync metadata - tracks when indicators were last synced
+  worldBankSyncStatus: defineTable({
+    lastFullSync: v.number(), // Timestamp of last complete sync
+    indicatorCount: v.number(), // Total indicators synced
+    syncDurationMs: v.number(), // How long the sync took
+    status: v.union(
+      v.literal("success"),
+      v.literal("partial"), // Some pages failed
+      v.literal("failed"),
+    ),
+    errorMessage: v.optional(v.string()),
+  }),
 });

@@ -45,6 +45,7 @@ const metalEnum = z.enum([
 const currencyEnum = z.enum([
   "eur",
   "usd",
+  "chf",
 ] as const satisfies readonly MetalCurrency[]);
 
 const ParamsSchema = {
@@ -63,13 +64,13 @@ const ParamsSchema = {
       .string()
       .datetime()
       .describe(
-        'ISO 8601 date string in standard time (e.g., "2025-02-25T00:00:00Z")'
+        'ISO 8601 date string in standard time (e.g., "2025-02-25T00:00:00Z")',
       ),
     endDate: z
       .string()
       .datetime()
       .describe(
-        'ISO 8601 date string in standard time (e.g., "2025-02-25T23:59:59Z")'
+        'ISO 8601 date string in standard time (e.g., "2025-02-25T23:59:59Z")',
       ),
     aggregationInterval: timeIntervalEnum,
     currency: currencyEnum,
@@ -92,7 +93,7 @@ const app = new Hono()
           .select({
             timestamp:
               sql`${precious_metal_prices.timestamp} AT TIME ZONE 'UTC'`.as(
-                "timestamp"
+                "timestamp",
               ),
             price: metalColumns[currency][metal],
           })
@@ -114,7 +115,7 @@ const app = new Hono()
         console.error(`Error fetching ${metal} ${currency} price:`, error);
         return c.json({ error: "Internal Server Error" }, 500);
       }
-    }
+    },
   )
   .get(
     "/:metal/prices/historical",
@@ -191,7 +192,7 @@ const app = new Hono()
               -- Generate daily timestamps at the end of each day (23:59)
               SELECT generate_series(
                 date_trunc('day', now() - INTERVAL '1 ${sql.raw(
-                  timeRange.toLowerCase()
+                  timeRange.toLowerCase(),
                 )}'),
                 now()::date - INTERVAL '1 day' + INTERVAL '23 hours 59 minutes', -- Stop at yesterday
                 INTERVAL '1 ${sql.raw(timeRange === "Year" ? "week" : "day")}'
@@ -214,7 +215,7 @@ const app = new Hono()
                 ${metalColumns[currency][metal]} AS price
               FROM ${precious_metal_prices}
               WHERE timestamp >= ( now() - INTERVAL '1 ${sql.raw(
-                timeRange.toLowerCase()
+                timeRange.toLowerCase(),
               )}' - INTERVAL '1 day' )
                 AND timestamp <= now()
             ),
@@ -376,11 +377,11 @@ const app = new Hono()
       } catch (error) {
         console.error(
           `Error fetching ${metal} ${currency} prices for a time range of "${timeRange}": `,
-          error
+          error,
         );
         return c.json({ error: "Internal Server Error" }, 500);
       }
-    }
+    },
   )
   //TODO: Check each aggregationInterval for correct implementation, especially date_trunc('day', ...) in the hourly_intervals, daily_intervals, monthly_intervals, quarterly_intervals...
   .get(
@@ -406,7 +407,7 @@ const app = new Hono()
             .select({
               timestamp:
                 sql`${precious_metal_prices.timestamp} AT TIME ZONE 'UTC'`.as(
-                  "timestamp"
+                  "timestamp",
                 ),
               price: metalColumns[currency][metal],
             })
@@ -414,8 +415,8 @@ const app = new Hono()
             .where(
               and(
                 gte(precious_metal_prices.timestamp, parsedStartDate),
-                lte(precious_metal_prices.timestamp, parsedEndDate)
-              )
+                lte(precious_metal_prices.timestamp, parsedEndDate),
+              ),
             )
             .orderBy(precious_metal_prices.timestamp);
         } else if (aggregationInterval === "hour") {
@@ -645,11 +646,154 @@ const app = new Hono()
       } catch (error) {
         console.error(
           `Error fetching ${metal} ${currency} prices for range ${startDate} to ${endDate}: `,
-          error
+          error,
         );
         return c.json({ error: "Internal Server Error" }, 500);
       }
+    },
+  )
+  // ═══════════════════════════════════════════════════════════════
+  // GOLD EXTENDED PRICES - Gram, Kilo, and Purity prices
+  // ═══════════════════════════════════════════════════════════════
+  .get("/gold/prices/extended", async (c): Promise<Response> => {
+    try {
+      const priceRows = await db
+        .select()
+        .from(precious_metal_prices)
+        .orderBy(desc(precious_metal_prices.timestamp))
+        .limit(1);
+
+      if (priceRows.length === 0) {
+        return c.json({ error: "No price data available" }, 404);
+      }
+
+      const p = priceRows[0];
+
+      const extendedPrices = {
+        // Base ounce prices
+        ounce: {
+          eur: Number(p.gold_eur),
+          usd: Number(p.gold_usd),
+          chf: p.gold_chf ? Number(p.gold_chf) : null,
+        },
+        // Per gram prices
+        gram: {
+          eur: p.gold_eur_gram ? Number(p.gold_eur_gram) : null,
+          usd: p.gold_usd_gram ? Number(p.gold_usd_gram) : null,
+          chf: p.gold_chf_gram ? Number(p.gold_chf_gram) : null,
+        },
+        // Per kilo prices
+        kilo: {
+          eur: p.gold_eur_kilo ? Number(p.gold_eur_kilo) : null,
+          usd: p.gold_usd_kilo ? Number(p.gold_usd_kilo) : null,
+          chf: p.gold_chf_kilo ? Number(p.gold_chf_kilo) : null,
+        },
+        // Purity prices (per gram at purity level)
+        purity: {
+          eur: {
+            333: p.gold_eur_333 ? Number(p.gold_eur_333) : null,
+            585: p.gold_eur_585 ? Number(p.gold_eur_585) : null,
+            750: p.gold_eur_750 ? Number(p.gold_eur_750) : null,
+            833: p.gold_eur_833 ? Number(p.gold_eur_833) : null,
+            900: p.gold_eur_900 ? Number(p.gold_eur_900) : null,
+            916: p.gold_eur_916 ? Number(p.gold_eur_916) : null,
+            999: p.gold_eur_999 ? Number(p.gold_eur_999) : null,
+          },
+          usd: {
+            333: p.gold_usd_333 ? Number(p.gold_usd_333) : null,
+            585: p.gold_usd_585 ? Number(p.gold_usd_585) : null,
+            750: p.gold_usd_750 ? Number(p.gold_usd_750) : null,
+            833: p.gold_usd_833 ? Number(p.gold_usd_833) : null,
+            900: p.gold_usd_900 ? Number(p.gold_usd_900) : null,
+            916: p.gold_usd_916 ? Number(p.gold_usd_916) : null,
+            999: p.gold_usd_999 ? Number(p.gold_usd_999) : null,
+          },
+          chf: {
+            333: p.gold_chf_333 ? Number(p.gold_chf_333) : null,
+            585: p.gold_chf_585 ? Number(p.gold_chf_585) : null,
+            750: p.gold_chf_750 ? Number(p.gold_chf_750) : null,
+            833: p.gold_chf_833 ? Number(p.gold_chf_833) : null,
+            900: p.gold_chf_900 ? Number(p.gold_chf_900) : null,
+            916: p.gold_chf_916 ? Number(p.gold_chf_916) : null,
+            999: p.gold_chf_999 ? Number(p.gold_chf_999) : null,
+          },
+        },
+        timestamp: p.timestamp.toISOString(),
+      };
+
+      return c.json(extendedPrices, 200);
+    } catch (error) {
+      console.error("Error fetching gold extended prices:", error);
+      return c.json({ error: "Internal Server Error" }, 500);
     }
-  );
+  })
+  // ═══════════════════════════════════════════════════════════════
+  // ALL METALS LATEST - All metals in a single request (for vault)
+  // ═══════════════════════════════════════════════════════════════
+  .get("/prices/all/latest", async (c): Promise<Response> => {
+    try {
+      const priceRows = await db
+        .select()
+        .from(precious_metal_prices)
+        .orderBy(desc(precious_metal_prices.timestamp))
+        .limit(1);
+
+      if (priceRows.length === 0) {
+        return c.json({ error: "No price data available" }, 404);
+      }
+
+      const p = priceRows[0];
+
+      // Get latest exchange rates
+      const exchangeRows = await db.execute(sql`
+        SELECT from_eur_to_usd, from_eur_to_chf
+        FROM currency_exchange_rates
+        ORDER BY timestamp DESC
+        LIMIT 1
+      `);
+
+      const exchange = exchangeRows.rows[0] as
+        | {
+            from_eur_to_usd: string;
+            from_eur_to_chf: string | null;
+          }
+        | undefined;
+
+      const allPrices = {
+        gold: {
+          eur: Number(p.gold_eur),
+          usd: Number(p.gold_usd),
+          chf: p.gold_chf ? Number(p.gold_chf) : null,
+        },
+        silver: {
+          eur: Number(p.silver_eur),
+          usd: Number(p.silver_usd),
+          chf: p.silver_chf ? Number(p.silver_chf) : null,
+        },
+        platinum: {
+          eur: Number(p.platinum_eur),
+          usd: Number(p.platinum_usd),
+          chf: p.platinum_chf ? Number(p.platinum_chf) : null,
+        },
+        palladium: {
+          eur: Number(p.palladium_eur),
+          usd: Number(p.palladium_usd),
+          chf: p.palladium_chf ? Number(p.palladium_chf) : null,
+        },
+        exchangeRates: {
+          eurToUsd: exchange ? Number(exchange.from_eur_to_usd) : null,
+          eurToChf: exchange?.from_eur_to_chf
+            ? Number(exchange.from_eur_to_chf)
+            : null,
+        },
+        timestamp: p.timestamp.toISOString(),
+      };
+
+      return c.json(allPrices, 200);
+    } catch (error) {
+      console.error("Error fetching all metal prices:", error);
+      return c.json({ error: "Internal Server Error" }, 500);
+    }
+  });
 
 export default app;

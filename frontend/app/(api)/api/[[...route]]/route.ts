@@ -2,12 +2,13 @@ import { Hono } from "hono";
 import { handle } from "hono/vercel";
 
 import metals from "./metals";
+import worlddata from "./worlddata";
 
 export const runtime = "edge";
 
 const app = new Hono().basePath("/api");
 
-const routes = app.route("/metals", metals);
+const routes = app.route("/metals", metals).route("/world-data", worlddata);
 
 export const GET = handle(app);
 export const POST = handle(app);

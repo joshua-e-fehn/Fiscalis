@@ -76,3 +76,28 @@ export {
   useUpdateScenario,
   useDeleteScenario,
 } from "./loans";
+
+// Re-export all Convex metals hooks
+export {
+  // Query hooks
+  useMetals,
+  useMetalsSummary,
+  useMetalItem,
+  // Mutation hooks
+  useAddMetalItemFromCatalog,
+  useAddCustomMetalItem,
+  useUpdateMetalItem,
+  useDeleteMetalItem,
+  useAddMetalTransaction,
+  useDeleteMetalTransaction,
+} from "./metals";
+
+// Re-export all Convex World Bank indicator hooks
+export {
+  useConvexIndicatorSearch,
+  useWorldBankSyncStatus,
+  useSyncWorldBankIndicators,
+  useRecordIndicatorTimeout,
+  useRecordIndicatorSuccess,
+  useIndicatorByCode,
+} from "./worldbank";

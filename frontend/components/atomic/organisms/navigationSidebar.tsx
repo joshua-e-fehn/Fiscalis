@@ -11,11 +11,12 @@ import {
   ChartLine,
   ChartNoAxesCombined,
   Command,
+  Coins,
   GalleryVerticalEnd,
   GemIcon,
+  Globe2,
   House,
   Landmark,
-  MapIcon,
   PieChart,
   ReceiptText,
   Settings2,
@@ -78,7 +79,7 @@ const data = {
       items: [
         {
           title: "Equities",
-          url: "#",
+          url: "/equities",
           icon: ChartLine,
         },
         {
@@ -88,39 +89,39 @@ const data = {
         },
         {
           title: "Bonds",
-          url: "#",
+          url: "/bonds",
           icon: ReceiptText,
         },
         {
           title: "Real Estate",
-          url: "#",
+          url: "/real-estate",
           icon: Building2,
         },
         {
           title: "Cash & Money Market",
-          url: "#",
+          url: "/cash",
           icon: Banknote,
         },
         {
           title: "Cryptocurrencies",
-          url: "#",
+          url: "/crypto",
           icon: Bitcoin,
         },
         {
           title: "Collectibles",
-          url: "#",
+          url: "/collectibles",
           icon: Star,
         },
       ],
     },
     {
-      title: "Debt",
+      title: "Liabilities",
       url: "#",
       icon: CreditCard,
       items: [
         {
           title: "Loans",
-          url: "/debt/loans",
+          url: "/liabilities/loans",
           icon: HandCoins,
         },
       ],
@@ -172,7 +173,7 @@ const data = {
     {
       title: "World Map",
       url: "/world-map",
-      icon: MapIcon,
+      icon: Globe2,
       isActive: true,
       items: [],
     },

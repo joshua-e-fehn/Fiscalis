@@ -100,4 +100,7 @@ export {
   useRecordIndicatorTimeout,
   useRecordIndicatorSuccess,
   useIndicatorByCode,
+  useUserFavorites,
+  useIsIndicatorFavorited,
+  useToggleFavorite,
 } from "./worldbank";

@@ -1,6 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isPublicRoute = createRouteMatcher(["/", "/sign-in(.*)", "/sign-up(.*)"]);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/world-data(.*)", // Public World Bank data API
+  "/api/worldbank/sync(.*)", // Public World Bank sync API (for cron jobs)
+]);
 
 export const proxy = clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {

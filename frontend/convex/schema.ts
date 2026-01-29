@@ -485,4 +485,15 @@ export default defineSchema({
     ),
     errorMessage: v.optional(v.string()),
   }),
+
+  // User's favorite World Bank indicators
+  worldBankFavorites: defineTable({
+    userId: v.string(), // Clerk user ID
+    indicatorCode: v.string(), // World Bank indicator code (e.g., "NY.GDP.MKTP.CD")
+    indicatorName: v.string(), // Display name at time of favoriting
+    indicatorDescription: v.optional(v.string()),
+    addedAt: v.number(), // Timestamp when favorited
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_indicator", ["userId", "indicatorCode"]),
 });

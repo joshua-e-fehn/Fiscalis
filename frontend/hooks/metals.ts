@@ -1,4 +1,5 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
 import {
@@ -297,4 +298,155 @@ export function getGoldPurityPrice(
   if (!prices?.goldExtended) return null;
 
   return prices.goldExtended.purity[currency][purity] ?? null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// YTD Portfolio Performance Hook
+// ═══════════════════════════════════════════════════════════════
+
+import { calculateSellPrice } from "@/convex/lib/priceCalculations";
+import { MetalItemWithValuation } from "@/lib/types/metals-extended";
+
+interface YTDPerformanceResult {
+  ytdProfitLoss: number | null;
+  ytdProfitLossPercent: number | null;
+  valueAtStartOfYear: number | null;
+  isLoading: boolean;
+}
+
+/**
+ * Hook to calculate YTD portfolio performance
+ *
+ * This fetches historical prices for Jan 1st of the current year for each metal type
+ * and calculates the portfolio value at that date using each item's fine weight and sell premium.
+ *
+ * YTD = (current portfolio value - portfolio value at Jan 1) / portfolio value at Jan 1
+ */
+export function useYTDPortfolioPerformance(
+  items: MetalItemWithValuation[] | undefined,
+  currentPortfolioValue: number,
+  currency: MetalsCurrency = "eur",
+): YTDPerformanceResult {
+  const currentYear = new Date().getFullYear();
+  const startOfYear = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
+  const dayAfterStartOfYear = new Date(Date.UTC(currentYear, 0, 2, 0, 0, 0, 0));
+
+  // Fetch historical prices for each metal type at start of year
+  const goldPrices = useMetalPricesRange(
+    "gold",
+    startOfYear,
+    dayAfterStartOfYear,
+    "day",
+    currency as MetalCurrency,
+    !!items && items.length > 0,
+  );
+
+  const silverPrices = useMetalPricesRange(
+    "silver",
+    startOfYear,
+    dayAfterStartOfYear,
+    "day",
+    currency as MetalCurrency,
+    !!items && items.some((i) => i.metalType === "silver"),
+  );
+
+  const platinumPrices = useMetalPricesRange(
+    "platinum",
+    startOfYear,
+    dayAfterStartOfYear,
+    "day",
+    currency as MetalCurrency,
+    !!items && items.some((i) => i.metalType === "platinum"),
+  );
+
+  const palladiumPrices = useMetalPricesRange(
+    "palladium",
+    startOfYear,
+    dayAfterStartOfYear,
+    "day",
+    currency as MetalCurrency,
+    !!items && items.some((i) => i.metalType === "palladium"),
+  );
+
+  const isLoading =
+    goldPrices.isLoading ||
+    silverPrices.isLoading ||
+    platinumPrices.isLoading ||
+    palladiumPrices.isLoading;
+
+  // Calculate portfolio value at start of year
+  const valueAtStartOfYear = useMemo(() => {
+    if (!items || items.length === 0 || isLoading) {
+      return null;
+    }
+
+    // Get spot prices at start of year for each metal
+    const startOfYearPrices: Record<MetalsType, number | null> = {
+      gold: goldPrices.data?.[0]?.price ?? null,
+      silver: silverPrices.data?.[0]?.price ?? null,
+      platinum: platinumPrices.data?.[0]?.price ?? null,
+      palladium: palladiumPrices.data?.[0]?.price ?? null,
+    };
+
+    // Filter items that existed at the start of the year
+    // (purchased before Jan 1 of current year)
+    const startOfYearTimestamp = startOfYear.getTime();
+    const itemsAtStartOfYear = items.filter((item) => {
+      // Use createdAt as proxy for purchase date if purchaseDate not available
+      const itemDate = item.purchaseDate
+        ? new Date(item.purchaseDate).getTime()
+        : item.createdAt;
+      return itemDate < startOfYearTimestamp;
+    });
+
+    if (itemsAtStartOfYear.length === 0) {
+      return null;
+    }
+
+    // Calculate total value at start of year using historical prices + item premiums
+    let totalValue = 0;
+    for (const item of itemsAtStartOfYear) {
+      const spotPrice = startOfYearPrices[item.metalType];
+      if (spotPrice === null) continue;
+
+      // Calculate what this item would have been worth at Jan 1 using its sell premium
+      const itemValueAtStartOfYear = calculateSellPrice(
+        spotPrice,
+        item.fineWeightGrams,
+        item.sellPremium,
+        item.quantity,
+      );
+      totalValue += itemValueAtStartOfYear;
+    }
+
+    return totalValue > 0 ? totalValue : null;
+  }, [
+    items,
+    isLoading,
+    goldPrices.data,
+    silverPrices.data,
+    platinumPrices.data,
+    palladiumPrices.data,
+    startOfYear,
+  ]);
+
+  // Calculate YTD performance
+  const ytdProfitLoss =
+    valueAtStartOfYear !== null && currentPortfolioValue > 0
+      ? currentPortfolioValue - valueAtStartOfYear
+      : null;
+
+  const ytdProfitLossPercent =
+    valueAtStartOfYear !== null &&
+    valueAtStartOfYear > 0 &&
+    ytdProfitLoss !== null
+      ? (ytdProfitLoss / valueAtStartOfYear) * 100
+      : null;
+
+  return {
+    ytdProfitLoss,
+    ytdProfitLossPercent,
+    valueAtStartOfYear,
+    isLoading,
+  };
 }

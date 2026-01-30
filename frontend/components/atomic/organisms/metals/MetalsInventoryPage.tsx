@@ -13,7 +13,7 @@ import {
   useMetalsSummary,
   useVaultTransactions,
 } from "@/hooks/convex/metals";
-import { useMetalsPrices } from "@/hooks/metals";
+import { useMetalsPrices, useYTDPortfolioPerformance } from "@/hooks/metals";
 import {
   MetalsType,
   MetalsCurrency,
@@ -108,48 +108,13 @@ export function MetalsInventoryPage({
   // Loading state
   const isLoading = itemsLoading || summaryLoading || pricesLoading;
 
-  // Calculate YTD performance from items bought/sold this year
-  const ytdPerformance = useMemo(() => {
-    if (!items || items.length === 0) {
-      return { ytdProfitLoss: null, ytdProfitLossPercent: null };
-    }
-
-    const currentYear = new Date().getFullYear();
-    const startOfYear = new Date(currentYear, 0, 1).getTime();
-
-    // Filter items that were purchased this year
-    const ytdItems = items.filter((item) => {
-      // Check if the item was created this year (approximation for purchase date)
-      return item.createdAt >= startOfYear;
-    });
-
-    if (ytdItems.length === 0) {
-      return { ytdProfitLoss: null, ytdProfitLossPercent: null };
-    }
-
-    // Calculate YTD totals
-    let ytdMarketValue = 0;
-    let ytdCost = 0;
-    let hasCompleteCostData = true;
-
-    for (const item of ytdItems) {
-      ytdMarketValue += item.marketValue ?? 0;
-      if (item.totalCost !== null) {
-        ytdCost += item.totalCost;
-      } else {
-        hasCompleteCostData = false;
-      }
-    }
-
-    if (!hasCompleteCostData || ytdCost === 0) {
-      return { ytdProfitLoss: null, ytdProfitLossPercent: null };
-    }
-
-    const ytdProfitLoss = ytdMarketValue - ytdCost;
-    const ytdProfitLossPercent = (ytdProfitLoss / ytdCost) * 100;
-
-    return { ytdProfitLoss, ytdProfitLossPercent };
-  }, [items]);
+  // Calculate YTD performance using historical prices
+  // This fetches spot prices for Jan 1 and calculates portfolio value at that date
+  const ytdPerformance = useYTDPortfolioPerformance(
+    items,
+    summary?.totalMarketValue ?? 0,
+    currency,
+  );
 
   // Filter and sort items
   const filteredItems = useMemo(() => {
@@ -318,7 +283,7 @@ export function MetalsInventoryPage({
               ytdProfitLoss={ytdPerformance.ytdProfitLoss}
               ytdProfitLossPercent={ytdPerformance.ytdProfitLossPercent}
               currency={currency}
-              isLoading={summaryLoading}
+              isLoading={summaryLoading || ytdPerformance.isLoading}
             />
           </div>
 

@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/shadcn/card";
 import {
-  LineChart,
+  ComposedChart,
   Line,
   XAxis,
   YAxis,
@@ -17,7 +17,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   Area,
-  AreaChart,
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
@@ -93,6 +92,9 @@ function formatDate(timestamp: number, range: ChartTimeRange): string {
 /**
  * Build portfolio value history from transactions
  * This creates a running total of invested cost over time
+ * The chart shows:
+ * - "value" line: historical cost basis, ending at current market value
+ * - "cost" line: horizontal reference showing total cost basis
  */
 function buildPortfolioHistory(
   transactions: Transaction[],
@@ -155,6 +157,9 @@ function buildPortfolioHistory(
     }
   }
 
+  // Calculate the final cost basis to use as reference line
+  const finalCost = totalCost ?? runningCost;
+
   // If we have holdings (runningCost > 0), always show the chart
   if (runningCost > 0 || currentValue > 0) {
     // Add starting point at cutoff if we had holdings before the range
@@ -162,16 +167,21 @@ function buildPortfolioHistory(
       dataPoints.push({
         date: formatDate(cutoffDate, timeRange),
         value: costAtCutoff,
-        cost: costAtCutoff,
+        cost: finalCost, // Use final cost basis as horizontal reference
         timestamp: cutoffDate,
       });
+    }
+
+    // Update all data points to show the final cost basis as a horizontal reference line
+    for (const point of dataPoints) {
+      point.cost = finalCost;
     }
 
     // Add current point with actual market value
     dataPoints.push({
       date: new Date().toLocaleDateString("de-DE"),
       value: currentValue,
-      cost: totalCost ?? runningCost,
+      cost: finalCost,
       timestamp: now,
     });
   }
@@ -186,7 +196,7 @@ function buildPortfolioHistory(
         timeRange,
       ),
       value: 0,
-      cost: 0,
+      cost: finalCost,
       timestamp: cutoffDate || firstPoint.timestamp - 7 * 24 * 60 * 60 * 1000,
     });
   }
@@ -399,7 +409,7 @@ export function PortfolioChart({
             className="h-48"
           >
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
+              <ComposedChart
                 data={chartData}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
@@ -443,17 +453,7 @@ export function PortfolioChart({
                     strokeDasharray: "5 5",
                   }}
                 />
-                {/* Cost baseline */}
-                <Line
-                  type="monotone"
-                  dataKey="cost"
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth={1}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  activeDot={false}
-                />
-                {/* Portfolio value */}
+                {/* Portfolio value - render first so it's behind the cost line */}
                 <Area
                   type="monotone"
                   dataKey="value"
@@ -468,7 +468,17 @@ export function PortfolioChart({
                     fill: "white",
                   }}
                 />
-              </AreaChart>
+                {/* Cost baseline - horizontal reference line (rendered on top) */}
+                <Line
+                  type="monotone"
+                  dataKey="cost"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={2}
+                  strokeDasharray="8 4"
+                  dot={false}
+                  activeDot={false}
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           </motion.div>
         </AnimatePresence>

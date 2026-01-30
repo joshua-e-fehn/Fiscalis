@@ -17,6 +17,8 @@ import {
   PieChart,
   Briefcase,
 } from "lucide-react";
+import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { useEquitiesSummary } from "@/hooks/convex/equities";
 
 /**
  * Equities Overview Page
@@ -147,6 +149,11 @@ const EquityCategoryCard = ({ category }: { category: EquityCategory }) => {
 };
 
 export default function EquitiesPage() {
+  const { summary, isLoading } = useEquitiesSummary();
+
+  // Check if there are any holdings
+  const hasHoldings = summary && summary.totalValue > 0;
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
@@ -157,6 +164,14 @@ export default function EquitiesPage() {
           investments.
         </p>
       </div>
+
+      {/* Portfolio Dashboard Section */}
+      <CategoryDashboardSection
+        summary={summary}
+        currency="eur"
+        isLoading={isLoading}
+        showTopHoldings={hasHoldings ?? false}
+      />
 
       {/* Public Equities Section */}
       <div className="space-y-4">
@@ -190,7 +205,7 @@ export default function EquitiesPage() {
         </div>
       </div>
 
-      {/* Summary Section */}
+      {/* Connect Broker CTA */}
       <Card className="bg-muted/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

@@ -377,6 +377,9 @@ export function createMapColorExpression(
     const logMax = Math.log10(positiveValues[positiveValues.length - 1]);
     const logRange = logMax - logMin;
 
+    // Track last value to ensure strictly ascending order
+    let lastValue = -Infinity;
+
     for (let i = 0; i < numStops; i++) {
       const logValue = logMin + (i / (numStops - 1)) * logRange;
       const value = Math.pow(10, logValue);
@@ -384,11 +387,18 @@ export function createMapColorExpression(
         (i / (numStops - 1)) * (palette.length - 1),
       );
 
-      stops.push(value);
-      stops.push(palette[paletteIndex]);
+      // Only add if strictly greater than previous value
+      if (value > lastValue) {
+        stops.push(value);
+        stops.push(palette[paletteIndex]);
+        lastValue = value;
+      }
     }
   } else {
     // For other scales, use quantile-based stops
+    // Track last value to ensure strictly ascending order
+    let lastValue = -Infinity;
+
     for (let i = 0; i < numStops; i++) {
       const valueIndex = Math.floor(
         (i / (numStops - 1)) * (sortedValues.length - 1),
@@ -397,9 +407,35 @@ export function createMapColorExpression(
         (i / (numStops - 1)) * (palette.length - 1),
       );
 
-      stops.push(sortedValues[valueIndex]);
-      stops.push(palette[paletteIndex]);
+      const value = sortedValues[valueIndex];
+
+      // Only add if strictly greater than previous value
+      // This handles cases where quantile values are the same
+      if (value > lastValue) {
+        stops.push(value);
+        stops.push(palette[paletteIndex]);
+        lastValue = value;
+      }
     }
+  }
+
+  // Handle edge case: if we have less than 2 stops (all values are the same),
+  // create a simple color expression
+  if (stops.length < 4) {
+    // Less than 2 value-color pairs
+    const singleColor = palette[Math.floor(palette.length / 2)];
+    return [
+      "case",
+      [
+        "any",
+        ["!", ["has", "dataValue"]],
+        ["==", ["get", "dataValue"], -999999999],
+        ["==", ["get", "dataValue"], null],
+        ["==", ["typeof", ["get", "dataValue"]], "string"],
+      ],
+      NO_DATA_COLOR,
+      singleColor,
+    ];
   }
 
   // MapLibre expression for coloring

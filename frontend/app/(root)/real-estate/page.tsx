@@ -19,6 +19,8 @@ import {
   TrendingUp,
   MapPin,
 } from "lucide-react";
+import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { useRealEstateSummary } from "@/hooks/convex/realEstate";
 
 /**
  * Real Estate Overview Page
@@ -159,6 +161,8 @@ const RealEstateCategoryCard = ({
 };
 
 export default function RealEstatePage() {
+  const { summary, isLoading } = useRealEstateSummary();
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
@@ -169,6 +173,13 @@ export default function RealEstatePage() {
           commercial holdings, REITs, and more.
         </p>
       </div>
+
+      {/* Dashboard Section */}
+      <CategoryDashboardSection
+        summary={summary}
+        currency="eur"
+        isLoading={isLoading}
+      />
 
       {/* Category Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -450,3 +450,350 @@ export function useYTDPortfolioPerformance(
     isLoading,
   };
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Portfolio Historical Values Hook
+// ═══════════════════════════════════════════════════════════════
+
+export type PortfolioTimeRange = "1W" | "1M" | "3M" | "6M" | "1Y" | "All";
+
+interface PortfolioHistoryPoint {
+  timestamp: number;
+  date: string;
+  value: number;
+  cost: number;
+}
+
+interface PortfolioHistoricalValuesResult {
+  dataPoints: PortfolioHistoryPoint[];
+  isLoading: boolean;
+}
+
+/**
+ * Get date range and aggregation interval for a given time range
+ */
+function getDateRangeForTimeRange(
+  timeRange: PortfolioTimeRange,
+  earliestTransaction: Date | null,
+): { startDate: Date; endDate: Date; interval: TimeInterval } {
+  const endDate = new Date();
+  let startDate: Date;
+  let interval: TimeInterval;
+
+  switch (timeRange) {
+    case "1W":
+      startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+      interval = "hour";
+      break;
+    case "1M":
+      startDate = new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      interval = "day";
+      break;
+    case "3M":
+      startDate = new Date(endDate.getTime() - 90 * 24 * 60 * 60 * 1000);
+      interval = "day";
+      break;
+    case "6M":
+      startDate = new Date(endDate.getTime() - 180 * 24 * 60 * 60 * 1000);
+      interval = "day";
+      break;
+    case "1Y":
+      startDate = new Date(endDate.getTime() - 365 * 24 * 60 * 60 * 1000);
+      interval = "day";
+      break;
+    case "All":
+    default:
+      // Use earliest transaction date or 1 year ago, whichever is earlier
+      startDate = earliestTransaction
+        ? new Date(
+            Math.min(
+              earliestTransaction.getTime(),
+              endDate.getTime() - 365 * 24 * 60 * 60 * 1000,
+            ),
+          )
+        : new Date(endDate.getTime() - 365 * 24 * 60 * 60 * 1000);
+      interval = "day";
+      break;
+  }
+
+  return { startDate, endDate, interval };
+}
+
+/**
+ * Hook to calculate portfolio historical values for the performance chart
+ *
+ * This calculates the theoretical sell value of all holdings at each point in time:
+ * - Fetches historical prices for each metal type
+ * - Tracks quantity held at each date based on transactions
+ * - Calculates: holdings_at_date × historical_price_at_date
+ */
+export function usePortfolioHistoricalValues(
+  items: MetalItemWithValuation[] | undefined,
+  transactions:
+    | Array<{
+        transactionDate: string;
+        transactionType: string;
+        quantity: number;
+        pricePerUnit: number;
+        vaultItemId?: string;
+      }>
+    | undefined,
+  currentPortfolioValue: number,
+  totalCost: number | null,
+  timeRange: PortfolioTimeRange = "3M",
+  currency: MetalsCurrency = "eur",
+): PortfolioHistoricalValuesResult {
+  // Find earliest transaction date
+  const earliestTransaction = useMemo(() => {
+    if (!transactions || transactions.length === 0) return null;
+    const sorted = [...transactions].sort(
+      (a, b) =>
+        new Date(a.transactionDate).getTime() -
+        new Date(b.transactionDate).getTime(),
+    );
+    return new Date(sorted[0].transactionDate);
+  }, [transactions]);
+
+  // Get date range for the selected time range
+  const { startDate, endDate, interval } = useMemo(
+    () => getDateRangeForTimeRange(timeRange, earliestTransaction),
+    [timeRange, earliestTransaction],
+  );
+
+  // Fetch historical prices for each metal
+  const hasItems = !!items && items.length > 0;
+
+  const goldPrices = useMetalPricesRange(
+    "gold",
+    startDate,
+    endDate,
+    interval,
+    currency as MetalCurrency,
+    hasItems && items.some((i) => i.metalType === "gold"),
+  );
+
+  const silverPrices = useMetalPricesRange(
+    "silver",
+    startDate,
+    endDate,
+    interval,
+    currency as MetalCurrency,
+    hasItems && items.some((i) => i.metalType === "silver"),
+  );
+
+  const platinumPrices = useMetalPricesRange(
+    "platinum",
+    startDate,
+    endDate,
+    interval,
+    currency as MetalCurrency,
+    hasItems && items.some((i) => i.metalType === "platinum"),
+  );
+
+  const palladiumPrices = useMetalPricesRange(
+    "palladium",
+    startDate,
+    endDate,
+    interval,
+    currency as MetalCurrency,
+    hasItems && items.some((i) => i.metalType === "palladium"),
+  );
+
+  const isLoading =
+    goldPrices.isLoading ||
+    silverPrices.isLoading ||
+    platinumPrices.isLoading ||
+    palladiumPrices.isLoading;
+
+  // Calculate portfolio value at each historical price point
+  const dataPoints = useMemo<PortfolioHistoryPoint[]>(() => {
+    if (!items || items.length === 0 || isLoading) {
+      return [];
+    }
+
+    // Build a map of historical prices by timestamp
+    const pricesByTimestamp = new Map<
+      number,
+      Record<MetalsType, number | null>
+    >();
+
+    // Helper to safely convert date to timestamp
+    // The API returns date as string (JSON serialization), not Date object
+    const toTimestamp = (date: Date | string | null): number => {
+      if (!date) return 0;
+      if (typeof date === "string") return new Date(date).getTime();
+      return date.getTime();
+    };
+
+    // Collect all unique timestamps from all metals
+    const allPrices = [
+      ...(goldPrices.data ?? []).map((p) => ({
+        ...p,
+        timestamp: toTimestamp(p.date),
+        metal: "gold" as MetalsType,
+      })),
+      ...(silverPrices.data ?? []).map((p) => ({
+        ...p,
+        timestamp: toTimestamp(p.date),
+        metal: "silver" as MetalsType,
+      })),
+      ...(platinumPrices.data ?? []).map((p) => ({
+        ...p,
+        timestamp: toTimestamp(p.date),
+        metal: "platinum" as MetalsType,
+      })),
+      ...(palladiumPrices.data ?? []).map((p) => ({
+        ...p,
+        timestamp: toTimestamp(p.date),
+        metal: "palladium" as MetalsType,
+      })),
+    ].filter((p) => p.timestamp > 0 && p.price !== null);
+
+    // Get unique timestamps and initialize price map
+    const uniqueTimestamps = new Set<number>();
+    for (const pricePoint of allPrices) {
+      uniqueTimestamps.add(pricePoint.timestamp);
+    }
+
+    // Initialize all timestamps with null prices
+    for (const ts of uniqueTimestamps) {
+      pricesByTimestamp.set(ts, {
+        gold: null,
+        silver: null,
+        platinum: null,
+        palladium: null,
+      });
+    }
+
+    // Fill in prices from each metal's data
+    for (const pricePoint of allPrices) {
+      const existing = pricesByTimestamp.get(pricePoint.timestamp);
+      if (existing) {
+        existing[pricePoint.metal] = pricePoint.price;
+      }
+    }
+
+    // Forward-fill missing prices (use last known price)
+    const sortedTimestamps = Array.from(uniqueTimestamps).sort((a, b) => a - b);
+    const lastKnownPrices: Record<MetalsType, number | null> = {
+      gold: null,
+      silver: null,
+      platinum: null,
+      palladium: null,
+    };
+
+    for (const ts of sortedTimestamps) {
+      const prices = pricesByTimestamp.get(ts)!;
+      for (const metal of [
+        "gold",
+        "silver",
+        "platinum",
+        "palladium",
+      ] as const) {
+        if (prices[metal] !== null) {
+          lastKnownPrices[metal] = prices[metal];
+        } else if (lastKnownPrices[metal] !== null) {
+          prices[metal] = lastKnownPrices[metal];
+        }
+      }
+    }
+
+    // Build transaction history to track holdings over time
+    // Group items by their id and track quantity changes
+    const itemQuantityAtTime = new Map<
+      string,
+      Array<{ timestamp: number; quantity: number; costBasis: number }>
+    >();
+
+    // Initialize with current state
+    for (const item of items) {
+      const purchaseTimestamp = item.purchaseDate
+        ? new Date(item.purchaseDate).getTime()
+        : item.createdAt;
+      const costBasis = (item.purchasePricePerUnit ?? 0) * item.quantity;
+
+      itemQuantityAtTime.set(item._id, [
+        {
+          timestamp: purchaseTimestamp,
+          quantity: item.quantity,
+          costBasis,
+        },
+      ]);
+    }
+
+    // Calculate portfolio value at each timestamp
+    const results: PortfolioHistoryPoint[] = [];
+
+    for (const ts of sortedTimestamps) {
+      const prices = pricesByTimestamp.get(ts)!;
+      let portfolioValue = 0;
+      let portfolioCost = 0;
+
+      for (const item of items) {
+        const spotPrice = prices[item.metalType];
+        if (spotPrice === null) continue;
+
+        // Check if item existed at this timestamp
+        const purchaseTimestamp = item.purchaseDate
+          ? new Date(item.purchaseDate).getTime()
+          : item.createdAt;
+
+        if (ts < purchaseTimestamp) {
+          // Item didn't exist yet
+          continue;
+        }
+
+        // Calculate sell value at this timestamp
+        const itemValue = calculateSellPrice(
+          spotPrice,
+          item.fineWeightGrams,
+          item.sellPremium,
+          item.quantity,
+        );
+        portfolioValue += itemValue;
+
+        // Track cost basis
+        if (item.purchasePricePerUnit) {
+          portfolioCost += item.purchasePricePerUnit * item.quantity;
+        }
+      }
+
+      if (portfolioValue > 0) {
+        results.push({
+          timestamp: ts,
+          date: new Date(ts).toLocaleDateString("de-DE"),
+          value: portfolioValue,
+          cost: portfolioCost > 0 ? portfolioCost : portfolioValue,
+        });
+      }
+    }
+
+    // Add current value as the last point if not already present
+    const now = Date.now();
+    const lastPoint = results[results.length - 1];
+    if (!lastPoint || lastPoint.timestamp < now - 60 * 60 * 1000) {
+      results.push({
+        timestamp: now,
+        date: new Date(now).toLocaleDateString("de-DE"),
+        value: currentPortfolioValue,
+        cost: totalCost ?? currentPortfolioValue,
+      });
+    }
+
+    return results;
+  }, [
+    items,
+    isLoading,
+    goldPrices.data,
+    silverPrices.data,
+    platinumPrices.data,
+    palladiumPrices.data,
+    currentPortfolioValue,
+    totalCost,
+  ]);
+
+  return {
+    dataPoints,
+    isLoading,
+  };
+}

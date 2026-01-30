@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import { Icon } from "lucide-react";
 import { gemRing } from "@lucide/lab";
+import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { useCollectiblesSummary } from "@/hooks/convex/collectibles";
 
 // Wrapper component for lab icons to match the standard icon interface
 const GemRingIcon = ({ className }: { className?: string }) => (
@@ -195,6 +197,8 @@ const CollectibleCategoryCard = ({
 };
 
 export default function CollectiblesPage() {
+  const { summary, isLoading } = useCollectiblesSummary();
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
@@ -205,6 +209,13 @@ export default function CollectiblesPage() {
           and more.
         </p>
       </div>
+
+      {/* Dashboard Section */}
+      <CategoryDashboardSection
+        summary={summary}
+        currency="eur"
+        isLoading={isLoading}
+      />
 
       {/* Category Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -17,7 +17,10 @@ import {
   ArrowRight,
   TrendingUp,
   Atom,
+  Gem,
 } from "lucide-react";
+import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { useCommoditiesSummary } from "@/hooks/convex/commodities";
 
 /**
  * Commodities Overview Page
@@ -76,6 +79,14 @@ const commodityCategories: CommodityCategory[] = [
     icon: Atom,
     implemented: false,
     examples: ["Neodymium", "Dysprosium", "Lithium", "Cobalt"],
+  },
+  {
+    title: "Gemstones",
+    description: "Diamonds, rubies, sapphires, and other precious gemstones",
+    href: "/commodities/gemstones",
+    icon: Gem,
+    implemented: false,
+    examples: ["Diamonds", "Rubies", "Sapphires", "Emeralds"],
   },
 ];
 
@@ -156,6 +167,11 @@ const CommodityCategoryCard = ({
 };
 
 export default function CommoditiesPage() {
+  const { summary, isLoading } = useCommoditiesSummary("eur");
+
+  // Check if there are any holdings
+  const hasHoldings = summary && summary.totalValue > 0;
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-6 md:px-24 gap-6">
       {/* Header */}
@@ -167,32 +183,44 @@ export default function CommoditiesPage() {
         </p>
       </div>
 
-      {/* Category Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-        {commodityCategories.map((category) => (
-          <CommodityCategoryCard key={category.title} category={category} />
-        ))}
+      {/* Portfolio Dashboard Section */}
+      <div className="w-full">
+        <CategoryDashboardSection
+          summary={summary}
+          currency="eur"
+          isLoading={isLoading}
+          showTopHoldings={hasHoldings ?? false}
+        />
       </div>
 
-      {/* Quick Stats Section - Placeholder for future */}
-      <Card className="w-full mt-4">
-        <CardHeader>
-          <CardTitle>Market Overview</CardTitle>
-          <CardDescription>
-            Summary of your commodity holdings and market performance
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center text-muted-foreground py-8">
-            <p>Portfolio summary will appear here once you add holdings.</p>
-            <Button asChild variant="link" className="mt-2">
-              <Link href="/commodities/metals/inventory">
-                Get started with Precious Metals →
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Category Grid */}
+      <div className="w-full">
+        <h2 className="text-lg font-semibold mb-4">Categories</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {commodityCategories.map((category) => (
+            <CommodityCategoryCard key={category.title} category={category} />
+          ))}
+        </div>
+      </div>
+
+      {/* Empty state CTA - only show when no holdings */}
+      {!hasHoldings && !isLoading && (
+        <Card className="w-full mt-4 bg-muted/30">
+          <CardContent className="py-6">
+            <div className="text-center">
+              <p className="text-muted-foreground">
+                Start tracking your commodity investments to see portfolio
+                analytics here.
+              </p>
+              <Button asChild variant="link" className="mt-2">
+                <Link href="/commodities/metals/inventory">
+                  Get started with Precious Metals →
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </main>
   );
 }

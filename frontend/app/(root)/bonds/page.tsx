@@ -19,6 +19,8 @@ import {
   TrendingUp,
   FileText,
 } from "lucide-react";
+import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { useBondsSummary } from "@/hooks/convex/bonds";
 
 /**
  * Bonds Overview Page
@@ -169,6 +171,8 @@ const BondCategoryCard = ({ category }: { category: BondCategory }) => {
 };
 
 export default function BondsPage() {
+  const { summary, isLoading } = useBondsSummary();
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
@@ -179,6 +183,13 @@ export default function BondsPage() {
           bonds, and bond funds.
         </p>
       </div>
+
+      {/* Dashboard Section */}
+      <CategoryDashboardSection
+        summary={summary}
+        currency="eur"
+        isLoading={isLoading}
+      />
 
       {/* Category Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

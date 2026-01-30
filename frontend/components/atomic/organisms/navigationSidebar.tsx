@@ -11,7 +11,6 @@ import {
   ChartLine,
   ChartNoAxesCombined,
   Command,
-  Coins,
   GalleryVerticalEnd,
   GemIcon,
   Globe2,
@@ -23,7 +22,6 @@ import {
   Star,
   CreditCard,
   ChartCandlestick,
-  Wallet,
   HandCoins,
 } from "lucide-react";
 
@@ -63,12 +61,6 @@ const data = {
       url: "/dashboard",
       icon: House,
       isActive: true,
-      items: [],
-    },
-    {
-      title: "Net Worth",
-      url: "#",
-      icon: Wallet,
       items: [],
     },
     {

@@ -18,6 +18,8 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { useCryptoSummary } from "@/hooks/convex/crypto";
 
 /**
  * Cryptocurrencies Overview Page
@@ -153,6 +155,8 @@ const CryptoCategoryCard = ({ category }: { category: CryptoCategory }) => {
 };
 
 export default function CryptoPage() {
+  const { summary, isLoading } = useCryptoSummary();
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
@@ -163,6 +167,13 @@ export default function CryptoPage() {
           stablecoins, and DeFi positions.
         </p>
       </div>
+
+      {/* Dashboard Section */}
+      <CategoryDashboardSection
+        summary={summary}
+        currency="eur"
+        isLoading={isLoading}
+      />
 
       {/* Category Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

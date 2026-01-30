@@ -104,3 +104,11 @@ export {
   useIsIndicatorFavorited,
   useToggleFavorite,
 } from "./worldbank";
+
+// Re-export portfolio overview hook
+export {
+  usePortfolioOverview,
+  type AssetCategoryData,
+  type LiabilitiesSummaryData,
+  type PortfolioSummary,
+} from "./portfolio";

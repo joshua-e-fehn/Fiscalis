@@ -104,6 +104,7 @@ const CATEGORY_LABELS: Record<IndicatorCategory, string> = {
   trade: "Trade",
   energy: "Energy & Environment",
   development: "Development",
+  commodities: "Commodities",
 };
 
 // Default indicator state
@@ -519,7 +520,7 @@ export default function WorldMapPage() {
       const batchSize = 10;
       const allData: Array<{
         year: number;
-        countries: typeof worldData.countries;
+        countries: NonNullable<typeof worldData>["countries"];
       }> = [];
 
       // Use appropriate endpoint for featured vs dynamic indicators

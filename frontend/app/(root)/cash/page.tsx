@@ -19,6 +19,8 @@ import {
   ArrowRight,
   TrendingUp,
 } from "lucide-react";
+import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { useCashSummary } from "@/hooks/convex/cash";
 
 /**
  * Cash & Money Market Overview Page
@@ -163,6 +165,8 @@ const CashCategoryCard = ({ category }: { category: CashCategory }) => {
 };
 
 export default function CashPage() {
+  const { summary, isLoading } = useCashSummary();
+
   return (
     <div className="container mx-auto py-6 space-y-8">
       {/* Header */}
@@ -175,6 +179,13 @@ export default function CashPage() {
           and foreign currency holdings.
         </p>
       </div>
+
+      {/* Dashboard Section */}
+      <CategoryDashboardSection
+        summary={summary}
+        currency="eur"
+        isLoading={isLoading}
+      />
 
       {/* Category Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

@@ -96,3 +96,36 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Onboarding-specific styles */
+@layer components {
+  .onboarding-glow-gold {
+    box-shadow: 0 0 60px rgba(212, 175, 55, 0.15);
+  }
+
+  .onboarding-glow-blue {
+    box-shadow: 0 0 60px rgba(59, 130, 246, 0.15);
+  }
+
+  .onboarding-glass {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Smooth scrolling for onboarding */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Hide scrollbar for onboarding flow */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

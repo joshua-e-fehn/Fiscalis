@@ -37,10 +37,28 @@ export default defineSchema({
     availableBalance: v.optional(v.number()),
     currency: v.string(),
     lastSynced: v.number(),
+    // Classification fields
+    investmentCategory: v.optional(v.string()), // "cash", "liabilities", etc.
+    investmentSubcategory: v.optional(v.string()), // "checking-accounts", "credit-cards", etc.
+    classificationSource: v.optional(v.string()), // "auto", "user_override", "admin"
+    classificationRule: v.optional(v.string()), // Rule ID that matched
+    userCategoryOverride: v.optional(v.string()), // User's manual category override
+    userSubcategoryOverride: v.optional(v.string()), // User's manual subcategory override
+    // Currency conversion fields
+    valueInBaseCurrency: v.optional(v.number()), // Balance in EUR
+    exchangeRateUsed: v.optional(v.number()), // Rate at sync time
+    exchangeRateTimestamp: v.optional(v.number()), // When rate was fetched
+    baseCurrency: v.optional(v.string()), // "EUR"
   })
     .index("by_user", ["userId"])
     .index("by_item", ["itemId"])
-    .index("by_account", ["accountId"]),
+    .index("by_account", ["accountId"])
+    .index("by_category", ["userId", "investmentCategory"])
+    .index("by_subcategory", [
+      "userId",
+      "investmentCategory",
+      "investmentSubcategory",
+    ]),
 
   plaidTransactions: defineTable({
     userId: v.string(),
@@ -112,6 +130,11 @@ export default defineSchema({
     institutionName: v.optional(v.string()), // Broker name (denormalized)
     lastSyncAt: v.optional(v.number()),
     createdAt: v.number(),
+    // Cash classification fields (for uninvested cash tracking)
+    cashInvestmentCategory: v.optional(v.string()), // "cash" or "liabilities" (if margin)
+    cashInvestmentSubcategory: v.optional(v.string()), // "broker-cash" or "margin-loans"
+    cashValueInBaseCurrency: v.optional(v.number()), // Cash value in EUR
+    cashExchangeRateUsed: v.optional(v.number()), // Rate at sync time
   })
     .index("by_user", ["userId"])
     .index("by_connection", ["connectionId"])
@@ -141,13 +164,31 @@ export default defineSchema({
     unrealizedPLPercent: v.optional(v.number()), // Unrealized P&L percentage
     dayPL: v.optional(v.number()), // Today's P&L
     dayPLPercent: v.optional(v.number()), // Today's P&L percentage
+    // Classification fields
+    investmentCategory: v.optional(v.string()), // "equities", "cash", "bonds", etc.
+    investmentSubcategory: v.optional(v.string()), // "stocks", "etfs", "broker-cash", etc.
+    classificationSource: v.optional(v.string()), // "auto", "user_override", "admin"
+    classificationRule: v.optional(v.string()), // Rule ID that matched
+    userCategoryOverride: v.optional(v.string()), // User's manual category override
+    userSubcategoryOverride: v.optional(v.string()), // User's manual subcategory override
+    // Currency conversion fields
+    valueInBaseCurrency: v.optional(v.number()), // Market value in EUR
+    exchangeRateUsed: v.optional(v.number()), // Rate at sync time
+    exchangeRateTimestamp: v.optional(v.number()), // When rate was fetched
+    baseCurrency: v.optional(v.string()), // "EUR"
     // Metadata
     lastSyncAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_account", ["accountId"])
-    .index("by_symbol", ["userId", "symbol"]),
+    .index("by_symbol", ["userId", "symbol"])
+    .index("by_category", ["userId", "investmentCategory"])
+    .index("by_subcategory", [
+      "userId",
+      "investmentCategory",
+      "investmentSubcategory",
+    ]),
 
   // Broker transactions/activities
   brokerTransactions: defineTable({
@@ -313,9 +354,30 @@ export default defineSchema({
 
   userSettings: defineTable({
     userId: v.string(),
+    displayName: v.optional(v.string()),
     defaultCurrency: v.string(),
+    language: v.optional(v.string()), // "en" or "de"
     theme: v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
     dashboardLayout: v.optional(v.any()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // ═══════════════════════════════════════════════════════════════
+  // ONBOARDING PROGRESS
+  // ═══════════════════════════════════════════════════════════════
+
+  onboardingProgress: defineTable({
+    userId: v.string(),
+    currentStep: v.number(), // 1-6
+    completedSteps: v.array(v.number()), // [1, 2, 3]
+    skippedSteps: v.array(v.number()), // [3, 4]
+    profileCompleted: v.boolean(),
+    bankingConnected: v.boolean(),
+    brokersConnected: v.boolean(),
+    cryptoConnected: v.boolean(),
+    onboardingCompleted: v.boolean(),
+    completedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
@@ -496,4 +558,141 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_indicator", ["userId", "indicatorCode"]),
+
+  // ═══════════════════════════════════════════════════════════════
+  // CRYPTO (Vezgo)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Vezgo user registration (links Clerk user to Vezgo user)
+  vezgoUsers: defineTable({
+    userId: v.string(), // Clerk user ID
+    vezgoToken: v.string(), // Encrypted Vezgo user token
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // Vezgo connections (exchanges, wallets, blockchain addresses)
+  vezgoConnections: defineTable({
+    userId: v.string(), // Clerk user ID
+    accountId: v.string(), // Vezgo account ID
+    provider: v.string(), // "coinbase", "binance", "metamask", etc.
+    providerType: v.union(
+      v.literal("exchange"), // Centralized exchanges (Coinbase, Binance, Kraken)
+      v.literal("wallet"), // Software wallets (MetaMask, Trust Wallet)
+      v.literal("hardware"), // Hardware wallets (Ledger, Trezor)
+      v.literal("blockchain"), // Direct blockchain address
+    ),
+    name: v.string(), // Display name
+    logo: v.optional(v.string()), // Provider logo URL
+    status: v.union(
+      v.literal("active"),
+      v.literal("error"),
+      v.literal("syncing"),
+      v.literal("disconnected"),
+    ),
+    lastSyncAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_account", ["accountId"])
+    .index("by_provider_type", ["userId", "providerType"])
+    .index("by_status", ["userId", "status"]),
+
+  // Vezgo positions (crypto holdings)
+  vezgoPositions: defineTable({
+    userId: v.string(), // Clerk user ID
+    connectionId: v.id("vezgoConnections"), // Reference to connection
+
+    // Asset identification
+    symbol: v.string(), // "BTC", "ETH", "USDC"
+    name: v.optional(v.string()), // "Bitcoin", "Ethereum"
+    ticker: v.optional(v.string()), // Display ticker
+
+    // Holdings
+    quantity: v.number(), // Amount held
+    fiatValue: v.optional(v.number()), // Value in fiat currency
+    fiatCurrency: v.string(), // "USD", "EUR"
+
+    // Asset categorization
+    category: v.union(
+      v.literal("cryptocurrency"), // BTC, ETH, etc.
+      v.literal("token"), // ERC-20, SPL tokens
+      v.literal("stablecoin"), // USDC, USDT, DAI
+      v.literal("defi"), // DeFi protocol positions (LP tokens, staked assets)
+      v.literal("nft"), // Non-fungible tokens
+    ),
+
+    // DeFi-specific fields
+    protocol: v.optional(v.string()), // "Aave", "Uniswap", "Compound"
+    poolName: v.optional(v.string()), // "ETH/USDC LP"
+    apy: v.optional(v.number()), // Annual percentage yield
+    rewardsEarned: v.optional(v.number()), // Unclaimed rewards
+
+    // NFT-specific fields
+    contractAddress: v.optional(v.string()), // NFT contract address
+    tokenId: v.optional(v.string()), // NFT token ID
+    collectionName: v.optional(v.string()), // NFT collection name
+    imageUrl: v.optional(v.string()), // NFT image URL
+    metadata: v.optional(v.any()), // NFT metadata JSON
+
+    // Chain info
+    chain: v.optional(v.string()), // "ethereum", "polygon", "solana"
+    address: v.optional(v.string()), // Wallet address holding this asset
+
+    lastSyncAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_connection", ["connectionId"])
+    .index("by_category", ["userId", "category"])
+    .index("by_symbol", ["userId", "symbol"]),
+
+  // Vezgo transactions
+  vezgoTransactions: defineTable({
+    userId: v.string(), // Clerk user ID
+    connectionId: v.id("vezgoConnections"), // Reference to connection
+    vezgoTransactionId: v.string(), // Vezgo's transaction ID
+
+    // Transaction details
+    type: v.union(
+      v.literal("buy"),
+      v.literal("sell"),
+      v.literal("transfer_in"),
+      v.literal("transfer_out"),
+      v.literal("swap"),
+      v.literal("stake"),
+      v.literal("unstake"),
+      v.literal("reward"),
+      v.literal("airdrop"),
+      v.literal("mint"),
+      v.literal("burn"),
+      v.literal("fee"),
+      v.literal("other"),
+    ),
+    symbol: v.string(), // Asset symbol
+    quantity: v.number(), // Amount
+    fiatValue: v.optional(v.number()), // Value at time of transaction
+    fiatCurrency: v.string(),
+
+    // Fees
+    fee: v.optional(v.number()),
+    feeCurrency: v.optional(v.string()),
+
+    // Transfer details
+    fromAddress: v.optional(v.string()),
+    toAddress: v.optional(v.string()),
+    txHash: v.optional(v.string()), // Blockchain transaction hash
+
+    // Chain info
+    chain: v.optional(v.string()),
+
+    // Timestamps
+    transactionDate: v.string(), // ISO date string
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_connection", ["connectionId"])
+    .index("by_date", ["userId", "transactionDate"])
+    .index("by_vezgo_id", ["vezgoTransactionId"]),
 });

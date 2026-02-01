@@ -17,4 +17,14 @@ crons.weekly(
   internal.worldbank.syncAllIndicatorsInternal,
 );
 
+// ═══════════════════════════════════════════════════════════════
+// Crypto Connection Sync (Vezgo)
+// Runs every 6 hours to keep crypto data fresh
+// ═══════════════════════════════════════════════════════════════
+crons.interval(
+  "sync-crypto-connections",
+  { hours: 6 },
+  internal.actions.vezgo.scheduledSyncAllAction,
+);
+
 export default crons;

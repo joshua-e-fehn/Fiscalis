@@ -170,7 +170,17 @@ export function BrokerAccountsCard({
 
   // Calculate total portfolio value for this connection
   const totalValue = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-  const totalCash = accounts.reduce((sum, acc) => sum + (acc.cash || 0), 0);
+  // For broker accounts, cash can be in either `cash` field or `balance` field
+  // (when account has no positions, all value is cash held in balance)
+  const getEffectiveCash = (acc: BrokerAccount) => {
+    if (acc.cash && acc.cash > 0) return acc.cash;
+    // If cash is 0 or undefined, the balance itself might be the cash
+    return acc.balance || 0;
+  };
+  const totalCash = accounts.reduce(
+    (sum, acc) => sum + getEffectiveCash(acc),
+    0,
+  );
   const currency = accounts[0]?.currency || "USD";
 
   return (

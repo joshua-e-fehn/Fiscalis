@@ -64,10 +64,11 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
       await registerUser();
 
       // Get the connection URL
-      const currentUrl =
-        typeof window !== "undefined" ? window.location.href : "";
+      const baseUrl =
+        typeof window !== "undefined" ? window.location.origin : "";
       const result = await getConnectUrl({
-        redirectUri: currentUrl,
+        redirectUri: baseUrl,
+        origin: baseUrl,
       });
 
       if (result.connectUrl) {

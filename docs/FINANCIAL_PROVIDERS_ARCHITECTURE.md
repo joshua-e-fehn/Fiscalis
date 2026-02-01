@@ -11,7 +11,7 @@ Fiscalis uses a multi-provider strategy to aggregate financial data from various
 | Provider      | Category               | Coverage                                     | Status         |
 | ------------- | ---------------------- | -------------------------------------------- | -------------- |
 | **Plaid**     | Banking                | US, UK, EU banks                             | ✅ Implemented |
-| **Snaptrade** | Brokers                | 38+ brokers including Interactive Brokers    | 🔄 Planned     |
+| **Snaptrade** | Brokers                | 38+ brokers including Interactive Brokers    | ✅ Implemented |
 | **Vezgo**     | Crypto                 | 40+ exchanges, 30+ blockchains, 500+ wallets | 🔄 Planned     |
 | **FinAPI**    | German Banking/Brokers | German banks and depot accounts              | 🔄 Future      |
 
@@ -644,20 +644,19 @@ export interface NormalizedPosition {
 
 ## Implementation Roadmap
 
-### Phase 1: Foundation (Current)
+### Phase 1: Foundation (Completed)
 
 - [x] Plaid banking integration
-- [x] Basic broker UI (placeholder)
-- [ ] Unified database schema migration
-- [ ] Provider adapter interface
+- [x] Unified database schema migration
+- [x] Provider adapter interface
 
-### Phase 2: Snaptrade Integration
+### Phase 2: Snaptrade Integration (Completed)
 
-- [ ] Snaptrade account setup & API keys
-- [ ] Snaptrade Connect UI component
-- [ ] OAuth callback handling
-- [ ] Position syncing
-- [ ] Transaction history
+- [x] Snaptrade account setup & API keys
+- [x] Snaptrade Connect UI component
+- [x] OAuth callback handling
+- [x] Position syncing
+- [x] Transaction history
 
 ### Phase 3: Vezgo Integration
 

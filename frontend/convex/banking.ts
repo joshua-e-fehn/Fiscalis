@@ -5,6 +5,10 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import {
+  classifyPlaidAccount,
+  getClassificationFields,
+} from "./lib/classification";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES (Public - called from frontend)
@@ -351,6 +355,7 @@ export const updateItemStatus = internalMutation({
 
 /**
  * Save or update accounts for a Plaid item
+ * Automatically classifies accounts into investment categories
  */
 export const saveAccounts = internalMutation({
   args: {
@@ -379,16 +384,32 @@ export const saveAccounts = internalMutation({
         .withIndex("by_account", (q) => q.eq("accountId", account.accountId))
         .first();
 
+      // Classify the account
+      const classification = classifyPlaidAccount({
+        type: account.type,
+        subtype: account.subtype ?? null,
+        name: account.name,
+      });
+
+      const classificationFields = getClassificationFields(classification);
+
       if (existing) {
+        // Preserve user overrides if they exist
+        const preserveUserOverrides =
+          existing.userCategoryOverride || existing.userSubcategoryOverride;
+
         await ctx.db.patch(existing._id, {
           ...account,
           lastSynced: now,
+          // Only update classification if no user override exists
+          ...(preserveUserOverrides ? {} : classificationFields),
         });
       } else {
         await ctx.db.insert("plaidAccounts", {
           userId: args.userId,
           itemId: args.itemId,
           ...account,
+          ...classificationFields,
           lastSynced: now,
         });
       }

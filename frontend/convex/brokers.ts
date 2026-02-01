@@ -5,6 +5,13 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import {
+  classifySnaptradePosition,
+  getClassificationFields,
+  convertCurrency,
+  getCurrencyConversionFields,
+  BASE_CURRENCY,
+} from "./lib/classification";
 
 // ═══════════════════════════════════════════════════════════════
 // SNAPTRADE USER QUERIES
@@ -39,7 +46,7 @@ export const getConnections = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -57,7 +64,7 @@ export const getConnection = query({
   args: { connectionId: v.id("brokerConnections") },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const connection = await ctx.db.get(args.connectionId);
 
@@ -76,7 +83,7 @@ export const getConnectionsNeedingAttention = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -109,7 +116,7 @@ export const getAccounts = query({
   args: { connectionId: v.optional(v.id("brokerConnections")) },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -146,7 +153,7 @@ export const getPositions = query({
   args: { accountId: v.optional(v.id("brokerAccounts")) },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -177,7 +184,7 @@ export const getPositionsBySymbol = query({
   args: { symbol: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -197,7 +204,7 @@ export const getPortfolioSummary = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -263,7 +270,7 @@ export const getTransactions = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
     const limit = args.limit || 100;
@@ -572,6 +579,7 @@ export const upsertAccount = internalMutation({
 
 /**
  * Upsert broker position
+ * Automatically classifies positions and converts currency to base (EUR)
  */
 export const upsertPosition = internalMutation({
   args: {
@@ -606,7 +614,33 @@ export const upsertPosition = internalMutation({
 
     const now = Date.now();
 
+    // Classify the position
+    const classification = classifySnaptradePosition({
+      assetType: args.assetType,
+      symbol: args.symbol,
+      name: args.name ?? null,
+      quantity: args.quantity,
+      marketValue: args.marketValue ?? null,
+    });
+
+    const classificationFields = getClassificationFields(classification);
+
+    // Convert market value to base currency (EUR)
+    let currencyConversionFields = {};
+    if (args.marketValue !== undefined) {
+      const conversion = convertCurrency(
+        args.marketValue,
+        args.currency,
+        BASE_CURRENCY,
+      );
+      currencyConversionFields = getCurrencyConversionFields(conversion);
+    }
+
     if (existing) {
+      // Preserve user overrides if they exist
+      const preserveUserOverrides =
+        existing.userCategoryOverride || existing.userSubcategoryOverride;
+
       await ctx.db.patch(existing._id, {
         snaptradePositionId: args.snaptradePositionId,
         symbolId: args.symbolId,
@@ -626,6 +660,10 @@ export const upsertPosition = internalMutation({
         dayPL: args.dayPL,
         dayPLPercent: args.dayPLPercent,
         lastSyncAt: now,
+        // Only update classification if no user override exists
+        ...(preserveUserOverrides ? {} : classificationFields),
+        // Always update currency conversion
+        ...currencyConversionFields,
       });
       return existing._id;
     }
@@ -651,6 +689,8 @@ export const upsertPosition = internalMutation({
       unrealizedPLPercent: args.unrealizedPLPercent,
       dayPL: args.dayPL,
       dayPLPercent: args.dayPLPercent,
+      ...classificationFields,
+      ...currencyConversionFields,
       lastSyncAt: now,
       createdAt: now,
     });

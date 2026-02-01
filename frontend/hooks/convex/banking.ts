@@ -199,6 +199,61 @@ export function useRefreshAccounts() {
   return { mutate, isLoading, error };
 }
 
+/**
+ * Hook to update institution logo for a single item
+ */
+export function useUpdateInstitutionLogo() {
+  const updateLogo = useAction(api.actions.plaid.updateInstitutionLogo);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutate = useCallback(
+    async (itemId: string) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const result = await updateLogo({ itemId });
+        return result;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        setError(error);
+        throw error;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [updateLogo],
+  );
+
+  return { mutate, isLoading, error };
+}
+
+/**
+ * Hook to update institution logos for all items
+ */
+export function useUpdateAllInstitutionLogos() {
+  const updateAllLogos = useAction(api.actions.plaid.updateAllInstitutionLogos);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutate = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await updateAllLogos();
+      return result;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateAllLogos]);
+
+  return { mutate, isLoading, error };
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PLAID TRANSACTIONS HOOKS
 // ═══════════════════════════════════════════════════════════════

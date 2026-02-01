@@ -52,19 +52,47 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
       <Card className="mb-8 border-yellow-200 dark:border-yellow-900 bg-yellow-50/50 dark:bg-yellow-950/20">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl flex flex-row items-center gap-2">
+            <div className="flex items-center gap-3">
+              {item.institutionLogo ? (
                 <div className="relative">
-                  <Landmark className="h-7 w-7" />
+                  <img
+                    src={`data:image/png;base64,${item.institutionLogo}`}
+                    alt={institutionName}
+                    className="h-10 w-10 rounded-lg object-contain"
+                  />
                   <div className="absolute -top-1 -right-1 rounded-full bg-yellow-500 p-0.5">
                     <AlertCircle className="h-3 w-3 text-white" />
                   </div>
                 </div>
-                <span>{institutionName}</span>
-              </CardTitle>
-              <CardDescription className="mt-1.5 text-yellow-700 dark:text-yellow-400">
-                This connection needs to be re-authenticated
-              </CardDescription>
+              ) : (
+                <div className="relative">
+                  <div
+                    className="h-10 w-10 rounded-lg flex items-center justify-center"
+                    style={{
+                      backgroundColor: item.institutionPrimaryColor
+                        ? `${item.institutionPrimaryColor}20`
+                        : "hsl(var(--primary) / 0.1)",
+                    }}
+                  >
+                    <Landmark
+                      className="h-5 w-5"
+                      style={{
+                        color:
+                          item.institutionPrimaryColor || "hsl(var(--primary))",
+                      }}
+                    />
+                  </div>
+                  <div className="absolute -top-1 -right-1 rounded-full bg-yellow-500 p-0.5">
+                    <AlertCircle className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+              )}
+              <div>
+                <CardTitle className="text-lg">{institutionName}</CardTitle>
+                <CardDescription className="mt-0.5 text-yellow-700 dark:text-yellow-400">
+                  This connection needs to be re-authenticated
+                </CardDescription>
+              </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

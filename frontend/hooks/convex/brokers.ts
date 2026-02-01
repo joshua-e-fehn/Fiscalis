@@ -303,6 +303,32 @@ export function useSyncAll() {
   return { syncAll, isLoading, error };
 }
 
+/**
+ * Hook to update broker logos for all connections
+ */
+export function useUpdateAllBrokerLogos() {
+  const updateAction = useAction(api.actions.snaptrade.updateAllBrokerLogos);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const updateLogos = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await updateAction({});
+      return result;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      setError(error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [updateAction]);
+
+  return { updateLogos, isLoading, error };
+}
+
 // ═══════════════════════════════════════════════════════════════
 // BROKER DISCOVERY HOOKS
 // ═══════════════════════════════════════════════════════════════

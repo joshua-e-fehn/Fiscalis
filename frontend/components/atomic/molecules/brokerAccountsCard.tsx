@@ -250,7 +250,7 @@ export function BrokerAccountsCard({
                     <RefreshCw
                       className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
                     />
-                    {isSyncing ? "Syncing..." : "Refresh data"}
+                    {isSyncing ? "Syncing..." : "Sync"}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -259,7 +259,7 @@ export function BrokerAccountsCard({
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <Unlink className="mr-2 h-4 w-4" />
-                    Disconnect broker
+                    Disconnect
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

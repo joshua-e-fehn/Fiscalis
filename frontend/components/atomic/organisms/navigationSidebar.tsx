@@ -95,7 +95,7 @@ const data = {
           icon: Banknote,
         },
         {
-          title: "Crypto Assets",
+          title: "Crypto",
           url: "/assets/crypto",
           icon: Bitcoin,
         },

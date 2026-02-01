@@ -150,6 +150,30 @@ export const exchangeToken = action({
     const accessToken = exchangeResponse.data.access_token;
     const itemId = exchangeResponse.data.item_id;
 
+    // Fetch institution logo and metadata if institutionId is provided
+    let institutionLogo: string | undefined;
+    let institutionPrimaryColor: string | undefined;
+
+    if (args.institutionId) {
+      try {
+        const institutionResponse = await plaidClient.institutionsGetById({
+          institution_id: args.institutionId,
+          country_codes: getCountryCodes(),
+          options: {
+            include_optional_metadata: true,
+          },
+        });
+
+        const institution = institutionResponse.data.institution;
+        // Logo is a base64-encoded 152x152 PNG string
+        institutionLogo = institution.logo ?? undefined;
+        institutionPrimaryColor = institution.primary_color ?? undefined;
+      } catch (error) {
+        // Log but don't fail the entire operation if we can't get the logo
+        console.warn("Failed to fetch institution metadata:", error);
+      }
+    }
+
     // Encrypt the access token before storing
     const encryptedToken = encrypt(accessToken, getEncryptionKey());
 
@@ -160,6 +184,8 @@ export const exchangeToken = action({
       itemId,
       institutionId: args.institutionId,
       institutionName: args.institutionName,
+      institutionLogo,
+      institutionPrimaryColor,
     });
 
     // Fetch initial accounts
@@ -168,6 +194,157 @@ export const exchangeToken = action({
     });
 
     return { success: true, itemId };
+  },
+});
+
+/**
+ * Internal action to fetch and update institution logo for an item
+ */
+export const updateInstitutionLogoInternal = internalAction({
+  args: { itemId: v.string() },
+  handler: async (ctx, args) => {
+    // Get the item
+    const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
+      itemId: args.itemId,
+    });
+
+    if (!item) {
+      return { success: false, message: "Item not found" };
+    }
+
+    // Skip if no institution ID or already has logo
+    if (!item.institutionId) {
+      return { success: false, message: "No institution ID available" };
+    }
+
+    if (item.institutionLogo) {
+      return { success: true, message: "Logo already exists" };
+    }
+
+    const plaidClient = getPlaidClient();
+
+    try {
+      const institutionResponse = await plaidClient.institutionsGetById({
+        institution_id: item.institutionId,
+        country_codes: getCountryCodes(),
+        options: {
+          include_optional_metadata: true,
+        },
+      });
+
+      const institution = institutionResponse.data.institution;
+      const institutionLogo = institution.logo ?? undefined;
+      const institutionPrimaryColor = institution.primary_color ?? undefined;
+
+      if (!institutionLogo && !institutionPrimaryColor) {
+        return {
+          success: false,
+          message: "No logo or color available for this institution",
+        };
+      }
+
+      // Update the item with logo
+      await ctx.runMutation(internal.banking.updateItemLogo, {
+        itemId: args.itemId,
+        institutionLogo,
+        institutionPrimaryColor,
+      });
+
+      return { success: true, message: "Logo updated" };
+    } catch (error) {
+      console.error("Failed to fetch institution logo:", error);
+      return { success: false, message: "Failed to fetch logo from Plaid" };
+    }
+  },
+});
+
+/**
+ * Fetch and update institution logo for an existing item
+ * Useful for migrating existing connections to display logos
+ */
+export const updateInstitutionLogo = action({
+  args: { itemId: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ success: boolean; message: string }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+
+    // Get the item to verify ownership
+    const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
+      itemId: args.itemId,
+    });
+
+    if (!item || item.userId !== userId) {
+      throw new Error("Item not found or unauthorized");
+    }
+
+    // Call internal action to do the actual work
+    const result = await ctx.runAction(
+      internal.actions.plaid.updateInstitutionLogoInternal,
+      {
+        itemId: args.itemId,
+      },
+    );
+
+    return result;
+  },
+});
+
+/**
+ * Fetch and update logos for all items belonging to the current user
+ */
+export const updateAllInstitutionLogos = action({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+
+    // Get all items for user
+    const items = await ctx.runQuery(internal.banking.getItemsByUserInternal, {
+      userId,
+    });
+
+    let updated = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const item of items) {
+      // Skip if no institution ID or already has logo
+      if (!item.institutionId) {
+        skipped++;
+        continue;
+      }
+
+      if (item.institutionLogo) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        const result = await ctx.runAction(
+          internal.actions.plaid.updateInstitutionLogoInternal,
+          {
+            itemId: item.itemId,
+          },
+        );
+        if (result.success) {
+          updated++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        console.error(`Failed to update logo for item ${item.itemId}:`, error);
+        failed++;
+      }
+    }
+
+    return { success: true, updated, skipped, failed };
   },
 });
 
@@ -219,6 +396,24 @@ export const syncAccountsInternal = internalAction({
         itemId: args.itemId,
         status: "active",
       });
+
+      // Fetch and update institution logo if missing
+      if (!item.institutionLogo && item.institutionId) {
+        try {
+          await ctx.runAction(
+            internal.actions.plaid.updateInstitutionLogoInternal,
+            {
+              itemId: args.itemId,
+            },
+          );
+        } catch (logoError) {
+          // Don't fail the sync if logo fetch fails
+          console.warn(
+            "Failed to fetch institution logo during sync:",
+            logoError,
+          );
+        }
+      }
 
       return { success: true, accountCount: accounts.length };
     } catch (error: unknown) {

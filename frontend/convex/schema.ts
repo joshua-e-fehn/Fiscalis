@@ -12,6 +12,8 @@ export default defineSchema({
     itemId: v.string(), // Plaid item ID
     institutionId: v.optional(v.string()),
     institutionName: v.optional(v.string()),
+    institutionLogo: v.optional(v.string()), // Base64-encoded PNG from Plaid
+    institutionPrimaryColor: v.optional(v.string()), // Hex color code from Plaid (e.g., "#004966")
     status: v.union(
       v.literal("active"),
       v.literal("error"),

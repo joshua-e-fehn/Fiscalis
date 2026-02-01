@@ -10,6 +10,8 @@ export {
   usePlaidAccountsByItem,
   useBalancesSummary,
   useRefreshAccounts,
+  useUpdateInstitutionLogo,
+  useUpdateAllInstitutionLogos,
   useTransactions,
   useTransactionsByDate,
   useSyncTransactions,
@@ -43,6 +45,7 @@ export {
   // Sync hooks
   useSyncPositions,
   useSyncAll,
+  useUpdateAllBrokerLogos,
   // Broker discovery hooks
   useListBrokers,
   useSearchBrokers,

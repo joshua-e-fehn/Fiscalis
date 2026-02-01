@@ -21,11 +21,19 @@ import { BankAccountsCard } from "@/components/atomic/molecules/bankAccountsCard
 import { BankReauthCard } from "@/components/atomic/molecules/bankReauthCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
 
-export function BanksCard() {
+interface BanksCardProps {
+  /** External sync state passed from parent (e.g., from PageHeader sync button) */
+  isSyncing?: boolean;
+}
+
+export function BanksCard({ isSyncing: externalIsSyncing }: BanksCardProps) {
   const accounts = usePlaidAccounts();
   const itemsNeedingReauth = useItemsNeedingReauth();
   const items = usePlaidItems();
   const refreshAccounts = useRefreshAccounts();
+
+  // Combine external syncing state with internal
+  const isSyncing = externalIsSyncing || refreshAccounts.isLoading;
 
   // Loading state - Convex returns undefined while loading
   const isLoading = accounts === undefined || items === undefined;
@@ -161,10 +169,32 @@ export function BanksCard() {
   return (
     <Card className="mb-8">
       <CardHeader>
-        <CardTitle>Connected Accounts</CardTitle>
-        <CardDescription>
-          View and manage your linked bank accounts
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Connected Accounts</CardTitle>
+            <CardDescription>
+              View and manage your linked bank accounts
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refreshAccounts.mutate()}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span className="ml-2 hidden sm:inline">
+                {isSyncing ? "Syncing..." : "Refresh All"}
+              </span>
+            </Button>
+            <PlaidLinkButton variant="outline" buttonText="Add Bank" />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {/* Show items needing re-authentication first */}
@@ -186,6 +216,8 @@ export function BanksCard() {
                 key={item.itemId}
                 itemId={item.itemId}
                 institutionName={item.institutionName || "Unknown Bank"}
+                institutionLogo={item.institutionLogo}
+                institutionPrimaryColor={item.institutionPrimaryColor}
                 accounts={itemAccounts}
               />
             );

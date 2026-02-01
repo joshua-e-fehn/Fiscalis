@@ -49,12 +49,16 @@ interface ConvexAccount {
 interface BankAccountsCardProps {
   itemId: string;
   institutionName: string;
+  institutionLogo?: string; // Base64-encoded PNG from Plaid
+  institutionPrimaryColor?: string; // Hex color code from Plaid
   accounts: ConvexAccount[];
 }
 
 export function BankAccountsCard({
   itemId,
   institutionName,
+  institutionLogo,
+  institutionPrimaryColor,
   accounts,
 }: BankAccountsCardProps) {
   const deleteItem = useDeletePlaidItem();
@@ -79,14 +83,37 @@ export function BankAccountsCard({
       <Card className="mb-8">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl flex flex-row items-center gap-2">
-                <Landmark className="h-7 w-7" /> {institutionName}
-              </CardTitle>
-              <CardDescription className="mt-1.5">
-                You have connected {accounts.length} account
-                {accounts.length !== 1 ? "s" : ""}
-              </CardDescription>
+            <div className="flex items-center gap-3">
+              {institutionLogo ? (
+                <img
+                  src={`data:image/png;base64,${institutionLogo}`}
+                  alt={institutionName}
+                  className="h-10 w-10 rounded-lg object-contain"
+                />
+              ) : (
+                <div
+                  className="h-10 w-10 rounded-lg flex items-center justify-center"
+                  style={{
+                    backgroundColor: institutionPrimaryColor
+                      ? `${institutionPrimaryColor}20`
+                      : "hsl(var(--primary) / 0.1)",
+                  }}
+                >
+                  <Landmark
+                    className="h-5 w-5"
+                    style={{
+                      color: institutionPrimaryColor || "hsl(var(--primary))",
+                    }}
+                  />
+                </div>
+              )}
+              <div>
+                <CardTitle className="text-lg">{institutionName}</CardTitle>
+                <CardDescription className="mt-0.5">
+                  {accounts.length} account{accounts.length !== 1 ? "s" : ""}{" "}
+                  connected
+                </CardDescription>
+              </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -104,9 +131,7 @@ export function BankAccountsCard({
                   <RefreshCw
                     className={`mr-2 h-4 w-4 ${refreshAccounts.isLoading ? "animate-spin" : ""}`}
                   />
-                  {refreshAccounts.isLoading
-                    ? "Refreshing..."
-                    : "Refresh accounts"}
+                  {refreshAccounts.isLoading ? "Refreshing..." : "Sync"}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -115,7 +140,7 @@ export function BankAccountsCard({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <Unlink className="mr-2 h-4 w-4" />
-                  Disconnect bank
+                  Disconnect
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

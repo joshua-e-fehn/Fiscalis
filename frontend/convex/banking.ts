@@ -21,7 +21,7 @@ export const getItems = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -38,6 +38,8 @@ export const getItems = query({
       itemId: item.itemId,
       institutionId: item.institutionId,
       institutionName: item.institutionName,
+      institutionLogo: item.institutionLogo,
+      institutionPrimaryColor: item.institutionPrimaryColor,
       status: item.status,
       errorCode: item.errorCode,
       createdAt: item.createdAt,
@@ -53,7 +55,7 @@ export const getAccounts = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
     return await ctx.db
@@ -70,7 +72,7 @@ export const getAccountsByItem = query({
   args: { itemId: v.string() },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     return await ctx.db
       .query("plaidAccounts")
@@ -91,7 +93,7 @@ export const getTransactions = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -136,7 +138,7 @@ export const getTransactionsDb = query({
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -163,7 +165,7 @@ export const getBalancesSummary = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
     const accounts = await ctx.db
@@ -203,7 +205,7 @@ export const getItemsNeedingReauth = query({
   args: {},
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    if (!identity) return null;
 
     const userId = identity.subject;
     const items = await ctx.db
@@ -291,6 +293,8 @@ export const saveItem = internalMutation({
     itemId: v.string(),
     institutionId: v.optional(v.string()),
     institutionName: v.optional(v.string()),
+    institutionLogo: v.optional(v.string()),
+    institutionPrimaryColor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -307,6 +311,11 @@ export const saveItem = internalMutation({
         status: "active",
         errorCode: undefined,
         updatedAt: now,
+        // Update logo fields if provided (they might have changed)
+        ...(args.institutionLogo && { institutionLogo: args.institutionLogo }),
+        ...(args.institutionPrimaryColor && {
+          institutionPrimaryColor: args.institutionPrimaryColor,
+        }),
       });
       return existing._id;
     }
@@ -317,6 +326,8 @@ export const saveItem = internalMutation({
       itemId: args.itemId,
       institutionId: args.institutionId,
       institutionName: args.institutionName,
+      institutionLogo: args.institutionLogo,
+      institutionPrimaryColor: args.institutionPrimaryColor,
       status: "active",
       createdAt: now,
       updatedAt: now,
@@ -348,6 +359,31 @@ export const updateItemStatus = internalMutation({
     await ctx.db.patch(item._id, {
       status: args.status,
       errorCode: args.errorCode,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Update the institution logo for a Plaid item
+ */
+export const updateItemLogo = internalMutation({
+  args: {
+    itemId: v.string(),
+    institutionLogo: v.optional(v.string()),
+    institutionPrimaryColor: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const item = await ctx.db
+      .query("plaidItems")
+      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
+      .first();
+
+    if (!item) throw new Error("Item not found");
+
+    await ctx.db.patch(item._id, {
+      institutionLogo: args.institutionLogo,
+      institutionPrimaryColor: args.institutionPrimaryColor,
       updatedAt: Date.now(),
     });
   },

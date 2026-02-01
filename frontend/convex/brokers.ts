@@ -462,6 +462,25 @@ export const updateConnectionStatus = internalMutation({
 });
 
 /**
+ * Update connection broker logo
+ */
+export const updateConnectionLogo = internalMutation({
+  args: {
+    connectionId: v.id("brokerConnections"),
+    brokerLogo: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Only update if logo is provided and not empty
+    if (args.brokerLogo) {
+      await ctx.db.patch(args.connectionId, {
+        brokerLogo: args.brokerLogo,
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});
+
+/**
  * Delete connection data (called by action after SnapTrade API call)
  */
 export const deleteConnectionData = internalMutation({

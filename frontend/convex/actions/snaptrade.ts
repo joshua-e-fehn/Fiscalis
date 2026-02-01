@@ -752,6 +752,112 @@ export const syncPositions = action({
 });
 
 /**
+ * Update broker logos for all connections
+ * This fetches the latest logo from SnapTrade for each connection
+ */
+export const updateAllBrokerLogos = action({
+  args: {},
+  handler: async (
+    ctx,
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    updated?: number;
+    failed?: number;
+    total?: number;
+  }> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+
+    // Get SnapTrade user
+    const snaptradeUser = await ctx.runQuery(
+      internal.brokers.getSnaptradeUserInternal,
+      { userId },
+    );
+
+    if (!snaptradeUser) {
+      return { success: false, message: "No SnapTrade user registered" };
+    }
+
+    const snaptrade = getSnaptradeClient();
+    const encryptionKey = getEncryptionKey();
+    const userSecret = decrypt(
+      snaptradeUser.snaptradeUserSecret,
+      encryptionKey,
+    );
+
+    // Get all connections
+    const connections: Array<{
+      _id: any;
+      authorizationId: string;
+      brokerName: string;
+    }> = await ctx.runQuery(internal.brokers.getConnectionsByUserInternal, {
+      userId,
+    });
+
+    let updated = 0;
+    let failed = 0;
+
+    console.log(`[UPDATE_LOGOS] Processing ${connections.length} connections`);
+
+    for (const connection of connections) {
+      try {
+        console.log(
+          `[UPDATE_LOGOS] Fetching logo for ${connection.brokerName} (authId: ${connection.authorizationId})`,
+        );
+        const authResponse =
+          await snaptrade.connections.detailBrokerageAuthorization({
+            userId: snaptradeUser.snaptradeUserId,
+            userSecret,
+            authorizationId: connection.authorizationId,
+          });
+
+        const brokerage = authResponse.data.brokerage;
+        console.log(
+          `[UPDATE_LOGOS] Brokerage info for ${connection.brokerName}:`,
+          {
+            name: brokerage?.name,
+            slug: brokerage?.slug,
+            logo: brokerage?.logo || "(no logo)",
+            logoType: typeof brokerage?.logo,
+            fullResponse: JSON.stringify(brokerage, null, 2),
+          },
+        );
+
+        const brokerLogo = brokerage?.logo;
+        if (brokerLogo) {
+          console.log(
+            `[UPDATE_LOGOS] Updating logo for ${connection.brokerName}: ${brokerLogo}`,
+          );
+          await ctx.runMutation(internal.brokers.updateConnectionLogo, {
+            connectionId: connection._id,
+            brokerLogo,
+          });
+          updated++;
+        } else {
+          console.log(
+            `[UPDATE_LOGOS] No logo available for ${connection.brokerName}`,
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[UPDATE_LOGOS] Failed to update logo for ${connection.brokerName}:`,
+          error,
+        );
+        failed++;
+      }
+    }
+
+    console.log(
+      `[UPDATE_LOGOS] Complete: ${updated} updated, ${failed} failed, ${connections.length} total`,
+    );
+    return { success: true, updated, failed, total: connections.length };
+  },
+});
+
+/**
  * Sync all data for all connections
  */
 export const syncAll = action({
@@ -799,6 +905,54 @@ export const syncAll = action({
           connectionId: connection._id,
           status: "syncing",
         });
+
+        // Fetch latest brokerage info (including logo) and update if missing
+        if (!connection.brokerLogo) {
+          try {
+            console.log(
+              `[SYNC] Fetching logo for ${connection.brokerName} (authId: ${connection.authorizationId})`,
+            );
+            const authResponse =
+              await snaptrade.connections.detailBrokerageAuthorization({
+                userId: snaptradeUser.snaptradeUserId,
+                userSecret,
+                authorizationId: connection.authorizationId,
+              });
+
+            const brokerage = authResponse.data.brokerage;
+            console.log(`[SYNC] Brokerage info for ${connection.brokerName}:`, {
+              name: brokerage?.name,
+              slug: brokerage?.slug,
+              logo: brokerage?.logo || "(no logo)",
+              logoType: typeof brokerage?.logo,
+            });
+
+            const brokerLogo = brokerage?.logo;
+            if (brokerLogo) {
+              console.log(
+                `[SYNC] Updating logo for ${connection.brokerName}: ${brokerLogo.substring(0, 50)}...`,
+              );
+              await ctx.runMutation(internal.brokers.updateConnectionLogo, {
+                connectionId: connection._id,
+                brokerLogo,
+              });
+            } else {
+              console.log(
+                `[SYNC] No logo available for ${connection.brokerName}`,
+              );
+            }
+          } catch (logoError) {
+            // Don't fail sync if logo fetch fails
+            console.warn(
+              `[SYNC] Failed to fetch broker logo for ${connection.brokerName}:`,
+              logoError,
+            );
+          }
+        } else {
+          console.log(
+            `[SYNC] ${connection.brokerName} already has logo: ${connection.brokerLogo.substring(0, 50)}...`,
+          );
+        }
 
         // Sync accounts
         await syncAccountsInternal(ctx, {

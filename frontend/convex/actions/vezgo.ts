@@ -7,9 +7,10 @@ import { encrypt } from "../lib/encryption";
 import {
   getVezgoClient,
   getVezgoUser,
-  mapProviderType,
+  mapProviderCategories,
   mapAssetCategory,
   mapTransactionType,
+  type ProviderCategory,
 } from "../lib/vezgo";
 
 // ═══════════════════════════════════════════════════════════════
@@ -280,30 +281,46 @@ export const handleCallback = action({
       // Create connection in our database
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const provider = account.provider as any;
+      const providerName = provider?.name || "unknown";
+
+      // Log the full provider object to understand its structure
+      console.log("Vezgo provider data:", JSON.stringify(provider, null, 2));
+
+      // Prefer Vezgo's categories if available, fall back to static mapping
+      const vezgoCategories = provider?.categories as string[] | undefined;
+      const categories =
+        vezgoCategories && vezgoCategories.length > 0
+          ? vezgoCategories.filter(
+              (c): c is ProviderCategory =>
+                c === "exchange" || c === "wallet" || c === "blockchain",
+            )
+          : mapProviderCategories(providerName);
+
       const connectionId = await ctx.runMutation(
         internal.crypto.createConnection,
         {
           userId,
           accountId: args.accountId,
-          provider: provider?.name || "unknown",
-          providerType: mapProviderType(
-            provider?.auth_type || provider?.type || "wallet",
-          ),
+          provider: providerName,
+          // Categorize provider - can have multiple categories (exchange, wallet, blockchain)
+          categories: categories.length > 0 ? categories : ["wallet"], // Default to wallet if empty
           name: provider?.display_name || provider?.name || "Crypto Account",
           logo: provider?.logo || undefined,
         },
       );
 
-      // Schedule initial sync
-      await ctx.scheduler.runAfter(
-        0,
-        internal.actions.vezgo.syncConnectionInternal,
-        {
-          userId,
-          connectionId,
-          accountId: args.accountId,
-        },
-      );
+      // Run initial sync and wait for completion
+      await ctx.runAction(internal.actions.vezgo.syncConnectionInternal, {
+        userId,
+        connectionId,
+        accountId: args.accountId,
+      });
+
+      // Take snapshot after sync is complete
+      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+        userId,
+        source: "vezgo-connect",
+      });
 
       return {
         success: true,
@@ -316,6 +333,67 @@ export const handleCallback = action({
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to connect account: ${errorMessage}`);
+    }
+  },
+});
+
+/**
+ * Debug: Get raw Vezgo account data for a connection
+ * Useful for seeing what Vezgo actually returns for a provider
+ * This is an internalAction so it can be run from the Convex Dashboard without auth
+ */
+export const debugGetVezgoAccountData = internalAction({
+  args: {
+    connectionId: v.id("vezgoConnections"),
+  },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    success: boolean;
+    connectionId: string;
+    storedProvider: string;
+    storedCategories: string[];
+    vezgoAccount: {
+      id: string | undefined;
+      provider: unknown;
+      providerCategories: unknown;
+    };
+  }> => {
+    // Get connection (no auth check - this is internal/debug only)
+    const connection = await ctx.runQuery(
+      internal.crypto.getConnectionInternal,
+      { connectionId: args.connectionId },
+    );
+
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    try {
+      // Use the userId from the connection
+      const user = getVezgoUser(connection.userId);
+      const account = await user.accounts.getOne(connection.accountId);
+
+      // Return the raw provider data from Vezgo
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const providerData = account.provider as any;
+
+      return {
+        success: true,
+        connectionId: args.connectionId,
+        storedProvider: connection.provider,
+        storedCategories: connection.categories,
+        vezgoAccount: {
+          id: account.id,
+          provider: providerData, // This is what Vezgo returns
+          providerCategories: providerData?.categories,
+        },
+      };
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to fetch Vezgo data: ${errorMessage}`);
     }
   },
 });
@@ -362,6 +440,12 @@ export const deleteConnection = action({
     // Delete from our database
     await ctx.runMutation(internal.crypto.deleteConnectionData, {
       connectionId: args.connectionId,
+    });
+
+    // Take a snapshot after disconnection to capture the portfolio change
+    await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+      userId,
+      source: "vezgo-disconnect",
     });
 
     return { success: true };
@@ -412,10 +496,13 @@ export const syncConnection = action({
 
 /**
  * Sync all connections for the current user
+ * @param skipSnapshot - If true, don't create a snapshot (used by syncAll to avoid duplicates)
  */
 export const syncAllConnections = action({
-  args: {},
-  handler: async (ctx): Promise<{ success: boolean; count: number }> => {
+  args: {
+    skipSnapshot: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; count: number }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
@@ -427,16 +514,30 @@ export const syncAllConnections = action({
       { userId },
     );
 
+    // Sync all connections and WAIT for each to complete
     for (const connection of connections) {
-      await ctx.scheduler.runAfter(
-        0,
-        internal.actions.vezgo.syncConnectionInternal,
-        {
+      try {
+        await ctx.runAction(internal.actions.vezgo.syncConnectionInternal, {
           userId,
           connectionId: connection._id,
           accountId: connection.accountId,
-        },
-      );
+        });
+      } catch (error) {
+        console.error(`Error syncing connection ${connection._id}:`, error);
+        // Continue with other connections even if one fails
+      }
+    }
+
+    // Take a portfolio snapshot AFTER all syncs complete (unless skipped)
+    if (!args.skipSnapshot) {
+      try {
+        await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+          userId,
+          source: "vezgo",
+        });
+      } catch (snapshotError) {
+        console.error("Failed to take portfolio snapshot:", snapshotError);
+      }
     }
 
     return { success: true, count: connections.length };
@@ -456,13 +557,24 @@ export const getProviders = action({
       const vezgo = getVezgoClient();
       const providers = await vezgo.providers.getList();
 
+      // Log first provider to understand structure
+      if (providers.length > 0) {
+        console.log(
+          "Sample Vezgo provider structure:",
+          JSON.stringify(providers[0], null, 2),
+        );
+      }
+
       return {
         success: true,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         providers: providers.map((p: any) => ({
           name: p.name || "unknown",
           displayName: p.display_name || p.name || "Unknown Provider",
-          type: p.auth_type || p.type,
+          // Return all type-related fields for debugging
+          type: p.type,
+          authType: p.auth_type,
+          category: p.category,
           logo: p.logo,
         })),
       };
@@ -759,5 +871,92 @@ export const scheduledSyncAllAction = internalAction({
     }
 
     return { count: connections.length };
+  },
+});
+
+/**
+ * Internal action to sync all Vezgo crypto data for a specific user
+ * Called by the scheduled daily sync (no authentication required)
+ */
+export const syncAllForUserInternal = internalAction({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    connectionsSynced: v.number(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (
+    ctx,
+    { userId },
+  ): Promise<{
+    success: boolean;
+    connectionsSynced: number;
+    error?: string;
+  }> => {
+    console.log(`[VEZGO SCHEDULED] Syncing for user: ${userId}`);
+
+    // Get user's Vezgo token
+    const vezgoUser = await ctx.runQuery(internal.crypto.getVezgoUserInternal, {
+      userId,
+    });
+
+    if (!vezgoUser) {
+      console.log(`[VEZGO SCHEDULED] No Vezgo user for: ${userId}`);
+      return {
+        success: true,
+        connectionsSynced: 0,
+      };
+    }
+
+    // Get all connections for this user
+    const connections = await ctx.runQuery(
+      internal.crypto.getConnectionsByUserInternal,
+      { userId },
+    );
+
+    if (!connections || connections.length === 0) {
+      console.log(`[VEZGO SCHEDULED] No connections for user: ${userId}`);
+      return {
+        success: true,
+        connectionsSynced: 0,
+      };
+    }
+
+    let connectionsSynced = 0;
+
+    for (const connection of connections) {
+      try {
+        // Sync positions for this connection
+        await ctx.runAction(internal.actions.vezgo.syncConnectionInternal, {
+          userId,
+          connectionId: connection._id,
+          accountId: connection.accountId,
+        });
+
+        // Sync transactions
+        await ctx.runAction(internal.actions.vezgo.syncTransactionsInternal, {
+          userId,
+          connectionId: connection._id,
+          accountId: connection.accountId,
+        });
+
+        connectionsSynced++;
+        console.log(
+          `[VEZGO SCHEDULED] Synced connection ${connection._id} for user ${userId}`,
+        );
+      } catch (error) {
+        console.error(
+          `[VEZGO SCHEDULED] Failed to sync connection ${connection._id}:`,
+          error,
+        );
+      }
+    }
+
+    return {
+      success: connectionsSynced > 0 || connections.length === 0,
+      connectionsSynced,
+    };
   },
 });

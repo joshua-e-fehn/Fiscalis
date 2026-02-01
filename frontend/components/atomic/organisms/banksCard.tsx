@@ -14,12 +14,14 @@ import {
   CardDescription,
 } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
-import { Building2, CreditCard, Plus, RefreshCw, Loader2 } from "lucide-react";
+import { Building2, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
 
 import { BankAccountsCard } from "@/components/atomic/molecules/bankAccountsCard";
 import { BankReauthCard } from "@/components/atomic/molecules/bankReauthCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
+import { useSyncContextSafe } from "@/providers/syncProvider";
+import { IntegrationEmptyState } from "@/components/atomic/molecules/integrations";
 
 interface BanksCardProps {
   /** External sync state passed from parent (e.g., from PageHeader sync button) */
@@ -32,8 +34,13 @@ export function BanksCard({ isSyncing: externalIsSyncing }: BanksCardProps) {
   const items = usePlaidItems();
   const refreshAccounts = useRefreshAccounts();
 
-  // Combine external syncing state with internal
-  const isSyncing = externalIsSyncing || refreshAccounts.isLoading;
+  // Get global sync state (may be undefined if outside SyncProvider)
+  const syncContext = useSyncContextSafe();
+  const isGlobalPlaidSyncing = syncContext?.isPlaidSyncing ?? false;
+
+  // Combine external syncing state with internal and global
+  const isSyncing =
+    externalIsSyncing || refreshAccounts.isLoading || isGlobalPlaidSyncing;
 
   // Loading state - Convex returns undefined while loading
   const isLoading = accounts === undefined || items === undefined;
@@ -63,47 +70,43 @@ export function BanksCard({ isSyncing: externalIsSyncing }: BanksCardProps) {
 
   if (isLoading) {
     return (
-      <Card className="mb-8">
-        <CardHeader>
-          <Skeleton className="h-6 w-2/4" />
-          <Skeleton className="h-3 w-1/4" />
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-2 w-3/4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-9 w-1/2 mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </CardContent>
-            </Card>
-          ))}
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        {[1, 2].map((i) => (
+          <Card key={i}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3].map((j) => (
+                  <Skeleton key={j} className="h-16 rounded-lg" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="mb-8 border-destructive/50">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="rounded-full bg-destructive/10 p-3 mb-4">
-              <CreditCard className="h-8 w-8 text-destructive" />
-            </div>
-            <h3 className="text-lg font-semibold text-destructive mb-2">
-              Failed to Load Accounts
-            </h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              We couldn&apos;t load your bank accounts. Please try refreshing
-              the page.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <IntegrationEmptyState
+        icon={Building2}
+        title="Failed to Load Accounts"
+        description="We couldn't load your bank accounts. Please try refreshing the page."
+        className="border-destructive/50"
+      >
+        <Button onClick={() => window.location.reload()} variant="outline">
+          Refresh Page
+        </Button>
+      </IntegrationEmptyState>
     );
   }
 
@@ -112,117 +115,70 @@ export function BanksCard({ isSyncing: externalIsSyncing }: BanksCardProps) {
     // If we have items but no accounts, offer to sync
     if (needsSync) {
       return (
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="rounded-full bg-blue-100 dark:bg-blue-900 p-4 mb-4">
-                <RefreshCw className="h-10 w-10 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Sync Your Accounts</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                You have {items?.length} bank connection
-                {items?.length !== 1 ? "s" : ""} but no accounts synced yet.
-                Click below to fetch your account data.
-              </p>
-              <Button
-                onClick={() => refreshAccounts.mutate()}
-                disabled={refreshAccounts.isLoading}
-                size="lg"
-              >
-                {refreshAccounts.isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Sync Accounts
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <IntegrationEmptyState
+          icon={RefreshCw}
+          title="Sync Your Accounts"
+          description={`You have ${items?.length} bank connection${items?.length !== 1 ? "s" : ""} but no accounts synced yet. Click below to fetch your account data.`}
+        >
+          <Button
+            onClick={() => refreshAccounts.mutate()}
+            disabled={refreshAccounts.isLoading}
+            size="lg"
+          >
+            {refreshAccounts.isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Syncing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Sync Accounts
+              </>
+            )}
+          </Button>
+        </IntegrationEmptyState>
       );
     }
 
     return (
-      <Card className="mb-8">
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="rounded-full bg-muted p-4 mb-4">
-              <Building2 className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">No Linked Accounts</h3>
-            <p className="text-sm text-muted-foreground max-w-sm mb-6">
-              Connect your bank accounts to track your finances, view balances,
-              and monitor transactions all in one place.
-            </p>
-            <PlaidLinkButton />
-          </div>
-        </CardContent>
-      </Card>
+      <IntegrationEmptyState
+        icon={Building2}
+        title="No Linked Accounts"
+        description="Connect your bank accounts to track your finances, view balances, and monitor transactions all in one place."
+      >
+        <PlaidLinkButton />
+      </IntegrationEmptyState>
     );
   }
 
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Connected Accounts</CardTitle>
-            <CardDescription>
-              View and manage your linked bank accounts
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refreshAccounts.mutate()}
-              disabled={isSyncing}
-            >
-              {isSyncing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-              <span className="ml-2 hidden sm:inline">
-                {isSyncing ? "Syncing..." : "Refresh All"}
-              </span>
-            </Button>
-            <PlaidLinkButton variant="outline" buttonText="Add Bank" />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Show items needing re-authentication first */}
-        {hasItemsNeedingReauth &&
-          itemsNeedingReauth.map((item) => (
-            <BankReauthCard key={item.itemId} item={item} />
-          ))}
+    <div className="space-y-4">
+      {/* Show items needing re-authentication first */}
+      {hasItemsNeedingReauth &&
+        itemsNeedingReauth.map((item) => (
+          <BankReauthCard key={item.itemId} item={item} />
+        ))}
 
-        {/* Show connected accounts */}
-        {hasAccounts &&
-          items &&
-          items.map((item) => {
-            const itemAccounts = accountsByItem.get(item.itemId) || [];
-            if (itemAccounts.length === 0) {
-              return null;
-            }
-            return (
-              <BankAccountsCard
-                key={item.itemId}
-                itemId={item.itemId}
-                institutionName={item.institutionName || "Unknown Bank"}
-                institutionLogo={item.institutionLogo}
-                institutionPrimaryColor={item.institutionPrimaryColor}
-                accounts={itemAccounts}
-              />
-            );
-          })}
-      </CardContent>
-    </Card>
+      {/* Show connected accounts */}
+      {hasAccounts &&
+        items &&
+        items.map((item) => {
+          const itemAccounts = accountsByItem.get(item.itemId) || [];
+          if (itemAccounts.length === 0) {
+            return null;
+          }
+          return (
+            <BankAccountsCard
+              key={item.itemId}
+              itemId={item.itemId}
+              institutionName={item.institutionName || "Unknown Bank"}
+              institutionLogo={item.institutionLogo}
+              institutionPrimaryColor={item.institutionPrimaryColor}
+              accounts={itemAccounts}
+            />
+          );
+        })}
+    </div>
   );
 }

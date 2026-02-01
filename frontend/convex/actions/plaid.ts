@@ -193,6 +193,12 @@ export const exchangeToken = action({
       itemId,
     });
 
+    // Take a snapshot after new connection is synced
+    await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+      userId,
+      source: "plaid-connect",
+    });
+
     return { success: true, itemId };
   },
 });
@@ -435,9 +441,13 @@ export const syncAccountsInternal = internalAction({
 
 /**
  * Public action to refresh accounts for all items or a specific item
+ * @param skipSnapshot - If true, don't create a snapshot (used by syncAll to avoid duplicates)
  */
 export const refreshAccounts = action({
-  args: { itemId: v.optional(v.string()) },
+  args: {
+    itemId: v.optional(v.string()),
+    skipSnapshot: v.optional(v.boolean()),
+  },
   returns: v.object({
     success: v.boolean(),
     itemsSynced: v.number(),
@@ -465,14 +475,16 @@ export const refreshAccounts = action({
         itemId: args.itemId,
       });
 
-      // Take a portfolio snapshot after sync
-      try {
-        await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
-          userId,
-          source: "plaid",
-        });
-      } catch (snapshotError) {
-        console.error("Failed to take portfolio snapshot:", snapshotError);
+      // Take a portfolio snapshot after sync (unless skipped)
+      if (!args.skipSnapshot) {
+        try {
+          await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+            userId,
+            source: "plaid",
+          });
+        } catch (snapshotError) {
+          console.error("Failed to take portfolio snapshot:", snapshotError);
+        }
       }
 
       return { success: true, itemsSynced: 1 };
@@ -496,14 +508,16 @@ export const refreshAccounts = action({
       }
     }
 
-    // Take a portfolio snapshot after sync
-    try {
-      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
-        userId,
-        source: "plaid",
-      });
-    } catch (snapshotError) {
-      console.error("Failed to take portfolio snapshot:", snapshotError);
+    // Take a portfolio snapshot after sync (unless skipped)
+    if (!args.skipSnapshot) {
+      try {
+        await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+          userId,
+          source: "plaid",
+        });
+      } catch (snapshotError) {
+        console.error("Failed to take portfolio snapshot:", snapshotError);
+      }
     }
 
     return { success: true, itemsSynced: userItems.length };

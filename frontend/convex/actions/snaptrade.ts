@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { action, ActionCtx } from "../_generated/server";
+import { action, ActionCtx, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { encrypt, decrypt } from "../lib/encryption";
 import {
@@ -346,6 +346,12 @@ export const handleCallback = action({
         authorizationId: args.authorizationId,
       });
 
+      // Take a snapshot after new connection is synced
+      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+        userId,
+        source: "snaptrade-connect",
+      });
+
       return {
         success: true,
         alreadyExists: false,
@@ -472,6 +478,12 @@ export const deleteConnection = action({
     // Delete from our database
     await ctx.runMutation(internal.brokers.deleteConnectionData, {
       connectionId: args.connectionId,
+    });
+
+    // Take a snapshot after disconnection to capture the portfolio change
+    await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+      userId,
+      source: "snaptrade-disconnect",
     });
 
     return { success: true };
@@ -859,10 +871,13 @@ export const updateAllBrokerLogos = action({
 
 /**
  * Sync all data for all connections
+ * @param skipSnapshot - If true, don't create a snapshot (used by syncAll to avoid duplicates)
  */
 export const syncAll = action({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    skipSnapshot: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
@@ -1107,15 +1122,17 @@ export const syncAll = action({
       }
     }
 
-    // Take a portfolio snapshot after sync completes
-    try {
-      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
-        userId,
-        source: "snaptrade",
-      });
-    } catch (snapshotError) {
-      console.error("Failed to take portfolio snapshot:", snapshotError);
-      // Don't fail the sync if snapshot fails
+    // Take a portfolio snapshot after sync completes (unless skipped)
+    if (!args.skipSnapshot) {
+      try {
+        await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+          userId,
+          source: "snaptrade",
+        });
+      } catch (snapshotError) {
+        console.error("Failed to take portfolio snapshot:", snapshotError);
+        // Don't fail the sync if snapshot fails
+      }
     }
 
     return {
@@ -1198,6 +1215,227 @@ export const searchBrokers = action({
     } catch (error: unknown) {
       console.error("Search brokers error:", error);
       throw new Error(formatErrorForUser(error));
+    }
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// INTERNAL ACTIONS FOR SCHEDULED SYNC
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Internal action to sync all SnapTrade data for a specific user
+ * Called by the scheduled daily sync (no authentication required)
+ */
+export const syncAllForUserInternal = internalAction({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    connectionsProcessed: v.number(),
+    accountsProcessed: v.number(),
+    positionsProcessed: v.number(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (
+    ctx,
+    { userId },
+  ): Promise<{
+    success: boolean;
+    connectionsProcessed: number;
+    accountsProcessed: number;
+    positionsProcessed: number;
+    error?: string;
+  }> => {
+    console.log(`[SNAPTRADE SCHEDULED] Syncing for user: ${userId}`);
+
+    // Get user's SnapTrade credentials
+    type SnaptradeUserResult = {
+      snaptradeUserId: string;
+      snaptradeUserSecret: string;
+    } | null;
+    const snaptradeUser: SnaptradeUserResult = await ctx.runQuery(
+      internal.brokers.getSnaptradeUserInternal,
+      { userId },
+    );
+
+    if (!snaptradeUser) {
+      console.log(`[SNAPTRADE SCHEDULED] No SnapTrade user for: ${userId}`);
+      return {
+        success: true,
+        connectionsProcessed: 0,
+        accountsProcessed: 0,
+        positionsProcessed: 0,
+      };
+    }
+
+    const snaptrade = getSnaptradeClient();
+    const encryptionKey = getEncryptionKey();
+    const userSecret = decrypt(
+      snaptradeUser.snaptradeUserSecret,
+      encryptionKey,
+    );
+
+    const results = {
+      connectionsProcessed: 0,
+      accountsProcessed: 0,
+      positionsProcessed: 0,
+    };
+
+    try {
+      // Get all connections for this user
+      const connections: Array<{
+        _id: Id<"brokerConnections">;
+        authorizationId: string;
+        brokerName: string;
+        brokerLogo?: string;
+      }> = await ctx.runQuery(internal.brokers.getConnectionsByUserInternal, {
+        userId,
+      });
+
+      for (const connection of connections) {
+        try {
+          // Update connection status to syncing
+          await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+            connectionId: connection._id,
+            status: "syncing",
+          });
+
+          // Sync accounts for this connection
+          await syncAccountsInternal(ctx, {
+            userId,
+            snaptradeUserId: snaptradeUser.snaptradeUserId,
+            userSecret,
+            connectionId: connection._id,
+            authorizationId: connection.authorizationId,
+          });
+
+          results.connectionsProcessed++;
+
+          // Get accounts for this connection
+          const accounts = await ctx.runQuery(
+            internal.brokers.getAccountsByConnectionInternal,
+            { connectionId: connection._id },
+          );
+
+          // Sync positions for each account
+          for (const account of accounts) {
+            try {
+              results.accountsProcessed++;
+
+              // Delete existing positions
+              await ctx.runMutation(
+                internal.brokers.deletePositionsForAccount,
+                {
+                  accountId: account._id,
+                },
+              );
+
+              // Get holdings
+              const holdingsResponse =
+                await snaptrade.accountInformation.getUserHoldings({
+                  userId: snaptradeUser.snaptradeUserId,
+                  userSecret,
+                  accountId: account.snaptradeAccountId,
+                });
+
+              const holdings = holdingsResponse.data;
+              let totalMarketValue = 0;
+
+              for (const position of holdings.positions || []) {
+                const symbol = position.symbol?.symbol;
+                if (!symbol) continue;
+
+                const quantity = position.units || 0;
+                const currentPrice = position.price || 0;
+                const marketValue = quantity * currentPrice;
+                const averageCostBasis = position.average_purchase_price;
+                const totalCostBasis = averageCostBasis
+                  ? averageCostBasis * quantity
+                  : undefined;
+
+                totalMarketValue += marketValue;
+
+                await ctx.runMutation(internal.brokers.upsertPosition, {
+                  userId,
+                  accountId: account._id,
+                  symbol: String(symbol),
+                  symbolId: position.symbol?.id,
+                  name: position.symbol?.description,
+                  assetType: normalizeAssetType(position.symbol?.type?.code),
+                  quantity,
+                  averageCostBasis: averageCostBasis ?? undefined,
+                  totalCostBasis,
+                  currentPrice,
+                  marketValue,
+                  currency: position.symbol?.currency?.code || "USD",
+                  isin: position.symbol?.isin,
+                  cusip: position.symbol?.cusip,
+                  figi: position.symbol?.figi_code,
+                });
+
+                results.positionsProcessed++;
+              }
+
+              // Update account balance
+              const cashValue = holdings.total_value?.cash ?? 0;
+              const apiTotalValue = holdings.total_value?.value;
+              const calculatedBalance =
+                apiTotalValue ?? totalMarketValue + cashValue;
+
+              await ctx.runMutation(internal.brokers.upsertAccount, {
+                userId,
+                connectionId: connection._id,
+                snaptradeAccountId: account.snaptradeAccountId,
+                name: account.name,
+                accountNumber: account.accountNumber,
+                accountType: account.accountType,
+                balance: calculatedBalance,
+                cash: cashValue,
+                currency: account.currency,
+              });
+            } catch (accountError) {
+              console.error(
+                `[SNAPTRADE SCHEDULED] Account sync error for ${account._id}:`,
+                accountError,
+              );
+            }
+          }
+
+          // Update connection status to connected
+          await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+            connectionId: connection._id,
+            status: "connected",
+            lastSyncAt: Date.now(),
+          });
+        } catch (connError) {
+          console.error(
+            `[SNAPTRADE SCHEDULED] Connection sync error for ${connection._id}:`,
+            connError,
+          );
+
+          // Update connection status to error
+          await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+            connectionId: connection._id,
+            status: "error",
+            errorMessage:
+              connError instanceof Error ? connError.message : "Sync failed",
+          });
+        }
+      }
+
+      return {
+        success: true,
+        ...results,
+      };
+    } catch (error) {
+      console.error(`[SNAPTRADE SCHEDULED] Sync error for ${userId}:`, error);
+      return {
+        success: false,
+        ...results,
+        error: error instanceof Error ? error.message : "Sync failed",
+      };
     }
   },
 });

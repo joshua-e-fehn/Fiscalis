@@ -5,6 +5,7 @@ import {
   internalMutation,
   internalQuery,
 } from "./_generated/server";
+import { internal } from "./_generated/api";
 import {
   classifyPlaidAccount,
   getClassificationFields,
@@ -274,6 +275,12 @@ export const deleteItem = mutation({
 
     // Delete the item
     await ctx.db.delete(item._id);
+
+    // Schedule a snapshot after disconnection to capture the portfolio change
+    await ctx.scheduler.runAfter(0, internal.portfolioSnapshots.takeSnapshot, {
+      userId,
+      source: "plaid-disconnect",
+    });
 
     return { success: true };
   },

@@ -8,6 +8,18 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 // ═══════════════════════════════════════════════════════════════
+// Daily Portfolio Sync & Snapshot
+// Runs every day at 6:00 AM UTC
+// Syncs all providers (Plaid, Snaptrade, Vezgo) for all users
+// and creates portfolio snapshots for performance tracking
+// ═══════════════════════════════════════════════════════════════
+crons.daily(
+  "daily-portfolio-sync",
+  { hourUTC: 6, minuteUTC: 0 },
+  internal.actions.syncAll.scheduledDailySync,
+);
+
+// ═══════════════════════════════════════════════════════════════
 // World Bank Indicator Sync
 // Runs every Sunday at 3:00 AM UTC
 // ═══════════════════════════════════════════════════════════════

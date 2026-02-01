@@ -1,35 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/shadcn/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/shadcn/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/shadcn/alert-dialog";
-import { Button } from "@/components/ui/shadcn/button";
-import { Landmark, MoreHorizontal, RefreshCw, Unlink } from "lucide-react";
+/**
+ * BankAccountsCard Component
+ *
+ * Displays a single bank institution with its connected accounts.
+ * Uses the unified IntegrationConnectionCard for consistent styling.
+ */
 
-import { BankAccountCard } from "@/components/atomic/atoms/bankAccountCard";
+import {
+  Landmark,
+  CreditCard,
+  Wallet,
+  PiggyBank,
+  Building2,
+} from "lucide-react";
 import { useDeletePlaidItem, useRefreshAccounts } from "@/hooks/convex";
+import { useSyncContextSafe } from "@/providers/syncProvider";
+import {
+  IntegrationConnectionCard,
+  IntegrationAccountItem,
+} from "@/components/atomic/molecules/integrations";
 
 // Type for Convex account data
 interface ConvexAccount {
@@ -44,6 +34,7 @@ interface ConvexAccount {
   currentBalance?: number;
   availableBalance?: number;
   currency: string;
+  lastSynced?: number;
 }
 
 interface BankAccountsCardProps {
@@ -52,6 +43,23 @@ interface BankAccountsCardProps {
   institutionLogo?: string; // Base64-encoded PNG from Plaid
   institutionPrimaryColor?: string; // Hex color code from Plaid
   accounts: ConvexAccount[];
+}
+
+// Get icon for account type
+function getAccountIcon(type: string, subtype?: string) {
+  const t = type.toLowerCase();
+  const s = subtype?.toLowerCase() || "";
+
+  if (t === "credit" || s.includes("credit")) {
+    return <CreditCard className="h-4 w-4" />;
+  }
+  if (s.includes("savings") || s.includes("money market")) {
+    return <PiggyBank className="h-4 w-4" />;
+  }
+  if (t === "investment" || s.includes("brokerage")) {
+    return <Building2 className="h-4 w-4" />;
+  }
+  return <Wallet className="h-4 w-4" />;
 }
 
 export function BankAccountsCard({
@@ -63,7 +71,13 @@ export function BankAccountsCard({
 }: BankAccountsCardProps) {
   const deleteItem = useDeletePlaidItem();
   const refreshAccounts = useRefreshAccounts();
-  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+
+  // Get global sync state (may be undefined if outside SyncProvider)
+  const syncContext = useSyncContextSafe();
+  const isGlobalPlaidSyncing = syncContext?.isPlaidSyncing ?? false;
+
+  // Combine local and global sync state
+  const isSyncing = refreshAccounts.isLoading || isGlobalPlaidSyncing;
 
   if (!accounts || accounts.length === 0) {
     return null;
@@ -71,123 +85,77 @@ export function BankAccountsCard({
 
   const handleDisconnect = async () => {
     await deleteItem.mutate(itemId);
-    setShowDisconnectDialog(false);
   };
 
-  const handleRefresh = async () => {
+  const handleSync = async () => {
     await refreshAccounts.mutate(itemId);
   };
 
-  return (
-    <>
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {institutionLogo ? (
-                <img
-                  src={`data:image/png;base64,${institutionLogo}`}
-                  alt={institutionName}
-                  className="h-10 w-10 rounded-lg object-contain"
-                />
-              ) : (
-                <div
-                  className="h-10 w-10 rounded-lg flex items-center justify-center"
-                  style={{
-                    backgroundColor: institutionPrimaryColor
-                      ? `${institutionPrimaryColor}20`
-                      : "hsl(var(--primary) / 0.1)",
-                  }}
-                >
-                  <Landmark
-                    className="h-5 w-5"
-                    style={{
-                      color: institutionPrimaryColor || "hsl(var(--primary))",
-                    }}
-                  />
-                </div>
-              )}
-              <div>
-                <CardTitle className="text-lg">{institutionName}</CardTitle>
-                <CardDescription className="mt-0.5">
-                  {accounts.length} account{accounts.length !== 1 ? "s" : ""}{" "}
-                  connected
-                </CardDescription>
-              </div>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={handleRefresh}
-                  disabled={refreshAccounts.isLoading}
-                  className="cursor-pointer"
-                >
-                  <RefreshCw
-                    className={`mr-2 h-4 w-4 ${refreshAccounts.isLoading ? "animate-spin" : ""}`}
-                  />
-                  {refreshAccounts.isLoading ? "Refreshing..." : "Sync"}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => setShowDisconnectDialog(true)}
-                  disabled={deleteItem.isLoading}
-                  className="cursor-pointer text-destructive focus:text-destructive"
-                >
-                  <Unlink className="mr-2 h-4 w-4" />
-                  Disconnect
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
-            <BankAccountCard key={account._id} account={account} />
-          ))}
-        </CardContent>
-      </Card>
+  // Calculate total balance
+  const totalBalance = accounts.reduce(
+    (sum, acc) => sum + (acc.currentBalance || acc.availableBalance || 0),
+    0,
+  );
+  const currency = accounts[0]?.currency || "USD";
 
-      <AlertDialog
-        open={showDisconnectDialog}
-        onOpenChange={setShowDisconnectDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Unlink className="h-5 w-5 text-destructive" />
-              Disconnect {institutionName}?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-left">
-              This will remove{" "}
-              {accounts.length === 1
-                ? "your connected account"
-                : `all ${accounts.length} accounts`}{" "}
-              from your dashboard.
-              <br />
-              <br />
-              <span className="text-muted-foreground">
-                Your actual bank account will not be affected. You can reconnect
-                at any time.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDisconnect}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleteItem.isLoading ? "Disconnecting..." : "Disconnect"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+  // Get the most recent sync time from accounts
+  const lastSyncAt =
+    accounts.reduce((latest, acc) => {
+      if (acc.lastSynced && acc.lastSynced > latest) {
+        return acc.lastSynced;
+      }
+      return latest;
+    }, 0) || undefined;
+
+  // Prepare logo - Plaid sends base64 encoded PNGs
+  const logoUrl = institutionLogo
+    ? `data:image/png;base64,${institutionLogo}`
+    : undefined;
+
+  // Fallback icon with institution color
+  const fallbackIcon = (
+    <Landmark
+      className="h-5 w-5"
+      style={{
+        color: institutionPrimaryColor || "hsl(var(--primary))",
+      }}
+    />
+  );
+
+  return (
+    <IntegrationConnectionCard
+      name={institutionName}
+      logo={logoUrl}
+      fallbackIcon={fallbackIcon}
+      status="connected"
+      totalValue={totalBalance}
+      currency={currency}
+      lastSyncAt={lastSyncAt}
+      secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
+      onSync={handleSync}
+      onDisconnect={handleDisconnect}
+      isSyncing={isSyncing}
+      isDisconnecting={deleteItem.isLoading}
+    >
+      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+        {[...accounts]
+          .sort((a, b) => {
+            const balanceA = a.currentBalance || a.availableBalance || 0;
+            const balanceB = b.currentBalance || b.availableBalance || 0;
+            return balanceB - balanceA; // Descending order
+          })
+          .map((account) => (
+            <IntegrationAccountItem
+              key={account._id}
+              name={account.name}
+              type={account.subtype || account.type}
+              accountNumber={account.mask ? `****${account.mask}` : undefined}
+              balance={account.currentBalance || account.availableBalance || 0}
+              currency={account.currency}
+              icon={getAccountIcon(account.type, account.subtype)}
+            />
+          ))}
+      </div>
+    </IntegrationConnectionCard>
   );
 }

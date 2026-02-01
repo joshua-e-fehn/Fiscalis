@@ -11,6 +11,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/shadcn/breadcrumb";
 import Link from "next/link";
+import { SyncAllButton } from "@/components/atomic/atoms/syncAllButton";
 
 export function Header({
   hasSidebarTrigger,
@@ -20,7 +21,7 @@ export function Header({
   hasDashboardButton: boolean;
 }) {
   return (
-    <header className="sticky top-0 z-50 bg-background flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+    <header className="sticky top-0 z-50 bg-background flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
       <div className="flex w-full items-center gap-2 px-4">
         {hasSidebarTrigger && (
           <>
@@ -43,6 +44,9 @@ export function Header({
           </BreadcrumbList>
         </Breadcrumb> */}
         <div className="ml-auto flex items-center gap-2">
+          <SignedIn>
+            <SyncAllButton />
+          </SignedIn>
           <SignedOut>
             <SignInButton>
               <Button variant="outline">Sign in</Button>

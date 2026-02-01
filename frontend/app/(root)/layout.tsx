@@ -1,6 +1,7 @@
 import { SidebarInset, SidebarProvider } from "@/components/ui/shadcn/sidebar";
 
 import QueryProvider from "@/providers/queryProvider";
+import { SyncProvider } from "@/providers/syncProvider";
 
 import { NavigationSidebarWrapper } from "@/components/atomic/organisms/navigationSidebarWrapper";
 import { Header } from "@/components/atomic/organisms/header";
@@ -16,13 +17,15 @@ export default function RootLayout({
     <Protect>
       <main>
         <QueryProvider>
-          <SidebarProvider>
-            <NavigationSidebarWrapper />
-            <SidebarInset>
-              <Header hasSidebarTrigger={true} hasDashboardButton={false} />
-              {children}
-            </SidebarInset>
-          </SidebarProvider>
+          <SyncProvider>
+            <SidebarProvider>
+              <NavigationSidebarWrapper />
+              <SidebarInset>
+                <Header hasSidebarTrigger={true} hasDashboardButton={false} />
+                {children}
+              </SidebarInset>
+            </SidebarProvider>
+          </SyncProvider>
         </QueryProvider>
       </main>
     </Protect>

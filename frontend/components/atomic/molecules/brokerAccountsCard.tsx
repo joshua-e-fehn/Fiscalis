@@ -1,45 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/shadcn/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/shadcn/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/shadcn/alert-dialog";
-import { Button } from "@/components/ui/shadcn/button";
-import { Badge } from "@/components/ui/shadcn/badge";
-import {
-  TrendingUp,
-  MoreHorizontal,
-  RefreshCw,
-  Unlink,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Loader2,
-} from "lucide-react";
+/**
+ * BrokerAccountsCard Component
+ *
+ * Displays a single broker connection with its accounts.
+ * Uses the unified IntegrationConnectionCard for consistent styling.
+ */
+
+import { TrendingUp, Briefcase, LineChart, Coins } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
-import { useDeleteConnection, useSyncAll } from "@/hooks/convex";
-import { BrokerAccountCard } from "@/components/atomic/atoms/brokerAccountCard";
+import {
+  useDeleteConnection,
+  useSyncAll,
+  useBrokerPositions,
+} from "@/hooks/convex";
+import { useSyncContextSafe } from "@/providers/syncProvider";
+import {
+  IntegrationConnectionCard,
+  IntegrationAccountItem,
+} from "@/components/atomic/molecules/integrations";
 
 // Type for broker connection from Convex
 interface BrokerConnection {
@@ -75,13 +54,36 @@ interface BrokerAccountsCardProps {
   accounts: BrokerAccount[];
 }
 
+// Get icon for account type
+function getAccountIcon(accountType?: string) {
+  const t = accountType?.toLowerCase() || "";
+
+  if (t.includes("margin") || t.includes("trading")) {
+    return <LineChart className="h-4 w-4" />;
+  }
+  if (t.includes("retirement") || t.includes("ira") || t.includes("401")) {
+    return <Briefcase className="h-4 w-4" />;
+  }
+  if (t.includes("crypto")) {
+    return <Coins className="h-4 w-4" />;
+  }
+  return <TrendingUp className="h-4 w-4" />;
+}
+
 export function BrokerAccountsCard({
   connection,
   accounts,
 }: BrokerAccountsCardProps) {
   const { deleteConnection, isLoading: isDeleting } = useDeleteConnection();
-  const { syncAll, isLoading: isSyncing } = useSyncAll();
-  const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+  const { syncAll, isLoading: isLocalSyncing } = useSyncAll();
+  const positions = useBrokerPositions(); // Get all positions to determine which accounts have them
+
+  // Get global sync state (may be undefined if outside SyncProvider)
+  const syncContext = useSyncContextSafe();
+  const isGlobalSnaptradeSyncing = syncContext?.isSnaptradeSyncing ?? false;
+
+  // Combine local and global sync state
+  const isSyncing = isLocalSyncing || isGlobalSnaptradeSyncing;
 
   if (!accounts || accounts.length === 0) {
     return null;
@@ -89,242 +91,80 @@ export function BrokerAccountsCard({
 
   const handleDisconnect = async () => {
     await deleteConnection(connection._id);
-    setShowDisconnectDialog(false);
   };
 
-  const handleRefresh = async () => {
+  const handleSync = async () => {
     await syncAll();
   };
 
-  const getStatusBadge = () => {
-    switch (connection.status) {
-      case "connected":
-        return (
-          <Badge variant="outline" className="text-green-600 border-green-600">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            Connected
-          </Badge>
-        );
-      case "syncing":
-        return (
-          <Badge variant="outline" className="text-blue-600 border-blue-600">
-            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-            Syncing
-          </Badge>
-        );
-      case "reauth_required":
-        return (
-          <Badge
-            variant="outline"
-            className="text-orange-600 border-orange-600"
-          >
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Re-auth Required
-          </Badge>
-        );
-      case "error":
-        return (
-          <Badge
-            variant="outline"
-            className="text-destructive border-destructive"
-          >
-            <AlertCircle className="h-3 w-3 mr-1" />
-            Error
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge
-            variant="outline"
-            className="text-yellow-600 border-yellow-600"
-          >
-            <Clock className="h-3 w-3 mr-1" />
-            Pending
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline" className="text-muted-foreground">
-            <Clock className="h-3 w-3 mr-1" />
-            Unknown
-          </Badge>
-        );
+  // Build a set of account IDs that have positions
+  const accountsWithPositions = new Set(
+    positions?.map((p) => p.accountId) ?? [],
+  );
+
+  // Helper to get effective cash for an account
+  // Same logic as cash page: if cash > 0 use it, else if no positions treat balance as cash
+  const getEffectiveCash = (acc: BrokerAccount) => {
+    if ((acc.cash ?? 0) > 0) return acc.cash ?? 0;
+    // If no positions and balance > 0, treat balance as cash
+    if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
+      return acc.balance ?? 0;
     }
-  };
-
-  const formatLastSync = () => {
-    if (!connection.lastSyncAt) return "Never synced";
-    const date = new Date(connection.lastSyncAt);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+    return 0;
   };
 
   // Calculate total portfolio value for this connection
   const totalValue = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-  // For broker accounts, cash can be in either `cash` field or `balance` field
-  // (when account has no positions, all value is cash held in balance)
-  const getEffectiveCash = (acc: BrokerAccount) => {
-    if (acc.cash && acc.cash > 0) return acc.cash;
-    // If cash is 0 or undefined, the balance itself might be the cash
-    return acc.balance || 0;
-  };
+
+  // Calculate total cash across all accounts using the same logic as cash page
   const totalCash = accounts.reduce(
     (sum, acc) => sum + getEffectiveCash(acc),
     0,
   );
   const currency = accounts[0]?.currency || "USD";
 
+  // Map connection status to integration status
+  const mapStatus = (status: BrokerConnection["status"]) => {
+    if (status === "connected") return "active";
+    return status;
+  };
+
+  // Fallback icon
+  const fallbackIcon = <TrendingUp className="h-5 w-5 text-primary" />;
+
   return (
-    <>
-      <Card className="mb-4">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {connection.brokerLogo ? (
-                <img
-                  src={connection.brokerLogo}
-                  alt={connection.brokerName}
-                  className="h-10 w-10 rounded-lg object-contain"
-                />
-              ) : (
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                </div>
-              )}
-              <div>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  {connection.brokerName}
-                  {getStatusBadge()}
-                </CardTitle>
-                <CardDescription className="mt-0.5">
-                  {accounts.length} account{accounts.length !== 1 ? "s" : ""} •
-                  Last synced: {formatLastSync()}
-                </CardDescription>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Portfolio value summary */}
-              <div className="text-right mr-4 hidden sm:block">
-                <div className="text-lg font-semibold">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency,
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(totalValue)}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency,
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0,
-                  }).format(totalCash)}{" "}
-                  cash
-                </div>
-              </div>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={handleRefresh}
-                    disabled={isSyncing}
-                    className="cursor-pointer"
-                  >
-                    <RefreshCw
-                      className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
-                    />
-                    {isSyncing ? "Syncing..." : "Sync"}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setShowDisconnectDialog(true)}
-                    disabled={isDeleting}
-                    className="cursor-pointer text-destructive focus:text-destructive"
-                  >
-                    <Unlink className="mr-2 h-4 w-4" />
-                    Disconnect
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {connection.errorMessage && (
-            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <p className="text-sm text-destructive flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                {connection.errorMessage}
-              </p>
-            </div>
-          )}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {accounts.map((account) => (
-              <BrokerAccountCard key={account._id} account={account} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <AlertDialog
-        open={showDisconnectDialog}
-        onOpenChange={setShowDisconnectDialog}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Unlink className="h-5 w-5 text-destructive" />
-              Disconnect {connection.brokerName}?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-left">
-              This will remove{" "}
-              {accounts.length === 1
-                ? "your connected account"
-                : `all ${accounts.length} accounts`}{" "}
-              and their position data from your dashboard.
-              <br />
-              <br />
-              <span className="text-muted-foreground">
-                Your actual brokerage account will not be affected. You can
-                reconnect at any time.
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDisconnect}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Disconnecting...
-                </>
-              ) : (
-                "Disconnect"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+    <IntegrationConnectionCard
+      name={connection.brokerName}
+      logo={connection.brokerLogo}
+      fallbackIcon={fallbackIcon}
+      status={mapStatus(connection.status)}
+      totalValue={totalValue}
+      totalCash={totalCash}
+      currency={currency}
+      lastSyncAt={connection.lastSyncAt}
+      errorMessage={connection.errorMessage}
+      secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
+      onSync={handleSync}
+      onDisconnect={handleDisconnect}
+      isSyncing={isSyncing}
+      isDisconnecting={isDeleting}
+    >
+      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+        {[...accounts]
+          .sort((a, b) => (b.balance || 0) - (a.balance || 0)) // Descending order
+          .map((account) => (
+            <IntegrationAccountItem
+              key={account._id}
+              name={account.name}
+              type={account.accountType}
+              accountNumber={account.accountNumber}
+              balance={account.balance || 0}
+              cash={getEffectiveCash(account)}
+              currency={account.currency}
+              icon={getAccountIcon(account.accountType)}
+            />
+          ))}
+      </div>
+    </IntegrationConnectionCard>
   );
 }

@@ -6,7 +6,12 @@
  */
 
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import {
+  mutation,
+  query,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 
 /**
@@ -142,7 +147,20 @@ export const takeSnapshot = internalMutation({
       commoditiesValue += itemCost;
     }
 
-    // 4. Manual loans (liabilities)
+    // 4. Vezgo crypto positions (crypto exchanges & wallets)
+    const vezgoPositions = await ctx.db
+      .query("vezgoPositions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    let vezgoCryptoValue = 0;
+    for (const pos of vezgoPositions) {
+      // Use fiatValue if available, otherwise skip (no quantity-based fallback without price)
+      const value = pos.fiatValue ?? 0;
+      vezgoCryptoValue += value;
+    }
+
+    // 5. Manual loans (liabilities)
     const loans = await ctx.db
       .query("loans")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -179,10 +197,12 @@ export const takeSnapshot = internalMutation({
       if (bondsCost > 0) hasCostBasis = true;
     }
 
-    if (cryptoValue > 0) {
+    // Combine broker crypto (from SnapTrade) + Vezgo crypto (exchanges & wallets)
+    const totalCryptoValue = cryptoValue + vezgoCryptoValue;
+    if (totalCryptoValue > 0) {
       categoryBreakdown.push({
         category: "crypto",
-        value: cryptoValue,
+        value: totalCryptoValue,
         costBasis: cryptoCost > 0 ? cryptoCost : undefined,
       });
       if (cryptoCost > 0) hasCostBasis = true;
@@ -204,6 +224,7 @@ export const takeSnapshot = internalMutation({
       equitiesValue +
       bondsValue +
       cryptoValue +
+      vezgoCryptoValue +
       commoditiesValue;
 
     totalLiabilities = liabilitiesValue + brokerLiabilitiesValue + loansValue;
@@ -212,39 +233,48 @@ export const takeSnapshot = internalMutation({
 
     const netWorth = totalAssets - totalLiabilities;
 
-    // Check if we already have a snapshot for today
-    const existingSnapshot = await ctx.db
-      .query("portfolioSnapshots")
-      .withIndex("by_user_date", (q) =>
-        q.eq("userId", userId).eq("date", today),
-      )
-      .first();
+    // Determine if we should create a new snapshot or update existing
+    // - "scheduled-daily" updates existing snapshot for the day (one per day)
+    // - All other sources (sync-all, manual, etc.) always create new snapshots
+    //   to build an irregular time series for tracking changes
+    const shouldUpdateExisting = source === "scheduled-daily";
 
-    if (existingSnapshot) {
-      // Update existing snapshot for today
-      await ctx.db.patch(existingSnapshot._id, {
-        timestamp: now,
-        totalAssets,
-        totalLiabilities,
-        netWorth,
-        totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
-        categoryBreakdown,
-        source,
-      });
-    } else {
-      // Create new snapshot
-      await ctx.db.insert("portfolioSnapshots", {
-        userId,
-        timestamp: now,
-        date: today,
-        totalAssets,
-        totalLiabilities,
-        netWorth,
-        totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
-        categoryBreakdown,
-        source,
-      });
+    if (shouldUpdateExisting) {
+      // Check if we already have a snapshot for today from scheduled sync
+      const existingSnapshot = await ctx.db
+        .query("portfolioSnapshots")
+        .withIndex("by_user_date", (q) =>
+          q.eq("userId", userId).eq("date", today),
+        )
+        .first();
+
+      if (existingSnapshot && existingSnapshot.source === "scheduled-daily") {
+        // Update existing scheduled snapshot for today
+        await ctx.db.patch(existingSnapshot._id, {
+          timestamp: now,
+          totalAssets,
+          totalLiabilities,
+          netWorth,
+          totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
+          categoryBreakdown,
+          source,
+        });
+        return { totalAssets, totalLiabilities, netWorth };
+      }
     }
+
+    // Create new snapshot (default behavior for manual syncs)
+    await ctx.db.insert("portfolioSnapshots", {
+      userId,
+      timestamp: now,
+      date: today,
+      totalAssets,
+      totalLiabilities,
+      netWorth,
+      totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
+      categoryBreakdown,
+      source,
+    });
 
     return { totalAssets, totalLiabilities, netWorth };
   },
@@ -377,7 +407,19 @@ export const takeManualSnapshot = mutation({
       commoditiesValue += itemCost;
     }
 
-    // 4. Manual loans
+    // 4. Vezgo crypto positions (crypto exchanges & wallets)
+    const vezgoPositions = await ctx.db
+      .query("vezgoPositions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    let vezgoCryptoValue = 0;
+    for (const pos of vezgoPositions) {
+      const value = pos.fiatValue ?? 0;
+      vezgoCryptoValue += value;
+    }
+
+    // 5. Manual loans
     const loans = await ctx.db
       .query("loans")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -414,10 +456,12 @@ export const takeManualSnapshot = mutation({
       if (bondsCost > 0) hasCostBasis = true;
     }
 
-    if (cryptoValue > 0) {
+    // Combine broker crypto + Vezgo crypto
+    const totalCryptoValue = cryptoValue + vezgoCryptoValue;
+    if (totalCryptoValue > 0) {
       categoryBreakdown.push({
         category: "crypto",
-        value: cryptoValue,
+        value: totalCryptoValue,
         costBasis: cryptoCost > 0 ? cryptoCost : undefined,
       });
       if (cryptoCost > 0) hasCostBasis = true;
@@ -438,6 +482,7 @@ export const takeManualSnapshot = mutation({
       equitiesValue +
       bondsValue +
       cryptoValue +
+      vezgoCryptoValue +
       commoditiesValue;
 
     totalLiabilities = liabilitiesValue + brokerLiabilitiesValue + loansValue;
@@ -445,37 +490,18 @@ export const takeManualSnapshot = mutation({
 
     const netWorth = totalAssets - totalLiabilities;
 
-    // Check if we already have a snapshot for today
-    const existingSnapshot = await ctx.db
-      .query("portfolioSnapshots")
-      .withIndex("by_user_date", (q) =>
-        q.eq("userId", userId).eq("date", today),
-      )
-      .first();
-
-    if (existingSnapshot) {
-      await ctx.db.patch(existingSnapshot._id, {
-        timestamp: now,
-        totalAssets,
-        totalLiabilities,
-        netWorth,
-        totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
-        categoryBreakdown,
-        source: "manual",
-      });
-    } else {
-      await ctx.db.insert("portfolioSnapshots", {
-        userId,
-        timestamp: now,
-        date: today,
-        totalAssets,
-        totalLiabilities,
-        netWorth,
-        totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
-        categoryBreakdown,
-        source: "manual",
-      });
-    }
+    // Always create new snapshot for manual triggers to build time series
+    await ctx.db.insert("portfolioSnapshots", {
+      userId,
+      timestamp: now,
+      date: today,
+      totalAssets,
+      totalLiabilities,
+      netWorth,
+      totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
+      categoryBreakdown,
+      source: "manual",
+    });
 
     return { totalAssets, totalLiabilities, netWorth };
   },
@@ -522,5 +548,48 @@ export const getLatestSnapshot = query({
       .first();
 
     return snapshot;
+  },
+});
+
+/**
+ * Internal query to get all unique users who have any financial connections
+ * Used by the scheduled daily sync to determine which users to sync
+ */
+export const getUsersWithConnections = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<string[]> => {
+    const userIds = new Set<string>();
+
+    // Get users with Plaid connections
+    const plaidItems = await ctx.db.query("plaidItems").collect();
+    for (const item of plaidItems) {
+      userIds.add(item.userId);
+    }
+
+    // Get users with Snaptrade connections
+    const brokerConnections = await ctx.db.query("brokerConnections").collect();
+    for (const conn of brokerConnections) {
+      userIds.add(conn.userId);
+    }
+
+    // Get users with Vezgo connections
+    const vezgoConnections = await ctx.db.query("vezgoConnections").collect();
+    for (const conn of vezgoConnections) {
+      userIds.add(conn.userId);
+    }
+
+    // Get users with vault items (manual assets)
+    const vaultItems = await ctx.db.query("vaultItems").collect();
+    for (const item of vaultItems) {
+      userIds.add(item.userId);
+    }
+
+    // Get users with loans (manual liabilities)
+    const loans = await ctx.db.query("loans").collect();
+    for (const loan of loans) {
+      userIds.add(loan.userId);
+    }
+
+    return Array.from(userIds);
   },
 });

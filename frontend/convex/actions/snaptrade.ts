@@ -953,6 +953,17 @@ export const syncAll = action({
       }
     }
 
+    // Take a portfolio snapshot after sync completes
+    try {
+      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+        userId,
+        source: "snaptrade",
+      });
+    } catch (snapshotError) {
+      console.error("Failed to take portfolio snapshot:", snapshotError);
+      // Don't fail the sync if snapshot fails
+    }
+
     return {
       success: results.errors.length === 0,
       ...results,

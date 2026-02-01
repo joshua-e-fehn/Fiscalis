@@ -42,7 +42,26 @@ export function CategoryAllocationChart({
   // Filter to only subcategories with value > 0
   const dataWithValue = subcategories.filter((s) => s.totalValue > 0);
 
-  if (dataWithValue.length === 0 || totalValue === 0) {
+  // Filter out items under 2% threshold and combine into "Other"
+  const THRESHOLD_PERCENT = 2;
+  const significantItems: typeof dataWithValue = [];
+  let otherValue = 0;
+  let otherColor = "#6B7280"; // Gray for "Other"
+
+  for (const item of dataWithValue) {
+    const percentage =
+      totalValue > 0 ? (item.totalValue / totalValue) * 100 : 0;
+    if (percentage >= THRESHOLD_PERCENT) {
+      significantItems.push(item);
+    } else {
+      otherValue += item.totalValue;
+    }
+  }
+
+  // Use filtered data for display
+  const filteredData = significantItems;
+
+  if (filteredData.length === 0 || totalValue === 0) {
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
@@ -65,12 +84,22 @@ export function CategoryAllocationChart({
   }
 
   // Prepare data for pie chart
-  const data = dataWithValue.map((s) => ({
+  const data = filteredData.map((s) => ({
     name: s.name,
     value: (s.totalValue / totalValue) * 100,
     absoluteValue: s.totalValue,
     color: s.color,
   }));
+
+  // Add "Other" category if there are small items
+  if (otherValue > 0) {
+    data.push({
+      name: "Other (<2%)",
+      value: (otherValue / totalValue) * 100,
+      absoluteValue: otherValue,
+      color: otherColor,
+    });
+  }
 
   return (
     <Card className={cn("h-full", className)}>

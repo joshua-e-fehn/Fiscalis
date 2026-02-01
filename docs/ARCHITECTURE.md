@@ -8,13 +8,14 @@ This document provides a comprehensive overview of the Fiscalis application arch
 2. [Repository Structure](#repository-structure)
 3. [Technology Stack](#technology-stack)
 4. [Data Flow Architecture](#data-flow-architecture)
-5. [Convex Backend](#convex-backend)
-6. [API Layer (Hono)](#api-layer-hono)
-7. [Database Layer](#database-layer)
-8. [Client-Side Data Management](#client-side-data-management)
-9. [Authentication Flow (Clerk)](#authentication-flow-clerk)
-10. [External Integrations](#external-integrations)
-11. [Component Architecture](#component-architecture)
+5. [Investment Category Classification](#investment-category-classification)
+6. [Convex Backend](#convex-backend)
+7. [API Layer (Hono)](#api-layer-hono)
+8. [Database Layer](#database-layer)
+9. [Client-Side Data Management](#client-side-data-management)
+10. [Authentication Flow (Clerk)](#authentication-flow-clerk)
+11. [External Integrations](#external-integrations)
+12. [Component Architecture](#component-architecture)
 
 ---
 
@@ -37,8 +38,8 @@ This document provides a comprehensive overview of the Fiscalis application arch
 │  │  │  │   hooks/convex/           │    │   hooks/metals.ts         │     │   ││
 │  │  │  │  - usePlaidAccounts()     │    │  - useMetalPrices()       │     │   ││
 │  │  │  │  - usePlaidItems()        │    │  - useMetalLatest()       │     │   ││
-│  │  │  │  - useBrokerConnections() │    │                           │     │   ││
-│  │  │  │  (Convex real-time)       │    │  (React Query + Hono)     │     │   ││
+│  │  │  │  - useBrokerConnections() │    │                           │     │   │││  │  │  - useVezgoConnections()  │    │                           │     │   ││
+│  │  │  - useVezgoPositions()    │    │                           │     │   │││  │  │  │  (Convex real-time)       │    │  (React Query + Hono)     │     │   ││
 │  │  │  └───────────┬───────────────┘    └─────────────┬─────────────┘     │   ││
 │  │  └──────────────┼──────────────────────────────────┼───────────────────┘   ││
 │  └─────────────────┼──────────────────────────────────┼────────────────────────┘│
@@ -47,7 +48,7 @@ This document provides a comprehensive overview of the Fiscalis application arch
                      │                                  │
                      ▼                                  ▼
 ┌────────────────────────────────────┐    ┌────────────────────────────────────────┐
-│           CONVEX BACKEND           │    │         HONO API + NEON DB             │
+│           CONVEX BACKEND           │    │         HONO API + Supabase DB             │
 │  ┌──────────────────────────────┐  │    │  ┌──────────────────────────────────┐  │
 │  │   Real-time User Data        │  │    │  │    Time-series Data              │  │
 │  │  • plaidItems (encrypted)    │  │    │  │  • precious_metal_prices         │  │
@@ -59,9 +60,11 @@ This document provides a comprehensive overview of the Fiscalis application arch
 │                │                   │    │                │                       │
 │                ▼                   │    │                ▼                       │
 │  ┌──────────────────────────────┐  │    │  ┌──────────────────────────────────┐  │
-│  │       Plaid API              │  │    │  │       Neon PostgreSQL            │  │
-│  │  (via Convex actions)        │  │    │  │       (Drizzle ORM)              │  │
-│  └──────────────────────────────┘  │    │  └──────────────────────────────────┘  │
+│  │    External APIs             │  │    │  │       Supabase PostgreSQL            │  │
+│  │  • Plaid (Banking)           │  │    │  │       (Drizzle ORM)              │  │
+│  │  • Snaptrade (Brokers)       │  │    │  └──────────────────────────────────┘  │
+│  │  (via Convex actions)        │  │    │                                        │
+│  └──────────────────────────────┘  │    │                                        │
 └────────────────────────────────────┘    └────────────────────────────────────────┘
 ```
 
@@ -74,14 +77,19 @@ Fiscalis uses a **hybrid architecture** with two backends optimized for differen
 │                         HYBRID DATABASE ARCHITECTURE                             │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
-│   CONVEX (Real-time, User Data)              NEON PostgreSQL (Time-series)      │
+│   CONVEX (Real-time, User Data)              Supabase PostgreSQL (Time-series)      │
 │   ─────────────────────────────              ──────────────────────────────     │
 │   • plaidItems (encrypted tokens)            • precious_metal_prices             │
 │   • plaidAccounts (cached)                   • currency_exchange_rates           │
-│   • plaidTransactions                                                            │
-│   • brokerConnections                        Accessed via:                       │
-│   • brokerPositions                          • Hono API routes (/api/metals/*)   │
-│                                              • Drizzle ORM                       │
+│   • plaidTransactions                        • world_bank_indicators             │
+│   • snaptradeConnections (encrypted)                                             │
+│   • snaptradeAccounts                        Accessed via:                       │
+│   • snaptradePositions                       • Hono API routes (/api/metals/*)   │
+│   • snaptradeActivities                      • Hono API routes (/api/worldbank/*)│
+│   • vezgoUsers (encrypted token)             • Drizzle ORM                       │
+│   • vezgoConnections                                                             │
+│   • vezgoPositions                                                               │
+│   • vezgoTransactions                                                            │
 │   Accessed via:                                                                  │
 │   • Convex hooks (useQuery, useMutation)                                         │
 │   • Convex actions (for Plaid API calls)                                         │
@@ -92,7 +100,7 @@ Fiscalis uses a **hybrid architecture** with two backends optimized for differen
 **Why Hybrid?**
 
 - **Convex**: Provides real-time reactivity for user data (banking, brokers) with automatic cache invalidation and WebSocket subscriptions
-- **Neon**: Better suited for time-series data with periodic batch updates (metal prices, exchange rates) that doesn't need real-time sync
+- **Supabase**: Better suited for time-series data with periodic batch updates (metal prices, exchange rates) that doesn't need real-time sync
 
 ---
 
@@ -118,13 +126,19 @@ Fiscalis/
 │   ├── convex/                    # Convex Backend
 │   │   ├── _generated/            # Auto-generated Convex types
 │   │   ├── actions/               # Convex actions (external API calls)
-│   │   │   └── plaid.ts           # Plaid API integration
+│   │   │   ├── plaid.ts           # Plaid API integration
+│   │   │   ├── snaptrade.ts       # Snaptrade API integration
+│   │   │   └── vezgo.ts           # Vezgo API integration (crypto)
 │   │   ├── lib/                   # Convex utilities
-│   │   │   └── encryption.ts      # AES-256-GCM encryption
+│   │   │   ├── encryption.ts      # AES-256-GCM encryption
+│   │   │   └── vezgo.ts           # Vezgo client helpers
 │   │   ├── auth.config.ts         # Clerk auth configuration
 │   │   ├── schema.ts              # Database schema definition
 │   │   ├── banking.ts             # Banking queries & mutations
-│   │   └── brokers.ts             # Broker queries & mutations
+│   │   ├── brokers.ts             # Broker queries & mutations
+│   │   ├── categories.ts          # Category-based queries (cash, equities, etc.)
+│   │   ├── classification.ts      # Classification override mutations
+│   │   └── crypto.ts              # Crypto queries & mutations (Vezgo)
 │   │
 │   ├── components/                # UI Components
 │   │   ├── atomic/                # Atomic Design Pattern
@@ -135,7 +149,7 @@ Fiscalis/
 │   │       ├── shadcn/            # shadcn/ui components
 │   │       └── aceternity/        # Aceternity UI components
 │   │
-│   ├── db/                        # Neon Database configuration
+│   ├── db/                        # Supabase Database configuration
 │   │   └── drizzle/
 │   │       ├── drizzle.ts         # DB connection setup
 │   │       └── schema.ts          # Table definitions (time-series)
@@ -144,14 +158,22 @@ Fiscalis/
 │   │   ├── convex/                # Convex hooks (real-time)
 │   │   │   ├── banking.ts         # Plaid data hooks
 │   │   │   ├── brokers.ts         # Broker data hooks
+│   │   │   ├── cash.ts            # Cash & money market summary
+│   │   │   ├── classification.ts  # Classification override hooks
+│   │   │   ├── crypto.ts          # Vezgo/Crypto data hooks
+│   │   │   ├── equities.ts        # Equities summary hooks
+│   │   │   ├── liabilities.ts     # Liabilities summary hooks
+│   │   │   ├── portfolio.ts       # Portfolio aggregation hooks
 │   │   │   └── index.ts           # Hook exports
-│   │   └── metals.ts              # Metals data hooks (React Query)
+│   │   ├── metals.ts              # Metals data hooks (React Query)
+│   │   └── useVezgoConnect.ts     # Vezgo Connect modal hook
 │   │
 │   ├── lib/                       # Utilities and helpers
 │   │   ├── api/                   # API fetch functions
 │   │   │   └── metals.ts          # Metals API wrapper
 │   │   ├── types/                 # TypeScript type definitions
-│   │   │   └── metals.ts          # Metals types
+│   │   │   ├── metals.ts          # Metals types
+│   │   │   └── classification.ts  # Investment category types
 │   │   ├── hono.ts                # Hono client setup
 │   │   └── utils.ts               # General utilities
 │   │
@@ -250,20 +272,25 @@ Fiscalis/
 
 ### Financial Integrations
 
-| Technology           | Version | Purpose                              |
-| -------------------- | ------- | ------------------------------------ |
-| **Plaid**            | ^31.1.0 | Banking & financial data aggregation |
-| **react-plaid-link** | ^3.6.1  | Plaid Link React component           |
+| Technology           | Version | Purpose                                       |
+| -------------------- | ------- | --------------------------------------------- |
+| **Plaid**            | ^31.1.0 | Banking & financial data aggregation          |
+| **react-plaid-link** | ^3.6.1  | Plaid Link React component                    |
+| **Snaptrade**        | ^2.0.63 | Brokerage account aggregation (38+ brokers)   |
+| **Vezgo**            | ^2.0.8  | Crypto aggregation (exchanges, wallets, DeFi) |
+| **World Bank API**   | -       | Economic indicators & country data            |
 
 ### Infrastructure & Deployment
 
-| Service    | Purpose                             |
-| ---------- | ----------------------------------- |
-| **Vercel** | Frontend hosting & Edge Functions   |
-| **Convex** | Real-time backend hosting           |
-| **Neon**   | Serverless PostgreSQL (time-series) |
-| **Clerk**  | Authentication service              |
-| **Plaid**  | Banking API provider                |
+| Service        | Purpose                             |
+| -------------- | ----------------------------------- |
+| **Vercel**     | Frontend hosting & Edge Functions   |
+| **Convex**     | Real-time backend hosting           |
+| **Supabase**   | Serverless PostgreSQL (time-series) |
+| **Clerk**      | Authentication service              |
+| **Plaid**      | Banking API provider                |
+| **Snaptrade**  | Brokerage API provider              |
+| **World Bank** | Economic data API                   |
 
 ---
 
@@ -306,7 +333,7 @@ Fiscalis/
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Metals Data Flow (Hono + Neon - Traditional)
+### Metals Data Flow (Hono + Supabase - Traditional)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -328,10 +355,317 @@ Fiscalis/
 │  4. Hono route handler         5. DB Query                                   │
 │  ┌─────────────────┐          ┌─────────────────┐                            │
 │  │  .get("/latest")│ ──────▶  │  db.select()    │                            │
-│  │  (metals.ts)    │          │  (Drizzle/Neon) │                            │
+│  │  (metals.ts)    │          │  (Drizzle/Supabase) │                            │
 │  └─────────────────┘          └─────────────────┘                            │
 │                                                                               │
 └───────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Investment Category Classification
+
+The Investment Category Classification system is the core mechanism that maps raw financial data from external providers (Plaid, Snaptrade, Vezgo) into Fiscalis's unified investment taxonomy. This enables consistent categorization, aggregation, and analysis across all asset types.
+
+### Classification Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    INVESTMENT CATEGORY CLASSIFICATION SYSTEM                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  ┌─────────────────────────┐     ┌─────────────────────────────────────────────┐│
+│  │   EXTERNAL PROVIDERS    │     │         CLASSIFICATION TYPES               ││
+│  ├─────────────────────────┤     │  (lib/types/classification.ts)             ││
+│  │                         │     ├─────────────────────────────────────────────┤│
+│  │  Plaid                  │     │  InvestmentCategory:                       ││
+│  │  • type: "depository"   │────▶│  • cash, equities, bonds, crypto           ││
+│  │  • subtype: "checking"  │     │  • commodities, real-estate, collectibles  ││
+│  │                         │     │  • liabilities                              ││
+│  │  Snaptrade              │     │                                             ││
+│  │  • assetType: "equity"  │────▶│  InvestmentSubcategory (per category):     ││
+│  │  • symbol: "AAPL"       │     │  • cash: checking, savings, broker-cash... ││
+│  │                         │     │  • equities: stocks, etfs, funds, options..││
+│  │  Vezgo                  │     │  • bonds: government, corporate, municipal ││
+│  │  • assetType: "crypto"  │────▶│  • crypto: bitcoin, ethereum, stablecoins..││
+│  │  • symbol: "BTC"        │     │  • commodities: metals, energy, agricultural│
+│  │                         │     │  • liabilities: mortgages, loans, margin...││
+│  └─────────────────────────┘     └─────────────────────────────────────────────┘│
+│                                                                                  │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐│
+│  │                        DATABASE SCHEMA FIELDS                                ││
+│  │  (Both plaidAccounts and brokerPositions tables)                            ││
+│  ├─────────────────────────────────────────────────────────────────────────────┤│
+│  │  • investmentCategory: "cash" | "equities" | "bonds" | ...                  ││
+│  │  • investmentSubcategory: "checking-accounts" | "stocks" | ...              ││
+│  │  • classificationSource: "auto" | "user_override" | "admin"                 ││
+│  │  • classificationRule: "plaid-checking" | "snaptrade-equity" | ...          ││
+│  │  • userCategoryOverride: Optional user manual override                      ││
+│  │  • userSubcategoryOverride: Optional user manual override                   ││
+│  │  • valueInBaseCurrency: Amount converted to EUR                             ││
+│  │  • exchangeRateUsed: Rate at time of sync                                   ││
+│  └─────────────────────────────────────────────────────────────────────────────┘│
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Investment Categories & Subcategories
+
+| Category         | Subcategories                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| **cash**         | checking-accounts, savings-accounts, money-market, cds, treasury-bills, forex, broker-cash |
+| **equities**     | stocks, etfs, funds, options, private                                                      |
+| **bonds**        | government, corporate, municipal, savings, funds                                           |
+| **crypto**       | bitcoin, ethereum, altcoins, stablecoins, defi, nfts                                       |
+| **commodities**  | metals, energy, industrial, agricultural, rare-earth, gemstones                            |
+| **real-estate**  | residential, commercial, reits, crowdfunding, land                                         |
+| **collectibles** | art, watches, wine, cars, memorabilia, nfts, other                                         |
+| **liabilities**  | mortgages, loans, credit-cards, margin-loans                                               |
+
+### Classification Rules
+
+Classification is performed automatically when syncing data from providers:
+
+```typescript
+// lib/types/classification.ts
+
+// Example Plaid account classification (by account type)
+interface AccountTypeMatcher {
+  type: "account_type";
+  provider: "plaid";
+  values: string[]; // ["depository:checking"]
+}
+
+// Example Snaptrade position classification (by asset type)
+interface AssetTypeMatcher {
+  type: "asset_type";
+  provider: "snaptrade";
+  values: string[]; // ["equity", "stock"]
+}
+
+// Example symbol-based classification
+interface SymbolExactMatcher {
+  type: "symbol_exact";
+  values: string[]; // ["BTC", "ETH"]
+}
+
+// Pattern-based classification for ETFs
+interface SymbolPatternMatcher {
+  type: "symbol_pattern";
+  regex: string; // "^(SPY|QQQ|VTI|VOO)$"
+}
+```
+
+### Classification Mapping by Provider
+
+**Plaid (Banking) → Classification:**
+
+| Plaid Account Type | Plaid Subtype    | Category      | Subcategory       |
+| ------------------ | ---------------- | ------------- | ----------------- |
+| depository         | checking         | cash          | checking-accounts |
+| depository         | savings          | cash          | savings-accounts  |
+| depository         | money market     | cash          | money-market      |
+| depository         | cd               | cash          | cds               |
+| credit             | credit card      | liabilities   | credit-cards      |
+| loan               | mortgage         | liabilities   | mortgages         |
+| loan               | student, auto... | liabilities   | loans             |
+| investment         | \*               | (by position) | (by position)     |
+
+**Snaptrade (Brokers) → Classification:**
+
+| Snaptrade Asset Type | Category | Subcategory |
+| -------------------- | -------- | ----------- |
+| equity, stock        | equities | stocks      |
+| etf                  | equities | etfs        |
+| mutual_fund          | equities | funds       |
+| option               | equities | options     |
+| bond                 | bonds    | (varies)    |
+| cryptocurrency       | crypto   | (by symbol) |
+| forex                | cash     | forex       |
+| cash (uninvested)    | cash     | broker-cash |
+
+### Category-Based Queries
+
+The classification system enables efficient category-based queries via database indexes:
+
+```typescript
+// convex/categories.ts
+
+// Get all holdings for a specific category
+export const getCashHoldings = query({
+  handler: async (ctx) => {
+    const userId = (await ctx.auth.getUserIdentity())!.subject;
+
+    // Get bank accounts classified as cash
+    const bankAccounts = await ctx.db
+      .query("plaidAccounts")
+      .withIndex("by_category", (q) =>
+        q.eq("userId", userId).eq("investmentCategory", "cash"),
+      )
+      .collect();
+
+    // Get broker positions classified as cash (money market funds, etc.)
+    const brokerCash = await ctx.db
+      .query("brokerPositions")
+      .withIndex("by_category", (q) =>
+        q.eq("userId", userId).eq("investmentCategory", "cash"),
+      )
+      .collect();
+
+    // Get broker accounts with uninvested cash
+    const brokerAccounts = await ctx.db
+      .query("brokerAccounts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    return { bankAccounts, brokerCash, brokerAccounts };
+  },
+});
+```
+
+### Category Summary Hooks
+
+Frontend hooks provide aggregated category summaries for dashboards:
+
+```typescript
+// hooks/convex/cash.ts
+export function useCashSummary() {
+  const cashData = useQuery(api.categories.getCashHoldings);
+
+  return {
+    totalValue: cashData?.summary.totalValue ?? 0,
+    bankTotal: cashData?.summary.bankTotal ?? 0,
+    brokerCashTotal: cashData?.summary.brokerCashTotal ?? 0,
+    accountCount: cashData?.summary.accountCount ?? 0,
+    bySubcategory: cashData?.summary.bySubcategory ?? {},
+  };
+}
+
+// hooks/convex/equities.ts
+export function useEquitiesSummary() {
+  const equitiesData = useQuery(api.categories.getEquitiesHoldings);
+  // ... similar pattern
+}
+
+// hooks/convex/liabilities.ts
+export function useLiabilitiesSummary() {
+  const liabilitiesData = useQuery(api.categories.getLiabilities);
+  // ... similar pattern
+}
+```
+
+### User Classification Overrides
+
+Users can manually override automatic classifications:
+
+```typescript
+// convex/classification.ts
+
+export const overridePlaidAccountClassification = mutation({
+  args: {
+    accountId: v.id("plaidAccounts"),
+    category: v.string(),
+    subcategory: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.accountId, {
+      userCategoryOverride: args.category,
+      userSubcategoryOverride: args.subcategory,
+      classificationSource: "user_override",
+    });
+  },
+});
+
+export const resetPlaidAccountClassification = mutation({
+  args: { accountId: v.id("plaidAccounts") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.accountId, {
+      userCategoryOverride: undefined,
+      userSubcategoryOverride: undefined,
+      classificationSource: "auto",
+    });
+  },
+});
+```
+
+### Classification Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         CLASSIFICATION FLOW                                      │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                  │
+│  1. SYNC FROM PROVIDER                                                          │
+│  ┌─────────────────┐                                                            │
+│  │  Plaid/Snaptrade│                                                            │
+│  │  returns data   │                                                            │
+│  └────────┬────────┘                                                            │
+│           │                                                                      │
+│           ▼                                                                      │
+│  2. AUTO-CLASSIFICATION                                                         │
+│  ┌─────────────────────────────────────────────────┐                            │
+│  │  Apply classification rules based on:           │                            │
+│  │  • Account type (Plaid)                         │                            │
+│  │  • Asset type (Snaptrade)                       │                            │
+│  │  • Symbol/name patterns                         │                            │
+│  └────────┬────────────────────────────────────────┘                            │
+│           │                                                                      │
+│           ▼                                                                      │
+│  3. STORE WITH CLASSIFICATION                                                   │
+│  ┌─────────────────────────────────────────────────┐                            │
+│  │  Save to Convex DB:                             │                            │
+│  │  • investmentCategory                           │                            │
+│  │  • investmentSubcategory                        │                            │
+│  │  • classificationSource: "auto"                 │                            │
+│  │  • classificationRule: "rule-id"                │                            │
+│  │  • valueInBaseCurrency (EUR conversion)         │                            │
+│  └────────┬────────────────────────────────────────┘                            │
+│           │                                                                      │
+│           ▼                                                                      │
+│  4. QUERY BY CATEGORY (Frontend)                                                │
+│  ┌─────────────────────────────────────────────────┐                            │
+│  │  useCashSummary() → api.categories.getCash...   │                            │
+│  │  useEquitiesSummary() → api.categories.getEq... │                            │
+│  │  useLiabilitiesSummary() → api.categories.getL..│                            │
+│  └────────┬────────────────────────────────────────┘                            │
+│           │                                                                      │
+│           ▼                                                                      │
+│  5. OPTIONAL: USER OVERRIDE                                                     │
+│  ┌─────────────────────────────────────────────────┐                            │
+│  │  User clicks "Change Category" on an item       │                            │
+│  │  → overridePlaidAccountClassification()         │                            │
+│  │  → classificationSource: "user_override"        │                            │
+│  └─────────────────────────────────────────────────┘                            │
+│                                                                                  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Files
+
+| File                          | Purpose                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| `lib/types/classification.ts` | Type definitions for categories, subcategories, and classification rules |
+| `convex/categories.ts`        | Category-based Convex queries (getCashHoldings, getLiabilities, etc.)    |
+| `convex/classification.ts`    | Classification override mutations                                        |
+| `convex/schema.ts`            | Database schema with classification fields and indexes                   |
+| `hooks/convex/cash.ts`        | Cash summary hook with subcategory breakdowns                            |
+| `hooks/convex/equities.ts`    | Equities summary hook                                                    |
+| `hooks/convex/liabilities.ts` | Liabilities summary hook                                                 |
+| `hooks/convex/portfolio.ts`   | Portfolio-wide aggregation across all categories                         |
+
+### Database Indexes
+
+Efficient category queries are enabled by compound indexes:
+
+```typescript
+// convex/schema.ts
+plaidAccounts: defineTable({...})
+  .index("by_category", ["userId", "investmentCategory"])
+  .index("by_subcategory", ["userId", "investmentCategory", "investmentSubcategory"]),
+
+brokerPositions: defineTable({...})
+  .index("by_category", ["userId", "investmentCategory"])
+  .index("by_subcategory", ["userId", "investmentCategory", "investmentSubcategory"]),
 ```
 
 ---
@@ -425,6 +759,101 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_connection", ["connectionId"]),
+
+  // Crypto (Vezgo)
+  vezgoUsers: defineTable({
+    userId: v.string(), // Clerk user ID
+    vezgoToken: v.string(), // Encrypted Vezgo user token (AES-256-GCM)
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  vezgoConnections: defineTable({
+    userId: v.string(),
+    vezgoUserId: v.id("vezgoUsers"),
+    accountId: v.string(), // Vezgo account ID
+    provider: v.string(), // e.g., "binance", "coinbase", "metamask"
+    providerType: v.union(
+      // Type of crypto connection
+      v.literal("exchange"),
+      v.literal("wallet"),
+      v.literal("hardware"),
+      v.literal("blockchain"),
+    ),
+    name: v.optional(v.string()),
+    status: v.union(
+      v.literal("active"),
+      v.literal("error"),
+      v.literal("syncing"),
+    ),
+    lastSyncAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_account", ["accountId"])
+    .index("by_provider_type", ["userId", "providerType"]),
+
+  vezgoPositions: defineTable({
+    userId: v.string(),
+    connectionId: v.id("vezgoConnections"),
+    symbol: v.string(), // e.g., "BTC", "ETH"
+    name: v.optional(v.string()),
+    quantity: v.number(),
+    fiatValue: v.optional(v.number()),
+    fiatTicker: v.optional(v.string()),
+    category: v.union(
+      // Asset classification
+      v.literal("cryptocurrency"),
+      v.literal("token"),
+      v.literal("stablecoin"),
+      v.literal("defi"),
+      v.literal("nft"),
+    ),
+    // DeFi-specific fields
+    protocol: v.optional(v.string()),
+    poolName: v.optional(v.string()),
+    apy: v.optional(v.number()),
+    // NFT-specific fields
+    nftCollection: v.optional(v.string()),
+    nftTokenId: v.optional(v.string()),
+    chain: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_connection", ["connectionId"])
+    .index("by_category", ["userId", "category"]),
+
+  vezgoTransactions: defineTable({
+    userId: v.string(),
+    connectionId: v.id("vezgoConnections"),
+    transactionId: v.string(),
+    type: v.union(
+      // Transaction types
+      v.literal("buy"),
+      v.literal("sell"),
+      v.literal("transfer_in"),
+      v.literal("transfer_out"),
+      v.literal("swap"),
+      v.literal("stake"),
+      v.literal("unstake"),
+      v.literal("reward"),
+      v.literal("fee"),
+    ),
+    symbol: v.string(),
+    quantity: v.number(),
+    fiatValue: v.optional(v.number()),
+    fiatTicker: v.optional(v.string()),
+    fee: v.optional(v.number()),
+    feeTicker: v.optional(v.string()),
+    chain: v.optional(v.string()),
+    txHash: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_connection", ["connectionId"])
+    .index("by_type", ["userId", "type"]),
 });
 ```
 
@@ -531,7 +960,7 @@ export type AppType = typeof routes;
 
 ## Database Layer
 
-### Neon PostgreSQL (Time-series Data)
+### Supabase PostgreSQL (Time-series Data)
 
 ```typescript
 // db/drizzle/drizzle.ts
@@ -660,6 +1089,15 @@ export const getAccounts = query({
 
 ## External Integrations
 
+### Provider Overview
+
+| Provider       | Category      | Data Provided                             | Status         |
+| -------------- | ------------- | ----------------------------------------- | -------------- |
+| **Plaid**      | Banking       | Accounts, balances, transactions          | ✅ Implemented |
+| **Snaptrade**  | Brokers       | Positions, holdings, activities           | ✅ Implemented |
+| **World Bank** | Economic Data | GDP, inflation, country indicators        | ✅ Implemented |
+| **Vezgo**      | Crypto        | Exchanges, wallets, positions, DeFi, NFTs | ✅ Implemented |
+
 ### Plaid Integration (via Convex Actions)
 
 ```typescript
@@ -742,6 +1180,314 @@ export const createLinkToken = action({
 └───────┴──────────────────────────┴──────────────────────────┴────────────┘
 ```
 
+### Snaptrade Integration (via Convex Actions)
+
+```typescript
+// convex/actions/snaptrade.ts
+import { Snaptrade } from "snaptrade-typescript-sdk";
+
+const getSnaptradeClient = () => {
+  return new Snaptrade({
+    clientId: process.env.SNAPTRADE_CLIENT_ID!,
+    consumerKey: process.env.SNAPTRADE_CONSUMER_KEY!,
+  });
+};
+
+export const registerUser = action({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const snaptrade = getSnaptradeClient();
+    const response = await snaptrade.authentication.registerSnapTradeUser({
+      userId: identity.subject,
+    });
+
+    return { userSecret: response.data.userSecret };
+  },
+});
+
+export const getConnectionLink = action({
+  args: { userSecret: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const snaptrade = getSnaptradeClient();
+    const response = await snaptrade.authentication.loginSnapTradeUser({
+      userId: identity.subject,
+      userSecret: args.userSecret,
+    });
+
+    return { redirectUri: response.data.redirectURI };
+  },
+});
+```
+
+### Snaptrade Connect Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         SNAPTRADE CONNECT FLOW                           │
+│                                                                          │
+│   Frontend                    Convex                    Snaptrade        │
+│   ─────────                   ──────                    ─────────        │
+│       │                          │                          │            │
+│       │  1. registerUser()       │                          │            │
+│       │ ────────────────────────▶│                          │            │
+│       │                          │ 2. registerSnapTradeUser │            │
+│       │                          │ ────────────────────────▶│            │
+│       │                          │◀──────────────────────── │            │
+│       │◀──────────────────────── │    { userSecret }        │            │
+│       │    { userSecret }        │                          │            │
+│       │                          │                          │            │
+│       │  3. getConnectionLink()  │                          │            │
+│       │ ────────────────────────▶│                          │            │
+│       │                          │ 4. loginSnapTradeUser    │            │
+│       │                          │ ────────────────────────▶│            │
+│       │                          │◀──────────────────────── │            │
+│       │◀──────────────────────── │    { redirectURI }       │            │
+│       │                          │                          │            │
+│       │  5. Open Snaptrade Connect (iframe/redirect)        │            │
+│       │ ─────────────────────────────────────────────────▶  │            │
+│       │         User authenticates with broker              │            │
+│       │◀───────────────────────────────────────────────────  │            │
+│       │    Callback with authorizationId                    │            │
+│       │                          │                          │            │
+│       │  6. syncAccounts()       │                          │            │
+│       │ ────────────────────────▶│                          │            │
+│       │                          │ 7. Fetch accounts/positions           │
+│       │                          │ ────────────────────────▶│            │
+│       │                          │◀──────────────────────── │            │
+│       │                          │ 8. Store in Convex DB    │            │
+│       │◀──────────────────────── │                          │            │
+│       │    { success: true }     │                          │            │
+│       │                          │                          │            │
+└───────┴──────────────────────────┴──────────────────────────┴────────────┘
+```
+
+### Vezgo Integration (via Convex Actions)
+
+Vezgo provides unified access to crypto exchanges, wallets, DeFi protocols, and NFTs.
+
+```typescript
+// convex/actions/vezgo.ts
+import Vezgo from "vezgo-sdk-js";
+import { encrypt, decrypt } from "../lib/encryption";
+
+const getVezgoClient = () => {
+  return Vezgo.init({
+    clientId: process.env.VEZGO_CLIENT_ID!,
+    secret: process.env.VEZGO_CLIENT_SECRET!,
+  });
+};
+
+export const registerUser = action({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const vezgo = getVezgoClient();
+    const user = await vezgo.login();
+
+    // Encrypt Vezgo token before storing
+    const encryptionKey = process.env.CONVEX_ENCRYPTION_KEY!;
+    const encryptedToken = encrypt(user.token, encryptionKey);
+
+    await ctx.runMutation(api.crypto.upsertVezgoUser, {
+      userId: identity.subject,
+      vezgoToken: encryptedToken,
+    });
+
+    return { success: true };
+  },
+});
+
+export const getConnectUrl = action({
+  args: { provider: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    // Get and decrypt user token
+    const vezgoUser = await ctx.runQuery(api.crypto.getVezgoUser);
+    const encryptionKey = process.env.CONVEX_ENCRYPTION_KEY!;
+    const token = decrypt(vezgoUser.vezgoToken, encryptionKey);
+
+    const vezgo = getVezgoClient();
+    const user = vezgo.login(token);
+
+    const connectUrl = await user.connect({
+      provider: args.provider,
+      redirectURI: `${process.env.NEXT_PUBLIC_APP_URL}/integrations/crypto`,
+    });
+
+    return { connectUrl };
+  },
+});
+
+export const syncConnection = action({
+  args: { accountId: v.string() },
+  handler: async (ctx, args) => {
+    // Sync positions and transactions from Vezgo
+    const accounts = await vezgoUser.accounts.getOne(args.accountId);
+
+    // Store positions with category classification
+    for (const position of accounts.positions) {
+      await ctx.runMutation(api.crypto.upsertPosition, {
+        connectionId,
+        symbol: position.symbol,
+        quantity: position.amount,
+        fiatValue: position.fiatValue,
+        category: classifyAsset(position), // cryptocurrency, stablecoin, defi, nft
+      });
+    }
+  },
+});
+```
+
+### Vezgo Connect Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          VEZGO CONNECT FLOW                              │
+│                                                                          │
+│   Frontend                    Convex                      Vezgo          │
+│   ─────────                   ──────                      ─────          │
+│       │                          │                          │            │
+│       │  1. registerUser()       │                          │            │
+│       │ ────────────────────────▶│                          │            │
+│       │                          │ 2. vezgo.login()         │            │
+│       │                          │ ────────────────────────▶│            │
+│       │                          │◀──────────────────────── │            │
+│       │                          │    { user.token }        │            │
+│       │                          │ 3. Encrypt & store token │            │
+│       │◀──────────────────────── │                          │            │
+│       │    { success: true }     │                          │            │
+│       │                          │                          │            │
+│       │  4. getConnectUrl()      │                          │            │
+│       │ ────────────────────────▶│                          │            │
+│       │                          │ 5. user.connect()        │            │
+│       │                          │ ────────────────────────▶│            │
+│       │                          │◀──────────────────────── │            │
+│       │◀──────────────────────── │    { connectUrl }        │            │
+│       │                          │                          │            │
+│       │  6. Open Vezgo Connect (popup)                      │            │
+│       │ ─────────────────────────────────────────────────▶  │            │
+│       │         User authenticates with exchange/wallet     │            │
+│       │◀───────────────────────────────────────────────────  │            │
+│       │    Redirect with accountId                          │            │
+│       │                          │                          │            │
+│       │  7. syncConnection()     │                          │            │
+│       │ ────────────────────────▶│                          │            │
+│       │                          │ 8. accounts.getOne()     │            │
+│       │                          │ ────────────────────────▶│            │
+│       │                          │◀──────────────────────── │            │
+│       │                          │    { positions, txns }   │            │
+│       │                          │ 9. Store in Convex DB    │            │
+│       │◀──────────────────────── │    (with encryption)     │            │
+│       │    { success: true }     │                          │            │
+│       │                          │                          │            │
+│       │  10. Real-time update    │                          │            │
+│       │◀──────────────────────── │                          │            │
+│       │    (via WebSocket)       │                          │            │
+│       │                          │                          │            │
+└───────┴──────────────────────────┴──────────────────────────┴────────────┘
+```
+
+### Vezgo Provider Types
+
+| Type         | Examples                  | Data Provided                    |
+| ------------ | ------------------------- | -------------------------------- |
+| `exchange`   | Binance, Coinbase, Kraken | Spot positions, trades, deposits |
+| `wallet`     | MetaMask, Ledger, Trezor  | Token balances, NFTs, DeFi       |
+| `hardware`   | Ledger, Trezor            | Multi-chain balances             |
+| `blockchain` | Ethereum, Solana, Bitcoin | On-chain positions, transactions |
+
+### Crypto Asset Classification
+
+```typescript
+// convex/crypto.ts - Asset categorization
+const BTC_ETH_SYMBOLS = new Set(["BTC", "ETH", "WBTC", "WETH", "stETH"]);
+const STABLECOIN_SYMBOLS = new Set(["USDT", "USDC", "DAI", "BUSD", "TUSD"]);
+
+function classifyAsset(position: VezgoPosition): AssetCategory {
+  if (position.category === "nft") return "nft";
+  if (position.category === "defi") return "defi";
+  if (STABLECOIN_SYMBOLS.has(position.symbol)) return "stablecoin";
+  if (BTC_ETH_SYMBOLS.has(position.symbol)) return "cryptocurrency";
+  return "token"; // Altcoins
+}
+```
+
+### Crypto Hooks (Frontend)
+
+```typescript
+// hooks/convex/crypto.ts
+import { useQuery, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
+// Real-time subscription to crypto positions
+export function useVezgoPositions() {
+  return useQuery(api.crypto.getPositions);
+}
+
+// Real-time subscription to connections
+export function useVezgoConnections() {
+  return useQuery(api.crypto.getConnections);
+}
+
+// Connections filtered by type (exchange, wallet, etc.)
+export function useVezgoConnectionsByType(type: ProviderType) {
+  return useQuery(api.crypto.getConnectionsByType, { providerType: type });
+}
+
+// Aggregated crypto summary (total value, categories)
+export function useCryptoSummary() {
+  const positions = useVezgoPositions();
+  // Calculate totals by category, 24h change, etc.
+}
+
+// Position allocations for charts
+export function useCryptoPositionAllocations() {
+  const positions = useVezgoPositions();
+  // Group by symbol, calculate percentages
+}
+```
+
+### World Bank API Integration (via Hono)
+
+```typescript
+// app/(api)/api/[[...route]]/worldbank.ts
+import { Hono } from "hono";
+import { db } from "@/db/drizzle/drizzle";
+import { worldBankIndicators } from "@/db/drizzle/schema";
+
+const worldbank = new Hono();
+
+// Get GDP data for a country
+worldbank.get("/indicators/:indicator/:country", async (c) => {
+  const { indicator, country } = c.req.param();
+
+  const data = await db
+    .select()
+    .from(worldBankIndicators)
+    .where(
+      and(
+        eq(worldBankIndicators.indicator, indicator),
+        eq(worldBankIndicators.countryCode, country),
+      ),
+    )
+    .orderBy(desc(worldBankIndicators.year));
+
+  return c.json({ data });
+});
+
+export default worldbank;
+```
+
 ---
 
 ## Component Architecture
@@ -763,7 +1509,14 @@ components/atomic/
 │   ├── bankAccountsCard.tsx
 │   ├── bankReauthCard.tsx
 │   ├── brokerConnectionsCard.tsx
-│   └── navigationDropdown.tsx
+│   ├── navigationDropdown.tsx
+│   └── crypto/                      # Crypto-specific molecules
+│       ├── CryptoConnectionsCard.tsx
+│       ├── CryptoPositionsTable.tsx
+│       ├── CryptoHoldingsCard.tsx
+│       ├── CryptoAllocationChart.tsx
+│       ├── CryptoLargestHoldingsCard.tsx
+│       └── CryptoTransactionsTable.tsx
 │
 └── organisms/       # Complex, self-contained sections
     ├── banksCard.tsx
@@ -797,19 +1550,20 @@ components/atomic/
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           CONVEX HOOK LAYER                              │
 │                                                                          │
-│  ┌─────────────────────┐  ┌─────────────────────┐                       │
-│  │ usePlaidAccounts()  │  │ useCreateLinkToken()│                       │
-│  │ usePlaidItems()     │  │ useExchangeToken()  │                       │
-│  │ useRefreshAccounts()│  │ useDeletePlaidItem()│                       │
-│  └──────────┬──────────┘  └──────────┬──────────┘                       │
-│             │                        │                                   │
-└─────────────┼────────────────────────┼───────────────────────────────────┘
-              │ WebSocket              │ HTTP (action)
-              ▼                        ▼
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌──────────────────┐ │
+│  │ usePlaidAccounts()  │  │ useCreateLinkToken()│  │useVezgoPositions │ │
+│  │ usePlaidItems()     │  │ useExchangeToken()  │  │useVezgoConnect.. │ │
+│  │ useRefreshAccounts()│  │ useDeletePlaidItem()│  │useCryptoSummary()│ │
+│  └──────────┬──────────┘  └──────────┬──────────┘  └────────┬─────────┘ │
+│             │                        │                       │           │
+└─────────────┼────────────────────────┼───────────────────────┼───────────┘
+              │ WebSocket              │ HTTP (action)         │ WebSocket
+              ▼                        ▼                       ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           CONVEX BACKEND                                 │
 │                                                                          │
 │  banking.ts (queries/mutations)     actions/plaid.ts (external API)     │
+│  crypto.ts (queries/mutations)      actions/vezgo.ts (external API)     │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -821,14 +1575,18 @@ components/atomic/
 The Fiscalis architecture provides:
 
 1. **Real-time user data** via Convex with automatic WebSocket subscriptions
-2. **Time-series data** via Hono + Neon for commodities pricing
-3. **Secure storage** with AES-256-GCM encryption for sensitive tokens
+2. **Time-series data** via Hono + Supabase for commodities pricing and economic indicators
+3. **Secure storage** with AES-256-GCM encryption for sensitive tokens (Plaid, Snaptrade, Vezgo)
 4. **Type safety** from database to UI with TypeScript throughout
-5. **Clean separation** between real-time (banking, brokers) and traditional (metals) data patterns
+5. **Clean separation** between real-time (banking, brokers, crypto) and traditional (metals, world data) patterns
+6. **Multi-provider financial aggregation** with Plaid (banking), Snaptrade (brokers), and Vezgo (crypto)
+7. **Unified classification system** mapping provider data to 8 investment categories with 50+ subcategories
 
 ### Key Design Decisions
 
 - **Convex for user data**: Automatic real-time sync eliminates manual cache invalidation
-- **Neon for time-series**: Traditional SQL better suited for historical price queries
+- **Supabase for time-series**: Traditional SQL better suited for historical price queries
 - **Clerk for auth**: Unified authentication across frontend, Convex, and Hono
 - **Atomic Design**: Scalable component architecture with clear hierarchy
+- **Provider per category**: One financial data provider per asset category (Plaid→banking, Snaptrade→brokers, Vezgo→crypto)
+- **Classification at sync time**: Provider data classified to categories immediately upon sync, enabling efficient category-based queries via compound indexes

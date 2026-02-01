@@ -114,8 +114,18 @@ export function TopHoldingsList({
                       <span className="text-muted-foreground w-4">
                         {index + 1}.
                       </span>
-                      <span className="truncate max-w-[180px]">
-                        {holding.name}
+                      <span>
+                        {holding.institutionName ? (
+                          <>
+                            {holding.institutionName}
+                            <span className="text-muted-foreground mx-1">
+                              •
+                            </span>
+                            {holding.name}
+                          </>
+                        ) : (
+                          holding.name
+                        )}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">

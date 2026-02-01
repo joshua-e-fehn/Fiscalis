@@ -695,4 +695,39 @@ export default defineSchema({
     .index("by_connection", ["connectionId"])
     .index("by_date", ["userId", "transactionDate"])
     .index("by_vezgo_id", ["vezgoTransactionId"]),
+
+  // ═══════════════════════════════════════════════════════════════
+  // PORTFOLIO SNAPSHOTS
+  // ═══════════════════════════════════════════════════════════════
+  // Stores portfolio value snapshots taken after each sync operation
+  // Used for historical performance tracking
+
+  portfolioSnapshots: defineTable({
+    userId: v.string(), // Clerk user ID
+    timestamp: v.number(), // Unix timestamp in milliseconds
+    date: v.string(), // ISO date string (YYYY-MM-DD) for easier querying
+
+    // Total portfolio values
+    totalAssets: v.number(), // Sum of all asset values
+    totalLiabilities: v.number(), // Sum of all liabilities
+    netWorth: v.number(), // totalAssets - totalLiabilities
+    totalCostBasis: v.optional(v.number()), // Total cost basis if available
+
+    // Breakdown by category (for detailed analysis)
+    categoryBreakdown: v.optional(
+      v.array(
+        v.object({
+          category: v.string(), // "equities", "cash", "commodities", etc.
+          value: v.number(),
+          costBasis: v.optional(v.number()),
+        }),
+      ),
+    ),
+
+    // Sync source that triggered this snapshot
+    source: v.string(), // "plaid", "snaptrade", "manual", "vault", "scheduled"
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_date", ["userId", "date"])
+    .index("by_user_timestamp", ["userId", "timestamp"]),
 });

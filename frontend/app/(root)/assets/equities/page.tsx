@@ -16,26 +16,22 @@ import {
   BarChart3,
   PieChart,
   Briefcase,
+  Activity,
 } from "lucide-react";
-import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import {
+  CategoryDashboardSection,
+  SubcategoryCategoryCard,
+  type SubcategoryCardData,
+} from "@/components/atomic/molecules/investments";
 import { useEquitiesSummary } from "@/hooks/convex/equities";
 
 /**
  * Equities Overview Page
  *
- * Hub for all equity investment types: Private Equity, Public Stocks, ETFs/Index Funds, Mutual Funds.
+ * Hub for all equity investment types: Private Equity, Public Stocks, ETFs/Index Funds, Mutual Funds, Options.
  */
 
-interface EquityCategory {
-  title: string;
-  description: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  implemented: boolean;
-  examples: string[];
-}
-
-const publicEquityCategories: EquityCategory[] = [
+const publicEquityCategories: SubcategoryCardData[] = [
   {
     title: "Public Stocks",
     description: "Individual company shares traded on public stock exchanges",
@@ -62,9 +58,17 @@ const publicEquityCategories: EquityCategory[] = [
     implemented: false,
     examples: ["Growth Funds", "Value Funds", "Sector Funds", "Balanced Funds"],
   },
+  {
+    title: "Options",
+    description: "Derivative contracts for hedging or leveraged exposure",
+    href: "/equities/options",
+    icon: Activity,
+    implemented: false,
+    examples: ["Call Options", "Put Options", "Spreads", "Covered Calls"],
+  },
 ];
 
-const privateEquityCategories: EquityCategory[] = [
+const privateEquityCategories: SubcategoryCardData[] = [
   {
     title: "Private Equity",
     description:
@@ -75,78 +79,6 @@ const privateEquityCategories: EquityCategory[] = [
     examples: ["Startups", "Venture Capital", "Angel Investments", "PE Funds"],
   },
 ];
-
-const EquityCategoryCard = ({ category }: { category: EquityCategory }) => {
-  const Icon = category.icon;
-
-  return (
-    <Card
-      className={`relative overflow-hidden transition-all ${
-        category.implemented
-          ? "hover:shadow-lg hover:border-primary cursor-pointer"
-          : "opacity-60"
-      }`}
-    >
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={`p-2 rounded-lg ${
-                category.implemented ? "bg-primary/10" : "bg-muted"
-              }`}
-            >
-              <Icon
-                className={`h-6 w-6 ${
-                  category.implemented
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{category.title}</CardTitle>
-              {!category.implemented && (
-                <span className="text-xs text-muted-foreground">
-                  Coming soon
-                </span>
-              )}
-            </div>
-          </div>
-          {category.implemented && (
-            <TrendingUp className="h-5 w-5 text-green-500" />
-          )}
-        </div>
-        <CardDescription className="mt-2">
-          {category.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {category.examples.map((example) => (
-            <span
-              key={example}
-              className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground"
-            >
-              {example}
-            </span>
-          ))}
-        </div>
-        {category.implemented ? (
-          <Button asChild className="w-full">
-            <Link href={category.href}>
-              View Portfolio
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        ) : (
-          <Button disabled className="w-full" variant="outline">
-            Coming Soon
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
 
 export default function EquitiesPage() {
   const { summary, isLoading } = useEquitiesSummary();
@@ -182,9 +114,13 @@ export default function EquitiesPage() {
           </h2>
           <div className="h-px flex-1 bg-border" />
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {publicEquityCategories.map((category) => (
-            <EquityCategoryCard key={category.title} category={category} />
+            <SubcategoryCategoryCard
+              key={category.title}
+              category={category}
+              actionLabel="View Holdings"
+            />
           ))}
         </div>
       </div>
@@ -200,7 +136,11 @@ export default function EquitiesPage() {
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {privateEquityCategories.map((category) => (
-            <EquityCategoryCard key={category.title} category={category} />
+            <SubcategoryCategoryCard
+              key={category.title}
+              category={category}
+              actionLabel="View Holdings"
+            />
           ))}
         </div>
       </div>
@@ -219,7 +159,7 @@ export default function EquitiesPage() {
         </CardHeader>
         <CardContent>
           <Button variant="outline" asChild>
-            <Link href="/brokers">
+            <Link href="/integrations/brokers">
               Connect Broker
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>

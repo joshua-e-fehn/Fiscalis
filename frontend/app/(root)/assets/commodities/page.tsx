@@ -15,11 +15,14 @@ import {
   Factory,
   Wheat,
   ArrowRight,
-  TrendingUp,
   Atom,
   Gem,
 } from "lucide-react";
-import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import {
+  CategoryDashboardSection,
+  SubcategoryCategoryCard,
+  type SubcategoryCardData,
+} from "@/components/atomic/molecules/investments";
 import { useCommoditiesSummary } from "@/hooks/convex/commodities";
 
 /**
@@ -29,21 +32,12 @@ import { useCommoditiesSummary } from "@/hooks/convex/commodities";
  * Currently only Precious Metals is implemented.
  */
 
-interface CommodityCategory {
-  title: string;
-  description: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  implemented: boolean;
-  examples: string[];
-}
-
-const commodityCategories: CommodityCategory[] = [
+const commodityCategories: SubcategoryCardData[] = [
   {
     title: "Precious Metals",
     description:
       "Track gold, silver, platinum, and palladium prices with real-time charts",
-    href: "/commodities/metals",
+    href: "/assets/commodities/metals",
     icon: Coins,
     implemented: true,
     examples: ["Gold", "Silver", "Platinum", "Palladium"],
@@ -51,7 +45,7 @@ const commodityCategories: CommodityCategory[] = [
   {
     title: "Energy",
     description: "Oil, natural gas, and other energy commodity prices",
-    href: "/commodities/energy",
+    href: "/assets/commodities/energy",
     icon: Fuel,
     implemented: false,
     examples: ["Crude Oil", "Natural Gas", "Heating Oil", "Gasoline"],
@@ -59,7 +53,7 @@ const commodityCategories: CommodityCategory[] = [
   {
     title: "Industrial Metals",
     description: "Base metals used in manufacturing and construction",
-    href: "/commodities/industrial",
+    href: "/assets/commodities/industrial",
     icon: Factory,
     implemented: false,
     examples: ["Copper", "Aluminum", "Zinc", "Nickel"],
@@ -67,7 +61,7 @@ const commodityCategories: CommodityCategory[] = [
   {
     title: "Agricultural",
     description: "Grains, softs, and other agricultural commodities",
-    href: "/commodities/agricultural",
+    href: "/assets/commodities/agricultural",
     icon: Wheat,
     implemented: false,
     examples: ["Wheat", "Corn", "Soybeans", "Coffee"],
@@ -75,7 +69,7 @@ const commodityCategories: CommodityCategory[] = [
   {
     title: "Rare Earth",
     description: "Strategic rare earth elements used in technology and defense",
-    href: "/commodities/rare-earth",
+    href: "/assets/commodities/rare-earth",
     icon: Atom,
     implemented: false,
     examples: ["Neodymium", "Dysprosium", "Lithium", "Cobalt"],
@@ -83,88 +77,12 @@ const commodityCategories: CommodityCategory[] = [
   {
     title: "Gemstones",
     description: "Diamonds, rubies, sapphires, and other precious gemstones",
-    href: "/commodities/gemstones",
+    href: "/assets/commodities/gemstones",
     icon: Gem,
     implemented: false,
     examples: ["Diamonds", "Rubies", "Sapphires", "Emeralds"],
   },
 ];
-
-const CommodityCategoryCard = ({
-  category,
-}: {
-  category: CommodityCategory;
-}) => {
-  const Icon = category.icon;
-
-  return (
-    <Card
-      className={`relative overflow-hidden transition-all ${
-        category.implemented
-          ? "hover:shadow-lg hover:border-primary cursor-pointer"
-          : "opacity-60"
-      }`}
-    >
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={`p-2 rounded-lg ${
-                category.implemented ? "bg-primary/10" : "bg-muted"
-              }`}
-            >
-              <Icon
-                className={`h-6 w-6 ${
-                  category.implemented
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{category.title}</CardTitle>
-              {!category.implemented && (
-                <span className="text-xs text-muted-foreground">
-                  Coming soon
-                </span>
-              )}
-            </div>
-          </div>
-          {category.implemented && (
-            <TrendingUp className="h-5 w-5 text-green-500" />
-          )}
-        </div>
-        <CardDescription className="mt-2">
-          {category.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {category.examples.map((example) => (
-            <span
-              key={example}
-              className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground"
-            >
-              {example}
-            </span>
-          ))}
-        </div>
-        {category.implemented ? (
-          <Button asChild className="w-full">
-            <Link href={category.href}>
-              View Prices
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        ) : (
-          <Button disabled className="w-full" variant="outline">
-            Coming Soon
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
 
 export default function CommoditiesPage() {
   const { summary, isLoading } = useCommoditiesSummary("eur");
@@ -198,7 +116,11 @@ export default function CommoditiesPage() {
         <h2 className="text-lg font-semibold mb-4">Categories</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {commodityCategories.map((category) => (
-            <CommodityCategoryCard key={category.title} category={category} />
+            <SubcategoryCategoryCard
+              key={category.title}
+              category={category}
+              actionLabel="View Prices"
+            />
           ))}
         </div>
       </div>

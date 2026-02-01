@@ -112,3 +112,17 @@ export {
   type LiabilitiesSummaryData,
   type PortfolioSummary,
 } from "./portfolio";
+
+// Re-export liabilities summary hook
+export { useLiabilitiesSummary } from "./liabilities";
+
+// Re-export classification override hooks
+export {
+  useClassificationOverride,
+  useOverriddenItems,
+  usePlaidAccountClassification,
+  useBrokerPositionClassification,
+  type ClassificationItemType,
+  type ClassificationOverrideState,
+  type UseClassificationOverrideReturn,
+} from "./classification";

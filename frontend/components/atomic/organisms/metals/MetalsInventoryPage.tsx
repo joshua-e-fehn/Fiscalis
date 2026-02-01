@@ -245,7 +245,10 @@ export function MetalsInventoryPage({
           </p>
         </div>
         <Button asChild>
-          <Link href="/commodities/metals" className="flex items-center gap-2">
+          <Link
+            href="/assets/commodities/metals"
+            className="flex items-center gap-2"
+          >
             <ArrowLeftRight className="h-4 w-4" />
             Prices
           </Link>

@@ -65,14 +65,38 @@ export function AllocationChart({
     );
   }
 
+  // Filter out items under 2% threshold and combine into "Other"
+  const THRESHOLD_PERCENT = 2;
+  const allMetals = (
+    ["gold", "silver", "platinum", "palladium"] as const
+  ).filter((metal) => summary.allocation[metal] > 0);
+
+  const significantMetals: (typeof allMetals)[number][] = [];
+  let otherValue = 0;
+
+  for (const metal of allMetals) {
+    if (summary.allocation[metal] >= THRESHOLD_PERCENT) {
+      significantMetals.push(metal);
+    } else {
+      otherValue += summary.allocation[metal];
+    }
+  }
+
   // Prepare data for pie chart
-  const data = (["gold", "silver", "platinum", "palladium"] as const)
-    .filter((metal) => summary.allocation[metal] > 0)
-    .map((metal) => ({
-      name: metalLabels[metal],
-      value: summary.allocation[metal],
-      color: metalColors[metal],
-    }));
+  const data = significantMetals.map((metal) => ({
+    name: metalLabels[metal],
+    value: summary.allocation[metal],
+    color: metalColors[metal],
+  }));
+
+  // Add "Other" category if there are small items
+  if (otherValue > 0) {
+    data.push({
+      name: "Other (<2%)",
+      value: otherValue,
+      color: "#6B7280",
+    });
+  }
 
   return (
     <Card className={cn("h-full", className)}>

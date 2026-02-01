@@ -7,6 +7,8 @@
 
 import { useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   InvestmentCategory,
   PortfolioDataPoint,
@@ -20,7 +22,7 @@ import { useCryptoSummary } from "./crypto";
 import { useRealEstateSummary } from "./realEstate";
 import { useCashSummary } from "./cash";
 import { useCollectiblesSummary } from "./collectibles";
-import { useLoansSummary } from "./loans";
+import { useLiabilitiesSummary } from "./liabilities";
 import {
   Briefcase,
   Coins,
@@ -114,8 +116,14 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
   const { summary: collectiblesSummary, isLoading: collectiblesLoading } =
     useCollectiblesSummary();
 
-  // Fetch liabilities
-  const loansSummaryData = useLoansSummary(userId ?? undefined);
+  // Fetch liabilities (mortgages, loans, credit cards, margin loans from Plaid + broker)
+  const { summary: liabilitiesSummary, isLoading: liabilitiesLoading } =
+    useLiabilitiesSummary();
+
+  // Fetch portfolio snapshots for historical performance
+  const portfolioSnapshots = useQuery(api.portfolioSnapshots.getSnapshots, {
+    limit: 365,
+  });
 
   const isLoading =
     commoditiesLoading ||
@@ -125,7 +133,8 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     realEstateLoading ||
     cashLoading ||
     collectiblesLoading ||
-    loansSummaryData === undefined;
+    liabilitiesLoading ||
+    portfolioSnapshots === undefined;
 
   // Build portfolio summary
   const summary = useMemo<PortfolioSummary | null>(() => {
@@ -299,14 +308,20 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
         ? (unrealizedProfitLoss / totalCostBasis) * 100
         : null;
 
-    // Liabilities summary
-    const totalLiabilities = loansSummaryData?.totalDebt ?? 0;
-    const liabilities: LiabilitiesSummaryData | null = loansSummaryData
+    // Liabilities summary from classified Plaid accounts + broker positions
+    const totalLiabilities = liabilitiesSummary?.totalValue ?? 0;
+    const liabilitiesCount =
+      liabilitiesSummary?.subcategories.reduce(
+        (sum, s) => sum + s.holdingsCount,
+        0,
+      ) ?? 0;
+
+    const liabilities: LiabilitiesSummaryData | null = liabilitiesSummary
       ? {
-          totalBalance: loansSummaryData.totalDebt ?? 0,
-          monthlyPayment: loansSummaryData.totalMonthlyPayments ?? 0,
-          loansCount: loansSummaryData.loansCount ?? 0,
-          upcomingPaymentAmount: null, // TODO: Add from upcoming payments query
+          totalBalance: liabilitiesSummary.totalValue ?? 0,
+          monthlyPayment: 0, // TODO: Calculate from payment schedules
+          loansCount: liabilitiesCount,
+          upcomingPaymentAmount: null,
           upcomingPaymentDate: null,
         }
       : null;
@@ -314,10 +329,30 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     // Net worth
     const netWorth = totalAssets - totalLiabilities;
 
-    // Merge history data points from all categories
-    // For now, use commodities history as it's the only one with real data
-    // TODO: Implement proper multi-category history merging
-    const historyDataPoints = commoditiesSummary?.historyDataPoints ?? [];
+    // Build history data points from portfolio snapshots
+    // Snapshots are taken after each sync and provide accurate historical tracking
+    const historyDataPoints: PortfolioDataPoint[] = (
+      portfolioSnapshots ?? []
+    ).map((snapshot) => ({
+      date: snapshot.date,
+      timestamp: snapshot.timestamp,
+      value: snapshot.totalAssets,
+      cost: snapshot.totalCostBasis ?? 0,
+    }));
+
+    // If we have no snapshots yet but have current data, add today's point
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    const hasToday = historyDataPoints.some((p) => p.date === todayStr);
+
+    if (!hasToday && totalAssets > 0) {
+      historyDataPoints.push({
+        date: todayStr,
+        timestamp: today.getTime(),
+        value: totalAssets,
+        cost: totalCostBasis ?? 0,
+      });
+    }
 
     // Calculate YTD from history
     let ytdProfitLoss: number | null = null;
@@ -363,7 +398,8 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     realEstateSummary,
     cashSummary,
     collectiblesSummary,
-    loansSummaryData,
+    liabilitiesSummary,
+    portfolioSnapshots,
   ]);
 
   return { summary, isLoading };

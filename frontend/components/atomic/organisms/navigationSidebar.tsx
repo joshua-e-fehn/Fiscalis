@@ -71,37 +71,37 @@ const data = {
       items: [
         {
           title: "Equities",
-          url: "/equities",
+          url: "/assets/equities",
           icon: ChartLine,
         },
         {
           title: "Commodities",
-          url: "/commodities",
+          url: "/assets/commodities",
           icon: GemIcon,
         },
         {
           title: "Bonds",
-          url: "/bonds",
+          url: "/assets/bonds",
           icon: ReceiptText,
         },
         {
           title: "Real Estate",
-          url: "/real-estate",
+          url: "/assets/real-estate",
           icon: Building2,
         },
         {
           title: "Cash & Money Market",
-          url: "/cash",
+          url: "/assets/cash",
           icon: Banknote,
         },
         {
-          title: "Cryptocurrencies",
-          url: "/crypto",
+          title: "Crypto Assets",
+          url: "/assets/crypto",
           icon: Bitcoin,
         },
         {
           title: "Collectibles",
-          url: "/collectibles",
+          url: "/assets/collectibles",
           icon: Star,
         },
       ],
@@ -134,15 +134,22 @@ const data = {
   navigationIntegrations: [
     {
       title: "Banking",
-      url: "/banking",
+      url: "/integrations/banking",
       icon: Landmark,
       isActive: true,
       items: [],
     },
     {
       title: "Brokers",
-      url: "/brokers",
+      url: "/integrations/brokers",
       icon: ChartCandlestick,
+      isActive: true,
+      items: [],
+    },
+    {
+      title: "Crypto",
+      url: "/integrations/crypto",
+      icon: Bitcoin,
       isActive: true,
       items: [],
     },
@@ -150,21 +157,21 @@ const data = {
   navigationTools: [
     {
       title: "Interest Calculators",
-      url: "/calculators/interest",
+      url: "/tools/calculators/interest",
       icon: Calculator,
       isActive: true,
       items: [],
     },
     {
       title: "Loan Calculators",
-      url: "/calculators/loan",
+      url: "/tools/calculators/loan",
       icon: Calculator,
       isActive: true,
       items: [],
     },
     {
       title: "World Map",
-      url: "/world-map",
+      url: "/tools/world-map",
       icon: Globe2,
       isActive: true,
       items: [],

@@ -14,7 +14,10 @@ import {
   usePortfolioOverview,
   AssetCategoryData,
 } from "@/hooks/convex/portfolio";
-import { CategoryPerformanceChart } from "@/components/atomic/molecules/investments";
+import {
+  CategoryPerformanceChart,
+  UnifiedPositionsTable,
+} from "@/components/atomic/molecules/investments";
 import { currencyCodes, InvestmentCurrency } from "@/lib/types/investments";
 import {
   TrendingUp,
@@ -257,8 +260,9 @@ function AllocationChart({
                   cy="50%"
                   innerRadius={50}
                   outerRadius={80}
-                  paddingAngle={2}
+                  paddingAngle={0}
                   dataKey="value"
+                  minAngle={3}
                 >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -410,7 +414,7 @@ function LiabilitiesCard({
   isLoading = false,
 }: LiabilitiesCardProps) {
   return (
-    <Link href="/liabilities/loans">
+    <Link href="/liabilities">
       <Card className="hover:shadow-md hover:border-primary/50 transition-all cursor-pointer border-loss/20 bg-loss/5 h-full">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -500,7 +504,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Row 2: Allocation Chart + Performance Chart */}
+        {/* Row 2: Allocation Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           <AllocationChart
             categories={summary?.assetCategories ?? []}
@@ -542,6 +546,15 @@ export default function DashboardPage() {
               />
             )}
           </div>
+        </div>
+
+        {/* Row 4: Unified Positions Table */}
+        <div className="mb-6">
+          <UnifiedPositionsTable
+            currency={currency}
+            maxRows={10}
+            showFilters={true}
+          />
         </div>
 
         {/* Loading skeletons for categories */}

@@ -315,7 +315,7 @@ export default function PreciousMetalsPage() {
         </div>
         <Button asChild>
           <Link
-            href="/commodities/metals/inventory"
+            href="/assets/commodities/metals/inventory"
             className="flex items-center gap-2"
           >
             <ArrowLeftRight className="h-4 w-4" />

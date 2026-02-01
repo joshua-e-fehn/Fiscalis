@@ -17,9 +17,12 @@ import {
   Banknote,
   ArrowRightLeft,
   ArrowRight,
-  TrendingUp,
 } from "lucide-react";
-import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import {
+  CategoryDashboardSection,
+  SubcategoryCategoryCard,
+  type SubcategoryCardData,
+} from "@/components/atomic/molecules/investments";
 import { useCashSummary } from "@/hooks/convex/cash";
 
 /**
@@ -29,16 +32,15 @@ import { useCashSummary } from "@/hooks/convex/cash";
  * Money Market Funds, CDs, Treasury Bills, Cash Equivalents, Forex.
  */
 
-interface CashCategory {
-  title: string;
-  description: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  implemented: boolean;
-  examples: string[];
-}
-
-const cashCategories: CashCategory[] = [
+const cashCategories: SubcategoryCardData[] = [
+  {
+    title: "Checking Accounts",
+    description: "Everyday transaction accounts linked via banking connections",
+    href: "/cash/checking",
+    icon: Wallet,
+    implemented: false,
+    examples: ["Personal Checking", "Business Checking", "Joint Accounts"],
+  },
   {
     title: "Savings Accounts",
     description: "High-yield savings accounts and regular bank savings",
@@ -92,78 +94,6 @@ const cashCategories: CashCategory[] = [
   },
 ];
 
-const CashCategoryCard = ({ category }: { category: CashCategory }) => {
-  const Icon = category.icon;
-
-  return (
-    <Card
-      className={`relative overflow-hidden transition-all ${
-        category.implemented
-          ? "hover:shadow-lg hover:border-primary cursor-pointer"
-          : "opacity-60"
-      }`}
-    >
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={`p-2 rounded-lg ${
-                category.implemented ? "bg-primary/10" : "bg-muted"
-              }`}
-            >
-              <Icon
-                className={`h-6 w-6 ${
-                  category.implemented
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
-              />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{category.title}</CardTitle>
-              {!category.implemented && (
-                <span className="text-xs text-muted-foreground">
-                  Coming soon
-                </span>
-              )}
-            </div>
-          </div>
-          {category.implemented && (
-            <TrendingUp className="h-5 w-5 text-green-500" />
-          )}
-        </div>
-        <CardDescription className="mt-2">
-          {category.description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {category.examples.map((example) => (
-            <span
-              key={example}
-              className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground"
-            >
-              {example}
-            </span>
-          ))}
-        </div>
-        {category.implemented ? (
-          <Button asChild className="w-full">
-            <Link href={category.href}>
-              View Accounts
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        ) : (
-          <Button disabled className="w-full" variant="outline">
-            Coming Soon
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
 export default function CashPage() {
   const { summary, isLoading } = useCashSummary();
 
@@ -190,7 +120,11 @@ export default function CashPage() {
       {/* Category Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {cashCategories.map((category) => (
-          <CashCategoryCard key={category.title} category={category} />
+          <SubcategoryCategoryCard
+            key={category.title}
+            category={category}
+            actionLabel="View Accounts"
+          />
         ))}
       </div>
 
@@ -209,13 +143,13 @@ export default function CashPage() {
         </CardHeader>
         <CardContent className="flex gap-3">
           <Button variant="outline" asChild>
-            <Link href="/banking">
+            <Link href="/integrations/banking">
               Connect Bank Account
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/brokers">
+            <Link href="/integrations/brokers">
               Connect Broker
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>

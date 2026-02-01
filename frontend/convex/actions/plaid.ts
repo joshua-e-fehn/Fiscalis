@@ -270,6 +270,16 @@ export const refreshAccounts = action({
         itemId: args.itemId,
       });
 
+      // Take a portfolio snapshot after sync
+      try {
+        await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+          userId,
+          source: "plaid",
+        });
+      } catch (snapshotError) {
+        console.error("Failed to take portfolio snapshot:", snapshotError);
+      }
+
       return { success: true, itemsSynced: 1 };
     }
 
@@ -289,6 +299,16 @@ export const refreshAccounts = action({
       } catch (error) {
         console.error(`Error syncing item ${item.itemId}:`, error);
       }
+    }
+
+    // Take a portfolio snapshot after sync
+    try {
+      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+        userId,
+        source: "plaid",
+      });
+    } catch (snapshotError) {
+      console.error("Failed to take portfolio snapshot:", snapshotError);
     }
 
     return { success: true, itemsSynced: userItems.length };

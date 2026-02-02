@@ -72,7 +72,7 @@ import { MetalIcon } from "@/components/atomic/atoms/metals";
 import {
   PriceChart,
   CompareChart,
-} from "@/components/atomic/organisms/priceChart";
+} from "@/components/atomic/organisms/PriceChart";
 import { cn } from "@/lib/utils";
 import {
   Euro,

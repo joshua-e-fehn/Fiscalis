@@ -12,21 +12,8 @@
  */
 
 import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
-import {
-  ArrowRight,
-  Bitcoin,
-  Coins,
-  CircleDollarSign,
-  Layers,
-} from "lucide-react";
+import { Bitcoin, Coins, CircleDollarSign, Layers, Plus } from "lucide-react";
 import {
   CategoryValueCard,
   CategoryProfitLossCard,
@@ -40,7 +27,13 @@ import {
   CryptoLargestHoldingsCard,
 } from "@/components/atomic/molecules/crypto";
 import { useCryptoSummary, useVezgoConnections } from "@/hooks/convex/crypto";
-import { calculateYTDPerformance } from "@/lib/types/investments";
+import {
+  calculateYTDPerformance,
+  categoryColorPalettes,
+} from "@/lib/types/investments";
+
+// Get crypto color palette
+const cryptoColors = categoryColorPalettes.crypto;
 
 /**
  * Crypto subcategory definitions
@@ -54,6 +47,7 @@ const cryptoCategories: SubcategoryCardData[] = [
     icon: Bitcoin,
     implemented: false,
     examples: ["BTC", "WBTC", "ETH", "stETH", "rETH", "WETH"],
+    color: cryptoColors.bitcoin,
   },
   {
     title: "Altcoins",
@@ -62,6 +56,7 @@ const cryptoCategories: SubcategoryCardData[] = [
     icon: Coins,
     implemented: false,
     examples: ["SOL", "ADA", "AVAX", "DOT", "MATIC"],
+    color: cryptoColors.altcoins,
   },
   {
     title: "Stablecoins",
@@ -70,6 +65,7 @@ const cryptoCategories: SubcategoryCardData[] = [
     icon: CircleDollarSign,
     implemented: false,
     examples: ["USDT", "USDC", "DAI", "FRAX"],
+    color: cryptoColors.stablecoins,
   },
   {
     title: "DeFi",
@@ -79,6 +75,7 @@ const cryptoCategories: SubcategoryCardData[] = [
     icon: Layers,
     implemented: false,
     examples: ["Staking", "LP Positions", "Yield Farming", "Lending"],
+    color: cryptoColors.defi,
   },
 ];
 
@@ -161,30 +158,6 @@ export default function CryptoAssetsOverviewPage() {
           ))}
         </div>
       </div>
-
-      {/* Connect CTA - Show if no connections */}
-      {!hasConnections && (
-        <Card className="bg-muted/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bitcoin className="h-5 w-5" />
-              Connect Your Crypto
-            </CardTitle>
-            <CardDescription>
-              Connect your crypto exchanges and wallets to automatically track
-              your portfolio performance in one place.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" asChild>
-              <Link href="/integrations/crypto">
-                Connect Accounts
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

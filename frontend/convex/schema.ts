@@ -574,15 +574,20 @@ export default defineSchema({
   }).index("by_user", ["userId"]),
 
   // Vezgo connections (exchanges, wallets, blockchain addresses)
+  // A connection can belong to multiple categories (e.g., exchange + wallet)
   vezgoConnections: defineTable({
     userId: v.string(), // Clerk user ID
     accountId: v.string(), // Vezgo account ID
     provider: v.string(), // "coinbase", "binance", "metamask", etc.
-    providerType: v.union(
-      v.literal("exchange"), // Centralized exchanges (Coinbase, Binance, Kraken)
-      v.literal("wallet"), // Software wallets (MetaMask, Trust Wallet)
-      v.literal("hardware"), // Hardware wallets (Ledger, Trezor)
-      v.literal("blockchain"), // Direct blockchain address
+    // Categories based on Vezgo's providerCategories: ['exchanges', 'wallets', 'blockchains']
+    // A connection can have multiple categories (e.g., ["exchange", "wallet"])
+    // Display order: exchange → wallet → blockchain
+    categories: v.array(
+      v.union(
+        v.literal("exchange"), // Centralized exchanges (CEX): Coinbase, Binance, Kraken
+        v.literal("wallet"), // Software/hardware wallets: MetaMask, Ledger, Trust Wallet
+        v.literal("blockchain"), // Direct blockchain addresses: Bitcoin, Ethereum addresses
+      ),
     ),
     name: v.string(), // Display name
     logo: v.optional(v.string()), // Provider logo URL
@@ -599,7 +604,6 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_account", ["accountId"])
-    .index("by_provider_type", ["userId", "providerType"])
     .index("by_status", ["userId", "status"]),
 
   // Vezgo positions (crypto holdings)

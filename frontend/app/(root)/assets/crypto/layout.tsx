@@ -12,6 +12,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
 import { LayoutDashboard, History, Wallet } from "lucide-react";
+import { PageHeader } from "@/components/atomic/molecules/investments";
 
 const cryptoAssetsTabs = [
   { name: "Overview", href: "/assets/crypto", icon: LayoutDashboard },
@@ -37,13 +38,11 @@ export default function CryptoAssetsLayout({
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Crypto Assets</h1>
-        <p className="text-muted-foreground mt-1">
-          Track your cryptocurrency investments and portfolio performance
-        </p>
-      </div>
+      <PageHeader
+        title="Crypto Assets"
+        subtitle="Track your cryptocurrency investments and portfolio performance"
+        actions={[{ label: "Connect Crypto", href: "/integrations/crypto" }]}
+      />
 
       {/* Tab Navigation */}
       <Tabs value={activeTab} onValueChange={(value) => router.push(value)}>

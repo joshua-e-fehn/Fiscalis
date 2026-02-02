@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import {
-  HandCoins,
   Plus,
   Calendar,
   TrendingDown,
@@ -35,9 +34,11 @@ import {
   Banknote,
   LayoutGrid,
   List,
+  HandCoins,
 } from "lucide-react";
 import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dialog";
 import { LoanCard } from "@/components/atomic/molecules/loans/loan-card";
+import { PageHeader } from "@/components/atomic/molecules/investments";
 import { Id } from "@/convex/_generated/dataModel";
 
 // ═══════════════════════════════════════════════════════════════
@@ -95,24 +96,16 @@ export default function LoansPage() {
   const isLoading = loans === undefined || summary === undefined;
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div className="flex items-center gap-3">
-          <HandCoins className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">My Loans</h1>
-            <p className="text-muted-foreground">Track and manage your debt</p>
-          </div>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Loan
-        </Button>
-      </div>
+    <div className="container mx-auto py-6 space-y-6">
+      <PageHeader
+        title="My Loans"
+        subtitle="Track and manage all your loans, mortgages, and credit obligations in one place. Monitor payments, interest rates, and payoff progress."
+        actionsLoading={isLoading}
+        actions={[{ label: "Add Loan", onClick: () => setShowAddDialog(true) }]}
+      />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           title="Total Debt"
           value={summary ? formatCurrency(summary.totalDebt) : undefined}

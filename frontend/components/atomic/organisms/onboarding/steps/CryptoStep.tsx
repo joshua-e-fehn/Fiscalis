@@ -149,12 +149,12 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
                         : "error"
                   }
                   icon={
-                    connection.providerType === "hardware" ? (
-                      <HardDrive className="w-5 h-5 text-[#D4AF37]" />
-                    ) : connection.providerType === "wallet" ? (
-                      <Wallet className="w-5 h-5 text-[#D4AF37]" />
-                    ) : (
+                    connection.categories?.includes("exchange") ? (
                       <Bitcoin className="w-5 h-5 text-[#D4AF37]" />
+                    ) : connection.categories?.includes("blockchain") ? (
+                      <HardDrive className="w-5 h-5 text-[#D4AF37]" />
+                    ) : (
+                      <Wallet className="w-5 h-5 text-[#D4AF37]" />
                     )
                   }
                 />

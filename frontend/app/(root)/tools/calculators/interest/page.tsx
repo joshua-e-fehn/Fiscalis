@@ -33,6 +33,7 @@ import {
   Calendar,
   ArrowRight,
 } from "lucide-react";
+import { PageHeader } from "@/components/atomic/molecules/investments";
 import {
   calculateAverageCompoundInterest,
   calculateAverageInterest,
@@ -47,20 +48,14 @@ import {
 
 export default function FinancialCalculatorsPage() {
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex flex-col items-center mb-10">
-        <div className="flex items-center gap-2 mb-4">
-          <Calculator className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Interest Calculators</h1>
-        </div>
-        <p className="text-muted-foreground text-center max-w-2xl">
-          Powerful financial tools to help you make better investment decisions.
-          Calculate compound interest, growth rates, future values, and more.
-        </p>
-      </div>
+    <div className="container mx-auto py-6 space-y-6">
+      <PageHeader
+        title="Interest Calculators"
+        subtitle="Powerful financial tools to help you make better investment decisions. Calculate compound interest, growth rates, future values, and more."
+      />
 
-      <Tabs defaultValue="interest-rate" className="w-full max-w-4xl mx-auto">
-        <TabsList className="grid grid-cols-4 mb-8">
+      <Tabs defaultValue="interest-rate" className="w-full">
+        <TabsList className="grid grid-cols-4 mb-8 max-w-2xl">
           <TabsTrigger value="interest-rate">
             <TrendingUp className="w-4 h-4 mr-2" />
             Interest Rate

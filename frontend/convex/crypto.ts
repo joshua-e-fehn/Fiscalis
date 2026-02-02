@@ -76,14 +76,14 @@ export const getConnections = query({
 });
 
 /**
- * Get connections filtered by provider type
+ * Get connections filtered by category
+ * A connection can have multiple categories, so we filter for any that include the specified category
  */
-export const getConnectionsByType = query({
+export const getConnectionsByCategory = query({
   args: {
-    providerType: v.union(
+    category: v.union(
       v.literal("exchange"),
       v.literal("wallet"),
-      v.literal("hardware"),
       v.literal("blockchain"),
     ),
   },
@@ -93,12 +93,13 @@ export const getConnectionsByType = query({
 
     const userId = identity.subject;
 
-    return await ctx.db
+    // Get all user connections and filter by category
+    const connections = await ctx.db
       .query("vezgoConnections")
-      .withIndex("by_provider_type", (q) =>
-        q.eq("userId", userId).eq("providerType", args.providerType),
-      )
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
+
+    return connections.filter((c) => c.categories.includes(args.category));
   },
 });
 
@@ -388,11 +389,12 @@ export const createConnection = internalMutation({
     userId: v.string(),
     accountId: v.string(),
     provider: v.string(),
-    providerType: v.union(
-      v.literal("exchange"),
-      v.literal("wallet"),
-      v.literal("hardware"),
-      v.literal("blockchain"),
+    categories: v.array(
+      v.union(
+        v.literal("exchange"),
+        v.literal("wallet"),
+        v.literal("blockchain"),
+      ),
     ),
     name: v.string(),
     logo: v.optional(v.string()),
@@ -404,7 +406,7 @@ export const createConnection = internalMutation({
       userId: args.userId,
       accountId: args.accountId,
       provider: args.provider,
-      providerType: args.providerType,
+      categories: args.categories,
       name: args.name,
       logo: args.logo,
       status: "syncing",
@@ -436,6 +438,50 @@ export const updateConnectionStatus = internalMutation({
       lastSyncAt: args.lastSyncAt,
       updatedAt: Date.now(),
     });
+  },
+});
+
+/**
+ * Update connection categories
+ * Allows users to manually adjust the categories for a connection
+ */
+export const updateConnectionCategories = mutation({
+  args: {
+    connectionId: v.id("vezgoConnections"),
+    categories: v.array(
+      v.union(
+        v.literal("exchange"),
+        v.literal("wallet"),
+        v.literal("blockchain"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    const userId = identity.subject;
+    if (connection.userId !== userId) {
+      throw new Error("Not authorized to update this connection");
+    }
+
+    if (args.categories.length === 0) {
+      throw new Error("At least one category is required");
+    }
+
+    await ctx.db.patch(args.connectionId, {
+      categories: args.categories,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });
 

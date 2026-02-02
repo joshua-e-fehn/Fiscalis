@@ -14,6 +14,7 @@ export {
   SubcategoryCategoryCard,
   type SubcategoryCardData,
 } from "./SubcategoryCategoryCard";
+export { PageHeader, type PageHeaderAction } from "./PageHeader";
 
 // Provider Aggregation Components
 export { ProviderAllocationChart } from "./ProviderAllocationChart";

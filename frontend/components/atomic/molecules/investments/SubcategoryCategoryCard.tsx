@@ -18,6 +18,8 @@ export interface SubcategoryCardData {
   icon: React.ComponentType<{ className?: string }>;
   implemented: boolean;
   examples: string[];
+  /** Optional color for the icon background (hex color) */
+  color?: string;
 }
 
 interface SubcategoryCategoryCardProps {
@@ -36,6 +38,13 @@ export function SubcategoryCategoryCard({
 }: SubcategoryCategoryCardProps) {
   const Icon = category.icon;
 
+  // Default to primary color if no color specified
+  const iconBgColor = category.color
+    ? `${category.color}20` // 20 = ~12% opacity in hex
+    : category.implemented
+      ? "rgb(var(--primary) / 0.1)"
+      : undefined;
+
   return (
     <Card
       className={`relative overflow-hidden transition-all h-full flex flex-col ${
@@ -48,16 +57,11 @@ export function SubcategoryCategoryCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className={`p-2 rounded-lg ${
-                category.implemented ? "bg-primary/10" : "bg-muted"
-              }`}
+              className={`p-2 rounded-lg ${!category.color && !category.implemented ? "bg-muted" : ""}`}
+              style={iconBgColor ? { backgroundColor: iconBgColor } : undefined}
             >
               <Icon
-                className={`h-6 w-6 ${
-                  category.implemented
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                }`}
+                className={`h-6 w-6 ${category.color ? "text-foreground" : category.implemented ? "text-primary" : "text-muted-foreground"}`}
               />
             </div>
             <div>

@@ -17,6 +17,7 @@ import {
 import {
   CategoryPerformanceChart,
   UnifiedPositionsTable,
+  PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { currencyCodes, InvestmentCurrency } from "@/lib/types/investments";
 import {
@@ -460,120 +461,116 @@ export default function DashboardPage() {
   const { summary, isLoading } = usePortfolioOverview(currency);
 
   return (
-    <div className="relative min-h-screen">
-      <div className="container px-4 py-8 relative z-10">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Your complete financial overview
-          </p>
+    <div className="container mx-auto py-6 space-y-6">
+      {/* Header */}
+      <PageHeader
+        title="Dashboard"
+        subtitle="Your complete financial overview"
+      />
+
+      {/* Row 1: Net Worth + Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Net Worth - spans 2 columns on lg */}
+        <div className="lg:col-span-2">
+          <NetWorthCard
+            netWorth={summary?.netWorth ?? 0}
+            profitLoss={summary?.unrealizedProfitLoss ?? null}
+            profitLossPercent={summary?.unrealizedProfitLossPercent ?? null}
+            currency={currency}
+            isLoading={isLoading}
+          />
         </div>
 
-        {/* Row 1: Net Worth + Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Net Worth - spans 2 columns on lg */}
-          <div className="lg:col-span-2">
-            <NetWorthCard
-              netWorth={summary?.netWorth ?? 0}
-              profitLoss={summary?.unrealizedProfitLoss ?? null}
-              profitLossPercent={summary?.unrealizedProfitLossPercent ?? null}
+        {/* Total Assets */}
+        <HeroKPICard
+          title="Total Assets"
+          value={summary?.totalAssets ?? 0}
+          icon={<PiggyBank className="h-4 w-4" />}
+          currency={currency}
+          isLoading={isLoading}
+          variant="profit"
+        />
+
+        {/* Total Liabilities */}
+        <HeroKPICard
+          title="Total Liabilities"
+          value={summary?.totalLiabilities ?? 0}
+          icon={<CreditCard className="h-4 w-4" />}
+          currency={currency}
+          isLoading={isLoading}
+          variant={(summary?.totalLiabilities ?? 0) > 0 ? "loss" : "neutral"}
+        />
+      </div>
+
+      {/* Row 2: Allocation Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <AllocationChart
+          categories={summary?.assetCategories ?? []}
+          totalAssets={summary?.totalAssets ?? 0}
+          currency={currency}
+          isLoading={isLoading}
+        />
+        <CategoryPerformanceChart
+          dataPoints={summary?.historyDataPoints ?? []}
+          currentValue={summary?.totalAssets ?? 0}
+          totalCost={summary?.totalCostBasis ?? null}
+          totalLiabilities={summary?.totalLiabilities ?? 0}
+          currency={currency}
+          isLoading={isLoading}
+          showViewToggle={true}
+        />
+      </div>
+
+      {/* Row 3: Category Cards + Liabilities */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Investment Categories</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {summary?.assetCategories.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              currency={currency}
+            />
+          ))}
+
+          {/* Liabilities Card */}
+          {summary?.liabilities && (
+            <LiabilitiesCard
+              totalBalance={summary.liabilities.totalBalance}
+              monthlyPayment={summary.liabilities.monthlyPayment}
+              loansCount={summary.liabilities.loansCount}
               currency={currency}
               isLoading={isLoading}
             />
-          </div>
-
-          {/* Total Assets */}
-          <HeroKPICard
-            title="Total Assets"
-            value={summary?.totalAssets ?? 0}
-            icon={<PiggyBank className="h-4 w-4" />}
-            currency={currency}
-            isLoading={isLoading}
-            variant="profit"
-          />
-
-          {/* Total Liabilities */}
-          <HeroKPICard
-            title="Total Liabilities"
-            value={summary?.totalLiabilities ?? 0}
-            icon={<CreditCard className="h-4 w-4" />}
-            currency={currency}
-            isLoading={isLoading}
-            variant={(summary?.totalLiabilities ?? 0) > 0 ? "loss" : "neutral"}
-          />
+          )}
         </div>
-
-        {/* Row 2: Allocation Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          <AllocationChart
-            categories={summary?.assetCategories ?? []}
-            totalAssets={summary?.totalAssets ?? 0}
-            currency={currency}
-            isLoading={isLoading}
-          />
-          <CategoryPerformanceChart
-            dataPoints={summary?.historyDataPoints ?? []}
-            currentValue={summary?.totalAssets ?? 0}
-            totalCost={summary?.totalCostBasis ?? null}
-            totalLiabilities={summary?.totalLiabilities ?? 0}
-            currency={currency}
-            isLoading={isLoading}
-            showViewToggle={true}
-          />
-        </div>
-
-        {/* Row 3: Category Cards + Liabilities */}
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-4">Investment Categories</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {summary?.assetCategories.map((category) => (
-              <CategoryCard
-                key={category.id}
-                category={category}
-                currency={currency}
-              />
-            ))}
-
-            {/* Liabilities Card */}
-            {summary?.liabilities && (
-              <LiabilitiesCard
-                totalBalance={summary.liabilities.totalBalance}
-                monthlyPayment={summary.liabilities.monthlyPayment}
-                loansCount={summary.liabilities.loansCount}
-                currency={currency}
-                isLoading={isLoading}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Row 4: Unified Positions Table */}
-        <div className="mb-6">
-          <UnifiedPositionsTable
-            currency={currency}
-            maxRows={10}
-            showFilters={true}
-          />
-        </div>
-
-        {/* Loading skeletons for categories */}
-        {isLoading && !summary && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {[...Array(8)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader className="pb-2">
-                  <Skeleton className="h-4 w-24" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-6 w-20 mb-2" />
-                  <Skeleton className="h-3 w-16" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Row 4: Unified Positions Table */}
+      <div className="mb-6">
+        <UnifiedPositionsTable
+          currency={currency}
+          maxRows={10}
+          showFilters={true}
+        />
+      </div>
+
+      {/* Loading skeletons for categories */}
+      {isLoading && !summary && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-6 w-20 mb-2" />
+                <Skeleton className="h-3 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

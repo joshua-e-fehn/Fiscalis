@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/shadcn/button";
-import { Loader2, CheckCircle2, TrendingUp } from "lucide-react";
+import { Loader2, CheckCircle2, TrendingUp, Plus } from "lucide-react";
 import { useSnaptradeConnect, useBrokerConnections } from "@/hooks/convex";
 
 // Use the window message hook from snaptrade-react for handling messages
@@ -17,6 +17,8 @@ interface SnaptradeConnectButtonProps {
   variant?: "default" | "outline" | "ghost" | "secondary";
   /** Optional: Size of the button */
   size?: "default" | "sm" | "lg" | "icon";
+  /** Optional: Whether to show the Plus icon (default: true) */
+  showIcon?: boolean;
   /** Optional: Callback when connection is successful */
   onSuccess?: (connectionId: string, brokerName: string) => void;
   /** Optional: Callback when connection fails */
@@ -28,6 +30,7 @@ export function SnaptradeConnectButton({
   buttonText,
   variant = "default",
   size = "default",
+  showIcon = true,
   onSuccess,
   onError,
 }: SnaptradeConnectButtonProps) {
@@ -147,9 +150,9 @@ export function SnaptradeConnectButton({
       >
         {isLoading || isModalOpen ? (
           <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <TrendingUp className="h-4 w-4" />
-        )}
+        ) : showIcon ? (
+          <Plus className="h-4 w-4" />
+        ) : null}
         {isLoading
           ? "Preparing..."
           : isModalOpen

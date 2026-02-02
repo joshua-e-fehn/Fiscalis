@@ -561,7 +561,7 @@ export const getUnifiedPositions = query({
             chain: position.chain,
             protocol: position.protocol,
             providerName: connection?.name,
-            providerType: connection?.providerType,
+            providerCategories: connection?.categories,
             contractAddress: position.contractAddress,
             tokenId: position.tokenId,
             imageUrl: position.imageUrl,

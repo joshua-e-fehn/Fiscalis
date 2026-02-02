@@ -1,14 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcn/card";
-import { Button } from "@/components/ui/shadcn/button";
 import {
   Wallet,
   PiggyBank,
@@ -16,14 +7,18 @@ import {
   Clock,
   Banknote,
   ArrowRightLeft,
-  ArrowRight,
 } from "lucide-react";
 import {
   CategoryDashboardSection,
   SubcategoryCategoryCard,
+  PageHeader,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { useCashSummary } from "@/hooks/convex/cash";
+import { categoryColorPalettes } from "@/lib/types/investments";
+
+// Get cash color palette
+const cashColors = categoryColorPalettes.cash;
 
 /**
  * Cash & Money Market Overview Page
@@ -40,6 +35,7 @@ const cashCategories: SubcategoryCardData[] = [
     icon: Wallet,
     implemented: false,
     examples: ["Personal Checking", "Business Checking", "Joint Accounts"],
+    color: cashColors["checking-accounts"],
   },
   {
     title: "Savings Accounts",
@@ -53,6 +49,7 @@ const cashCategories: SubcategoryCardData[] = [
       "Online Savings",
       "Business Savings",
     ],
+    color: cashColors["savings-accounts"],
   },
   {
     title: "Money Market Funds",
@@ -61,6 +58,7 @@ const cashCategories: SubcategoryCardData[] = [
     icon: Landmark,
     implemented: false,
     examples: ["Government MMF", "Prime MMF", "Tax-Exempt MMF", "Retail MMF"],
+    color: cashColors["money-market"],
   },
   {
     title: "Certificates of Deposit",
@@ -69,6 +67,7 @@ const cashCategories: SubcategoryCardData[] = [
     icon: Clock,
     implemented: false,
     examples: ["3-Month CD", "6-Month CD", "1-Year CD", "CD Ladders"],
+    color: cashColors.cds,
   },
   {
     title: "Treasury Bills",
@@ -83,6 +82,7 @@ const cashCategories: SubcategoryCardData[] = [
       "13-Week T-Bill",
       "26-Week T-Bill",
     ],
+    color: cashColors["treasury-bills"],
   },
   {
     title: "Foreign Currency (Forex)",
@@ -91,6 +91,7 @@ const cashCategories: SubcategoryCardData[] = [
     icon: ArrowRightLeft,
     implemented: false,
     examples: ["EUR", "GBP", "JPY", "CHF"],
+    color: cashColors.forex,
   },
 ];
 
@@ -99,16 +100,18 @@ export default function CashPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Cash & Money Market
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Track your liquid assets - savings accounts, money market funds, CDs,
-          and foreign currency holdings.
-        </p>
-      </div>
+      <PageHeader
+        title="Cash & Money Market"
+        subtitle="Track your liquid assets - savings accounts, money market funds, CDs, and foreign currency holdings."
+        actions={[
+          {
+            label: "Connect Broker",
+            href: "/integrations/brokers",
+            variant: "outline",
+          },
+          { label: "Connect Bank", href: "/integrations/banking" },
+        ]}
+      />
 
       {/* Dashboard Section */}
       <CategoryDashboardSection
@@ -118,44 +121,24 @@ export default function CashPage() {
       />
 
       {/* Category Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {cashCategories.map((category) => (
-          <SubcategoryCategoryCard
-            key={category.title}
-            category={category}
-            actionLabel="View Accounts"
-          />
-        ))}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Cash Categories
+          </h2>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {cashCategories.map((category) => (
+            <SubcategoryCategoryCard
+              key={category.title}
+              category={category}
+              actionLabel="View Accounts"
+            />
+          ))}
+        </div>
       </div>
-
-      {/* Summary Section */}
-      <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Wallet className="h-5 w-5" />
-            Liquidity Overview
-          </CardTitle>
-          <CardDescription>
-            Cash and money market investments provide stability and liquidity.
-            Track interest rates, maturity dates, and optimize your emergency
-            fund allocation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          <Button variant="outline" asChild>
-            <Link href="/integrations/banking">
-              Connect Bank Account
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/integrations/brokers">
-              Connect Broker
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

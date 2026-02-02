@@ -1,29 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcn/card";
-import { Button } from "@/components/ui/shadcn/button";
-import {
-  Coins,
-  Fuel,
-  Factory,
-  Wheat,
-  ArrowRight,
-  Atom,
-  Gem,
-} from "lucide-react";
+import { Coins, Fuel, Factory, Wheat, Atom, Gem } from "lucide-react";
 import {
   CategoryDashboardSection,
   SubcategoryCategoryCard,
+  PageHeader,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { useCommoditiesSummary } from "@/hooks/convex/commodities";
+import { categoryColorPalettes } from "@/lib/types/investments";
+
+// Get commodities color palette
+const commoditiesColors = categoryColorPalettes.commodities;
 
 /**
  * Commodities Overview Page
@@ -41,6 +29,7 @@ const commodityCategories: SubcategoryCardData[] = [
     icon: Coins,
     implemented: true,
     examples: ["Gold", "Silver", "Platinum", "Palladium"],
+    color: commoditiesColors.metals,
   },
   {
     title: "Energy",
@@ -49,6 +38,7 @@ const commodityCategories: SubcategoryCardData[] = [
     icon: Fuel,
     implemented: false,
     examples: ["Crude Oil", "Natural Gas", "Heating Oil", "Gasoline"],
+    color: commoditiesColors.energy,
   },
   {
     title: "Industrial Metals",
@@ -57,6 +47,7 @@ const commodityCategories: SubcategoryCardData[] = [
     icon: Factory,
     implemented: false,
     examples: ["Copper", "Aluminum", "Zinc", "Nickel"],
+    color: commoditiesColors.industrial,
   },
   {
     title: "Agricultural",
@@ -65,6 +56,7 @@ const commodityCategories: SubcategoryCardData[] = [
     icon: Wheat,
     implemented: false,
     examples: ["Wheat", "Corn", "Soybeans", "Coffee"],
+    color: commoditiesColors.agricultural,
   },
   {
     title: "Rare Earth",
@@ -73,6 +65,7 @@ const commodityCategories: SubcategoryCardData[] = [
     icon: Atom,
     implemented: false,
     examples: ["Neodymium", "Dysprosium", "Lithium", "Cobalt"],
+    color: commoditiesColors["rare-earth"],
   },
   {
     title: "Gemstones",
@@ -81,6 +74,7 @@ const commodityCategories: SubcategoryCardData[] = [
     icon: Gem,
     implemented: false,
     examples: ["Diamonds", "Rubies", "Sapphires", "Emeralds"],
+    color: commoditiesColors.gemstones,
   },
 ];
 
@@ -92,14 +86,18 @@ export default function CommoditiesPage() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-6 md:px-24 gap-6">
-      {/* Header */}
-      <div className="w-full">
-        <h1 className="text-3xl font-bold">Commodities</h1>
-        <p className="text-muted-foreground mt-2">
-          Track real-time prices and manage your holdings across different
-          commodity types
-        </p>
-      </div>
+      <PageHeader
+        title="Commodities"
+        subtitle="Track real-time prices and manage your holdings across different commodity types"
+        actions={[
+          {
+            label: "Add Item",
+            href: "/assets/commodities/metals",
+            variant: "outline",
+          },
+          { label: "Connect Broker", href: "/integrations/brokers" },
+        ]}
+      />
 
       {/* Portfolio Dashboard Section */}
       <div className="w-full">
@@ -112,37 +110,24 @@ export default function CommoditiesPage() {
       </div>
 
       {/* Category Grid */}
-      <div className="w-full">
-        <h2 className="text-lg font-semibold mb-4">Categories</h2>
+      <div className="w-full space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Commodity Categories
+          </h2>
+          <div className="h-px flex-1 bg-border" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {commodityCategories.map((category) => (
             <SubcategoryCategoryCard
               key={category.title}
               category={category}
-              actionLabel="View Prices"
+              actionLabel="View Portfolio"
             />
           ))}
         </div>
       </div>
-
-      {/* Empty state CTA - only show when no holdings */}
-      {!hasHoldings && !isLoading && (
-        <Card className="w-full mt-4 bg-muted/30">
-          <CardContent className="py-6">
-            <div className="text-center">
-              <p className="text-muted-foreground">
-                Start tracking your commodity investments to see portfolio
-                analytics here.
-              </p>
-              <Button asChild variant="link" className="mt-2">
-                <Link href="/commodities/metals/inventory">
-                  Get started with Precious Metals →
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </main>
   );
 }

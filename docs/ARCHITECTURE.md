@@ -15,7 +15,12 @@ This document provides a comprehensive overview of the Fiscalis application arch
 9. [Client-Side Data Management](#client-side-data-management)
 10. [Authentication Flow (Clerk)](#authentication-flow-clerk)
 11. [External Integrations](#external-integrations)
-12. [Component Architecture](#component-architecture)
+12. [Loans & Debt Management](#loans--debt-management)
+13. [Precious Metals Vault](#precious-metals-vault)
+14. [World Bank Data & Map](#world-bank-data--map)
+15. [Portfolio Snapshots](#portfolio-snapshots)
+16. [Onboarding System](#onboarding-system)
+17. [Component Architecture](#component-architecture)
 
 ---
 
@@ -48,21 +53,22 @@ This document provides a comprehensive overview of the Fiscalis application arch
                      │                                  │
                      ▼                                  ▼
 ┌────────────────────────────────────┐    ┌────────────────────────────────────────┐
-│           CONVEX BACKEND           │    │         HONO API + Supabase DB             │
+│           CONVEX BACKEND           │    │         HONO API + Neon DB             │
 │  ┌──────────────────────────────┐  │    │  ┌──────────────────────────────────┐  │
 │  │   Real-time User Data        │  │    │  │    Time-series Data              │  │
 │  │  • plaidItems (encrypted)    │  │    │  │  • precious_metal_prices         │  │
 │  │  • plaidAccounts             │  │    │  │  • currency_exchange_rates       │  │
 │  │  • plaidTransactions         │  │    │  │                                  │  │
 │  │  • brokerConnections         │  │    │  │  /api/metals/*                   │  │
-│  │  • brokerPositions           │  │    │  └──────────────────────────────────┘  │
-│  └──────────────────────────────┘  │    │                                        │
-│                │                   │    │                │                       │
-│                ▼                   │    │                ▼                       │
-│  ┌──────────────────────────────┐  │    │  ┌──────────────────────────────────┐  │
-│  │    External APIs             │  │    │  │       Supabase PostgreSQL            │  │
-│  │  • Plaid (Banking)           │  │    │  │       (Drizzle ORM)              │  │
-│  │  • Snaptrade (Brokers)       │  │    │  └──────────────────────────────────┘  │
+│  │  • brokerPositions           │  │    │  │  /api/world-data/*               │  │
+│  └──────────────────────────────┘  │    │  └──────────────────────────────────┘  │
+│                │                   │    │                                        │
+│                ▼                   │    │                │                       │
+│  ┌──────────────────────────────┐  │    │                ▼                       │
+│  │    External APIs             │  │    │  ┌──────────────────────────────────┐  │
+│  │  • Plaid (Banking)           │  │    │  │       Neon PostgreSQL            │  │
+│  │  • SnapTrade (Brokers)       │  │    │  │       (Drizzle ORM)              │  │
+│  │  • Vezgo (Crypto)            │  │    │  └──────────────────────────────────┘  │
 │  │  (via Convex actions)        │  │    │                                        │
 │  └──────────────────────────────┘  │    │                                        │
 └────────────────────────────────────┘    └────────────────────────────────────────┘
@@ -77,22 +83,27 @@ Fiscalis uses a **hybrid architecture** with two backends optimized for differen
 │                         HYBRID DATABASE ARCHITECTURE                             │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                  │
-│   CONVEX (Real-time, User Data)              Supabase PostgreSQL (Time-series)      │
-│   ─────────────────────────────              ──────────────────────────────     │
+│   CONVEX (Real-time, User Data)              Neon PostgreSQL (Time-series)       │
+│   ─────────────────────────────              ─────────────────────────────       │
 │   • plaidItems (encrypted tokens)            • precious_metal_prices             │
 │   • plaidAccounts (cached)                   • currency_exchange_rates           │
-│   • plaidTransactions                        • world_bank_indicators             │
-│   • snaptradeConnections (encrypted)                                             │
-│   • snaptradeAccounts                        Accessed via:                       │
-│   • snaptradePositions                       • Hono API routes (/api/metals/*)   │
-│   • snaptradeActivities                      • Hono API routes (/api/worldbank/*)│
+│   • plaidTransactions                                                            │
+│   • snaptradeUsers/Connections               Accessed via:                       │
+│   • brokerAccounts/Positions                 • Hono API routes (/api/metals/*)   │
+│   • brokerTransactions                       • Hono API routes (/api/world-data/*)│
 │   • vezgoUsers (encrypted token)             • Drizzle ORM                       │
-│   • vezgoConnections                                                             │
-│   • vezgoPositions                                                               │
+│   • vezgoConnections/Positions                                                   │
 │   • vezgoTransactions                                                            │
+│   • loans/loanPayments/loanScenarios                                             │
+│   • vaultItems/vaultTransactions                                                 │
+│   • metalCatalog                                                                 │
+│   • worldBankIndicators/Favorites                                                │
+│   • portfolioSnapshots                                                           │
+│   • onboardingProgress                                                           │
+│   • userSettings                                                                 │
 │   Accessed via:                                                                  │
 │   • Convex hooks (useQuery, useMutation)                                         │
-│   • Convex actions (for Plaid API calls)                                         │
+│   • Convex actions (for external API calls)                                      │
 │                                                                                  │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -100,7 +111,7 @@ Fiscalis uses a **hybrid architecture** with two backends optimized for differen
 **Why Hybrid?**
 
 - **Convex**: Provides real-time reactivity for user data (banking, brokers) with automatic cache invalidation and WebSocket subscriptions
-- **Supabase**: Better suited for time-series data with periodic batch updates (metal prices, exchange rates) that doesn't need real-time sync
+- **Neon PostgreSQL**: Better suited for time-series data with periodic batch updates (metal prices, exchange rates) that doesn't need real-time sync
 
 ---
 
@@ -111,34 +122,64 @@ Fiscalis/
 ├── frontend/                      # Next.js 16 Application
 │   ├── app/                       # App Router pages and API routes
 │   │   ├── (api)/                 # API route group
-│   │   │   └── api/[[...route]]/  # Hono catch-all route
-│   │   │       ├── route.ts       # Hono app setup & exports
-│   │   │       └── metals.ts      # Precious metals endpoints
+│   │   │   └── api/
+│   │   │       ├── [[...route]]/  # Hono catch-all route
+│   │   │       │   ├── route.ts       # Hono app setup & exports
+│   │   │       │   ├── metals.ts      # Precious metals price endpoints
+│   │   │       │   ├── worlddata.ts   # World Bank data endpoints
+│   │   │       │   └── worldbank-sync.ts # World Bank indicator sync
+│   │   │       └── vezgo/             # Vezgo webhook handlers
 │   │   ├── (auth)/                # Auth pages (sign-in, sign-up)
+│   │   ├── (onboarding)/          # User onboarding flow
+│   │   │   └── onboarding/
 │   │   ├── (root)/                # Protected app pages
 │   │   │   ├── dashboard/
-│   │   │   ├── banking/
-│   │   │   ├── brokers/
-│   │   │   ├── commodities/
-│   │   │   └── calculators/
+│   │   │   ├── assets/            # Asset management pages
+│   │   │   │   ├── bonds/
+│   │   │   │   ├── cash/
+│   │   │   │   ├── collectibles/
+│   │   │   │   ├── commodities/   # Includes metals inventory
+│   │   │   │   ├── crypto/
+│   │   │   │   ├── equities/
+│   │   │   │   └── real-estate/
+│   │   │   ├── integrations/      # Provider connections
+│   │   │   │   ├── banking/       # Plaid connections
+│   │   │   │   ├── brokers/       # SnapTrade connections
+│   │   │   │   └── crypto/        # Vezgo connections
+│   │   │   ├── liabilities/       # Debt management
+│   │   │   │   └── loans/
+│   │   │   └── tools/             # Utility pages
+│   │   │       ├── calculators/
+│   │   │       └── world-map/
 │   │   └── (website)/             # Public marketing pages
 │   │
 │   ├── convex/                    # Convex Backend
 │   │   ├── _generated/            # Auto-generated Convex types
 │   │   ├── actions/               # Convex actions (external API calls)
 │   │   │   ├── plaid.ts           # Plaid API integration
-│   │   │   ├── snaptrade.ts       # Snaptrade API integration
-│   │   │   └── vezgo.ts           # Vezgo API integration (crypto)
+│   │   │   ├── snaptrade.ts       # SnapTrade API integration
+│   │   │   ├── vezgo.ts           # Vezgo API integration (crypto)
+│   │   │   └── syncAll.ts         # Sync all providers at once
 │   │   ├── lib/                   # Convex utilities
 │   │   │   ├── encryption.ts      # AES-256-GCM encryption
-│   │   │   └── vezgo.ts           # Vezgo client helpers
+│   │   │   └── vezgo.ts           # Vezgo client helpers & category mapping
 │   │   ├── auth.config.ts         # Clerk auth configuration
 │   │   ├── schema.ts              # Database schema definition
-│   │   ├── banking.ts             # Banking queries & mutations
-│   │   ├── brokers.ts             # Broker queries & mutations
+│   │   ├── banking.ts             # Banking queries & mutations (Plaid)
+│   │   ├── brokers.ts             # Broker queries & mutations (SnapTrade)
 │   │   ├── categories.ts          # Category-based queries (cash, equities, etc.)
 │   │   ├── classification.ts      # Classification override mutations
-│   │   └── crypto.ts              # Crypto queries & mutations (Vezgo)
+│   │   ├── crypto.ts              # Crypto queries & mutations (Vezgo)
+│   │   ├── loans.ts               # Loan management queries & mutations
+│   │   ├── vault.ts               # Precious metals inventory management
+│   │   ├── onboarding.ts          # Onboarding progress tracking
+│   │   ├── portfolio.ts           # Portfolio-wide aggregation
+│   │   ├── portfolioSnapshots.ts  # Historical portfolio tracking
+│   │   ├── worldbank.ts           # World Bank indicator queries
+│   │   ├── seedCatalog.ts         # Metal catalog seeding
+│   │   ├── crons.ts               # Scheduled jobs (portfolio snapshots)
+│   │   ├── migrations.ts          # Database migrations
+│   │   └── http.ts                # HTTP webhook handlers
 │   │
 │   ├── components/                # UI Components
 │   │   ├── atomic/                # Atomic Design Pattern
@@ -149,7 +190,7 @@ Fiscalis/
 │   │       ├── shadcn/            # shadcn/ui components
 │   │       └── aceternity/        # Aceternity UI components
 │   │
-│   ├── db/                        # Supabase Database configuration
+│   ├── db/                        # Neon Database configuration
 │   │   └── drizzle/
 │   │       ├── drizzle.ts         # DB connection setup
 │   │       └── schema.ts          # Table definitions (time-series)
@@ -162,11 +203,24 @@ Fiscalis/
 │   │   │   ├── classification.ts  # Classification override hooks
 │   │   │   ├── crypto.ts          # Vezgo/Crypto data hooks
 │   │   │   ├── equities.ts        # Equities summary hooks
+│   │   │   ├── bonds.ts           # Bonds summary hooks
+│   │   │   ├── collectibles.ts    # Collectibles summary hooks
+│   │   │   ├── commodities.ts     # Commodities (non-metal) summary hooks
+│   │   │   ├── realEstate.ts      # Real estate summary hooks
 │   │   │   ├── liabilities.ts     # Liabilities summary hooks
+│   │   │   ├── loans.ts           # Loan management hooks
+│   │   │   ├── metals.ts          # Metals vault hooks
 │   │   │   ├── portfolio.ts       # Portfolio aggregation hooks
+│   │   │   ├── providers.ts       # Provider connection utilities
+│   │   │   ├── onboarding.ts      # Onboarding progress hooks
+│   │   │   ├── worldbank.ts       # World Bank indicator hooks
 │   │   │   └── index.ts           # Hook exports
-│   │   ├── metals.ts              # Metals data hooks (React Query)
-│   │   └── useVezgoConnect.ts     # Vezgo Connect modal hook
+│   │   ├── metals.ts              # Metals price data hooks (React Query + Hono)
+│   │   ├── worldbank.ts           # World Bank data hooks (React Query + Hono)
+│   │   ├── useVezgoConnect.ts     # Vezgo Connect URL hook
+│   │   ├── useVezgoNativeConnect.ts # Vezgo native connect SDK hook
+│   │   ├── useTimePlayback.ts     # Historical time playback hook
+│   │   └── use-mobile.tsx         # Mobile detection hook
 │   │
 │   ├── lib/                       # Utilities and helpers
 │   │   ├── api/                   # API fetch functions
@@ -187,8 +241,8 @@ Fiscalis/
 │       └── financeService.ts      # Financial calculations
 │
 └── backend/                       # Backend services
-    └── edge_functions/            # Supabase Edge Functions
-        └── supabase/
+    └── edge_functions/            # Legacy edge functions (now using Convex crons)
+        └── supabase/              # Legacy Supabase config
             └── functions/         # Scheduled price fetching
 ```
 
@@ -282,15 +336,16 @@ Fiscalis/
 
 ### Infrastructure & Deployment
 
-| Service        | Purpose                             |
-| -------------- | ----------------------------------- |
-| **Vercel**     | Frontend hosting & Edge Functions   |
-| **Convex**     | Real-time backend hosting           |
-| **Supabase**   | Serverless PostgreSQL (time-series) |
-| **Clerk**      | Authentication service              |
-| **Plaid**      | Banking API provider                |
-| **Snaptrade**  | Brokerage API provider              |
-| **World Bank** | Economic data API                   |
+| Service        | Purpose                                    |
+| -------------- | ------------------------------------------ |
+| **Vercel**     | Frontend hosting & Edge Functions          |
+| **Convex**     | Real-time backend hosting + scheduled jobs |
+| **Neon**       | Serverless PostgreSQL (time-series)        |
+| **Clerk**      | Authentication service                     |
+| **Plaid**      | Banking API provider                       |
+| **SnapTrade**  | Brokerage API provider                     |
+| **Vezgo**      | Crypto aggregation API provider            |
+| **World Bank** | Economic data API                          |
 
 ---
 
@@ -333,7 +388,7 @@ Fiscalis/
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Metals Data Flow (Hono + Supabase - Traditional)
+### Metals Data Flow (Hono + Neon - Traditional)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -355,7 +410,7 @@ Fiscalis/
 │  4. Hono route handler         5. DB Query                                   │
 │  ┌─────────────────┐          ┌─────────────────┐                            │
 │  │  .get("/latest")│ ──────▶  │  db.select()    │                            │
-│  │  (metals.ts)    │          │  (Drizzle/Supabase) │                            │
+│  │  (metals.ts)    │          │  (Drizzle/Neon)   │                            │
 │  └─────────────────┘          └─────────────────┘                            │
 │                                                                               │
 └───────────────────────────────────────────────────────────────────────────────┘
@@ -925,7 +980,7 @@ export function decrypt(encrypted: string, key: string): string {
 
 ## API Layer (Hono)
 
-Hono is used exclusively for time-series data (precious metals, currency rates).
+Hono is used for time-series data and external API proxying.
 
 ### Route Structure
 
@@ -934,12 +989,17 @@ Hono is used exclusively for time-series data (precious metals, currency rates).
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 import metals from "./metals";
+import worlddata from "./worlddata";
+import worldbankSync from "./worldbank-sync";
 
 export const runtime = "edge";
 
 const app = new Hono().basePath("/api");
 
-const routes = app.route("/metals", metals);
+const routes = app
+  .route("/metals", metals)
+  .route("/world-data", worlddata)
+  .route("/worldbank", worldbankSync);
 
 export const GET = handle(app);
 export const POST = handle(app);
@@ -956,11 +1016,25 @@ export type AppType = typeof routes;
 | GET    | `/api/metals/:metal/prices/historical` | Get historical prices by time range |
 | GET    | `/api/metals/:metal/prices/range`      | Get prices for custom date range    |
 
+### World Data Routes
+
+| Method | Endpoint                                    | Purpose                                     |
+| ------ | ------------------------------------------- | ------------------------------------------- |
+| GET    | `/api/world-data/indicators/:code/:country` | Get World Bank indicator data for a country |
+| GET    | `/api/world-data/indicators/:code`          | Get indicator data for all countries        |
+
+### World Bank Sync Routes
+
+| Method | Endpoint                | Purpose                        |
+| ------ | ----------------------- | ------------------------------ |
+| POST   | `/api/worldbank/sync`   | Trigger indicator catalog sync |
+| GET    | `/api/worldbank/status` | Get sync status                |
+
 ---
 
 ## Database Layer
 
-### Supabase PostgreSQL (Time-series Data)
+### Neon PostgreSQL (Time-series Data)
 
 ```typescript
 // db/drizzle/drizzle.ts
@@ -1267,6 +1341,103 @@ export const getConnectionLink = action({
 └───────┴──────────────────────────┴──────────────────────────┴────────────┘
 ```
 
+### Broker Account Balance & Cash Calculation
+
+SnapTrade returns account data with `balance` and `cash` fields, but different brokers populate these fields differently. Some brokers (like Interactive Brokers) don't always populate the `cash` field directly. To handle this consistently, Fiscalis uses a unified cash calculation logic:
+
+#### Cash Calculation Rules
+
+```typescript
+// Unified cash calculation logic used across the application
+// Located in: convex/categories.ts (getCashHoldings) and frontend components
+
+function getEffectiveCash(
+  account: BrokerAccount,
+  accountsWithPositions: Set<Id>,
+): number {
+  // Rule 1: If cash field is explicitly set and > 0, use it
+  if ((account.cash ?? 0) > 0) {
+    return account.cashValueInBaseCurrency ?? account.cash ?? 0;
+  }
+
+  // Rule 2: If account has NO positions and balance > 0, treat balance as cash
+  // This handles accounts that are purely cash (e.g., settlement accounts)
+  if (!accountsWithPositions.has(account._id) && (account.balance ?? 0) > 0) {
+    return account.balance ?? 0;
+  }
+
+  // Rule 3: Otherwise, no cash
+  return 0;
+}
+```
+
+#### Why This Logic?
+
+| Scenario                      | `balance` | `cash` | Has Positions | Effective Cash |
+| ----------------------------- | --------- | ------ | ------------- | -------------- |
+| Account with positions + cash | $10,000   | $2,000 | ✅ Yes        | **$2,000**     |
+| Account with only positions   | $8,000    | $0     | ✅ Yes        | **$0**         |
+| Cash-only account (no trades) | $5,000    | $0     | ❌ No         | **$5,000**     |
+| Empty account                 | $0        | $0     | ❌ No         | **$0**         |
+
+#### Implementation Locations
+
+This logic is implemented in multiple places for consistency:
+
+1. **Backend - Cash Category Query** (`convex/categories.ts`)
+
+   ```typescript
+   // getCashHoldings query uses this to aggregate broker cash for the Cash asset page
+   const brokerAccountsWithCash = brokerAccounts.filter((acc) => {
+     if ((acc.cash ?? 0) > 0) return true;
+     if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0)
+       return true;
+     return false;
+   });
+   ```
+
+2. **Frontend - Brokers Page KPI** (`app/(root)/integrations/brokers/page.tsx`)
+
+   ```typescript
+   // Calculate total cash for the KPI card
+   const accountsWithPositions = new Set(
+     positions?.map((p) => p.accountId) ?? [],
+   );
+   const totalCash =
+     accounts?.reduce((sum, acc) => {
+       if ((acc.cash ?? 0) > 0) return sum + (acc.cash ?? 0);
+       if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
+         return sum + (acc.balance ?? 0);
+       }
+       return sum;
+     }, 0) ?? 0;
+   ```
+
+3. **Frontend - Broker Connection Card** (`components/atomic/molecules/brokerAccountsCard.tsx`)
+   ```typescript
+   // Each connection card shows total value and cash breakdown
+   const getEffectiveCash = (acc: BrokerAccount) => {
+     if ((acc.cash ?? 0) > 0) return acc.cash ?? 0;
+     if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
+       return acc.balance ?? 0;
+     }
+     return 0;
+   };
+   ```
+
+#### Display Rules
+
+To avoid redundancy in the UI:
+
+- **Show cash** only when `cash !== balance` (i.e., when there's a mix of invested and cash)
+- **Don't show cash** when `cash === balance` (entire account is cash - showing it twice would be redundant)
+
+```typescript
+// IntegrationConnectionCard.tsx & IntegrationAccountItem.tsx
+const hasCash =
+  totalCash !== undefined && totalCash > 0 && totalCash !== totalValue;
+```
+
 ### Vezgo Integration (via Convex Actions)
 
 Vezgo provides unified access to crypto exchanges, wallets, DeFi protocols, and NFTs.
@@ -1406,6 +1577,125 @@ export const syncConnection = action({
 | `hardware`   | Ledger, Trezor            | Multi-chain balances             |
 | `blockchain` | Ethereum, Solana, Bitcoin | On-chain positions, transactions |
 
+### Vezgo Provider Categories (Multi-Category Support)
+
+A Vezgo connection can belong to **multiple categories** simultaneously. For example, Binance is both an `exchange` AND a `wallet` (you can store crypto without trading).
+
+#### Schema Definition
+
+```typescript
+// convex/schema.ts - vezgoConnections table
+vezgoConnections: defineTable({
+  userId: v.string(),
+  accountId: v.string(),
+  provider: v.string(),
+  // Categories array - a connection can have multiple categories
+  // Based on Vezgo's providerCategories: ['exchanges', 'wallets', 'blockchains']
+  categories: v.array(v.union(
+    v.literal("exchange"),   // Centralized exchanges (CEX)
+    v.literal("wallet"),     // Software/hardware wallets
+    v.literal("blockchain"), // Direct blockchain addresses
+  )),
+  name: v.string(),
+  logo: v.optional(v.string()),
+  status: v.union(v.literal("active"), v.literal("error"), ...),
+  // ...other fields
+})
+```
+
+#### Category Classification Logic
+
+```typescript
+// convex/lib/vezgo.ts - mapProviderCategories()
+
+// Known exchanges (always classified as "exchange")
+const KNOWN_EXCHANGES = new Set([
+  "binance", "coinbase", "kraken", "bitstamp", "gemini",
+  "kucoin", "okx", "bybit", "huobi", "crypto.com", ...
+]);
+
+// Known software/hardware wallets (classified as "wallet")
+const KNOWN_WALLETS = new Set([
+  "metamask", "phantom", "trust", "exodus", "coinbase_wallet",
+  "ledger", "trezor", "keepkey", ...
+]);
+
+// Known blockchain addresses (classified as "blockchain")
+const KNOWN_BLOCKCHAINS = new Set([
+  "bitcoin", "ethereum", "solana", "cardano", "polkadot", ...
+]);
+
+export function mapProviderCategories(providerName: string): ProviderCategory[] {
+  const name = providerName.toLowerCase();
+  const categories: ProviderCategory[] = [];
+
+  // Check each category list
+  if (KNOWN_EXCHANGES.has(name)) categories.push("exchange");
+  if (KNOWN_WALLETS.has(name)) categories.push("wallet");
+  if (KNOWN_BLOCKCHAINS.has(name)) categories.push("blockchain");
+
+  // Default: exchanges can also be wallets (you can hold without trading)
+  if (categories.includes("exchange") && !categories.includes("wallet")) {
+    categories.push("wallet");
+  }
+
+  // Fallback for unknown providers
+  if (categories.length === 0) categories.push("exchange");
+
+  return categories;
+}
+```
+
+#### Display Order
+
+Categories are displayed in a consistent order: **Exchange → Wallet → Blockchain**
+
+```typescript
+// components/atomic/molecules/crypto/CryptoConnectionsCard.tsx
+const CATEGORY_ORDER: ProviderCategory[] = ["exchange", "wallet", "blockchain"];
+
+function formatCategories(categories: ProviderCategory[]): string {
+  return CATEGORY_ORDER.filter((cat) => categories.includes(cat))
+    .map((cat) => categoryLabels[cat]) // "Exchange", "Wallet", "Blockchain"
+    .join(", ");
+}
+
+// Examples:
+// ["exchange", "wallet"] → "Exchange, Wallet"
+// ["wallet", "blockchain"] → "Wallet, Blockchain"
+// ["exchange"] → "Exchange"
+```
+
+#### Updating Categories
+
+Users can manually update categories via mutation:
+
+```typescript
+// convex/crypto.ts
+export const updateConnectionCategories = mutation({
+  args: {
+    connectionId: v.id("vezgoConnections"),
+    categories: v.array(
+      v.union(
+        v.literal("exchange"),
+        v.literal("wallet"),
+        v.literal("blockchain"),
+      ),
+    ),
+  },
+  handler: async (ctx, args) => {
+    // Validation: at least one category required
+    if (args.categories.length === 0) {
+      throw new Error("At least one category is required");
+    }
+    await ctx.db.patch(args.connectionId, {
+      categories: args.categories,
+      updatedAt: Date.now(),
+    });
+  },
+});
+```
+
 ### Crypto Asset Classification
 
 ```typescript
@@ -1490,6 +1780,374 @@ export default worldbank;
 
 ---
 
+## Loans & Debt Management
+
+The Loans system allows users to manually track and manage their debt (mortgages, auto loans, student loans, credit cards, etc.).
+
+### Schema Overview
+
+```typescript
+// convex/schema.ts - Loan tables
+
+loans: defineTable({
+  userId: v.string(),
+  name: v.string(), // "Home Mortgage", "Car Loan"
+  loanType: v.union(
+    v.literal("ANNUITY"), // Fixed payment (most common)
+    v.literal("CONSTANT_PRINCIPAL"), // Decreasing payment
+    v.literal("BULLET"), // Lump sum at end
+    v.literal("INTEREST_ONLY_THEN"), // Interest-only period, then regular
+  ),
+  originalPrincipal: v.number(),
+  currentBalance: v.number(),
+  annualInterestRate: v.number(), // Decimal (0.05 = 5%)
+  termMonths: v.number(),
+  scheduledPayment: v.number(),
+  paymentFrequency: v.union("MONTHLY", "QUARTERLY", "SEMI_ANNUAL", "ANNUAL"),
+  startDate: v.string(),
+  nextPaymentDate: v.string(),
+  status: v.union("active", "paid_off", "defaulted", "refinanced"),
+  // Optional fields
+  lender: v.optional(v.string()),
+  contractNumber: v.optional(v.string()),
+  collateral: v.optional(v.string()),
+  notes: v.optional(v.string()),
+});
+
+loanPayments: defineTable({
+  userId: v.string(),
+  loanId: v.id("loans"),
+  paymentDate: v.string(),
+  amount: v.number(),
+  principalPortion: v.number(),
+  interestPortion: v.number(),
+  paymentType: v.union(
+    "scheduled",
+    "additional_principal",
+    "prepayment",
+    "final",
+    "partial",
+    "late",
+  ),
+  balanceAfterPayment: v.number(),
+});
+
+loanScenarios: defineTable({
+  userId: v.string(),
+  loanId: v.id("loans"),
+  name: v.string(),
+  extraMonthlyPayment: v.optional(v.number()),
+  oneTimePrepayments: v.optional(v.array(/* date, amount */)),
+  newInterestRate: v.optional(v.number()), // For refinancing scenarios
+  // Calculated results
+  projectedEndDate: v.optional(v.string()),
+  totalInterestSaved: v.optional(v.number()),
+  monthsSaved: v.optional(v.number()),
+});
+```
+
+### Key Files
+
+| File                           | Purpose                                              |
+| ------------------------------ | ---------------------------------------------------- |
+| `convex/loans.ts`              | Loan CRUD, payment recording, scenario calculations  |
+| `hooks/convex/loans.ts`        | React hooks for loan data                            |
+| `app/(root)/liabilities/loans` | Loans page with overview, details, scenarios         |
+| `services/finance/`            | Financial calculation utilities (amortization, etc.) |
+
+### Loan Page Features
+
+- **Overview**: Total debt, monthly payments, next payment due, payoff progress
+- **Loan Cards**: Individual loan details with progress visualization
+- **Payment Tracking**: Record scheduled and extra payments
+- **Scenario Planning**: "What-if" analysis for extra payments and refinancing
+
+---
+
+## Precious Metals Vault
+
+The Vault system allows users to track their physical precious metals holdings (gold, silver, platinum, palladium).
+
+### Schema Overview
+
+```typescript
+// convex/schema.ts - Vault tables
+
+metalCatalog: defineTable({
+  name: v.string(), // "Krugerrand 1 oz"
+  metalType: v.union("gold", "silver", "platinum", "palladium"),
+  category: v.union("coin", "bar"),
+  purity: v.number(), // 999.9, 916.7 (22K gold)
+  weightGrams: v.number(), // Total weight
+  fineWeightGrams: v.number(), // Pure metal content
+  fineWeightOz: v.number(), // Pure metal in troy ounces
+  defaultBuyPremium: v.optional(v.number()), // 0.03 = 3% above spot
+  defaultSellPremium: v.optional(v.number()), // -0.02 = 2% below spot
+  country: v.optional(v.string()),
+  mint: v.optional(v.string()),
+  isPopular: v.boolean(), // Featured items
+});
+
+vaultItems: defineTable({
+  userId: v.string(),
+  catalogItemId: v.optional(v.id("metalCatalog")),
+  customName: v.optional(v.string()), // For non-catalog items
+  metalType: v.union("gold", "silver", "platinum", "palladium"),
+  category: v.union("coin", "bar", "jewelry", "scrap"),
+  purity: v.number(),
+  weightGrams: v.number(),
+  fineWeightGrams: v.number(),
+  quantity: v.number(),
+  buyPremium: v.optional(v.number()),
+  sellPremium: v.optional(v.number()),
+  purchasePricePerUnit: v.optional(v.number()),
+  purchaseDate: v.optional(v.string()),
+  storageLocation: v.optional(v.string()),
+  notes: v.optional(v.string()),
+});
+
+vaultTransactions: defineTable({
+  userId: v.string(),
+  vaultItemId: v.id("vaultItems"),
+  transactionType: v.union("buy", "sell", "gift_received", "gift_given"),
+  quantity: v.number(),
+  pricePerUnit: v.number(),
+  currency: v.string(),
+  transactionDate: v.string(),
+  spotPriceAtTransaction: v.optional(v.number()),
+  notes: v.optional(v.string()),
+});
+```
+
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         METALS PAGE DATA FLOW                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────┐  │
+│  │  Metal Prices   │    │   Vault Items    │    │  Metal Catalog      │  │
+│  │  (Hono + Neon)  │    │  (Convex)        │    │  (Convex)           │  │
+│  └────────┬────────┘    └────────┬─────────┘    └──────────┬──────────┘  │
+│           │                      │                         │             │
+│           └──────────────────────┼─────────────────────────┘             │
+│                                  ▼                                       │
+│                      ┌─────────────────────┐                            │
+│                      │  Holdings Value     │                            │
+│                      │  = fineWeightOz     │                            │
+│                      │    × spotPrice      │                            │
+│                      │    × (1 + premium)  │                            │
+│                      └─────────────────────┘                            │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Files
+
+| File                                   | Purpose                                  |
+| -------------------------------------- | ---------------------------------------- |
+| `convex/vault.ts`                      | Vault CRUD, transaction recording        |
+| `convex/seedCatalog.ts`                | Metal catalog seeding                    |
+| `hooks/convex/metals.ts`               | Vault data hooks                         |
+| `hooks/metals.ts`                      | Price data hooks (React Query + Hono)    |
+| `app/(root)/assets/commodities/metals` | Unified metals page (prices + inventory) |
+| `components/atomic/organisms/metals/`  | MetalsPage, MetalsInventoryTable, etc.   |
+
+### Features
+
+- **Overview Tab**: Total holdings value, allocation chart, quick stats
+- **Prices Tab**: Live metal prices, historical charts, compare mode
+- **Holdings Tab**: Detailed inventory table with P/L calculations
+- **History Tab**: Transaction history with buy/sell tracking
+
+---
+
+## World Bank Data & Map
+
+The World Map feature provides an interactive visualization of economic indicators from the World Bank API.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     WORLD BANK DATA ARCHITECTURE                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐      ┌─────────────────┐     ┌──────────────────┐  │
+│  │  World Bank API │      │  Convex DB      │     │  Neon PostgreSQL │  │
+│  │  (indicators)   │      │  (catalog)      │     │  (data cache)    │  │
+│  └────────┬────────┘      └────────┬────────┘     └─────────┬────────┘  │
+│           │                        │                        │           │
+│           ▼                        ▼                        ▼           │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │                     World Map Component                          │   │
+│  │  • Indicator search (Convex search index)                       │   │
+│  │  • Country selection (MapLibre GL)                              │   │
+│  │  • Data visualization (Recharts)                                │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Schema
+
+```typescript
+// convex/schema.ts
+
+worldBankIndicators: defineTable({
+  code: v.string(),                           // "NY.GDP.MKTP.CD"
+  name: v.string(),                           // "GDP (current US$)"
+  description: v.optional(v.string()),
+  sourceId: v.optional(v.string()),           // "2" for WDI
+  sourceName: v.optional(v.string()),
+  topics: v.optional(v.array(v.string())),
+  nameLower: v.string(),                      // For case-insensitive search
+  codeLower: v.string(),
+  // Reliability tracking
+  timeoutCount: v.number(),
+  status: v.union("ok", "warning", "error"),
+  lastTestedAt: v.optional(v.number()),
+})
+  .index("by_code", ["code"])
+  .searchIndex("search_indicators", {
+    searchField: "nameLower",
+    filterFields: ["status", "sourceId"],
+  }),
+
+worldBankFavorites: defineTable({
+  userId: v.string(),
+  indicatorCode: v.string(),
+  indicatorName: v.string(),
+  addedAt: v.number(),
+}).index("by_user", ["userId"]),
+```
+
+### Key Files
+
+| File                         | Purpose                                 |
+| ---------------------------- | --------------------------------------- |
+| `convex/worldbank.ts`        | Indicator search, favorites             |
+| `hooks/convex/worldbank.ts`  | Convex hooks for indicators             |
+| `hooks/worldbank.ts`         | React Query hooks for data fetching     |
+| `app/(root)/tools/world-map` | World map page                          |
+| `api/[[...route]]/worlddata` | Hono routes for fetching indicator data |
+
+---
+
+## Portfolio Snapshots
+
+Portfolio Snapshots provide historical tracking of total portfolio value over time.
+
+### Schema
+
+```typescript
+// convex/schema.ts
+
+portfolioSnapshots: defineTable({
+  userId: v.string(),
+  timestamp: v.number(),                      // Unix timestamp in ms
+  date: v.string(),                           // ISO date (YYYY-MM-DD)
+
+  // Totals
+  totalAssets: v.number(),
+  totalLiabilities: v.number(),
+  netWorth: v.number(),
+  totalCostBasis: v.optional(v.number()),
+
+  // Category breakdown
+  categoryBreakdown: v.optional(v.array(v.object({
+    category: v.string(),                     // "equities", "cash", etc.
+    value: v.number(),
+    costBasis: v.optional(v.number()),
+  }))),
+
+  source: v.string(),                         // "plaid", "snaptrade", "scheduled"
+})
+  .index("by_user_date", ["userId", "date"])
+  .index("by_user_timestamp", ["userId", "timestamp"]),
+```
+
+### Snapshot Creation
+
+Snapshots are created:
+
+1. **After syncs**: When Plaid, SnapTrade, or Vezgo data is synced
+2. **Scheduled**: Daily via Convex cron jobs
+3. **Manual**: When user triggers a portfolio refresh
+
+```typescript
+// convex/crons.ts
+import { cronJobs } from "convex/server";
+import { internal } from "./_generated/api";
+
+const crons = cronJobs();
+
+// Create daily portfolio snapshot at midnight UTC
+crons.daily(
+  "daily-portfolio-snapshot",
+  { hourUTC: 0, minuteUTC: 0 },
+  internal.portfolioSnapshots.createAllUsersSnapshots,
+);
+
+export default crons;
+```
+
+### Key Files
+
+| File                           | Purpose                       |
+| ------------------------------ | ----------------------------- |
+| `convex/portfolioSnapshots.ts` | Snapshot creation and queries |
+| `convex/crons.ts`              | Scheduled snapshot jobs       |
+| `hooks/convex/portfolio.ts`    | Portfolio hooks with history  |
+
+---
+
+## Onboarding System
+
+A guided onboarding flow helps new users connect their financial accounts.
+
+### Schema
+
+```typescript
+// convex/schema.ts
+
+onboardingProgress: defineTable({
+  userId: v.string(),
+  currentStep: v.number(),                    // 1-6
+  completedSteps: v.array(v.number()),        // [1, 2, 3]
+  skippedSteps: v.array(v.number()),          // [3, 4]
+  profileCompleted: v.boolean(),
+  bankingConnected: v.boolean(),
+  brokersConnected: v.boolean(),
+  cryptoConnected: v.boolean(),
+  onboardingCompleted: v.boolean(),
+  completedAt: v.optional(v.number()),
+}).index("by_user", ["userId"]),
+```
+
+### Onboarding Steps
+
+| Step | Name     | Purpose                                    |
+| ---- | -------- | ------------------------------------------ |
+| 1    | Welcome  | Introduction to Fiscalis                   |
+| 2    | Profile  | Currency preferences, display name         |
+| 3    | Banking  | Connect bank accounts via Plaid            |
+| 4    | Brokers  | Connect brokerage accounts via SnapTrade   |
+| 5    | Crypto   | Connect crypto wallets/exchanges via Vezgo |
+| 6    | Complete | Summary and redirect to dashboard          |
+
+### Key Files
+
+| File                                      | Purpose                     |
+| ----------------------------------------- | --------------------------- |
+| `convex/onboarding.ts`                    | Progress tracking mutations |
+| `hooks/convex/onboarding.ts`              | Onboarding hooks            |
+| `app/(onboarding)/onboarding/`            | Onboarding page layout      |
+| `components/atomic/organisms/onboarding/` | Step components             |
+
+---
+
 ## Component Architecture
 
 ### Atomic Design Pattern
@@ -1500,17 +2158,37 @@ components/atomic/
 │   ├── bankAccountCard.tsx
 │   ├── plaidLinkButton.tsx
 │   ├── plaidUpdateButton.tsx
-│   ├── addBrokerButton.tsx
+│   ├── snaptradeConnectButton.tsx
+│   ├── VezgoConnectButton.tsx
+│   ├── syncAllButton.tsx
+│   ├── brokerAccountCard.tsx
 │   ├── brokerConnectionCard.tsx
-│   └── cards/
-│       └── singleKPICard.tsx
+│   ├── timeSlider.tsx
+│   ├── barCharts/
+│   ├── pieCharts/
+│   ├── cards/
+│   │   └── singleKPICard.tsx
+│   └── metals/
 │
 ├── molecules/       # Combinations of atoms
 │   ├── bankAccountsCard.tsx
 │   ├── bankReauthCard.tsx
+│   ├── brokerAccountsCard.tsx
 │   ├── brokerConnectionsCard.tsx
+│   ├── brokerReauthCard.tsx
 │   ├── navigationDropdown.tsx
-│   └── crypto/                      # Crypto-specific molecules
+│   ├── navigationPopover.tsx
+│   ├── navigationTeamSwitcher.tsx
+│   ├── navigationUserMenu.tsx
+│   ├── indicatorSearch.tsx        # World Bank indicator search
+│   ├── integrations/              # Unified integration cards
+│   │   └── IntegrationConnectionCard.tsx
+│   ├── investments/
+│   │   └── PageHeader.tsx
+│   ├── loans/
+│   │   └── loan-card.tsx
+│   ├── metals/
+│   └── crypto/                    # Crypto-specific molecules
 │       ├── CryptoConnectionsCard.tsx
 │       ├── CryptoPositionsTable.tsx
 │       ├── CryptoHoldingsCard.tsx
@@ -1520,9 +2198,18 @@ components/atomic/
 │
 └── organisms/       # Complex, self-contained sections
     ├── banksCard.tsx
-    ├── priceChart.tsx
+    ├── brokersCard.tsx
+    ├── priceChart.tsx             # Metals price charts
     ├── header.tsx
-    └── navigationSidebar.tsx
+    ├── navigationSidebar.tsx
+    ├── navigationSidebarWrapper.tsx
+    ├── VezgoConnectModal.tsx
+    ├── loans/                     # Loan management organisms
+    │   └── add-loan-dialog.tsx
+    ├── metals/                    # Metals page organisms
+    │   ├── MetalsPage.tsx
+    │   └── MetalsInventoryTable.tsx
+    └── onboarding/                # Onboarding step components
 ```
 
 ### Component → Hook Relationship
@@ -1575,18 +2262,23 @@ components/atomic/
 The Fiscalis architecture provides:
 
 1. **Real-time user data** via Convex with automatic WebSocket subscriptions
-2. **Time-series data** via Hono + Supabase for commodities pricing and economic indicators
-3. **Secure storage** with AES-256-GCM encryption for sensitive tokens (Plaid, Snaptrade, Vezgo)
+2. **Time-series data** via Hono + Neon PostgreSQL for commodities pricing and economic indicators
+3. **Secure storage** with AES-256-GCM encryption for sensitive tokens (Plaid, SnapTrade, Vezgo)
 4. **Type safety** from database to UI with TypeScript throughout
 5. **Clean separation** between real-time (banking, brokers, crypto) and traditional (metals, world data) patterns
-6. **Multi-provider financial aggregation** with Plaid (banking), Snaptrade (brokers), and Vezgo (crypto)
+6. **Multi-provider financial aggregation** with Plaid (banking), SnapTrade (brokers), and Vezgo (crypto)
 7. **Unified classification system** mapping provider data to 8 investment categories with 50+ subcategories
+8. **Manual asset tracking** for loans, precious metals, and other non-connected assets
+9. **Historical tracking** via portfolio snapshots with daily cron jobs
+10. **Guided onboarding** helping users connect financial accounts step-by-step
 
 ### Key Design Decisions
 
 - **Convex for user data**: Automatic real-time sync eliminates manual cache invalidation
-- **Supabase for time-series**: Traditional SQL better suited for historical price queries
+- **Neon PostgreSQL for time-series**: Traditional SQL better suited for historical price queries
 - **Clerk for auth**: Unified authentication across frontend, Convex, and Hono
 - **Atomic Design**: Scalable component architecture with clear hierarchy
-- **Provider per category**: One financial data provider per asset category (Plaid→banking, Snaptrade→brokers, Vezgo→crypto)
+- **Provider per category**: One financial data provider per asset category (Plaid→banking, SnapTrade→brokers, Vezgo→crypto)
 - **Classification at sync time**: Provider data classified to categories immediately upon sync, enabling efficient category-based queries via compound indexes
+- **Hybrid manual/automatic**: Users can connect accounts OR manually track assets (loans, metals)
+- **Snapshot-based history**: Portfolio value captured daily + after syncs for accurate historical charts

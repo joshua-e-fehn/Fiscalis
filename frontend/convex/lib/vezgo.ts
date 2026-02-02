@@ -46,27 +46,160 @@ export function getVezgoUser(userId: string) {
 }
 
 /**
- * Map Vezgo provider type to our schema type
+ * Known centralized exchanges (CEX)
+ *
+ * From the Vezgo SDK (github.com/wealthica/vezgo-sdk-js):
+ * - The `providerCategories` option supports: ['exchanges', 'wallets', 'blockchains']
+ * - A connection can belong to multiple categories at once
+ *
+ * We maintain lists of known providers to accurately classify them.
+ */
+const KNOWN_EXCHANGES = [
+  // Major exchanges
+  "binance",
+  "coinbase",
+  "kraken",
+  "kucoin",
+  "bitfinex",
+  "gemini",
+  "bitstamp",
+  "okx",
+  "bybit",
+  "huobi",
+  "crypto.com",
+  "gate.io",
+  // Regional/smaller exchanges
+  "poloniex",
+  "bittrex",
+  "bitvavo",
+  "bitpanda",
+  "mexc",
+  "upbit",
+  "coinone",
+  "bithumb",
+  "korbit",
+  "zaif",
+  "bitflyer",
+  "liquid",
+  // Derivatives/futures
+  "deribit",
+  "ftx",
+  "delta",
+  "phemex",
+  // Pro/institutional variants
+  "coinbase pro",
+  "binance.us",
+  "binance us",
+  "kraken pro",
+];
+
+/**
+ * Known software/hardware wallets
+ */
+const KNOWN_WALLETS = [
+  // Software wallets
+  "metamask",
+  "phantom",
+  "trust",
+  "exodus",
+  "atomic",
+  "coinomi",
+  "electrum",
+  "mycelium",
+  "blue wallet",
+  "wasabi",
+  "sparrow",
+  "rainbow",
+  "argent",
+  "zerion",
+  "rabby",
+  // Hardware wallets
+  "ledger",
+  "trezor",
+  "keepkey",
+  "coldcard",
+  "bitbox",
+  "safepal",
+];
+
+/**
+ * Known blockchain address providers (direct chain connections)
+ */
+const KNOWN_BLOCKCHAINS = [
+  "bitcoin",
+  "ethereum",
+  "solana",
+  "polygon",
+  "avalanche",
+  "arbitrum",
+  "optimism",
+  "base",
+  "bnb",
+  "fantom",
+  "cronos",
+  "near",
+  "cosmos",
+  "cardano",
+  "polkadot",
+  "tron",
+  "litecoin",
+  "dogecoin",
+  "ripple",
+  "xrp",
+];
+
+export type ProviderCategory = "exchange" | "wallet" | "blockchain";
+
+/**
+ * Map Vezgo provider to categories based on provider name
+ *
+ * A connection can have multiple categories:
+ * - Coinbase → ["exchange"] (CEX only)
+ * - MetaMask → ["wallet"] (software wallet)
+ * - Bitcoin address → ["blockchain"] (direct chain address)
+ * - Binance with wallet → ["exchange", "wallet"] (both)
+ *
+ * Display order: exchange → wallet → blockchain
+ */
+export function mapProviderCategories(
+  providerName?: string,
+): ProviderCategory[] {
+  const name = providerName?.toLowerCase() || "";
+  const categories: ProviderCategory[] = [];
+
+  // Check if it's a known exchange
+  if (KNOWN_EXCHANGES.some((ex) => name.includes(ex))) {
+    categories.push("exchange");
+  }
+
+  // Check if it's a known wallet
+  if (KNOWN_WALLETS.some((w) => name.includes(w))) {
+    categories.push("wallet");
+  }
+
+  // Check if it's a blockchain address
+  if (KNOWN_BLOCKCHAINS.some((bc) => name.includes(bc))) {
+    categories.push("blockchain");
+  }
+
+  // Default to wallet if no categories matched
+  if (categories.length === 0) {
+    categories.push("wallet");
+  }
+
+  return categories;
+}
+
+/**
+ * @deprecated Use mapProviderCategories instead
+ * Kept for backwards compatibility during migration
  */
 export function mapProviderType(
-  vezgoType: string,
-): "exchange" | "wallet" | "hardware" | "blockchain" {
-  switch (vezgoType?.toLowerCase()) {
-    case "exchange":
-    case "cex":
-      return "exchange";
-    case "wallet":
-    case "software":
-      return "wallet";
-    case "hardware":
-      return "hardware";
-    case "blockchain":
-    case "address":
-    case "chain":
-      return "blockchain";
-    default:
-      return "wallet"; // Default to wallet for unknown types
-  }
+  _vezgoType: string,
+  providerName?: string,
+): "exchange" | "wallet" {
+  const categories = mapProviderCategories(providerName);
+  return categories.includes("exchange") ? "exchange" : "wallet";
 }
 
 /**

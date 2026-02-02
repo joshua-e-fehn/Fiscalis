@@ -73,6 +73,7 @@ import {
   Calculator,
   GitCompareArrows,
 } from "lucide-react";
+import { PageHeader } from "@/components/atomic/molecules/investments";
 import {
   calculateLoanSchedule,
   LoanPaymentInterval,
@@ -314,23 +315,16 @@ export default function LoanCalculatorPage() {
   const [selectedLoanType, setSelectedLoanType] = useState<string>("ANNUITY");
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
+    <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="text-center mb-12">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <HandCoins className="h-10 w-10 text-primary" />
-          <h1 className="text-4xl font-bold">Loan Calculator</h1>
-        </div>
-        <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-          Understand different loan types, visualize your payments, and find the
-          best option for your situation. We&apos;ll show you exactly where your
-          money goes.
-        </p>
-      </div>
+      <PageHeader
+        title="Loan Calculator"
+        subtitle="Understand different loan types, visualize your payments, and find the best option for your situation. We'll show you exactly where your money goes."
+      />
 
       {/* Tabs for Calculate and Compare */}
       <Tabs defaultValue="calculate" className="w-full">
-        <TabsList className="grid grid-cols-2 mb-8 max-w-md mx-auto">
+        <TabsList className="grid grid-cols-2 mb-8 max-w-md">
           <TabsTrigger value="calculate">
             <Calculator className="w-4 h-4 mr-2" />
             Calculate Loan

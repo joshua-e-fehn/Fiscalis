@@ -266,10 +266,29 @@ export const CompareChart = memo(function CompareChart({
   return (
     <div className={cn("h-full", className)}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart
+        <AreaChart
           data={normalizedData}
           margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
         >
+          <defs>
+            {datasets.map((dataset) => (
+              <linearGradient
+                key={`gradient-${dataset.metal}`}
+                id={`compareGradient-${dataset.metal}`}
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop offset="5%" stopColor={dataset.color} stopOpacity={0.3} />
+                <stop
+                  offset="95%"
+                  stopColor={dataset.color}
+                  stopOpacity={0.05}
+                />
+              </linearGradient>
+            ))}
+          </defs>
           <CartesianGrid
             strokeDasharray="3 3"
             vertical={false}
@@ -299,9 +318,11 @@ export const CompareChart = memo(function CompareChart({
           <ChartTooltip
             content={({ active, payload, label }) => {
               if (!active || !payload) return null;
-              // Filter out the zero reference line (dataKey is a function)
+              // Filter out entries that aren't metal data
               const metalEntries = payload.filter(
-                (entry: any) => typeof entry.dataKey === "string",
+                (entry: any) =>
+                  typeof entry.dataKey === "string" &&
+                  datasets.some((d) => d.metal === entry.dataKey),
               );
               if (metalEntries.length === 0) return null;
               return (
@@ -335,27 +356,20 @@ export const CompareChart = memo(function CompareChart({
               );
             }}
           />
-          {/* Zero line */}
-          <Line
-            type="linear"
-            dataKey={() => 0}
-            stroke="hsl(var(--border))"
-            strokeDasharray="5 5"
-            dot={false}
-            strokeWidth={1}
-          />
           {datasets.map((dataset) => (
-            <Line
+            <Area
               key={dataset.metal}
               type="monotone"
               dataKey={dataset.metal}
               stroke={dataset.color}
               strokeWidth={2}
+              fill={`url(#compareGradient-${dataset.metal})`}
+              fillOpacity={1}
               dot={false}
               activeDot={{ r: 4, strokeWidth: 0 }}
             />
           ))}
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

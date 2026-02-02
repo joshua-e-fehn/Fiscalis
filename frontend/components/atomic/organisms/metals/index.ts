@@ -1,5 +1,6 @@
 // Metals Organism Components
-export { MetalsInventoryPage } from "./MetalsInventoryPage";
+export { MetalsPage } from "./MetalsPage";
+export { MetalsInventoryPage } from "./MetalsInventoryPage"; // Legacy - use MetalsPage instead
 export { AddMetalSlideOver } from "./AddMetalSlideOver";
 export { MetalDetailSlideOver } from "./MetalDetailSlideOver";
 export { SellItemDialog } from "./SellItemDialog";

@@ -3,14 +3,27 @@
 import { useState, useCallback, useEffect } from "react";
 import { usePlaidLink } from "react-plaid-link";
 import { Button } from "@/components/ui/shadcn/button";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import {
   useCreateLinkToken,
   useExchangeToken,
   usePlaidAccounts,
 } from "@/hooks/convex";
 
-export function PlaidLinkButton() {
+interface PlaidLinkButtonProps {
+  /** Custom button text (overrides default dynamic text) */
+  buttonText?: string;
+  /** Whether to show the Plus icon on the left (default: true) */
+  showIcon?: boolean;
+  /** Button variant */
+  variant?: "default" | "outline" | "ghost" | "secondary";
+}
+
+export function PlaidLinkButton({
+  buttonText,
+  showIcon = true,
+  variant = "default",
+}: PlaidLinkButtonProps = {}) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -80,11 +93,12 @@ export function PlaidLinkButton() {
   const accountsLoading = accounts === undefined;
   const isDisabled =
     isLoading || accountsLoading || linkOpen || (!!token && !ready);
-  const buttonText = linkOpen
+  const defaultText = linkOpen
     ? "Connecting..."
     : accounts && accounts.length > 0
       ? "Connect Another Bank"
       : "Connect Your Bank";
+  const displayText = buttonText ?? defaultText;
 
   // Show success state if needed
   if (showSuccess) {
@@ -103,10 +117,12 @@ export function PlaidLinkButton() {
     <Button
       onClick={handleConnectBank}
       disabled={isDisabled}
+      variant={variant}
       className="flex items-center gap-2"
     >
       {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-      {buttonText}
+      {!isLoading && showIcon && <Plus className="h-4 w-4" />}
+      {displayText}
     </Button>
   );
 }

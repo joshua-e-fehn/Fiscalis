@@ -14,6 +14,8 @@ export interface ItemNeedingReauth {
   itemId: string;
   institutionId?: string;
   institutionName?: string;
+  institutionLogo?: string;
+  institutionPrimaryColor?: string;
   status: string;
   errorCode?: string;
 }

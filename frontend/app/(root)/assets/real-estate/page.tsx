@@ -1,29 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcn/card";
-import { Button } from "@/components/ui/shadcn/button";
-import {
-  Home,
-  Building2,
-  BarChart3,
-  Users,
-  TreePine,
-  ArrowRight,
-  MapPin,
-} from "lucide-react";
+import { Home, Building2, BarChart3, Users, TreePine } from "lucide-react";
 import {
   CategoryDashboardSection,
   SubcategoryCategoryCard,
+  PageHeader,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { useRealEstateSummary } from "@/hooks/convex/realEstate";
+import { categoryColorPalettes } from "@/lib/types/investments";
+
+// Get real-estate color palette
+const realEstateColors = categoryColorPalettes["real-estate"];
 
 /**
  * Real Estate Overview Page
@@ -41,6 +29,7 @@ const realEstateCategories: SubcategoryCardData[] = [
     icon: Home,
     implemented: false,
     examples: ["Primary Home", "Rental Properties", "Vacation Homes", "Condos"],
+    color: realEstateColors.residential,
   },
   {
     title: "Commercial",
@@ -50,6 +39,7 @@ const realEstateCategories: SubcategoryCardData[] = [
     icon: Building2,
     implemented: false,
     examples: ["Office Space", "Retail", "Warehouses", "Mixed-Use"],
+    color: realEstateColors.commercial,
   },
   {
     title: "REITs",
@@ -59,6 +49,7 @@ const realEstateCategories: SubcategoryCardData[] = [
     icon: BarChart3,
     implemented: false,
     examples: ["Equity REITs", "Mortgage REITs", "Hybrid REITs", "REIT ETFs"],
+    color: realEstateColors.reits,
   },
   {
     title: "Crowdfunding",
@@ -67,6 +58,7 @@ const realEstateCategories: SubcategoryCardData[] = [
     icon: Users,
     implemented: false,
     examples: ["Fundrise", "CrowdStreet", "RealtyMogul", "Groundfloor"],
+    color: realEstateColors.crowdfunding,
   },
   {
     title: "Land",
@@ -75,6 +67,7 @@ const realEstateCategories: SubcategoryCardData[] = [
     icon: TreePine,
     implemented: false,
     examples: ["Raw Land", "Farmland", "Timber", "Development Land"],
+    color: realEstateColors.land,
   },
 ];
 
@@ -83,14 +76,11 @@ export default function RealEstatePage() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Real Estate</h1>
-        <p className="text-muted-foreground mt-2">
-          Track your real estate investments - residential properties,
-          commercial holdings, REITs, and more.
-        </p>
-      </div>
+      <PageHeader
+        title="Real Estate"
+        subtitle="Track your real estate investments - residential properties, commercial holdings, REITs, and more."
+        actions={[{ label: "Add Property", disabled: true }]}
+      />
 
       {/* Dashboard Section */}
       <CategoryDashboardSection
@@ -100,36 +90,24 @@ export default function RealEstatePage() {
       />
 
       {/* Category Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {realEstateCategories.map((category) => (
-          <SubcategoryCategoryCard
-            key={category.title}
-            category={category}
-            actionLabel="View Properties"
-          />
-        ))}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Property Categories
+          </h2>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {realEstateCategories.map((category) => (
+            <SubcategoryCategoryCard
+              key={category.title}
+              category={category}
+              actionLabel="View Properties"
+            />
+          ))}
+        </div>
       </div>
-
-      {/* Summary Section */}
-      <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Property Portfolio
-          </CardTitle>
-          <CardDescription>
-            Real estate provides diversification, rental income, and potential
-            appreciation. Track property values, rental yields, and equity
-            growth.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" disabled>
-            Add Property
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

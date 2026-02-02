@@ -1,29 +1,23 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcn/card";
-import { Button } from "@/components/ui/shadcn/button";
 import {
   Landmark,
   Building,
   Building2,
   PiggyBank,
   BarChart3,
-  ArrowRight,
-  FileText,
 } from "lucide-react";
 import {
   CategoryDashboardSection,
   SubcategoryCategoryCard,
+  PageHeader,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { useBondsSummary } from "@/hooks/convex/bonds";
+import { categoryColorPalettes } from "@/lib/types/investments";
+
+// Get bonds color palette
+const bondsColors = categoryColorPalettes.bonds;
 
 /**
  * Bonds Overview Page
@@ -41,6 +35,7 @@ const bondCategories: SubcategoryCardData[] = [
     icon: Landmark,
     implemented: false,
     examples: ["US Treasuries", "German Bunds", "UK Gilts", "TIPS/I-Bonds"],
+    color: bondsColors.government,
   },
   {
     title: "Corporate Bonds",
@@ -54,6 +49,7 @@ const bondCategories: SubcategoryCardData[] = [
       "Convertible Bonds",
       "Green Bonds",
     ],
+    color: bondsColors.corporate,
   },
   {
     title: "Municipal Bonds",
@@ -68,6 +64,7 @@ const bondCategories: SubcategoryCardData[] = [
       "Tax-Free Munis",
       "Build America",
     ],
+    color: bondsColors.municipal,
   },
   {
     title: "Savings Bonds",
@@ -81,6 +78,7 @@ const bondCategories: SubcategoryCardData[] = [
       "Premium Bonds",
       "Savings Certificates",
     ],
+    color: bondsColors.savings,
   },
   {
     title: "Bond Funds & ETFs",
@@ -89,6 +87,7 @@ const bondCategories: SubcategoryCardData[] = [
     icon: BarChart3,
     implemented: false,
     examples: ["Aggregate Bond", "Short-Term", "Long-Term", "International"],
+    color: bondsColors.funds,
   },
 ];
 
@@ -97,14 +96,11 @@ export default function BondsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Bonds</h1>
-        <p className="text-muted-foreground mt-2">
-          Track your fixed income investments - government bonds, corporate
-          bonds, and bond funds.
-        </p>
-      </div>
+      <PageHeader
+        title="Bonds"
+        subtitle="Track your fixed income investments - government bonds, corporate bonds, and bond funds."
+        actions={[{ label: "Connect Broker", href: "/integrations/brokers" }]}
+      />
 
       {/* Dashboard Section */}
       <CategoryDashboardSection
@@ -114,43 +110,24 @@ export default function BondsPage() {
       />
 
       {/* Category Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {bondCategories.map((category) => (
-          <SubcategoryCategoryCard
-            key={category.title}
-            category={category}
-            actionLabel="View Holdings"
-          />
-        ))}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Bond Categories
+          </h2>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {bondCategories.map((category) => (
+            <SubcategoryCategoryCard
+              key={category.title}
+              category={category}
+              actionLabel="View Holdings"
+            />
+          ))}
+        </div>
       </div>
-
-      {/* Summary Section */}
-      <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Fixed Income Overview
-          </CardTitle>
-          <CardDescription>
-            Bonds provide steady income and help balance portfolio risk. Track
-            maturity dates, yields, and interest payments all in one place.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-3">
-          <Button variant="outline" asChild>
-            <Link href="/integrations/brokers">
-              Connect Broker
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/integrations/banking">
-              Connect Bank Account
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

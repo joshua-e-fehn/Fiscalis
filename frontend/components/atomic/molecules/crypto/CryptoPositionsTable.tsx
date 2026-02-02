@@ -39,8 +39,6 @@ import {
   Coins,
   Building2,
   Wallet,
-  Link2,
-  HardDrive,
   Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -66,10 +64,12 @@ function formatNumber(value: number): string {
   });
 }
 
+type ProviderCategory = "exchange" | "wallet" | "blockchain";
+
 interface CryptoPositionsTableProps {
   className?: string;
   filterByConnectionId?: Id<"vezgoConnections">;
-  filterByType?: "exchange" | "wallet" | "blockchain" | "hardware";
+  filterByCategory?: ProviderCategory;
   showFilters?: boolean;
   maxRows?: number;
 }
@@ -77,17 +77,15 @@ interface CryptoPositionsTableProps {
 type SortField = "symbol" | "quantity" | "fiatValue";
 type SortDirection = "asc" | "desc";
 
-const providerTypeIcons = {
+const categoryIcons = {
   exchange: Building2,
   wallet: Wallet,
-  blockchain: Link2,
-  hardware: HardDrive,
 };
 
 export function CryptoPositionsTable({
   className,
   filterByConnectionId,
-  filterByType,
+  filterByCategory,
   showFilters = true,
   maxRows,
 }: CryptoPositionsTableProps) {
@@ -96,7 +94,7 @@ export function CryptoPositionsTable({
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("fiatValue");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   // Create a map of connection IDs to connection details
   const connectionMap = useMemo(() => {
@@ -110,12 +108,12 @@ export function CryptoPositionsTable({
 
     let filtered = [...positions];
 
-    // Apply type filter
-    if (filterByType || (typeFilter && typeFilter !== "all")) {
-      const type = filterByType || typeFilter;
+    // Apply category filter (connection must include the category)
+    if (filterByCategory || (categoryFilter && categoryFilter !== "all")) {
+      const category = filterByCategory || categoryFilter;
       filtered = filtered.filter((p) => {
         const connection = connectionMap.get(p.connectionId);
-        return connection?.providerType === type;
+        return connection?.categories?.includes(category);
       });
     }
 
@@ -162,8 +160,8 @@ export function CryptoPositionsTable({
     return filtered;
   }, [
     positions,
-    filterByType,
-    typeFilter,
+    filterByCategory,
+    categoryFilter,
     search,
     sortField,
     sortDirection,
@@ -224,18 +222,17 @@ export function CryptoPositionsTable({
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            {!filterByType && (
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
+            {!filterByCategory && (
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by type" />
+                  <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="exchange">Exchanges</SelectItem>
                   <SelectItem value="wallet">Wallets</SelectItem>
                   <SelectItem value="blockchain">Blockchain</SelectItem>
-                  <SelectItem value="hardware">Hardware</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -289,13 +286,16 @@ export function CryptoPositionsTable({
               <TableBody>
                 {filteredPositions.map((position) => {
                   const connection = connectionMap.get(position.connectionId);
-                  const providerType = connection?.providerType as
-                    | keyof typeof providerTypeIcons
-                    | undefined;
-                  const TypeIcon =
-                    providerType && providerTypeIcons[providerType]
-                      ? providerTypeIcons[providerType]
-                      : Coins;
+                  const categories = (connection?.categories || [
+                    "wallet",
+                  ]) as ProviderCategory[];
+                  // Get the first category that has an icon
+                  const primaryCategory = categories.find(
+                    (c) => c in categoryIcons,
+                  ) as keyof typeof categoryIcons | undefined;
+                  const TypeIcon = primaryCategory
+                    ? categoryIcons[primaryCategory]
+                    : Coins;
 
                   return (
                     <TableRow key={position._id}>

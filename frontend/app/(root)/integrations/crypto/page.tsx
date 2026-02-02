@@ -1,33 +1,51 @@
 "use client";
 
 /**
- * Crypto Integrations Overview Page
+ * Crypto Integrations Page
  *
- * Connection management overview showing all connected crypto accounts.
+ * Connection management showing all connected crypto accounts.
+ * Connections can have multiple categories (exchange, wallet, blockchain).
  */
 
 import { CryptoConnectionsCard } from "@/components/atomic/molecules/crypto";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
-import { Badge } from "@/components/ui/shadcn/badge";
-import { VezgoConnectButton } from "@/components/atomic/atoms/VezgoConnectButton";
-import { useVezgoConnections, useVezgoPositions } from "@/hooks/convex/crypto";
-import { Building2, Wallet, Activity, Zap, TrendingUp } from "lucide-react";
+import {
+  useVezgoConnections,
+  useVezgoPositions,
+  useVezgoTotalValue,
+} from "@/hooks/convex/crypto";
+import { Building2, Wallet, Link2, Coins } from "lucide-react";
 import { useMemo } from "react";
+import { formatCurrency } from "@/lib/types/investments";
 
-export default function CryptoIntegrationsOverviewPage() {
+export default function CryptoIntegrationsPage() {
   const connections = useVezgoConnections();
   const positions = useVezgoPositions();
+  const totalValue = useVezgoTotalValue();
 
-  const exchangeCount =
-    connections?.filter((c) => c.providerType === "exchange").length ?? 0;
-  const walletCount =
-    connections?.filter((c) => c.providerType === "wallet").length ?? 0;
+  // Count connections by category (a connection can be in multiple categories)
+  const exchangeCount = useMemo(
+    () =>
+      connections?.filter((c) => c.categories?.includes("exchange")).length ??
+      0,
+    [connections],
+  );
+  const walletCount = useMemo(
+    () =>
+      connections?.filter((c) => c.categories?.includes("wallet")).length ?? 0,
+    [connections],
+  );
+  const blockchainCount = useMemo(
+    () =>
+      connections?.filter((c) => c.categories?.includes("blockchain")).length ??
+      0,
+    [connections],
+  );
 
   // Calculate unique tokens count
   const uniqueTokens = useMemo(() => {
@@ -38,6 +56,12 @@ export default function CryptoIntegrationsOverviewPage() {
 
   // Quick stats for the overview
   const stats = [
+    {
+      label: "Total Value",
+      value: formatCurrency(totalValue?.totalValue ?? 0, "usd"),
+      icon: Coins,
+      description: `${positions?.length ?? 0} positions`,
+    },
     {
       label: "Exchanges",
       value: exchangeCount,
@@ -51,16 +75,10 @@ export default function CryptoIntegrationsOverviewPage() {
       description: "Connected wallets",
     },
     {
-      label: "Positions",
-      value: positions?.length ?? 0,
-      icon: Activity,
-      description: "Total holdings",
-    },
-    {
-      label: "Tokens",
-      value: uniqueTokens,
-      icon: Zap,
-      description: "Unique assets",
+      label: "Blockchain",
+      value: blockchainCount,
+      icon: Link2,
+      description: "Direct addresses",
     },
   ];
 
@@ -68,122 +86,33 @@ export default function CryptoIntegrationsOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.label}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Main Content */}
-      <div className="space-y-6">
-        {/* Connections Card */}
-        <CryptoConnectionsCard />
-
-        {/* Getting Started Card - Show if no connections */}
-        {!hasConnections && (
-          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Get Started
-              </CardTitle>
-              <CardDescription>
-                Connect your crypto exchanges and wallets to automatically track
-                your portfolio.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="outline" className="shrink-0">
-                    1
-                  </Badge>
-                  <span>Connect your exchange or wallet</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="outline" className="shrink-0">
-                    2
-                  </Badge>
-                  <span>Your balances sync automatically</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Badge variant="outline" className="shrink-0">
-                    3
-                  </Badge>
-                  <span>Track performance in real-time</span>
-                </div>
-              </div>
-              <VezgoConnectButton className="w-full" />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Bottom Info Cards */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Supported Providers Info */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Supported Integrations
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span>Exchanges</span>
-                </div>
-                <Badge variant="secondary">40+</Badge>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <span>Wallets</span>
-                </div>
-                <Badge variant="secondary">30+</Badge>
-              </div>
-              <p className="text-xs text-muted-foreground pt-2">
-                Including Coinbase, Binance, Kraken, MetaMask, Ledger, and more.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Tips Card - Show if has connections */}
-          {hasConnections && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Connection Tips
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p>
-                  • Sync your accounts regularly to keep balances up to date
-                </p>
-                <p>• Remove unused connections to keep your dashboard clean</p>
-                <p>• Check connection status if balances seem outdated</p>
-              </CardContent>
-            </Card>
-          )}
+      {/* Quick Stats - only show if there are connections */}
+      {hasConnections && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={stat.label}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.label}
+                  </CardTitle>
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      </div>
+      )}
+
+      {/* All Connections */}
+      <CryptoConnectionsCard />
     </div>
   );
 }

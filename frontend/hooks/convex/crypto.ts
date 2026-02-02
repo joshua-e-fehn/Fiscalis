@@ -97,12 +97,13 @@ export function useVezgoConnections() {
 }
 
 /**
- * Hook to get connections filtered by type
+ * Hook to get connections filtered by category
+ * A connection can have multiple categories
  */
-export function useVezgoConnectionsByType(
-  providerType: "exchange" | "wallet" | "hardware" | "blockchain",
+export function useVezgoConnectionsByCategory(
+  category: "exchange" | "wallet" | "blockchain",
 ) {
-  return useQuery(api.crypto.getConnectionsByType, { providerType });
+  return useQuery(api.crypto.getConnectionsByCategory, { category });
 }
 
 /**

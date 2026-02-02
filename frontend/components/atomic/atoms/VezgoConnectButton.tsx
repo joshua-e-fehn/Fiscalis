@@ -52,9 +52,13 @@ interface VezgoConnectButtonProps {
    */
   onAlreadyExists?: (connectionId: string, providerName?: string) => void;
   /**
-   * Button variant
+   * Provider variant for icon/label selection
    */
   variant?: "exchange" | "wallet" | "blockchain" | "default";
+  /**
+   * Button style variant
+   */
+  buttonVariant?: "default" | "outline" | "ghost" | "secondary";
   /**
    * Button size
    */
@@ -71,6 +75,10 @@ interface VezgoConnectButtonProps {
    * Disable the button
    */
   disabled?: boolean;
+  /**
+   * Whether to show the Plus icon (default: true)
+   */
+  showIcon?: boolean;
 }
 
 const variantIcons = {
@@ -93,10 +101,12 @@ export function VezgoConnectButton({
   onError,
   onAlreadyExists,
   variant = "default",
+  buttonVariant = "default",
   size = "default",
   className,
   children,
   disabled = false,
+  showIcon = true,
 }: VezgoConnectButtonProps) {
   const { handleCallback } = useHandleVezgoCallback();
   const [internalError, setInternalError] = useState<Error | null>(null);
@@ -131,7 +141,7 @@ export function VezgoConnectButton({
     error: connectError,
   } = useVezgoNativeConnect({
     onSuccess: handleVezgoSuccess,
-    onError: (err) => {
+    onError: (err: Error) => {
       setInternalError(err);
       onError?.(err);
     },
@@ -153,15 +163,18 @@ export function VezgoConnectButton({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant="outline"
+            variant={buttonVariant}
             size={size}
             className={cn(
               "gap-2",
-              variant === "exchange" &&
+              buttonVariant === "outline" &&
+                variant === "exchange" &&
                 "hover:border-orange-500/50 hover:text-orange-500",
-              variant === "wallet" &&
+              buttonVariant === "outline" &&
+                variant === "wallet" &&
                 "hover:border-purple-500/50 hover:text-purple-500",
-              variant === "blockchain" &&
+              buttonVariant === "outline" &&
+                variant === "blockchain" &&
                 "hover:border-blue-500/50 hover:text-blue-500",
               className,
             )}
@@ -172,13 +185,10 @@ export function VezgoConnectButton({
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : error ? (
               <AlertCircle className="h-4 w-4 text-destructive" />
-            ) : (
-              <Icon className="h-4 w-4" />
-            )}
+            ) : showIcon ? (
+              <Plus className="h-4 w-4" />
+            ) : null}
             <span>{isLoading ? "Connecting..." : label}</span>
-            {!isLoading && !children && (
-              <Plus className="h-3 w-3 ml-1 opacity-60" />
-            )}
           </Button>
         </TooltipTrigger>
         {error && (

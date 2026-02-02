@@ -375,3 +375,270 @@ export const getClassificationStats = mutation({
     };
   },
 });
+
+// ═══════════════════════════════════════════════════════════════
+// VEZGO CONNECTION MIGRATIONS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Known exchanges by name - used for provider type detection
+ */
+const KNOWN_EXCHANGES = [
+  "binance",
+  "coinbase",
+  "kraken",
+  "kucoin",
+  "bitfinex",
+  "gemini",
+  "bitstamp",
+  "okx",
+  "bybit",
+  "gate.io",
+  "huobi",
+  "crypto.com",
+  "ftx",
+  "poloniex",
+  "bittrex",
+  "coinbase pro",
+  "binance.us",
+];
+
+/**
+ * Migration: Fix Vezgo connection provider types
+ *
+ * Some connections may have incorrect providerType (e.g., Binance as "wallet"
+ * instead of "exchange"). This migration fixes them based on known exchanges.
+ *
+ * Run: await ctx.runMutation(api.migrations.fixVezgoConnectionTypes)
+ */
+export const fixVezgoConnectionTypes = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let fixed = 0;
+    let skipped = 0;
+    const changes: Array<{ name: string; from: string; to: string }> = [];
+
+    const connections = await ctx.db.query("vezgoConnections").collect();
+
+    for (const connection of connections) {
+      const providerName = connection.provider?.toLowerCase() || "";
+      const displayName = connection.name?.toLowerCase() || "";
+
+      // Check if this is a known exchange
+      const isKnownExchange = KNOWN_EXCHANGES.some(
+        (ex) => providerName.includes(ex) || displayName.includes(ex),
+      );
+
+      // Skip if already migrated to categories
+      const connData = connection as any;
+      if (connData.categories) {
+        skipped++;
+        continue;
+      }
+
+      // If it's a known exchange but marked as wallet, fix it
+      if (isKnownExchange && connData.providerType !== "exchange") {
+        changes.push({
+          name: connection.name,
+          from: connData.providerType,
+          to: "exchange",
+        });
+
+        await ctx.db.patch(connection._id, {
+          providerType: "exchange",
+          updatedAt: Date.now(),
+        } as any);
+        fixed++;
+      } else {
+        skipped++;
+      }
+    }
+
+    return {
+      message: "Vezgo connection types migration completed",
+      totalConnections: connections.length,
+      fixed,
+      skipped,
+      changes,
+    };
+  },
+});
+
+/**
+ * Known software/hardware wallets for categorization
+ */
+const KNOWN_WALLETS = [
+  "metamask",
+  "phantom",
+  "trust",
+  "exodus",
+  "atomic",
+  "coinomi",
+  "electrum",
+  "mycelium",
+  "blue wallet",
+  "wasabi",
+  "sparrow",
+  "rainbow",
+  "argent",
+  "zerion",
+  "rabby",
+  "ledger",
+  "trezor",
+  "keepkey",
+  "coldcard",
+  "bitbox",
+  "safepal",
+];
+
+/**
+ * Known blockchain address providers for categorization
+ */
+const KNOWN_BLOCKCHAINS = [
+  "bitcoin",
+  "ethereum",
+  "solana",
+  "polygon",
+  "avalanche",
+  "arbitrum",
+  "optimism",
+  "base",
+  "bnb",
+  "fantom",
+  "cronos",
+  "near",
+  "cosmos",
+  "cardano",
+  "polkadot",
+  "tron",
+  "litecoin",
+  "dogecoin",
+  "ripple",
+  "xrp",
+];
+
+type ProviderCategory = "exchange" | "wallet" | "blockchain";
+
+/**
+ * Map provider name to categories
+ */
+function mapProviderCategories(providerName: string): ProviderCategory[] {
+  const name = providerName?.toLowerCase() || "";
+  const categories: ProviderCategory[] = [];
+
+  if (KNOWN_EXCHANGES.some((ex) => name.includes(ex))) {
+    categories.push("exchange");
+  }
+
+  if (KNOWN_WALLETS.some((w) => name.includes(w))) {
+    categories.push("wallet");
+  }
+
+  if (KNOWN_BLOCKCHAINS.some((bc) => name.includes(bc))) {
+    categories.push("blockchain");
+  }
+
+  // Default to wallet if no categories matched
+  if (categories.length === 0) {
+    categories.push("wallet");
+  }
+
+  return categories;
+}
+
+/**
+ * Migration: Convert providerType to categories array
+ *
+ * This migration converts the old single providerType field to the new
+ * categories array that can hold multiple values (exchange, wallet, blockchain).
+ *
+ * Run: await ctx.runMutation(api.migrations.migrateVezgoToCategories)
+ */
+export const migrateVezgoToCategories = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let migrated = 0;
+    let skipped = 0;
+    const changes: Array<{
+      name: string;
+      oldType: string;
+      newCategories: ProviderCategory[];
+    }> = [];
+
+    const connections = await ctx.db.query("vezgoConnections").collect();
+
+    for (const connection of connections) {
+      const connData = connection as any;
+
+      // Skip if already has categories
+      if (connData.categories && Array.isArray(connData.categories)) {
+        skipped++;
+        continue;
+      }
+
+      // Calculate categories based on provider name
+      const categories = mapProviderCategories(connection.provider);
+
+      changes.push({
+        name: connection.name,
+        oldType: connData.providerType || "unknown",
+        newCategories: categories,
+      });
+
+      // Update to new schema
+      await ctx.db.patch(connection._id, {
+        categories,
+        updatedAt: Date.now(),
+      } as any);
+
+      migrated++;
+    }
+
+    return {
+      message: "Vezgo categories migration completed",
+      totalConnections: connections.length,
+      migrated,
+      skipped,
+      changes,
+    };
+  },
+});
+
+/**
+ * Migration: Remove old providerType field after categories migration
+ *
+ * Run this AFTER migrateVezgoToCategories and verifying everything works.
+ *
+ * Run: await ctx.runMutation(api.migrations.cleanupVezgoProviderType)
+ */
+export const cleanupVezgoProviderType = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let cleaned = 0;
+    let skipped = 0;
+
+    const connections = await ctx.db.query("vezgoConnections").collect();
+
+    for (const connection of connections) {
+      const connData = connection as any;
+
+      // Only clean if it has both categories and providerType
+      if (!connData.categories || !connData.providerType) {
+        skipped++;
+        continue;
+      }
+
+      // Remove providerType by replacing the document
+      const { providerType, _id, _creationTime, ...rest } = connData;
+      await ctx.db.replace(connection._id, rest);
+      cleaned++;
+    }
+
+    return {
+      message: "Cleanup completed - providerType field removed",
+      totalConnections: connections.length,
+      cleaned,
+      skipped,
+    };
+  },
+});

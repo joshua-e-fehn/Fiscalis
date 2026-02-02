@@ -1,18 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcn/card";
-import { Button } from "@/components/ui/shadcn/button";
-import {
-  Building2,
   TrendingUp,
-  ArrowRight,
   BarChart3,
   PieChart,
   Briefcase,
@@ -21,9 +10,14 @@ import {
 import {
   CategoryDashboardSection,
   SubcategoryCategoryCard,
+  PageHeader,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { useEquitiesSummary } from "@/hooks/convex/equities";
+import { categoryColorPalettes } from "@/lib/types/investments";
+
+// Get equities color palette
+const equitiesColors = categoryColorPalettes.equities;
 
 /**
  * Equities Overview Page
@@ -39,6 +33,7 @@ const publicEquityCategories: SubcategoryCardData[] = [
     icon: TrendingUp,
     implemented: false,
     examples: ["Apple", "Microsoft", "Tesla", "Amazon"],
+    color: equitiesColors.stocks,
   },
   {
     title: "ETFs & Index Funds",
@@ -48,6 +43,7 @@ const publicEquityCategories: SubcategoryCardData[] = [
     icon: BarChart3,
     implemented: false,
     examples: ["S&P 500", "MSCI World", "NASDAQ-100", "DAX"],
+    color: equitiesColors.etfs,
   },
   {
     title: "Mutual Funds",
@@ -57,6 +53,7 @@ const publicEquityCategories: SubcategoryCardData[] = [
     icon: PieChart,
     implemented: false,
     examples: ["Growth Funds", "Value Funds", "Sector Funds", "Balanced Funds"],
+    color: equitiesColors.funds,
   },
   {
     title: "Options",
@@ -65,6 +62,7 @@ const publicEquityCategories: SubcategoryCardData[] = [
     icon: Activity,
     implemented: false,
     examples: ["Call Options", "Put Options", "Spreads", "Covered Calls"],
+    color: equitiesColors.options,
   },
 ];
 
@@ -77,6 +75,7 @@ const privateEquityCategories: SubcategoryCardData[] = [
     icon: Briefcase,
     implemented: false,
     examples: ["Startups", "Venture Capital", "Angel Investments", "PE Funds"],
+    color: equitiesColors.private,
   },
 ];
 
@@ -88,14 +87,11 @@ export default function EquitiesPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Equities</h1>
-        <p className="text-muted-foreground mt-2">
-          Track your stock portfolio, ETFs, mutual funds, and private equity
-          investments.
-        </p>
-      </div>
+      <PageHeader
+        title="Equities"
+        subtitle="Track your stock portfolio, ETFs, mutual funds, and private equity investments."
+        actions={[{ label: "Connect Broker", href: "/integrations/brokers" }]}
+      />
 
       {/* Portfolio Dashboard Section */}
       <CategoryDashboardSection
@@ -144,28 +140,6 @@ export default function EquitiesPage() {
           ))}
         </div>
       </div>
-
-      {/* Connect Broker CTA */}
-      <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Portfolio Overview
-          </CardTitle>
-          <CardDescription>
-            Connect your brokerage accounts to automatically track all your
-            equity investments in one place.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" asChild>
-            <Link href="/integrations/brokers">
-              Connect Broker
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

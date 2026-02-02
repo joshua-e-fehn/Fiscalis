@@ -1,14 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/shadcn/card";
-import { Button } from "@/components/ui/shadcn/button";
 import {
   Palette,
   Wine,
@@ -17,17 +8,20 @@ import {
   Coins,
   IdCardLanyard,
   Image,
-  ArrowRight,
-  Star,
 } from "lucide-react";
 import { Icon } from "lucide-react";
 import { gemRing } from "@lucide/lab";
 import {
   CategoryDashboardSection,
   SubcategoryCategoryCard,
+  PageHeader,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { useCollectiblesSummary } from "@/hooks/convex/collectibles";
+import { categoryColorPalettes } from "@/lib/types/investments";
+
+// Get collectibles color palette
+const collectiblesColors = categoryColorPalettes.collectibles;
 
 // Wrapper component for lab icons to match the standard icon interface
 const GemRingIcon = ({ className }: { className?: string }) => (
@@ -49,6 +43,7 @@ const collectibleCategories: SubcategoryCardData[] = [
     icon: Palette,
     implemented: false,
     examples: ["Paintings", "Sculptures", "Prints", "Photography"],
+    color: collectiblesColors.art,
   },
   {
     title: "Wine",
@@ -57,6 +52,7 @@ const collectibleCategories: SubcategoryCardData[] = [
     icon: Wine,
     implemented: false,
     examples: ["Bordeaux", "Burgundy", "Champagne", "Napa Valley"],
+    color: collectiblesColors.wine,
   },
   {
     title: "Watches",
@@ -65,6 +61,7 @@ const collectibleCategories: SubcategoryCardData[] = [
     icon: Watch,
     implemented: false,
     examples: ["Rolex", "Patek Philippe", "Audemars Piguet", "Omega"],
+    color: collectiblesColors.watches,
   },
   {
     title: "Jewelry",
@@ -78,6 +75,7 @@ const collectibleCategories: SubcategoryCardData[] = [
       "Vintage Jewelry",
       "Designer Pieces",
     ],
+    color: collectiblesColors.other,
   },
   {
     title: "Classic Cars",
@@ -86,6 +84,7 @@ const collectibleCategories: SubcategoryCardData[] = [
     icon: Car,
     implemented: false,
     examples: ["Porsche", "Ferrari", "Mercedes-Benz", "Muscle Cars"],
+    color: collectiblesColors.cars,
   },
   {
     title: "Numismatic Coins",
@@ -94,6 +93,7 @@ const collectibleCategories: SubcategoryCardData[] = [
     icon: Coins,
     implemented: false,
     examples: ["Ancient Coins", "Gold Coins", "Silver Coins", "Error Coins"],
+    color: collectiblesColors.memorabilia,
   },
   {
     title: "Trading Cards",
@@ -103,6 +103,7 @@ const collectibleCategories: SubcategoryCardData[] = [
     icon: IdCardLanyard,
     implemented: false,
     examples: ["Sports Cards", "Pokémon", "Magic: The Gathering", "Yu-Gi-Oh!"],
+    color: collectiblesColors.memorabilia,
   },
   {
     title: "NFTs",
@@ -111,23 +112,20 @@ const collectibleCategories: SubcategoryCardData[] = [
     icon: Image,
     implemented: false,
     examples: ["Art NFTs", "PFP Collections", "Gaming NFTs", "Music NFTs"],
+    color: collectiblesColors.nfts,
   },
 ];
-
 
 export default function CollectiblesPage() {
   const { summary, isLoading } = useCollectiblesSummary();
 
   return (
     <div className="container mx-auto py-6 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Collectibles</h1>
-        <p className="text-muted-foreground mt-2">
-          Track your collectible investments - art, wine, watches, classic cars,
-          and more.
-        </p>
-      </div>
+      <PageHeader
+        title="Collectibles"
+        subtitle="Track your collectible investments - art, wine, watches, classic cars, and more."
+        actions={[{ label: "Add Item", disabled: true }]}
+      />
 
       {/* Dashboard Section */}
       <CategoryDashboardSection
@@ -137,36 +135,24 @@ export default function CollectiblesPage() {
       />
 
       {/* Category Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {collectibleCategories.map((category) => (
-          <SubcategoryCategoryCard
-            key={category.title}
-            category={category}
-            actionLabel="View Collection"
-          />
-        ))}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-border" />
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            Collectible Categories
+          </h2>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {collectibleCategories.map((category) => (
+            <SubcategoryCategoryCard
+              key={category.title}
+              category={category}
+              actionLabel="View Collection"
+            />
+          ))}
+        </div>
       </div>
-
-      {/* Summary Section */}
-      <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5" />
-            Collection Overview
-          </CardTitle>
-          <CardDescription>
-            Collectibles can provide diversification and potential appreciation.
-            Track valuations, provenance, and insurance details for your
-            collection.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" disabled>
-            Add Item
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -22,8 +22,15 @@ import { cn } from "@/lib/utils";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MS } from "@/../services/finance/financeService";
 
-// Time range options
+// ═══════════════════════════════════════════════════════════════
+// Types using unified performance service
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * @deprecated Use PerformanceTimeRangeLabel from @/lib/performance instead
+ */
 export type ChartTimeRange = "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL";
 
 interface PortfolioDataPoint {
@@ -49,6 +56,9 @@ interface PortfolioChartProps {
   className?: string;
 }
 
+/**
+ * Time range labels for UI buttons
+ */
 const timeRangeLabels: Record<ChartTimeRange, string> = {
   "1W": "1W",
   "1M": "1M",
@@ -58,12 +68,16 @@ const timeRangeLabels: Record<ChartTimeRange, string> = {
   ALL: "All",
 };
 
-const timeRangeDays: Record<ChartTimeRange, number | null> = {
-  "1W": 7,
-  "1M": 30,
-  "3M": 90,
-  "6M": 180,
-  "1Y": 365,
+/**
+ * Time range to milliseconds mapping
+ * Uses unified MS constants from finance service
+ */
+const timeRangeMs: Record<ChartTimeRange, number | null> = {
+  "1W": MS.DAY * 7,
+  "1M": MS.DAY * 30,
+  "3M": MS.DAY * 90,
+  "6M": MS.DAY * 180,
+  "1Y": MS.DAY * 365,
   ALL: null,
 };
 
@@ -115,8 +129,8 @@ function buildPortfolioHistory(
 
   // Calculate cutoff date for time range
   const now = Date.now();
-  const days = timeRangeDays[timeRange];
-  const cutoffDate = days ? now - days * 24 * 60 * 60 * 1000 : 0;
+  const msRange = timeRangeMs[timeRange];
+  const cutoffDate = msRange ? now - msRange : 0;
 
   // Build running cost total - track cost before cutoff too
   let runningCost = 0;

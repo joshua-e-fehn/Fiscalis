@@ -18,7 +18,7 @@ import {
   PortfolioDataPoint,
   categoryColorPalettes,
 } from "@/lib/types/investments";
-import { Bitcoin, Coins, CircleDollarSign, Layers, Image } from "lucide-react";
+import { Bitcoin, Coins, CircleDollarSign, Layers } from "lucide-react";
 import React from "react";
 
 // ═══════════════════════════════════════════════════════════════
@@ -564,6 +564,102 @@ export function useVezgoProviders() {
 // CATEGORY SUMMARY HOOK (for Dashboard)
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// CRYPTO CATEGORIZATION
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Symbols that belong to Bitcoin & Ethereum category
+ * Includes wrapped versions and liquid staking derivatives
+ */
+const BTC_ETH_SYMBOLS = new Set([
+  // Bitcoin & wrapped versions
+  "BTC",
+  "WBTC",
+  "BTCB",
+  "TBTC",
+  "RENBTC",
+  "SBTC",
+  "HBTC",
+  // Ethereum & wrapped/staked versions
+  "ETH",
+  "WETH",
+  "STETH",
+  "RETH",
+  "CBETH",
+  "BETH",
+  "SETH2",
+  "METH",
+]);
+
+/**
+ * Known stablecoin symbols
+ * Used as fallback when Vezgo doesn't categorize as "stablecoin"
+ */
+const STABLECOIN_SYMBOLS = new Set([
+  "USDT",
+  "USDC",
+  "DAI",
+  "BUSD",
+  "TUSD",
+  "USDP",
+  "GUSD",
+  "FRAX",
+  "LUSD",
+  "USDD",
+  "PYUSD",
+  "EURC",
+  "EURT",
+  "EURS",
+  "AGEUR",
+  "FDUSD",
+  "CUSD",
+  "UST",
+  "MIM",
+  "DOLA",
+  "CRVUSD",
+  "GHO",
+]);
+
+/**
+ * Categorize a crypto position based on Vezgo category and symbol
+ *
+ * Rules:
+ * 1. If Vezgo category is "defi" → DeFi
+ * 2. If Vezgo category is "stablecoin" OR symbol is a known stablecoin → Stablecoins
+ * 3. If Vezgo category is "nft" → null (belongs to collectibles, ignore)
+ * 4. For everything else, check if BTC/ETH symbol → else Altcoin
+ */
+function categorizeCryptoPosition(
+  symbol: string,
+  vezgoCategory?: string,
+): "btc-eth" | "altcoins" | "stablecoins" | "defi" | null {
+  const upperSymbol = symbol.toUpperCase();
+
+  // NFTs don't belong to crypto page (they go to collectibles)
+  if (vezgoCategory === "nft") {
+    return null;
+  }
+
+  // DeFi positions stay as DeFi
+  if (vezgoCategory === "defi") {
+    return "defi";
+  }
+
+  // Stablecoins: check Vezgo category OR symbol
+  if (vezgoCategory === "stablecoin" || STABLECOIN_SYMBOLS.has(upperSymbol)) {
+    return "stablecoins";
+  }
+
+  // Check if it's BTC/ETH
+  if (BTC_ETH_SYMBOLS.has(upperSymbol)) {
+    return "btc-eth";
+  }
+
+  // Everything else is an altcoin
+  return "altcoins";
+}
+
 // Helper to convert Vezgo positions to Holding type
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapPositionsToHoldings(
@@ -587,6 +683,12 @@ function mapPositionsToHoldings(
 /**
  * Hook to get the crypto category summary
  * Aggregates data from Vezgo positions for the category dashboard
+ *
+ * Categorization rules:
+ * 1. DeFi (Vezgo category) → DeFi subcategory
+ * 2. Stablecoin (Vezgo category) → Stablecoins subcategory
+ * 3. NFT (Vezgo category) → Ignored (belongs to collectibles)
+ * 4. Everything else → Check if BTC/ETH symbol, else Altcoin
  */
 export function useCryptoSummary(): {
   summary: CategorySummary | null;
@@ -601,22 +703,42 @@ export function useCryptoSummary(): {
 
     const colors = categoryColorPalettes.crypto;
 
-    // Group positions by category
-    const cryptoPositions =
-      positions?.filter((p) => p.category === "cryptocurrency") || [];
-    const tokenPositions =
-      positions?.filter((p) => p.category === "token") || [];
-    const stablecoinPositions =
-      positions?.filter((p) => p.category === "stablecoin") || [];
-    const defiPositions = positions?.filter((p) => p.category === "defi") || [];
-    const nftPositions = positions?.filter((p) => p.category === "nft") || [];
+    // Group positions by our categorization logic
+    const btcEthPositions: typeof positions = [];
+    const altcoinPositions: typeof positions = [];
+    const stablecoinPositions: typeof positions = [];
+    const defiPositions: typeof positions = [];
 
-    // Calculate subcategory totals for allocation percentages
-    const cryptoTotal = cryptoPositions.reduce(
+    // Categorize each position
+    for (const position of positions || []) {
+      const category = categorizeCryptoPosition(
+        position.symbol,
+        position.category,
+      );
+
+      switch (category) {
+        case "btc-eth":
+          btcEthPositions.push(position);
+          break;
+        case "altcoins":
+          altcoinPositions.push(position);
+          break;
+        case "stablecoins":
+          stablecoinPositions.push(position);
+          break;
+        case "defi":
+          defiPositions.push(position);
+          break;
+        // null = NFT, skip it (belongs to collectibles)
+      }
+    }
+
+    // Calculate subcategory totals
+    const btcEthTotal = btcEthPositions.reduce(
       (sum, p) => sum + (p.fiatValue || 0),
       0,
     );
-    const tokenTotal = tokenPositions.reduce(
+    const altcoinTotal = altcoinPositions.reduce(
       (sum, p) => sum + (p.fiatValue || 0),
       0,
     );
@@ -628,52 +750,52 @@ export function useCryptoSummary(): {
       (sum, p) => sum + (p.fiatValue || 0),
       0,
     );
-    const nftTotal = nftPositions.reduce(
-      (sum, p) => sum + (p.fiatValue || 0),
-      0,
-    );
+
+    // Calculate total excluding NFTs
+    const cryptoTotal =
+      btcEthTotal + altcoinTotal + stablecoinTotal + defiTotal;
 
     const subcategories: SubcategoryData[] = [
       {
-        id: "exchanges",
-        name: "Exchanges",
-        href: "/crypto/exchanges",
+        id: "btc-eth",
+        name: "Bitcoin & Ethereum",
+        href: "/assets/crypto/btc-eth",
         icon: React.createElement(Bitcoin, { className: "h-4 w-4" }),
         color: colors.bitcoin,
-        totalValue: cryptoTotal,
+        totalValue: btcEthTotal,
         costBasis: null,
         profitLoss: null,
         profitLossPercent: null,
         topHoldings: mapPositionsToHoldings(
-          cryptoPositions,
-          "exchanges",
-          cryptoTotal,
+          btcEthPositions,
+          "btc-eth",
+          btcEthTotal,
         ),
-        holdingsCount: cryptoPositions.length,
+        holdingsCount: btcEthPositions.length,
         implemented: true,
       },
       {
-        id: "wallets",
-        name: "Wallets",
-        href: "/crypto/wallets",
+        id: "altcoins",
+        name: "Altcoins",
+        href: "/assets/crypto/altcoins",
         icon: React.createElement(Coins, { className: "h-4 w-4" }),
-        color: colors.ethereum,
-        totalValue: tokenTotal,
+        color: colors.altcoins,
+        totalValue: altcoinTotal,
         costBasis: null,
         profitLoss: null,
         profitLossPercent: null,
         topHoldings: mapPositionsToHoldings(
-          tokenPositions,
-          "wallets",
-          tokenTotal,
+          altcoinPositions,
+          "altcoins",
+          altcoinTotal,
         ),
-        holdingsCount: tokenPositions.length,
+        holdingsCount: altcoinPositions.length,
         implemented: true,
       },
       {
         id: "stablecoins",
         name: "Stablecoins",
-        href: "/crypto/stablecoins",
+        href: "/assets/crypto/stablecoins",
         icon: React.createElement(CircleDollarSign, { className: "h-4 w-4" }),
         color: colors.stablecoins,
         totalValue: stablecoinTotal,
@@ -691,7 +813,7 @@ export function useCryptoSummary(): {
       {
         id: "defi",
         name: "DeFi",
-        href: "/crypto/defi",
+        href: "/assets/crypto/defi",
         icon: React.createElement(Layers, { className: "h-4 w-4" }),
         color: colors.defi,
         totalValue: defiTotal,
@@ -702,26 +824,12 @@ export function useCryptoSummary(): {
         holdingsCount: defiPositions.length,
         implemented: true,
       },
-      {
-        id: "nfts",
-        name: "NFTs",
-        href: "/crypto/nfts",
-        icon: React.createElement(Image, { className: "h-4 w-4" }),
-        color: colors.altcoins,
-        totalValue: nftTotal,
-        costBasis: null,
-        profitLoss: null,
-        profitLossPercent: null,
-        topHoldings: mapPositionsToHoldings(nftPositions, "nfts", nftTotal),
-        holdingsCount: nftPositions.length,
-        implemented: true,
-      },
     ];
 
     const historyDataPoints: PortfolioDataPoint[] = [];
 
     return {
-      totalValue: totalValue?.totalValue || 0,
+      totalValue: cryptoTotal,
       totalCost: null,
       profitLoss: null,
       profitLossPercent: null,

@@ -8,7 +8,7 @@ import {
   Activity,
 } from "lucide-react";
 import {
-  CategoryDashboardSection,
+  InvestmentDashboardSection,
   SubcategoryCategoryCard,
   PageHeader,
   type SubcategoryCardData,
@@ -94,7 +94,8 @@ export default function EquitiesPage() {
       />
 
       {/* Portfolio Dashboard Section */}
-      <CategoryDashboardSection
+      <InvestmentDashboardSection
+        category="equities"
         summary={summary}
         currency="eur"
         isLoading={isLoading}

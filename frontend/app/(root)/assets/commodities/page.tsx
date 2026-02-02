@@ -2,7 +2,8 @@
 
 import { Coins, Fuel, Factory, Wheat, Atom, Gem } from "lucide-react";
 import {
-  CategoryDashboardSection,
+  InvestmentDashboardSection,
+  COMMODITIES_KPI_CARDS,
   SubcategoryCategoryCard,
   PageHeader,
   type SubcategoryCardData,
@@ -101,10 +102,12 @@ export default function CommoditiesPage() {
 
       {/* Portfolio Dashboard Section */}
       <div className="w-full">
-        <CategoryDashboardSection
+        <InvestmentDashboardSection
+          category="commodities"
           summary={summary}
           currency="eur"
           isLoading={isLoading}
+          kpiCards={COMMODITIES_KPI_CARDS}
           showTopHoldings={hasHoldings ?? false}
         />
       </div>

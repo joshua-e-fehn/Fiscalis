@@ -243,6 +243,23 @@ export function formatPercent(value: number, showSign = false): string {
  * 1. If we have a value at year start -> YTD = (current - yearStart) / yearStart
  * 2. If portfolio started this year -> YTD = (current - totalCost) as absolute gain
  * 3. If no data -> null
+ *
+ * @deprecated Use usePortfolioYTD() or useDiscretePerformance({ timeRange: "YTD" }) instead.
+ * This function will be removed in a future version.
+ *
+ * @example
+ * ```tsx
+ * // Old way (deprecated)
+ * const ytd = calculateYTDPerformance(currentValue, totalCost, historyDataPoints);
+ *
+ * // New way
+ * import { usePortfolioYTD } from "@/hooks/performance";
+ * const ytd = usePortfolioYTD();
+ *
+ * // Or directly with unified service
+ * import { useDiscretePerformance } from "@/hooks/performance";
+ * const { metrics } = useDiscretePerformance({ timeRange: "YTD" });
+ * ```
  */
 export function calculateYTDPerformance(
   currentValue: number,

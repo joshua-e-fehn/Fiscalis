@@ -28,9 +28,11 @@ import {
   CreditCard,
   ArrowRight,
   Minus,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useNetWorthYTD, usePortfolioChartData } from "@/hooks/performance";
 
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
@@ -117,6 +119,79 @@ function HeroKPICard({
 }
 
 // ═══════════════════════════════════════════════════════════════
+// YTD Net Worth Change Card
+// ═══════════════════════════════════════════════════════════════
+
+interface YTDNetWorthCardProps {
+  ytdChange: number | null;
+  ytdChangePercent: number | null;
+  currency: InvestmentCurrency;
+  isLoading?: boolean;
+}
+
+function YTDNetWorthCard({
+  ytdChange,
+  ytdChangePercent,
+  currency,
+  isLoading = false,
+}: YTDNetWorthCardProps) {
+  const isPositive = (ytdChange ?? 0) >= 0;
+  const hasData = ytdChange !== null;
+
+  return (
+    <Card
+      className={cn(
+        hasData && isPositive && "border-profit/30 bg-profit/5",
+        hasData && !isPositive && "border-loss/30 bg-loss/5",
+      )}
+    >
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          YTD Net Worth
+        </CardTitle>
+        <div className="text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-8 w-32" />
+        ) : hasData ? (
+          <>
+            <div
+              className={cn(
+                "text-2xl font-bold flex items-center gap-1",
+                isPositive ? "text-profit" : "text-loss",
+              )}
+            >
+              {isPositive ? (
+                <TrendingUp className="h-5 w-5" />
+              ) : (
+                <TrendingDown className="h-5 w-5" />
+              )}
+              {isPositive ? "+" : ""}
+              {formatCurrency(ytdChange, currency)}
+            </div>
+            {ytdChangePercent !== null && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {formatPercent(ytdChangePercent)} since Jan 1
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="text-muted-foreground">
+            <div className="text-2xl font-bold flex items-center gap-1">
+              <Minus className="h-4 w-4" />
+            </div>
+            <p className="text-xs mt-1">No data for this year</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Net Worth Card (Primary)
 // ═══════════════════════════════════════════════════════════════
 
@@ -138,7 +213,7 @@ function NetWorthCard({
   const isProfit = (profitLoss ?? 0) >= 0;
 
   return (
-    <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
           <Wallet className="h-4 w-4" />
@@ -459,6 +534,14 @@ function LiabilitiesCard({
 export default function DashboardPage() {
   const currency: InvestmentCurrency = "eur";
   const { summary, isLoading } = usePortfolioOverview(currency);
+  const netWorthYTD = useNetWorthYTD();
+
+  // Get portfolio chart data combining discrete snapshots and continuous price data
+  const portfolioChart = usePortfolioChartData({
+    timeRange: "Year", // Default to 1 year view
+    currency: "eur",
+    enabled: !isLoading,
+  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -469,7 +552,7 @@ export default function DashboardPage() {
       />
 
       {/* Row 1: Net Worth + Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Net Worth - spans 2 columns on lg */}
         <div className="lg:col-span-2">
           <NetWorthCard
@@ -500,6 +583,14 @@ export default function DashboardPage() {
           isLoading={isLoading}
           variant={(summary?.totalLiabilities ?? 0) > 0 ? "loss" : "neutral"}
         />
+
+        {/* YTD Net Worth Change */}
+        <YTDNetWorthCard
+          ytdChange={netWorthYTD.ytdChange}
+          ytdChangePercent={netWorthYTD.ytdChangePercent}
+          currency={currency}
+          isLoading={netWorthYTD.isLoading}
+        />
       </div>
 
       {/* Row 2: Allocation Charts */}
@@ -511,13 +602,22 @@ export default function DashboardPage() {
           isLoading={isLoading}
         />
         <CategoryPerformanceChart
-          dataPoints={summary?.historyDataPoints ?? []}
-          currentValue={summary?.totalAssets ?? 0}
-          totalCost={summary?.totalCostBasis ?? null}
+          dataPoints={
+            portfolioChart.dataPoints.length > 0
+              ? portfolioChart.dataPoints
+              : (summary?.historyDataPoints ?? [])
+          }
+          currentValue={
+            portfolioChart.currentValue || summary?.totalAssets || 0
+          }
+          totalCost={
+            portfolioChart.totalCost ?? summary?.totalCostBasis ?? null
+          }
           totalLiabilities={summary?.totalLiabilities ?? 0}
           currency={currency}
-          isLoading={isLoading}
+          isLoading={isLoading || portfolioChart.isLoading}
           showViewToggle={true}
+          title="Portfolio Development"
         />
       </div>
 

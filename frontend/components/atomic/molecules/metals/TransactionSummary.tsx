@@ -10,7 +10,6 @@ import {
   Wallet,
   TrendingUp,
   TrendingDown,
-  Target,
 } from "lucide-react";
 
 interface TransactionSummaryProps {
@@ -153,7 +152,11 @@ export function TransactionSummary({
           {/* Realized P/L */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+              {summary.realizedPL !== null && summary.realizedPL >= 0 ? (
+                <TrendingUp className="h-3.5 w-3.5 text-profit" />
+              ) : (
+                <TrendingDown className="h-3.5 w-3.5 text-loss" />
+              )}
               Realized P/L
             </div>
             {summary.realizedPL !== null ? (
@@ -184,7 +187,11 @@ export function TransactionSummary({
           {/* Unrealized P/L */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <TrendingDown className="h-3.5 w-3.5 text-muted-foreground" />
+              {hasUnrealizedPL && unrealizedPL >= 0 ? (
+                <TrendingUp className="h-3.5 w-3.5 text-profit" />
+              ) : (
+                <TrendingDown className="h-3.5 w-3.5 text-loss" />
+              )}
               Unrealized P/L
             </div>
             {hasUnrealizedPL ? (
@@ -215,7 +222,11 @@ export function TransactionSummary({
           {/* Total P/L */}
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Target className="h-3.5 w-3.5 text-primary" />
+              {totalPL !== null && totalPL >= 0 ? (
+                <TrendingUp className="h-3.5 w-3.5 text-profit" />
+              ) : (
+                <TrendingDown className="h-3.5 w-3.5 text-loss" />
+              )}
               Total P/L
             </div>
             {totalPL !== null ? (

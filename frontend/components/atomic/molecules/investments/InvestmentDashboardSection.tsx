@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Category Dashboard Section
+ * Investment Dashboard Section
  *
  * A flexible, unified dashboard section for all investment category pages.
  * Supports configurable KPI cards that can be customized per category.
@@ -81,7 +81,7 @@ export interface KPICardRenderProps {
   costBasis?: number | null;
 }
 
-export interface CategoryDashboardSectionProps {
+export interface InvestmentDashboardSectionProps {
   /** The category identifier (used for YTD/P&L calculations) */
   category: InvestmentCategory;
   /** Summary data from the category hook */
@@ -98,8 +98,14 @@ export interface CategoryDashboardSectionProps {
   kpiCards?: [KPICardConfig, KPICardConfig, KPICardConfig];
   /** Total portfolio assets (for allocation percentage calculations) */
   totalPortfolioAssets?: number;
+  /** Custom KPI cards row (replaces the entire KPI cards section) */
+  customKPICards?: ReactNode;
   /** Custom allocation chart component (replaces default CategoryAllocationChart) */
   customAllocationChart?: ReactNode;
+  /** Custom performance chart component (replaces default CategoryPerformanceChart) */
+  customPerformanceChart?: ReactNode;
+  /** Custom content to show between charts and holdings (e.g., metal type cards) */
+  customContentBelowCharts?: ReactNode;
   /** Custom holdings component (replaces default TopHoldingsList) */
   customHoldingsSection?: ReactNode;
   /** Custom chart title */
@@ -480,7 +486,7 @@ function AccountsCountCard({
 // Main Component
 // ═══════════════════════════════════════════════════════════════
 
-export function CategoryDashboardSection({
+export function InvestmentDashboardSection({
   category,
   summary,
   currency = "eur",
@@ -489,11 +495,14 @@ export function CategoryDashboardSection({
   maxHoldingsPerSubcategory = 3,
   kpiCards = STANDARD_KPI_CARDS,
   totalPortfolioAssets = 0,
+  customKPICards,
   customAllocationChart,
+  customPerformanceChart,
+  customContentBelowCharts,
   customHoldingsSection,
   performanceChartTitle,
   className,
-}: CategoryDashboardSectionProps) {
+}: InvestmentDashboardSectionProps) {
   // ─────────────────────────────────────────────────────────────
   // Performance Calculations
   // ─────────────────────────────────────────────────────────────
@@ -665,9 +674,11 @@ export function CategoryDashboardSection({
   return (
     <div className={cn("space-y-4", className)}>
       {/* Row 1: KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {kpiCards.map((config, index) => renderKPICard(config, index))}
-      </div>
+      {customKPICards ?? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {kpiCards.map((config, index) => renderKPICard(config, index))}
+        </div>
+      )}
 
       {/* Row 2: Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -677,15 +688,20 @@ export function CategoryDashboardSection({
             isLoading={isLoading}
           />
         )}
-        <CategoryPerformanceChart
-          dataPoints={summary?.historyDataPoints ?? []}
-          currentValue={summary?.totalValue ?? 0}
-          totalCost={costBasis}
-          currency={currency}
-          isLoading={isLoading}
-          title={performanceChartTitle}
-        />
+        {customPerformanceChart ?? (
+          <CategoryPerformanceChart
+            dataPoints={summary?.historyDataPoints ?? []}
+            currentValue={summary?.totalValue ?? 0}
+            totalCost={costBasis}
+            currency={currency}
+            isLoading={isLoading}
+            title={performanceChartTitle}
+          />
+        )}
       </div>
+
+      {/* Optional: Custom content below charts (e.g., metal type cards) */}
+      {customContentBelowCharts}
 
       {/* Row 3: Largest Holdings (only shown when there are holdings) */}
       {showTopHoldings &&

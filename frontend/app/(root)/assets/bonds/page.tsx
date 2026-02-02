@@ -8,7 +8,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import {
-  CategoryDashboardSection,
+  InvestmentDashboardSection,
   SubcategoryCategoryCard,
   PageHeader,
   type SubcategoryCardData,
@@ -103,7 +103,8 @@ export default function BondsPage() {
       />
 
       {/* Dashboard Section */}
-      <CategoryDashboardSection
+      <InvestmentDashboardSection
+        category="bonds"
         summary={summary}
         currency="eur"
         isLoading={isLoading}

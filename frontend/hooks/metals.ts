@@ -315,12 +315,29 @@ interface YTDPerformanceResult {
 }
 
 /**
- * Hook to calculate YTD portfolio performance
+ * Hook to calculate YTD portfolio performance for precious metals
  *
  * This fetches historical prices for Jan 1st of the current year for each metal type
  * and calculates the portfolio value at that date using each item's fine weight and sell premium.
  *
  * YTD = (current portfolio value - portfolio value at Jan 1) / portfolio value at Jan 1
+ *
+ * @deprecated Use useMetalsYTD() or useContinuousPerformance({ timeRange: "YTD" }) instead.
+ * This function will be removed in a future version.
+ *
+ * @example
+ * ```tsx
+ * // Old way (deprecated)
+ * const ytd = useYTDPortfolioPerformance(items, currentValue, currency);
+ *
+ * // New way (bridge hook)
+ * import { useMetalsYTD } from "@/hooks/performance";
+ * const ytd = useMetalsYTD(currency);
+ *
+ * // Best way (unified service directly)
+ * import { useContinuousPerformance } from "@/hooks/performance";
+ * const { metrics } = useContinuousPerformance({ timeRange: "YTD", currency });
+ * ```
  */
 export function useYTDPortfolioPerformance(
   items: MetalItemWithValuation[] | undefined,

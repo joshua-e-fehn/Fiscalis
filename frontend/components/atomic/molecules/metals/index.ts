@@ -22,6 +22,7 @@ export { HoldingCard, HoldingCardCompact } from "./HoldingCard";
 export { HoldingsTable } from "./HoldingsTable";
 export { HoldingsCardGrid } from "./HoldingsCardGrid";
 export { HoldingsGroupedView } from "./HoldingsGroupedView";
+export { MetalsLargestHoldingsCard } from "./MetalsLargestHoldingsCard";
 
 // Transaction components
 export { TransactionRow, type Transaction } from "./TransactionRow";

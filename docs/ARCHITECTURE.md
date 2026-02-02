@@ -19,8 +19,9 @@ This document provides a comprehensive overview of the Fiscalis application arch
 13. [Precious Metals Vault](#precious-metals-vault)
 14. [World Bank Data & Map](#world-bank-data--map)
 15. [Portfolio Snapshots](#portfolio-snapshots)
-16. [Onboarding System](#onboarding-system)
-17. [Component Architecture](#component-architecture)
+16. [Performance Calculation System](#performance-calculation-system)
+17. [Onboarding System](#onboarding-system)
+18. [Component Architecture](#component-architecture)
 
 ---
 
@@ -2103,6 +2104,177 @@ export default crons;
 
 ---
 
+## Performance Calculation System
+
+The Performance Calculation System provides historical performance data for the portfolio, supporting both discrete (snapshot-based) and continuous (price-based) calculation strategies.
+
+### Overview
+
+Portfolio performance can be calculated in two ways:
+
+1. **Discrete Strategy**: Uses stored portfolio snapshots to display historical values
+2. **Continuous Strategy**: Calculates historical values from current holdings + historical prices
+
+The dashboard combines both strategies to provide accurate historical charts even when snapshot data is limited or interpolated.
+
+### Discrete vs Continuous Strategies
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     DISCRETE STRATEGY                                    │
+│                                                                          │
+│  Uses: Portfolio Snapshots (stored in database)                         │
+│  Pro: Reflects actual portfolio composition at each point in time       │
+│  Con: Limited to dates when snapshots exist                             │
+│  Con: Interpolated values for dates without actual snapshots            │
+│                                                                          │
+│  Data Points:                                                            │
+│  ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐    ┌─────┐                   │
+│  │ Jan │    │ Feb │    │ Mar │    │ Apr │    │ May │                   │
+│  │ 1st │    │ 1st │    │ 1st │    │ 1st │    │ 1st │                   │
+│  │actual    │interp│    │interp│    │actual│    │actual│                   │
+│  └─────┘    └─────┘    └─────┘    └─────┘    └─────┘                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     CONTINUOUS STRATEGY                                  │
+│                                                                          │
+│  Uses: Current holdings × Historical prices                             │
+│  Pro: Smooth price curves showing daily fluctuations                    │
+│  Con: Assumes current holdings existed throughout period                │
+│                                                                          │
+│  Formula:                                                                │
+│  Value(t) = Σ(quantity_i × price_i(t) × premium_i)                     │
+│                                                                          │
+│  Data Points:                                                            │
+│  ────────────────────────────────────────────────────────────          │
+│  Daily price data provides continuous historical performance             │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Snapshot Source Types
+
+Portfolio snapshots include a `source` field indicating how the data was obtained:
+
+| Source           | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `"calculated"`   | Actual snapshot created from sync or cron job    |
+| `"interpolated"` | Generated value for dates without real snapshots |
+| `"plaid"`        | Snapshot created after Plaid sync                |
+| `"snaptrade"`    | Snapshot created after SnapTrade sync            |
+| `"vezgo"`        | Snapshot created after Vezgo sync                |
+| `"scheduled"`    | Snapshot created by daily cron job               |
+
+The chart logic distinguishes between `"interpolated"` and all other sources to determine if actual historical data exists.
+
+### Chart Data Hybrid Approach
+
+The `usePortfolioChartData` hook combines discrete and continuous strategies:
+
+```typescript
+// Decision logic in usePortfolioChartData.ts
+
+1. Fetch discrete snapshots (portfolio history)
+2. Fetch continuous price data (metals prices × holdings)
+3. Determine first actual (non-interpolated) snapshot timestamp
+4. For each date in range:
+   a. If date >= firstActualSnapshotTimestamp:
+      → Use discrete snapshot value (actual data exists)
+   b. If date < firstActualSnapshotTimestamp AND continuous data exists:
+      → Use continuous value (calculate from current holdings × historical prices)
+   c. If date < firstActualSnapshotTimestamp AND NO continuous data:
+      → Don't include data point (portfolio value was 0)
+```
+
+```
+Timeline Example:
+═══════════════════════════════════════════════════════════════════════
+
+Jan 1, 2025                Feb 25, 2025              Feb 1, 2026
+    │                           │                         │
+    │   No portfolio data       │  Gold coin purchased    │  Broker connected
+    │   (value was €0)          │  (use continuous)       │  (use discrete)
+    │                           │                         │
+    ▼                           ▼                         ▼
+────┴───────────────────────────┴─────────────────────────┴────────────►
+
+    [No data points]           [Metals prices ×          [Portfolio
+                                holdings = €3,800-4,200]  snapshot = €118k]
+```
+
+### Metal Price Conversion
+
+Metal prices from external APIs (e.g., metals.dev) are returned **per troy ounce**, but vault items store quantities in **grams**. The continuous performance calculation must convert:
+
+```typescript
+// hooks/performance/useContinuousPerformance.ts
+
+const TROY_OUNCE_TO_GRAMS = 31.1035;
+
+const toPerGram = (pricePerOunce: number): number =>
+  pricePerOunce / TROY_OUNCE_TO_GRAMS;
+
+// Value calculation
+const value = quantity * toPerGram(pricePerOunce) * (1 + premiumPercent / 100);
+```
+
+### Performance Hooks
+
+| Hook                       | Purpose                                                     |
+| -------------------------- | ----------------------------------------------------------- |
+| `useDiscretePerformance`   | Fetches portfolio snapshots for historical values           |
+| `useContinuousPerformance` | Calculates performance from vault items × historical prices |
+| `usePortfolioChartData`    | Combines discrete + continuous for dashboard chart          |
+| `useNetWorthYTD`           | Calculates year-to-date net worth change with fallback      |
+| `usePortfolioYTD`          | Calculates YTD return percentage                            |
+| `useCategoryPerformance`   | Category-specific performance (equities, metals, etc.)      |
+
+### YTD Calculation Fallback
+
+When calculating YTD performance, if no portfolio snapshot exists from before January 1st of the current year, the system falls back to continuous performance data:
+
+```typescript
+// hooks/performance/usePortfolioYTD.ts
+
+const yearStartValue =
+  discreteYearStartValue ?? // From portfolio snapshot
+  continuousYearStartValue ?? // From continuous calculation
+  0; // No data available
+```
+
+### Key Files
+
+| File                                            | Purpose                                     |
+| ----------------------------------------------- | ------------------------------------------- |
+| `hooks/performance/useDiscretePerformance.ts`   | Snapshot-based performance data             |
+| `hooks/performance/useContinuousPerformance.ts` | Price-based continuous performance          |
+| `hooks/performance/usePortfolioChartData.ts`    | Hybrid chart data combining both strategies |
+| `hooks/performance/usePortfolioYTD.ts`          | YTD calculation with fallback logic         |
+| `hooks/performance/types.ts`                    | Shared TypeScript types                     |
+
+### Data Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Dashboard Chart                                  │
+│                                                                          │
+│                    usePortfolioChartData()                               │
+│                            │                                             │
+│              ┌─────────────┴─────────────┐                              │
+│              ▼                           ▼                              │
+│   useDiscretePerformance()    useContinuousPerformance()                │
+│              │                           │                              │
+│              ▼                           ▼                              │
+│   Portfolio Snapshots         Vault Items + Metal Prices                │
+│   (Convex DB)                 (Convex + External API)                   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Onboarding System
 
 A guided onboarding flow helps new users connect their financial accounts.
@@ -2271,6 +2443,7 @@ The Fiscalis architecture provides:
 8. **Manual asset tracking** for loans, precious metals, and other non-connected assets
 9. **Historical tracking** via portfolio snapshots with daily cron jobs
 10. **Guided onboarding** helping users connect financial accounts step-by-step
+11. **Hybrid performance calculation** combining discrete snapshots with continuous price data for accurate historical charts
 
 ### Key Design Decisions
 
@@ -2282,3 +2455,5 @@ The Fiscalis architecture provides:
 - **Classification at sync time**: Provider data classified to categories immediately upon sync, enabling efficient category-based queries via compound indexes
 - **Hybrid manual/automatic**: Users can connect accounts OR manually track assets (loans, metals)
 - **Snapshot-based history**: Portfolio value captured daily + after syncs for accurate historical charts
+- **Discrete + Continuous performance**: Snapshots provide historical accuracy; continuous prices fill gaps with current holdings × historical prices
+- **Metal price conversion**: External APIs return prices per troy ounce, converted to per gram (÷ 31.1035) to match vault item quantities

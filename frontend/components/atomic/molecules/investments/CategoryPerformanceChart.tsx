@@ -24,8 +24,19 @@ import {
   currencyCodes,
 } from "@/lib/types/investments";
 import { TrendingUp, Wallet } from "lucide-react";
+import {
+  type PerformanceTimeRangeLabel,
+  TIME_RANGE_LABEL_MAP,
+} from "@/lib/performance";
+import { MS } from "@/../services/finance/financeService";
 
-// Time range options
+// ═══════════════════════════════════════════════════════════════
+// Types using unified performance service
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * @deprecated Use PerformanceTimeRangeLabel from @/lib/performance instead
+ */
 export type ChartTimeRange = "1W" | "1M" | "3M" | "6M" | "1Y" | "All";
 
 // View mode options
@@ -46,6 +57,10 @@ interface CategoryPerformanceChartProps {
   showViewToggle?: boolean;
 }
 
+/**
+ * Time range labels for UI buttons
+ * Maps to unified TimeRange via TIME_RANGE_LABEL_MAP
+ */
 const timeRangeLabels: Record<ChartTimeRange, string> = {
   "1W": "1W",
   "1M": "1M",
@@ -55,12 +70,16 @@ const timeRangeLabels: Record<ChartTimeRange, string> = {
   All: "All",
 };
 
+/**
+ * Time range to milliseconds mapping
+ * Uses unified MS constants from finance service
+ */
 const timeRangeDays: Record<ChartTimeRange, number | null> = {
-  "1W": 7,
-  "1M": 30,
-  "3M": 90,
-  "6M": 180,
-  "1Y": 365,
+  "1W": MS.DAY * 7,
+  "1M": MS.DAY * 30,
+  "3M": MS.DAY * 90,
+  "6M": MS.DAY * 180,
+  "1Y": MS.DAY * 365,
   All: null,
 };
 
@@ -123,8 +142,8 @@ export function CategoryPerformanceChart({
     }
 
     const now = Date.now();
-    const days = timeRangeDays[timeRange];
-    const cutoffDate = days ? now - days * 24 * 60 * 60 * 1000 : 0;
+    const msRange = timeRangeDays[timeRange];
+    const cutoffDate = msRange ? now - msRange : 0;
 
     // Filter by time range
     let filtered = dataPoints.filter((dp) => dp.timestamp >= cutoffDate);

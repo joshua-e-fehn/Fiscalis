@@ -13,7 +13,8 @@ import {
   useMetalsSummary,
   useVaultTransactions,
 } from "@/hooks/convex/metals";
-import { useMetalsPrices, useYTDPortfolioPerformance } from "@/hooks/metals";
+import { useMetalsPrices } from "@/hooks/metals";
+import { useMetalsYTD } from "@/hooks/performance";
 import {
   MetalsType,
   MetalsCurrency,
@@ -108,13 +109,9 @@ export function MetalsInventoryPage({
   // Loading state
   const isLoading = itemsLoading || summaryLoading || pricesLoading;
 
-  // Calculate YTD performance using historical prices
-  // This fetches spot prices for Jan 1 and calculates portfolio value at that date
-  const ytdPerformance = useYTDPortfolioPerformance(
-    items,
-    summary?.totalMarketValue ?? 0,
-    currency,
-  );
+  // Calculate YTD performance using the unified performance service
+  // Uses continuous strategy with historical metal prices
+  const ytdPerformance = useMetalsYTD(currency);
 
   // Filter and sort items
   const filteredItems = useMemo(() => {

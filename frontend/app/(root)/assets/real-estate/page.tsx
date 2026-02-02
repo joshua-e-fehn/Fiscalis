@@ -2,7 +2,7 @@
 
 import { Home, Building2, BarChart3, Users, TreePine } from "lucide-react";
 import {
-  CategoryDashboardSection,
+  InvestmentDashboardSection,
   SubcategoryCategoryCard,
   PageHeader,
   type SubcategoryCardData,
@@ -83,7 +83,8 @@ export default function RealEstatePage() {
       />
 
       {/* Dashboard Section */}
-      <CategoryDashboardSection
+      <InvestmentDashboardSection
+        category="real-estate"
         summary={summary}
         currency="eur"
         isLoading={isLoading}

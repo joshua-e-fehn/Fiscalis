@@ -9,12 +9,14 @@ import {
   ArrowRightLeft,
 } from "lucide-react";
 import {
-  CategoryDashboardSection,
+  InvestmentDashboardSection,
+  CASH_KPI_CARDS,
   SubcategoryCategoryCard,
   PageHeader,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { useCashSummary } from "@/hooks/convex/cash";
+import { usePortfolioOverview } from "@/hooks/convex/portfolio";
 import { categoryColorPalettes } from "@/lib/types/investments";
 
 // Get cash color palette
@@ -97,6 +99,7 @@ const cashCategories: SubcategoryCardData[] = [
 
 export default function CashPage() {
   const { summary, isLoading } = useCashSummary();
+  const { summary: portfolioSummary } = usePortfolioOverview("eur");
 
   return (
     <div className="container mx-auto py-6 space-y-8">
@@ -114,10 +117,14 @@ export default function CashPage() {
       />
 
       {/* Dashboard Section */}
-      <CategoryDashboardSection
+      <InvestmentDashboardSection
+        category="cash"
         summary={summary}
         currency="eur"
         isLoading={isLoading}
+        kpiCards={CASH_KPI_CARDS}
+        totalPortfolioAssets={portfolioSummary?.totalAssets ?? 0}
+        performanceChartTitle="Cash Balance History"
       />
 
       {/* Category Cards */}

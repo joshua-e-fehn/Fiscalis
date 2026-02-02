@@ -12,7 +12,7 @@ import {
 import { Icon } from "lucide-react";
 import { gemRing } from "@lucide/lab";
 import {
-  CategoryDashboardSection,
+  InvestmentDashboardSection,
   SubcategoryCategoryCard,
   PageHeader,
   type SubcategoryCardData,
@@ -128,7 +128,8 @@ export default function CollectiblesPage() {
       />
 
       {/* Dashboard Section */}
-      <CategoryDashboardSection
+      <InvestmentDashboardSection
+        category="collectibles"
         summary={summary}
         currency="eur"
         isLoading={isLoading}

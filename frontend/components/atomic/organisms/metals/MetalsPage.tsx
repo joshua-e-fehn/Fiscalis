@@ -32,11 +32,11 @@ import {
 } from "@/hooks/convex/metals";
 import {
   useMetalsPrices,
-  useYTDPortfolioPerformance,
   useMetalPrices,
   useMetalPriceLatest,
   useMetalPricesRange,
 } from "@/hooks/metals";
+import { useMetalsYTD } from "@/hooks/performance";
 import {
   MetalsType,
   MetalsCurrency,
@@ -65,6 +65,7 @@ import {
   Transaction,
   TransactionTypeFilter,
   MetalTypeFilter,
+  MetalsLargestHoldingsCard,
 } from "@/components/atomic/molecules/metals";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import { MetalIcon } from "@/components/atomic/atoms/metals";
@@ -440,12 +441,9 @@ export function MetalsPage({
   // ─────────────────────────────────────────────────────────────
   const isLoading = itemsLoading || summaryLoading || pricesLoading;
 
-  // Calculate YTD performance
-  const ytdPerformance = useYTDPortfolioPerformance(
-    items,
-    summary?.totalMarketValue ?? 0,
-    initialCurrency,
-  );
+  // Calculate YTD performance using the unified performance service
+  // Uses continuous strategy with historical metal prices
+  const ytdPerformance = useMetalsYTD(initialCurrency);
 
   // ─────────────────────────────────────────────────────────────
   // FILTER & SORT ITEMS
@@ -661,6 +659,16 @@ export function MetalsPage({
               ),
             )}
           </div>
+
+          {/* Largest Holdings Card - only show when there are holdings */}
+          {!isEmpty && (
+            <MetalsLargestHoldingsCard
+              items={items}
+              currency={initialCurrency}
+              maxHoldingsPerMetal={3}
+              isLoading={itemsLoading}
+            />
+          )}
 
           {isEmpty && (
             <EmptyVaultState

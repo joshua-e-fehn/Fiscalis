@@ -5,32 +5,21 @@
  *
  * Investment portfolio view for cryptocurrency holdings with:
  * - KPI Cards (Total Value, P/L, YTD)
- * - Allocation chart by position (BTC, ETH, SOL, etc.)
+ * - Allocation chart by subcategory (BTC & ETH, Altcoins, Stablecoins, DeFi)
  * - Performance chart
- * - Largest Holdings card
+ * - Largest Holdings card grouped by subcategory
  * - Crypto subcategory cards (BTC & ETH, Altcoins, Stablecoins, DeFi)
  */
 
-import Link from "next/link";
-import { Button } from "@/components/ui/shadcn/button";
-import { Bitcoin, Coins, CircleDollarSign, Layers, Plus } from "lucide-react";
+import { Bitcoin, Coins, CircleDollarSign, Layers } from "lucide-react";
 import {
-  CategoryValueCard,
-  CategoryProfitLossCard,
-  CategoryYTDCard,
-  CategoryPerformanceChart,
+  InvestmentDashboardSection,
   SubcategoryCategoryCard,
   type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
-import {
-  CryptoAllocationChart,
-  CryptoLargestHoldingsCard,
-} from "@/components/atomic/molecules/crypto";
-import { useCryptoSummary, useVezgoConnections } from "@/hooks/convex/crypto";
-import {
-  calculateYTDPerformance,
-  categoryColorPalettes,
-} from "@/lib/types/investments";
+import { CryptoAllocationChart } from "@/components/atomic/molecules/crypto";
+import { useCryptoSummary } from "@/hooks/convex/crypto";
+import { categoryColorPalettes } from "@/lib/types/investments";
 
 // Get crypto color palette
 const cryptoColors = categoryColorPalettes.crypto;
@@ -81,63 +70,21 @@ const cryptoCategories: SubcategoryCardData[] = [
 
 export default function CryptoAssetsOverviewPage() {
   const { summary, isLoading } = useCryptoSummary();
-  const connections = useVezgoConnections();
 
-  const hasConnections = connections && connections.length > 0;
-
-  // Calculate YTD if not already provided
-  const ytdData = summary
-    ? calculateYTDPerformance(
-        summary.totalValue,
-        summary.totalCost,
-        summary.historyDataPoints,
-      )
-    : { ytdProfitLoss: null, ytdProfitLossPercent: null };
-
-  const ytdProfitLoss = summary?.ytdProfitLoss ?? ytdData.ytdProfitLoss;
-  const ytdProfitLossPercent =
-    summary?.ytdProfitLossPercent ?? ytdData.ytdProfitLossPercent;
+  // Check if there are any holdings
+  const hasHoldings = summary && summary.totalValue > 0;
 
   return (
     <div className="space-y-8">
       {/* Portfolio Dashboard Section */}
-      <div className="space-y-4">
-        {/* Row 1: KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <CategoryValueCard
-            totalValue={summary?.totalValue ?? 0}
-            currency="eur"
-            isLoading={isLoading}
-          />
-          <CategoryProfitLossCard
-            profitLoss={summary?.profitLoss ?? null}
-            profitLossPercent={summary?.profitLossPercent ?? null}
-            currency="eur"
-            isLoading={isLoading}
-          />
-          <CategoryYTDCard
-            ytdProfitLoss={ytdProfitLoss}
-            ytdProfitLossPercent={ytdProfitLossPercent}
-            currency="eur"
-            isLoading={isLoading}
-          />
-        </div>
-
-        {/* Row 2: Charts - Allocation by Position + Performance */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <CryptoAllocationChart maxPositions={8} />
-          <CategoryPerformanceChart
-            dataPoints={summary?.historyDataPoints ?? []}
-            currentValue={summary?.totalValue ?? 0}
-            totalCost={summary?.totalCost ?? null}
-            currency="eur"
-            isLoading={isLoading}
-          />
-        </div>
-
-        {/* Row 3: Largest Holdings by Category */}
-        <CryptoLargestHoldingsCard maxHoldingsPerCategory={3} />
-      </div>
+      <InvestmentDashboardSection
+        category="crypto"
+        summary={summary}
+        currency="eur"
+        isLoading={isLoading}
+        showTopHoldings={hasHoldings ?? false}
+        customAllocationChart={<CryptoAllocationChart maxPositions={8} />}
+      />
 
       {/* Crypto Subcategory Cards */}
       <div className="space-y-4">

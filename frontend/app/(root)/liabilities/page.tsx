@@ -19,7 +19,7 @@ import {
   Plus,
   AlertTriangle,
 } from "lucide-react";
-import { CategoryDashboardSection } from "@/components/atomic/molecules/investments";
+import { InvestmentDashboardSection } from "@/components/atomic/molecules/investments";
 import { useLiabilitiesSummary } from "@/hooks/convex/liabilities";
 
 /**
@@ -233,7 +233,8 @@ export default function LiabilitiesPage() {
       )}
 
       {/* Portfolio Dashboard Section */}
-      <CategoryDashboardSection
+      <InvestmentDashboardSection
+        category="liabilities"
         summary={summary}
         currency="eur"
         isLoading={isLoading}

@@ -1,5 +1,10 @@
 // TODO: Protect from rounding errors / floating point errors by using a BigNumber library
-const MS_PER_SECOND = 1000;
+
+// ═══════════════════════════════════════════════════════════════
+// Time Constants (exported for reuse in performance calculations)
+// ═══════════════════════════════════════════════════════════════
+
+export const MS_PER_SECOND = 1000;
 const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
@@ -8,20 +13,49 @@ const DAYS_PER_WEEK = 7;
 const WEEKS_PER_YEAR = 52.178571428571429;
 const MONTHS_PER_YEAR = 12.175;
 const QUARTER_PER_YEAR = 4;
-const MS_PER_MINUTE = 60000;
-const MS_PER_HOUR = 3600000;
-const MS_PER_DAY = 86400000;
-const MS_PER_WEEK = 604800000;
-const MS_PER_YEAR = 31557600000;
-const MS_PER_MONTH = 2592000000;
-const MS_PER_QUARTER = MS_PER_YEAR / QUARTER_PER_YEAR;
+export const MS_PER_MINUTE = 60000;
+export const MS_PER_HOUR = 3600000;
+export const MS_PER_DAY = 86400000;
+export const MS_PER_WEEK = 604800000;
+export const MS_PER_YEAR = 31557600000;
+export const MS_PER_MONTH = 2592000000;
+export const MS_PER_QUARTER = MS_PER_YEAR / QUARTER_PER_YEAR;
+
+// Extended time constants for performance calculations
+export const MS_PER_3_MONTHS = MS_PER_MONTH * 3;
+export const MS_PER_6_MONTHS = MS_PER_MONTH * 6;
+export const MS_PER_3_YEARS = MS_PER_YEAR * 3;
+export const MS_PER_5_YEARS = MS_PER_YEAR * 5;
+
+/**
+ * Convenience object for millisecond constants
+ * Provides a namespace for all time-related millisecond values
+ */
+export const MS = {
+  SECOND: MS_PER_SECOND,
+  MINUTE: MS_PER_MINUTE,
+  HOUR: MS_PER_HOUR,
+  DAY: MS_PER_DAY,
+  WEEK: MS_PER_WEEK,
+  MONTH: MS_PER_MONTH,
+  QUARTER: MS_PER_QUARTER,
+  YEAR: MS_PER_YEAR,
+  "3_MONTHS": MS_PER_3_MONTHS,
+  "6_MONTHS": MS_PER_6_MONTHS,
+  "3_YEARS": MS_PER_3_YEARS,
+  "5_YEARS": MS_PER_5_YEARS,
+} as const;
 
 export type TimeRange =
   | "Hour"
   | "Day"
   | "Week"
   | "Month"
+  | "3Month"
+  | "6Month"
   | "Year"
+  | "3Year"
+  | "5Year"
   | "YTD"
   | "ALL";
 
@@ -46,8 +80,16 @@ export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
       return MS_PER_WEEK;
     case "Month":
       return MS_PER_MONTH;
+    case "3Month":
+      return MS_PER_3_MONTHS;
+    case "6Month":
+      return MS_PER_6_MONTHS;
     case "Year":
       return MS_PER_YEAR;
+    case "3Year":
+      return MS_PER_3_YEARS;
+    case "5Year":
+      return MS_PER_5_YEARS;
     case "YTD": {
       // Time from start of year until now in UTC
       const currentYear = now.getUTCFullYear();
@@ -55,12 +97,77 @@ export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
       return now.getTime() - startOfYearUTC.getTime();
     }
     case "ALL": {
-      // From January 1, 2025 (UTC) until now
-      const startOf2025UTC = new Date(Date.UTC(2025, 0, 1, 0, 0, 0, 0));
-      return now.getTime() - startOf2025UTC.getTime();
+      // From January 1, 2024 (UTC) until now (platform launch)
+      const startOf2024UTC = new Date(Date.UTC(2024, 0, 1, 0, 0, 0, 0));
+      return now.getTime() - startOf2024UTC.getTime();
     }
     default:
       return MS_PER_DAY; // Default to 1 day
+  }
+}
+
+/**
+ * Get the start timestamp for a given time range
+ * @returns Unix timestamp in milliseconds
+ */
+export function getTimeRangeStartTimestamp(timeRange: TimeRange): number {
+  const now = Date.now();
+
+  switch (timeRange) {
+    case "Hour":
+      return now - MS_PER_HOUR;
+    case "Day":
+      return now - MS_PER_DAY;
+    case "Week":
+      return now - MS_PER_WEEK;
+    case "Month":
+      return now - MS_PER_MONTH;
+    case "3Month":
+      return now - MS_PER_3_MONTHS;
+    case "6Month":
+      return now - MS_PER_6_MONTHS;
+    case "Year":
+      return now - MS_PER_YEAR;
+    case "3Year":
+      return now - MS_PER_3_YEARS;
+    case "5Year":
+      return now - MS_PER_5_YEARS;
+    case "YTD": {
+      const currentYear = new Date().getUTCFullYear();
+      return new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0)).getTime();
+    }
+    case "ALL":
+      // Platform launch date
+      return new Date(Date.UTC(2024, 0, 1, 0, 0, 0, 0)).getTime();
+    default:
+      return now - MS_PER_DAY;
+  }
+}
+
+/**
+ * Get the recommended aggregation interval for a time range
+ * Used for chart data point density
+ */
+export function getDefaultIntervalForRange(timeRange: TimeRange): TimeInterval {
+  switch (timeRange) {
+    case "Hour":
+      return "minute";
+    case "Day":
+      return "hour";
+    case "Week":
+    case "Month":
+    case "3Month":
+      return "day";
+    case "6Month":
+    case "Year":
+    case "YTD":
+      return "day"; // Could be "week" for performance optimization
+    case "3Year":
+    case "5Year":
+    case "ALL":
+      return "week"; // Or "month" for very long ranges
+    default:
+      return "day";
   }
 }
 

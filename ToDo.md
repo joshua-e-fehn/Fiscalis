@@ -4,9 +4,9 @@
 - Crypto Integration
 - Integration Balance & Positions to Investment Types mapping
 - Handling of "Private Equity"
+- Encrypt portfolio values & holdings
+- One currency unification with switching basen on exchange rate. Default is $ but can be set by user
 
   Manuel: Check why calculator pages slight narrower (less width)
 
-  3: Proper portfolio performance calculation [split discrete values (bank balance) and continuous values (gold items)]
-  3: Unified performance calculation
   3: Updating architecture & proper documentation / readme

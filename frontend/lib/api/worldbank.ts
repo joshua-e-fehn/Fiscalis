@@ -552,7 +552,8 @@ export const ISO3_TO_ISO2: Record<string, string> = {
 // Server-side API Functions (for Hono route)
 // ═══════════════════════════════════════════════════════════════
 
-const FETCH_TIMEOUT_MS = 15000; // 15 second timeout for World Bank API calls
+const FETCH_TIMEOUT_MS = 30000; // 30 second timeout for World Bank API calls
+const MAX_RETRIES = 2; // Retry up to 2 times on failure
 
 /**
  * Fetch with timeout wrapper
@@ -577,6 +578,34 @@ async function fetchWithTimeout(
 }
 
 /**
+ * Fetch with timeout and automatic retry on transient failures
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit = {},
+  retries: number = MAX_RETRIES,
+): Promise<Response> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetchWithTimeout(url, options);
+      // Retry on 5xx server errors from World Bank
+      if (response.status >= 500 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError ?? new Error("Fetch failed after retries");
+}
+
+/**
  * Fetch indicator data from World Bank API (server-side)
  * @param indicator - The indicator key (e.g., "gdp", "population")
  * @param year - The year to fetch data for
@@ -589,7 +618,7 @@ export async function fetchWorldBankIndicator(
   const indicatorCode = WORLDBANK_INDICATORS[indicator];
   const url = `${WORLDBANK_BASE_URL}/country/all/indicator/${indicatorCode}?format=json&date=${year}&per_page=300`;
 
-  const response = await fetchWithTimeout(url, {
+  const response = await fetchWithRetry(url, {
     headers: {
       Accept: "application/json",
     },

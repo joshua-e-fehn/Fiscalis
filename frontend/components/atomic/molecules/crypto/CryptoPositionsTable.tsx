@@ -42,7 +42,7 @@ import {
   Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 import { useState, useMemo } from "react";
 
 import { Id } from "@/convex/_generated/dataModel";

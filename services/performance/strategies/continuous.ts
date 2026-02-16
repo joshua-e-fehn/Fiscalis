@@ -7,7 +7,7 @@
  * Uses: inventory (holdings) + historical prices = value at any timestamp
  */
 
-import { getTimeIntervalInMilliseconds } from "@/../services/finance/financeService";
+import { getTimeIntervalInMilliseconds } from "../../finance/financeService";
 
 import type {
   PerformanceDataPoint,

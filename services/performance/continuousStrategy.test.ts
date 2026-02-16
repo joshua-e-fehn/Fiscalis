@@ -9,16 +9,12 @@ import {
   ContinuousPerformanceStrategy,
   calculateContinuousPerformance,
   getContinuousStrategy,
-} from "../../frontend/lib/performance/strategies/continuous";
+} from "./strategies/continuous";
 import type {
   ContinuousPerformanceInput,
   PerformanceCalculationOptions,
-} from "../../frontend/lib/performance/strategies/types";
-import type {
-  HoldingData,
-  PriceData,
-  PricePoint,
-} from "../../frontend/lib/performance/types";
+} from "./strategies/types";
+import type { HoldingData, PriceData, PricePoint } from "./types";
 
 // ═══════════════════════════════════════════════════════════════
 // Test Utilities

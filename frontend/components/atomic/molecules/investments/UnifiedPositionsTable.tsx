@@ -49,7 +49,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { formatCurrency, InvestmentCurrency } from "@/lib/types/investments";
+import { InvestmentCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 import { useState, useMemo } from "react";
 import type { FinancialProvider } from "@/lib/types/portfolio";
 

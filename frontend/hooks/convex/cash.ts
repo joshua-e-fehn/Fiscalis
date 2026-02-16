@@ -14,19 +14,12 @@ import {
   CategorySummary,
   SubcategoryData,
   PortfolioDataPoint,
-  categoryColorPalettes,
   Holding,
 } from "@/lib/types/investments";
 import {
-  PiggyBank,
-  Landmark,
-  Clock,
-  Banknote,
-  ArrowRightLeft,
-  Wallet,
-  CreditCard,
-} from "lucide-react";
-import React from "react";
+  cashSubcategoryUI,
+  makeSubcategoryBase,
+} from "@/lib/config/categoryUI";
 
 /**
  * Hook to get the cash category summary
@@ -50,7 +43,6 @@ export function useCashSummary(): {
       brokerAccountCash,
       summary: dataSummary,
     } = cashData;
-    const colors = categoryColorPalettes.cash;
     const bySubcategory = dataSummary.bySubcategory;
 
     // Helper to get top holdings for a subcategory
@@ -146,142 +138,19 @@ export function useCashSummary(): {
       return holdings.slice(0, limit);
     };
 
-    // Build subcategories array with real data
+    // Build subcategories array with real data from centralized config
     const subcategories: SubcategoryData[] = [];
 
-    // 1. Checking Accounts
-    const checkingData = bySubcategory["checking-accounts"] ?? {
-      count: 0,
-      total: 0,
-    };
-    subcategories.push({
-      id: "checking-accounts",
-      name: "Checking Accounts",
-      href: "/cash/checking",
-      icon: React.createElement(CreditCard, { className: "h-4 w-4" }),
-      color: colors["checking-accounts"] ?? "#3B82F6",
-      totalValue: checkingData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("checking-accounts"),
-      holdingsCount: checkingData.count,
-      implemented: true,
-    });
-
-    // 2. Savings Accounts
-    const savingsData = bySubcategory["savings-accounts"] ?? {
-      count: 0,
-      total: 0,
-    };
-    subcategories.push({
-      id: "savings-accounts",
-      name: "Savings Accounts",
-      href: "/cash/savings",
-      icon: React.createElement(PiggyBank, { className: "h-4 w-4" }),
-      color: colors["savings-accounts"],
-      totalValue: savingsData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("savings-accounts"),
-      holdingsCount: savingsData.count,
-      implemented: true,
-    });
-
-    // 3. Money Market Funds
-    const moneyMarketData = bySubcategory["money-market"] ?? {
-      count: 0,
-      total: 0,
-    };
-    subcategories.push({
-      id: "money-market",
-      name: "Money Market Funds",
-      href: "/cash/money-market",
-      icon: React.createElement(Landmark, { className: "h-4 w-4" }),
-      color: colors["money-market"],
-      totalValue: moneyMarketData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("money-market"),
-      holdingsCount: moneyMarketData.count,
-      implemented: true,
-    });
-
-    // 4. Certificates of Deposit
-    const cdsData = bySubcategory["cds"] ?? { count: 0, total: 0 };
-    subcategories.push({
-      id: "cds",
-      name: "Certificates of Deposit",
-      href: "/cash/cds",
-      icon: React.createElement(Clock, { className: "h-4 w-4" }),
-      color: colors.cds,
-      totalValue: cdsData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("cds"),
-      holdingsCount: cdsData.count,
-      implemented: true,
-    });
-
-    // 5. Treasury Bills
-    const tbillsData = bySubcategory["treasury-bills"] ?? {
-      count: 0,
-      total: 0,
-    };
-    subcategories.push({
-      id: "treasury-bills",
-      name: "Treasury Bills",
-      href: "/cash/tbills",
-      icon: React.createElement(Banknote, { className: "h-4 w-4" }),
-      color: colors["treasury-bills"],
-      totalValue: tbillsData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("treasury-bills"),
-      holdingsCount: tbillsData.count,
-      implemented: true,
-    });
-
-    // 6. Broker Cash
-    const brokerCashData = bySubcategory["broker-cash"] ?? {
-      count: 0,
-      total: 0,
-    };
-    subcategories.push({
-      id: "broker-cash",
-      name: "Broker Cash",
-      href: "/cash/broker",
-      icon: React.createElement(Wallet, { className: "h-4 w-4" }),
-      color: colors["broker-cash"] ?? "#8B5CF6",
-      totalValue: brokerCashData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("broker-cash"),
-      holdingsCount: brokerCashData.count,
-      implemented: true,
-    });
-
-    // 7. Foreign Currency
-    const forexData = bySubcategory["forex"] ?? { count: 0, total: 0 };
-    subcategories.push({
-      id: "forex",
-      name: "Foreign Currency",
-      href: "/cash/forex",
-      icon: React.createElement(ArrowRightLeft, { className: "h-4 w-4" }),
-      color: "#9333EA",
-      totalValue: forexData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("forex"),
-      holdingsCount: forexData.count,
-      implemented: true,
-    });
+    for (const [slug, meta] of Object.entries(cashSubcategoryUI)) {
+      const data = bySubcategory[slug] ?? { count: 0, total: 0 };
+      subcategories.push({
+        ...makeSubcategoryBase(slug, meta),
+        totalValue: data.total,
+        topHoldings: getTopHoldingsForSubcategory(slug),
+        holdingsCount: data.count,
+        implemented: true,
+      });
+    }
 
     // Calculate totals
     const totalValue = dataSummary.totalValue;

@@ -559,7 +559,7 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
     },
   },
 
-  // NFTs
+  // NFTs → classify as collectibles (not crypto)
   {
     id: "vezgo_nft",
     name: "Vezgo NFTs",
@@ -570,7 +570,7 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
       values: ["nft", "NFT", "Nft"],
     },
     result: {
-      category: "crypto",
+      category: "collectibles",
       subcategory: "nfts",
     },
   },

@@ -642,3 +642,74 @@ export const cleanupVezgoProviderType = mutation({
     };
   },
 });
+
+/**
+ * Migration: Reclassify NFTs from crypto to collectibles
+ *
+ * NFTs were previously classified as crypto/nfts. They now belong to
+ * collectibles/nfts. This migration updates existing positions and accounts
+ * that were classified under the old scheme.
+ *
+ * User overrides are preserved.
+ *
+ * Run: await ctx.runMutation(api.migrations.reclassifyNftsToCollectibles)
+ */
+export const reclassifyNftsToCollectibles = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let positionsUpdated = 0;
+    let positionsSkipped = 0;
+    let accountsUpdated = 0;
+    let accountsSkipped = 0;
+
+    // Reclassify broker positions
+    const positions = await ctx.db.query("brokerPositions").collect();
+    for (const position of positions) {
+      if (
+        position.investmentCategory === "crypto" &&
+        position.investmentSubcategory === "nfts"
+      ) {
+        if (position.userCategoryOverride) {
+          positionsSkipped++;
+          continue;
+        }
+        await ctx.db.patch(position._id, {
+          investmentCategory: "collectibles",
+          investmentSubcategory: "nfts",
+        } as any);
+        positionsUpdated++;
+      }
+    }
+
+    // Reclassify Plaid accounts (unlikely for NFTs, but check anyway)
+    const accounts = await ctx.db.query("plaidAccounts").collect();
+    for (const account of accounts) {
+      if (
+        account.investmentCategory === "crypto" &&
+        account.investmentSubcategory === "nfts"
+      ) {
+        if (account.userCategoryOverride) {
+          accountsSkipped++;
+          continue;
+        }
+        await ctx.db.patch(account._id, {
+          investmentCategory: "collectibles",
+          investmentSubcategory: "nfts",
+        } as any);
+        accountsUpdated++;
+      }
+    }
+
+    return {
+      message: "NFT reclassification completed (crypto → collectibles)",
+      positions: {
+        updated: positionsUpdated,
+        skippedUserOverride: positionsSkipped,
+      },
+      accounts: {
+        updated: accountsUpdated,
+        skippedUserOverride: accountsSkipped,
+      },
+    };
+  },
+});

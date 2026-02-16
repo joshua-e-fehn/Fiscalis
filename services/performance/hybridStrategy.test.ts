@@ -10,19 +10,14 @@ import {
   calculateHybridPerformance,
   getHybridStrategy,
   type HybridPerformanceResult,
-} from "../../frontend/lib/performance/strategies/hybrid";
+} from "./strategies/hybrid";
 import type {
   HybridPerformanceInput,
   DiscretePerformanceInput,
   ContinuousPerformanceInput,
   PerformanceCalculationOptions,
-} from "../../frontend/lib/performance/strategies/types";
-import type {
-  SnapshotData,
-  HoldingData,
-  PriceData,
-  PricePoint,
-} from "../../frontend/lib/performance/types";
+} from "./strategies/types";
+import type { SnapshotData, HoldingData, PriceData, PricePoint } from "./types";
 
 // ═══════════════════════════════════════════════════════════════
 // Test Utilities

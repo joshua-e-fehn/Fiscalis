@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
 import {
   InvestmentCurrency,
   PortfolioDataPoint,
-  currencyCodes,
 } from "@/lib/types/investments";
+import { currencyCodes } from "@/lib/utils/currency";
 import { TrendingUp, Wallet } from "lucide-react";
 import {
   type PerformanceTimeRangeLabel,

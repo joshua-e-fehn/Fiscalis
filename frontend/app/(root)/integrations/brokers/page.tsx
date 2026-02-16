@@ -24,7 +24,7 @@ import {
   PieChart,
   Coins,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function BrokersPage() {
   const connections = useBrokerConnections();

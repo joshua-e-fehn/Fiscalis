@@ -24,7 +24,7 @@ import {
   CreditCard,
   Banknote,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function BankingPage() {
   const accounts = usePlaidAccounts();

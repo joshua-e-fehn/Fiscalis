@@ -35,7 +35,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { formatCurrency, InvestmentCurrency } from "@/lib/types/investments";
+import { InvestmentCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 
 interface ProviderAllocationChartProps {
   className?: string;

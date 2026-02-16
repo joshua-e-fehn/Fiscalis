@@ -14,17 +14,12 @@ import {
   CategorySummary,
   SubcategoryData,
   PortfolioDataPoint,
-  categoryColorPalettes,
   Holding,
 } from "@/lib/types/investments";
 import {
-  Landmark,
-  Building,
-  Building2,
-  PiggyBank,
-  BarChart3,
-} from "lucide-react";
-import React from "react";
+  bondsSubcategoryUI,
+  makeSubcategoryBase,
+} from "@/lib/config/categoryUI";
 
 /**
  * Hook to get the bonds category summary
@@ -51,7 +46,7 @@ export function useBondsSummary(): {
     if (bondsData === undefined || bondsData === null) return null;
 
     const { positions, summary: dataSummary } = bondsData;
-    const colors = categoryColorPalettes.bonds;
+    const bySubcategory = dataSummary.bySubcategory;
 
     // Helper to get top holdings for a subcategory
     const getTopHoldingsForSubcategory = (
@@ -114,109 +109,23 @@ export function useBondsSummary(): {
 
     // Build subcategories array with real data
     const subcategories: SubcategoryData[] = [];
-    const bySubcategory = dataSummary.bySubcategory;
 
-    // 1. Government Bonds
-    const govData = bySubcategory["government"] ?? { count: 0, total: 0 };
-    const govCostBasis = getSubcategoryCostBasis("government");
-    const govPL = getSubcategoryPL("government");
-    subcategories.push({
-      id: "government",
-      name: "Government Bonds",
-      href: "/bonds/government",
-      icon: React.createElement(Landmark, { className: "h-4 w-4" }),
-      color: colors.government,
-      totalValue: govData.total,
-      costBasis: govCostBasis,
-      profitLoss: govPL,
-      profitLossPercent:
-        govCostBasis && govPL ? (govPL / govCostBasis) * 100 : null,
-      topHoldings: getTopHoldingsForSubcategory("government"),
-      holdingsCount: govData.count,
-      implemented: true,
-    });
-
-    // 2. Corporate Bonds
-    const corpData = bySubcategory["corporate"] ?? { count: 0, total: 0 };
-    const corpCostBasis = getSubcategoryCostBasis("corporate");
-    const corpPL = getSubcategoryPL("corporate");
-    subcategories.push({
-      id: "corporate",
-      name: "Corporate Bonds",
-      href: "/bonds/corporate",
-      icon: React.createElement(Building, { className: "h-4 w-4" }),
-      color: colors.corporate,
-      totalValue: corpData.total,
-      costBasis: corpCostBasis,
-      profitLoss: corpPL,
-      profitLossPercent:
-        corpCostBasis && corpPL ? (corpPL / corpCostBasis) * 100 : null,
-      topHoldings: getTopHoldingsForSubcategory("corporate"),
-      holdingsCount: corpData.count,
-      implemented: true,
-    });
-
-    // 3. Municipal Bonds
-    const muniData = bySubcategory["municipal"] ?? { count: 0, total: 0 };
-    const muniCostBasis = getSubcategoryCostBasis("municipal");
-    const muniPL = getSubcategoryPL("municipal");
-    subcategories.push({
-      id: "municipal",
-      name: "Municipal Bonds",
-      href: "/bonds/municipal",
-      icon: React.createElement(Building2, { className: "h-4 w-4" }),
-      color: colors.municipal,
-      totalValue: muniData.total,
-      costBasis: muniCostBasis,
-      profitLoss: muniPL,
-      profitLossPercent:
-        muniCostBasis && muniPL ? (muniPL / muniCostBasis) * 100 : null,
-      topHoldings: getTopHoldingsForSubcategory("municipal"),
-      holdingsCount: muniData.count,
-      implemented: true,
-    });
-
-    // 4. Savings Bonds
-    const savingsData = bySubcategory["savings"] ?? { count: 0, total: 0 };
-    const savingsCostBasis = getSubcategoryCostBasis("savings");
-    const savingsPL = getSubcategoryPL("savings");
-    subcategories.push({
-      id: "savings",
-      name: "Savings Bonds",
-      href: "/bonds/savings",
-      icon: React.createElement(PiggyBank, { className: "h-4 w-4" }),
-      color: colors.savings,
-      totalValue: savingsData.total,
-      costBasis: savingsCostBasis,
-      profitLoss: savingsPL,
-      profitLossPercent:
-        savingsCostBasis && savingsPL
-          ? (savingsPL / savingsCostBasis) * 100
-          : null,
-      topHoldings: getTopHoldingsForSubcategory("savings"),
-      holdingsCount: savingsData.count,
-      implemented: false, // Manual entry, not via broker integration
-    });
-
-    // 5. Bond Funds & ETFs
-    const fundsData = bySubcategory["funds"] ?? { count: 0, total: 0 };
-    const fundsCostBasis = getSubcategoryCostBasis("funds");
-    const fundsPL = getSubcategoryPL("funds");
-    subcategories.push({
-      id: "funds",
-      name: "Bond Funds & ETFs",
-      href: "/bonds/funds",
-      icon: React.createElement(BarChart3, { className: "h-4 w-4" }),
-      color: colors.funds,
-      totalValue: fundsData.total,
-      costBasis: fundsCostBasis,
-      profitLoss: fundsPL,
-      profitLossPercent:
-        fundsCostBasis && fundsPL ? (fundsPL / fundsCostBasis) * 100 : null,
-      topHoldings: getTopHoldingsForSubcategory("funds"),
-      holdingsCount: fundsData.count,
-      implemented: true,
-    });
+    // Iterate over all bond subcategories from centralized config
+    for (const [slug, meta] of Object.entries(bondsSubcategoryUI)) {
+      const data = bySubcategory[slug] ?? { count: 0, total: 0 };
+      const costBasis = getSubcategoryCostBasis(slug);
+      const pl = getSubcategoryPL(slug);
+      subcategories.push({
+        ...makeSubcategoryBase(slug, meta),
+        totalValue: data.total,
+        costBasis,
+        profitLoss: pl,
+        profitLossPercent: costBasis && pl ? (pl / costBasis) * 100 : null,
+        topHoldings: getTopHoldingsForSubcategory(slug),
+        holdingsCount: data.count,
+        implemented: data.count > 0 || meta.implemented,
+      });
+    }
 
     // Calculate totals
     const totalValue = dataSummary.totalValue;

@@ -11,62 +11,13 @@
  * - Crypto subcategory cards (BTC & ETH, Altcoins, Stablecoins, DeFi)
  */
 
-import { Bitcoin, Coins, CircleDollarSign, Layers } from "lucide-react";
 import {
   InvestmentDashboardSection,
   SubcategoryCategoryCard,
-  type SubcategoryCardData,
 } from "@/components/atomic/molecules/investments";
 import { CryptoAllocationChart } from "@/components/atomic/molecules/crypto";
 import { useCryptoSummary } from "@/hooks/convex/crypto";
-import { categoryColorPalettes } from "@/lib/types/investments";
-
-// Get crypto color palette
-const cryptoColors = categoryColorPalettes.crypto;
-
-/**
- * Crypto subcategory definitions
- * Bitcoin & Ethereum merged into one, others remain separate
- */
-const cryptoCategories: SubcategoryCardData[] = [
-  {
-    title: "Bitcoin & Ethereum",
-    description: "The two largest cryptocurrencies and their ecosystem tokens",
-    href: "/assets/crypto/btc-eth",
-    icon: Bitcoin,
-    implemented: false,
-    examples: ["BTC", "WBTC", "ETH", "stETH", "rETH", "WETH"],
-    color: cryptoColors.bitcoin,
-  },
-  {
-    title: "Altcoins",
-    description: "Alternative cryptocurrencies beyond BTC and ETH",
-    href: "/assets/crypto/altcoins",
-    icon: Coins,
-    implemented: false,
-    examples: ["SOL", "ADA", "AVAX", "DOT", "MATIC"],
-    color: cryptoColors.altcoins,
-  },
-  {
-    title: "Stablecoins",
-    description: "Price-stable cryptocurrencies pegged to fiat currencies",
-    href: "/assets/crypto/stablecoins",
-    icon: CircleDollarSign,
-    implemented: false,
-    examples: ["USDT", "USDC", "DAI", "FRAX"],
-    color: cryptoColors.stablecoins,
-  },
-  {
-    title: "DeFi",
-    description:
-      "Decentralized finance positions including staking and liquidity",
-    href: "/assets/crypto/defi",
-    icon: Layers,
-    implemented: false,
-    examples: ["Staking", "LP Positions", "Yield Farming", "Lending"],
-    color: cryptoColors.defi,
-  },
-];
+import { cryptoCategoryCards } from "@/lib/config/categoryUI";
 
 export default function CryptoAssetsOverviewPage() {
   const { summary, isLoading } = useCryptoSummary();
@@ -96,7 +47,7 @@ export default function CryptoAssetsOverviewPage() {
           <div className="h-px flex-1 bg-border" />
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {cryptoCategories.map((category) => (
+          {cryptoCategoryCards.map((category) => (
             <SubcategoryCategoryCard
               key={category.title}
               category={category}

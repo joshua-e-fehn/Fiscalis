@@ -5,10 +5,7 @@
  * Distinguishes between discrete (snapshot-based) and continuous (price-based) values.
  */
 
-import type {
-  TimeRange,
-  TimeInterval,
-} from "@/../services/finance/financeService";
+import type { TimeRange, TimeInterval } from "../finance/financeService";
 
 // Re-export for convenience
 export type { TimeRange, TimeInterval };

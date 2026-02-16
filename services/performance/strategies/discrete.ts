@@ -7,7 +7,7 @@
  * Uses interpolation to estimate values at timestamps between snapshots.
  */
 
-import { getTimeIntervalInMilliseconds } from "@/../services/finance/financeService";
+import { getTimeIntervalInMilliseconds } from "../../finance/financeService";
 
 import type {
   PerformanceDataPoint,

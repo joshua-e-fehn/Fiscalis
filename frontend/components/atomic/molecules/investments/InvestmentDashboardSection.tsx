@@ -24,8 +24,8 @@ import {
   CategorySummary,
   InvestmentCurrency,
   InvestmentCategory,
-  currencySymbols,
 } from "@/lib/types/investments";
+import { currencySymbols } from "@/lib/utils/currency";
 import {
   useCategoryYTD,
   useCategoryProfitLoss,

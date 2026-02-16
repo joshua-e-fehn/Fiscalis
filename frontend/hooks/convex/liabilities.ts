@@ -14,11 +14,12 @@ import {
   CategorySummary,
   SubcategoryData,
   PortfolioDataPoint,
-  categoryColorPalettes,
   Holding,
 } from "@/lib/types/investments";
-import { Home, CreditCard, Banknote, TrendingDown } from "lucide-react";
-import React from "react";
+import {
+  liabilitiesSubcategoryUI,
+  makeSubcategoryBase,
+} from "@/lib/config/categoryUI";
 
 /**
  * Hook to get the liabilities category summary
@@ -48,7 +49,6 @@ export function useLiabilitiesSummary(): {
       manualLoans,
       summary: dataSummary,
     } = liabilitiesData;
-    const colors = categoryColorPalettes.liabilities;
     const bySubcategory = dataSummary.bySubcategory;
 
     // Helper to get top holdings for a subcategory
@@ -139,82 +139,19 @@ export function useLiabilitiesSummary(): {
       return holdings.slice(0, limit);
     };
 
-    // Build subcategories array with real data
+    // Build subcategories array from centralized config
     const subcategories: SubcategoryData[] = [];
 
-    // 1. Mortgages
-    const mortgagesData = bySubcategory["mortgages"] ?? { count: 0, total: 0 };
-    subcategories.push({
-      id: "mortgages",
-      name: "Mortgages",
-      href: "/liabilities/mortgages",
-      icon: React.createElement(Home, { className: "h-4 w-4" }),
-      color: colors.mortgages,
-      totalValue: mortgagesData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("mortgages"),
-      holdingsCount: mortgagesData.count,
-      implemented: true,
-    });
-
-    // 2. Loans (personal, auto, student, etc.)
-    const loansData = bySubcategory["loans"] ?? { count: 0, total: 0 };
-    subcategories.push({
-      id: "loans",
-      name: "Loans",
-      href: "/liabilities/loans",
-      icon: React.createElement(Banknote, { className: "h-4 w-4" }),
-      color: colors.loans,
-      totalValue: loansData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("loans"),
-      holdingsCount: loansData.count,
-      implemented: true,
-    });
-
-    // 3. Credit Cards
-    const creditCardsData = bySubcategory["credit-cards"] ?? {
-      count: 0,
-      total: 0,
-    };
-    subcategories.push({
-      id: "credit-cards",
-      name: "Credit Cards",
-      href: "/liabilities/credit-cards",
-      icon: React.createElement(CreditCard, { className: "h-4 w-4" }),
-      color: colors["credit-cards"],
-      totalValue: creditCardsData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("credit-cards"),
-      holdingsCount: creditCardsData.count,
-      implemented: true,
-    });
-
-    // 4. Margin Loans
-    const marginLoansData = bySubcategory["margin-loans"] ?? {
-      count: 0,
-      total: 0,
-    };
-    subcategories.push({
-      id: "margin-loans",
-      name: "Margin Loans",
-      href: "/liabilities/margin",
-      icon: React.createElement(TrendingDown, { className: "h-4 w-4" }),
-      color: colors["margin-loans"],
-      totalValue: marginLoansData.total,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: getTopHoldingsForSubcategory("margin-loans"),
-      holdingsCount: marginLoansData.count,
-      implemented: true,
-    });
+    for (const [slug, meta] of Object.entries(liabilitiesSubcategoryUI)) {
+      const data = bySubcategory[slug] ?? { count: 0, total: 0 };
+      subcategories.push({
+        ...makeSubcategoryBase(slug, meta),
+        totalValue: data.total,
+        topHoldings: getTopHoldingsForSubcategory(slug),
+        holdingsCount: data.count,
+        implemented: true,
+      });
+    }
 
     // Calculate totals - liabilities are shown as positive values for display
     const totalValue = dataSummary.totalLiabilities;

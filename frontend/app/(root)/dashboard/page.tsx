@@ -19,7 +19,8 @@ import {
   UnifiedPositionsTable,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
-import { currencyCodes, InvestmentCurrency } from "@/lib/types/investments";
+import { InvestmentCurrency } from "@/lib/types/investments";
+import { currencyCodes } from "@/lib/utils/currency";
 import {
   TrendingUp,
   TrendingDown,

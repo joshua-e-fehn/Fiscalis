@@ -15,11 +15,12 @@ import {
   CategorySummary,
   SubcategoryData,
   PortfolioDataPoint,
-  categoryColorPalettes,
   Holding,
 } from "@/lib/types/investments";
-import { Home, Building2, BarChart3, Users, TreePine } from "lucide-react";
-import React from "react";
+import {
+  realEstateSubcategoryUI,
+  makeSubcategoryBase,
+} from "@/lib/config/categoryUI";
 
 /**
  * Hook to get the real estate category summary
@@ -46,7 +47,7 @@ export function useRealEstateSummary(): {
     if (realEstateData === undefined || realEstateData === null) return null;
 
     const { positions, summary: dataSummary } = realEstateData;
-    const colors = categoryColorPalettes["real-estate"];
+    const bySubcategory = dataSummary.bySubcategory;
 
     // Helper to get top holdings for a subcategory
     const getTopHoldingsForSubcategory = (
@@ -107,93 +108,24 @@ export function useRealEstateSummary(): {
       return total;
     };
 
-    // Build subcategories array
+    // Build subcategories array from centralized config
     const subcategories: SubcategoryData[] = [];
-    const bySubcategory = dataSummary.bySubcategory;
 
-    // 1. Residential (manual entry)
-    subcategories.push({
-      id: "residential",
-      name: "Residential",
-      href: "/real-estate/residential",
-      icon: React.createElement(Home, { className: "h-4 w-4" }),
-      color: colors.residential,
-      totalValue: 0,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: [],
-      holdingsCount: 0,
-      implemented: false,
-    });
-
-    // 2. Commercial (manual entry)
-    subcategories.push({
-      id: "commercial",
-      name: "Commercial",
-      href: "/real-estate/commercial",
-      icon: React.createElement(Building2, { className: "h-4 w-4" }),
-      color: colors.commercial,
-      totalValue: 0,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: [],
-      holdingsCount: 0,
-      implemented: false,
-    });
-
-    // 3. REITs (from broker positions)
-    const reitsData = bySubcategory["reits"] ?? { count: 0, total: 0 };
-    const reitsCostBasis = getSubcategoryCostBasis("reits");
-    const reitsPL = getSubcategoryPL("reits");
-    subcategories.push({
-      id: "reits",
-      name: "REITs",
-      href: "/real-estate/reits",
-      icon: React.createElement(BarChart3, { className: "h-4 w-4" }),
-      color: colors.reits,
-      totalValue: reitsData.total,
-      costBasis: reitsCostBasis,
-      profitLoss: reitsPL,
-      profitLossPercent:
-        reitsCostBasis && reitsPL ? (reitsPL / reitsCostBasis) * 100 : null,
-      topHoldings: getTopHoldingsForSubcategory("reits"),
-      holdingsCount: reitsData.count,
-      implemented: true,
-    });
-
-    // 4. Crowdfunding (manual entry)
-    subcategories.push({
-      id: "crowdfunding",
-      name: "Crowdfunding",
-      href: "/real-estate/crowdfunding",
-      icon: React.createElement(Users, { className: "h-4 w-4" }),
-      color: colors.crowdfunding,
-      totalValue: 0,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: [],
-      holdingsCount: 0,
-      implemented: false,
-    });
-
-    // 5. Land (manual entry)
-    subcategories.push({
-      id: "land",
-      name: "Land",
-      href: "/real-estate/land",
-      icon: React.createElement(TreePine, { className: "h-4 w-4" }),
-      color: colors.land,
-      totalValue: 0,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      topHoldings: [],
-      holdingsCount: 0,
-      implemented: false,
-    });
+    for (const [slug, meta] of Object.entries(realEstateSubcategoryUI)) {
+      const data = bySubcategory[slug] ?? { count: 0, total: 0 };
+      const costBasis = getSubcategoryCostBasis(slug);
+      const pl = getSubcategoryPL(slug);
+      subcategories.push({
+        ...makeSubcategoryBase(slug, meta),
+        totalValue: data.total,
+        costBasis,
+        profitLoss: pl,
+        profitLossPercent: costBasis && pl ? (pl / costBasis) * 100 : null,
+        topHoldings: getTopHoldingsForSubcategory(slug),
+        holdingsCount: data.count,
+        implemented: data.count > 0 || meta.implemented,
+      });
+    }
 
     // Calculate totals - REITs from broker positions + any future manual entries
     const totalValue = dataSummary.totalValue;

@@ -16,10 +16,13 @@ import {
   CategorySummary,
   SubcategoryData,
   PortfolioDataPoint,
-  categoryColorPalettes,
 } from "@/lib/types/investments";
-import { Bitcoin, Coins, CircleDollarSign, Layers } from "lucide-react";
-import React from "react";
+import {
+  cryptoSubcategoryUI,
+  cryptoDisplayGroups,
+  makeSubcategoryBase,
+} from "@/lib/config/categoryUI";
+import { createElement } from "react";
 
 // ═══════════════════════════════════════════════════════════════
 // VEZGO USER HOOKS
@@ -701,7 +704,8 @@ export function useCryptoSummary(): {
   const summary = useMemo<CategorySummary | null>(() => {
     if (!userId) return null;
 
-    const colors = categoryColorPalettes.crypto;
+    // Get the display group override for BTC+ETH merged card
+    const btcEthGroup = cryptoDisplayGroups[0]; // "btc-eth" group
 
     // Group positions by our categorization logic
     const btcEthPositions: typeof positions = [];
@@ -758,10 +762,10 @@ export function useCryptoSummary(): {
     const subcategories: SubcategoryData[] = [
       {
         id: "btc-eth",
-        name: "Bitcoin & Ethereum",
-        href: "/assets/crypto/btc-eth",
-        icon: React.createElement(Bitcoin, { className: "h-4 w-4" }),
-        color: colors.bitcoin,
+        name: btcEthGroup.title,
+        href: btcEthGroup.href,
+        icon: createElement(btcEthGroup.icon, { className: "h-4 w-4" }),
+        color: btcEthGroup.color,
         totalValue: btcEthTotal,
         costBasis: null,
         profitLoss: null,
@@ -775,15 +779,8 @@ export function useCryptoSummary(): {
         implemented: true,
       },
       {
-        id: "altcoins",
-        name: "Altcoins",
-        href: "/assets/crypto/altcoins",
-        icon: React.createElement(Coins, { className: "h-4 w-4" }),
-        color: colors.altcoins,
+        ...makeSubcategoryBase("altcoins", cryptoSubcategoryUI.altcoins),
         totalValue: altcoinTotal,
-        costBasis: null,
-        profitLoss: null,
-        profitLossPercent: null,
         topHoldings: mapPositionsToHoldings(
           altcoinPositions,
           "altcoins",
@@ -793,15 +790,8 @@ export function useCryptoSummary(): {
         implemented: true,
       },
       {
-        id: "stablecoins",
-        name: "Stablecoins",
-        href: "/assets/crypto/stablecoins",
-        icon: React.createElement(CircleDollarSign, { className: "h-4 w-4" }),
-        color: colors.stablecoins,
+        ...makeSubcategoryBase("stablecoins", cryptoSubcategoryUI.stablecoins),
         totalValue: stablecoinTotal,
-        costBasis: null,
-        profitLoss: null,
-        profitLossPercent: null,
         topHoldings: mapPositionsToHoldings(
           stablecoinPositions,
           "stablecoins",
@@ -811,15 +801,8 @@ export function useCryptoSummary(): {
         implemented: true,
       },
       {
-        id: "defi",
-        name: "DeFi",
-        href: "/assets/crypto/defi",
-        icon: React.createElement(Layers, { className: "h-4 w-4" }),
-        color: colors.defi,
+        ...makeSubcategoryBase("defi", cryptoSubcategoryUI.defi),
         totalValue: defiTotal,
-        costBasis: null,
-        profitLoss: null,
-        profitLossPercent: null,
         topHoldings: mapPositionsToHoldings(defiPositions, "defi", defiTotal),
         holdingsCount: defiPositions.length,
         implemented: true,

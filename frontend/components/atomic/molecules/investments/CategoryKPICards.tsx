@@ -7,7 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
-import { InvestmentCurrency, currencySymbols } from "@/lib/types/investments";
+import { InvestmentCurrency } from "@/lib/types/investments";
+import { currencySymbols } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface CategoryValueCardProps {

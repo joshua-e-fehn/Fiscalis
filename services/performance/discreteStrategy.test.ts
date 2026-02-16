@@ -9,12 +9,12 @@ import {
   DiscretePerformanceStrategy,
   calculateDiscretePerformance,
   getDiscreteStrategy,
-} from "../../frontend/lib/performance/strategies/discrete";
+} from "./strategies/discrete";
 import type {
   DiscretePerformanceInput,
   PerformanceCalculationOptions,
-} from "../../frontend/lib/performance/strategies/types";
-import type { SnapshotData } from "../../frontend/lib/performance/types";
+} from "./strategies/types";
+import type { SnapshotData } from "./types";
 
 // ═══════════════════════════════════════════════════════════════
 // Test Utilities

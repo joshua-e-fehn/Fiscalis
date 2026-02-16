@@ -12,8 +12,8 @@ import { api } from "@/convex/_generated/api";
 import {
   InvestmentCategory,
   PortfolioDataPoint,
-  categoryColorPalettes,
 } from "@/lib/types/investments";
+import { categoryPrimaryColors } from "@/lib/config/categoryUI";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { useCommoditiesSummary } from "./commodities";
 import { useEquitiesSummary } from "./equities";
@@ -149,7 +149,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       name: "Equities",
       href: "/equities",
       icon: React.createElement(Briefcase, { className: "h-4 w-4" }),
-      color: categoryColorPalettes.equities.primary,
+      color: categoryPrimaryColors.equities,
       totalValue: equitiesSummary?.totalValue ?? 0,
       costBasis: equitiesSummary?.totalCost ?? null,
       profitLoss: equitiesSummary?.profitLoss ?? null,
@@ -169,7 +169,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       name: "Commodities",
       href: "/commodities",
       icon: React.createElement(Coins, { className: "h-4 w-4" }),
-      color: categoryColorPalettes.commodities.primary,
+      color: categoryPrimaryColors.commodities,
       totalValue: commoditiesSummary?.totalValue ?? 0,
       costBasis: commoditiesSummary?.totalCost ?? null,
       profitLoss: commoditiesSummary?.profitLoss ?? null,
@@ -189,7 +189,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       name: "Bonds",
       href: "/bonds",
       icon: React.createElement(Receipt, { className: "h-4 w-4" }),
-      color: categoryColorPalettes.bonds.primary,
+      color: categoryPrimaryColors.bonds,
       totalValue: bondsSummary?.totalValue ?? 0,
       costBasis: bondsSummary?.totalCost ?? null,
       profitLoss: bondsSummary?.profitLoss ?? null,
@@ -209,7 +209,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       name: "Real Estate",
       href: "/real-estate",
       icon: React.createElement(Building2, { className: "h-4 w-4" }),
-      color: categoryColorPalettes["real-estate"].primary,
+      color: categoryPrimaryColors["real-estate"],
       totalValue: realEstateSummary?.totalValue ?? 0,
       costBasis: realEstateSummary?.totalCost ?? null,
       profitLoss: realEstateSummary?.profitLoss ?? null,
@@ -229,7 +229,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       name: "Cash & Savings",
       href: "/cash",
       icon: React.createElement(Banknote, { className: "h-4 w-4" }),
-      color: categoryColorPalettes.cash.primary,
+      color: categoryPrimaryColors.cash,
       totalValue: cashSummary?.totalValue ?? 0,
       costBasis: cashSummary?.totalCost ?? null,
       profitLoss: cashSummary?.profitLoss ?? null,
@@ -249,7 +249,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       name: "Cryptocurrency",
       href: "/crypto",
       icon: React.createElement(Bitcoin, { className: "h-4 w-4" }),
-      color: categoryColorPalettes.crypto.primary,
+      color: categoryPrimaryColors.crypto,
       totalValue: cryptoSummary?.totalValue ?? 0,
       costBasis: cryptoSummary?.totalCost ?? null,
       profitLoss: cryptoSummary?.profitLoss ?? null,
@@ -269,7 +269,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       name: "Collectibles",
       href: "/collectibles",
       icon: React.createElement(Gem, { className: "h-4 w-4" }),
-      color: categoryColorPalettes.collectibles.primary,
+      color: categoryPrimaryColors.collectibles,
       totalValue: collectiblesSummary?.totalValue ?? 0,
       costBasis: collectiblesSummary?.totalCost ?? null,
       profitLoss: collectiblesSummary?.profitLoss ?? null,

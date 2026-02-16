@@ -81,8 +81,7 @@ export type CryptoSubcategory =
   | "ethereum"
   | "altcoins"
   | "stablecoins"
-  | "defi"
-  | "nfts";
+  | "defi";
 
 /**
  * Commodities subcategories
@@ -113,7 +112,9 @@ export type CollectiblesSubcategory =
   | "watches"
   | "wine"
   | "cars"
-  | "memorabilia"
+  | "jewelry"
+  | "trading-cards"
+  | "memorabilia" // Numismatic coins, stamps, historical ephemera (not bullion)
   | "nfts"
   | "other";
 
@@ -157,7 +158,7 @@ export const subcategoriesByCategory: Record<
   ],
   equities: ["stocks", "etfs", "funds", "options", "private"],
   bonds: ["government", "corporate", "municipal", "savings", "funds"],
-  crypto: ["bitcoin", "ethereum", "altcoins", "stablecoins", "defi", "nfts"],
+  crypto: ["bitcoin", "ethereum", "altcoins", "stablecoins", "defi"],
   commodities: [
     "metals",
     "energy",
@@ -172,6 +173,8 @@ export const subcategoriesByCategory: Record<
     "watches",
     "wine",
     "cars",
+    "jewelry",
+    "trading-cards",
     "memorabilia",
     "nfts",
     "other",
@@ -208,7 +211,6 @@ export const subcategoryDisplayNames: Record<InvestmentSubcategory, string> = {
   altcoins: "Altcoins",
   stablecoins: "Stablecoins",
   defi: "DeFi",
-  nfts: "NFTs",
   // Commodities
   metals: "Precious Metals",
   energy: "Energy",
@@ -226,8 +228,11 @@ export const subcategoryDisplayNames: Record<InvestmentSubcategory, string> = {
   art: "Art",
   watches: "Watches",
   wine: "Wine",
-  cars: "Cars",
-  memorabilia: "Memorabilia",
+  cars: "Classic Cars",
+  jewelry: "Jewelry",
+  "trading-cards": "Trading Cards",
+  memorabilia: "Memorabilia & Ephemera",
+  nfts: "NFTs",
   other: "Other",
   // Liabilities
   mortgages: "Mortgages",

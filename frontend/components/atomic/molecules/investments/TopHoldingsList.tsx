@@ -7,11 +7,8 @@ import {
   CardTitle,
 } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
-import {
-  SubcategoryData,
-  InvestmentCurrency,
-  currencySymbols,
-} from "@/lib/types/investments";
+import { SubcategoryData, InvestmentCurrency } from "@/lib/types/investments";
+import { currencySymbols } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface TopHoldingsListProps {

@@ -21,7 +21,7 @@ import {
 } from "@/hooks/convex/crypto";
 import { Building2, Wallet, Link2, Coins } from "lucide-react";
 import { useMemo } from "react";
-import { formatCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function CryptoIntegrationsPage() {
   const connections = useVezgoConnections();

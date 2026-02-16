@@ -11,7 +11,7 @@ import {
   getTimeIntervalInMilliseconds,
   type TimeRange,
   type TimeInterval,
-} from "@/../services/finance/financeService";
+} from "../../finance/financeService";
 
 import type {
   PerformanceDataPoint,

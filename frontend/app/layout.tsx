@@ -18,7 +18,10 @@ export default function AppLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    // `dynamic` is required for strict CSP — the nonce is generated server-side
+    // and must be passed to the client via dynamic rendering.
+    // In dev mode strict CSP is disabled (see proxy.ts), but `dynamic` is harmless to keep.
+    <ClerkProvider dynamic>
       <html lang="en">
         <body className={inter.className}>
           <ConvexClientProvider>{children}</ConvexClientProvider>

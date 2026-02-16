@@ -15,6 +15,10 @@
  * When adding new external services or third-party scripts:
  *  - Add the domain to the correct CSP directive below (connect-src, script-src, frame-src, etc.)
  *  - Wildcard `*.x.com` does NOT match `x.com` itself — add both if needed.
+ *  - Schemeless domains (e.g. `*.convex.cloud`) only match `https://` — for WebSocket
+ *    connections you MUST also add `wss://*.convex.cloud`.
+ *  - Explicitly setting a directive (e.g. font-src) overrides the default-src 'self'
+ *    fallback — always include `'self'` if same-origin resources are needed.
  *  - If the new service loads scripts at runtime, it MUST be in script-src.
  *  - If it opens an iframe, it MUST be in frame-src.
  *  - Never add 'unsafe-inline' or 'unsafe-eval' to script-src — the strict nonce policy
@@ -51,12 +55,17 @@ export default clerkMiddleware(
       directives: {
         // Convex real-time (WebSocket + HTTP), Clerk FAPI, World Bank API, CARTO tiles, Vezgo
         // Note: both bare domain and wildcard are needed — *.x.com only matches subdomains, not x.com itself
+        // wss: scheme is required separately — schemeless entries only match https:
         "connect-src": [
           "*.convex.cloud",
+          "wss://*.convex.cloud",
           "api.worldbank.org",
           "basemaps.cartocdn.com",
           "*.basemaps.cartocdn.com",
           "connect.vezgo.com",
+          // Dev tools (e.g. console-ninja) connect via WebSocket on random local ports.
+          // 'self' only matches the exact dev server origin, not other ports or 127.0.0.1.
+          ...(!isProd ? ["ws://localhost:*", "ws://127.0.0.1:*"] : []),
         ],
         // Plaid Link script loaded at runtime
         "script-src": ["cdn.plaid.com"],
@@ -69,8 +78,13 @@ export default clerkMiddleware(
           "basemaps.cartocdn.com",
           "*.basemaps.cartocdn.com",
         ],
-        // CARTO map glyph/font PBFs
-        "font-src": ["basemaps.cartocdn.com", "*.basemaps.cartocdn.com"],
+        // CARTO map glyph/font PBFs + 'self' for Next.js self-hosted Inter font files
+        // (explicitly setting font-src overrides the default-src 'self' fallback)
+        "font-src": [
+          "'self'",
+          "basemaps.cartocdn.com",
+          "*.basemaps.cartocdn.com",
+        ],
         // MapLibre Web Workers use blob URLs for tile parsing
         "worker-src": ["blob:"],
       },

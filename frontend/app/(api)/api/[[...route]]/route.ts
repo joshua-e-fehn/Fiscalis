@@ -5,7 +5,7 @@ import metals from "./metals";
 import worlddata from "./worlddata";
 import worldbankSync from "./worldbank-sync";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 const app = new Hono().basePath("/api");
 

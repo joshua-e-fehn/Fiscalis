@@ -19,6 +19,7 @@ import {
   UnifiedPositionsTable,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
+import { RetirementTeaserCard } from "@/components/atomic/molecules/retirement";
 import { InvestmentCurrency } from "@/lib/types/investments";
 import { currencyCodes } from "@/lib/utils/currency";
 import {
@@ -621,6 +622,9 @@ export default function DashboardPage() {
           title="Portfolio Development"
         />
       </div>
+
+      {/* Retirement planner teaser */}
+      <RetirementTeaserCard />
 
       {/* Row 3: Category Cards + Liabilities */}
       <div>

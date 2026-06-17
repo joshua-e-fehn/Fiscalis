@@ -17,6 +17,7 @@ import {
   House,
   Landmark,
   PieChart,
+  PiggyBank,
   ReceiptText,
   Settings2,
   Star,
@@ -155,6 +156,13 @@ const data = {
     },
   ],
   navigationTools: [
+    {
+      title: "Retirement Planner",
+      url: "/retirement",
+      icon: PiggyBank,
+      isActive: true,
+      items: [],
+    },
     {
       title: "Interest Calculators",
       url: "/tools/calculators/interest",

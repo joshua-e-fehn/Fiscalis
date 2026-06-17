@@ -129,3 +129,13 @@ export {
   type ClassificationOverrideState,
   type UseClassificationOverrideReturn,
 } from "./classification";
+
+// Re-export retirement planner hooks
+export {
+  useRetirementPlan,
+  useSaveRetirementPlan,
+  useUpdateRetirementStep,
+  useResetRetirementPlan,
+  useRetirementResults,
+  useRetirementPreview,
+} from "./retirement";

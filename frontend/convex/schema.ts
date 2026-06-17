@@ -357,6 +357,7 @@ export default defineSchema({
   userSettings: defineTable({
     userId: v.string(),
     displayName: v.optional(v.string()),
+    birthDate: v.optional(v.string()), // ISO date (YYYY-MM-DD); current age is derived from this
     defaultCurrency: v.string(),
     language: v.optional(v.string()), // "en" or "de"
     theme: v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
@@ -380,6 +381,54 @@ export default defineSchema({
     cryptoConnected: v.boolean(),
     onboardingCompleted: v.boolean(),
     completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // ═══════════════════════════════════════════════════════════════
+  // RETIREMENT PLANNER ("Rentenplaner")
+  // ═══════════════════════════════════════════════════════════════
+
+  // One active plan per user. Computation lives in
+  // services/finance/retirementService.ts (pure, unit-tested) and is composed
+  // client-side from this plan + getTotalNetWorth().
+  retirementPlans: defineTable({
+    userId: v.string(),
+
+    // Wizard state
+    currentStep: v.number(),
+    status: v.union(v.literal("draft"), v.literal("active")),
+
+    // Personal
+    birthDate: v.optional(v.string()), // ISO date, preferred over currentAge
+    currentAge: v.number(),
+    retirementAge: v.number(),
+
+    // Lifestyle
+    monthlyExpensesToday: v.number(), // base currency, "today's money"
+
+    // Housing / real estate
+    ownsPrimaryResidence: v.boolean(),
+    // Owner-occupied home is excluded from the 4%-rule funding base (cannot be
+    // sold and lived in). Stored explicitly for UI clarity.
+    primaryResidenceExcluded: v.boolean(),
+    // Sellable property equity the user wants to count toward funding.
+    fundableRealEstateEquity: v.optional(v.number()),
+
+    // Pension income (flexible list of monthly sources)
+    pensionSources: v.array(
+      v.object({
+        label: v.string(),
+        monthlyAmount: v.number(),
+      }),
+    ),
+
+    // Assumptions (defaults applied on create)
+    inflationRate: v.number(), // default 0.02
+    withdrawalRate: v.number(), // default 0.04
+    optimisticReturn: v.number(), // default 0.0718 (doubles every ~10y)
+    conservativeReturn: v.number(), // default 0.05
+
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),

@@ -10,6 +10,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  CalendarDays,
 } from "lucide-react";
 import { OnboardingButton } from "../shared/OnboardingButton";
 import {
@@ -58,6 +59,7 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
 
   const [formData, setFormData] = useState<ProfileFormData>({
     displayName: "",
+    birthDate: "",
     defaultCurrency: "EUR",
     language: "en",
     theme: "dark",
@@ -74,6 +76,7 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
           user?.fullName ||
           user?.firstName ||
           prev.displayName,
+        birthDate: existingSettings?.birthDate || prev.birthDate,
         defaultCurrency:
           (existingSettings?.defaultCurrency as Currency) ||
           prev.defaultCurrency,
@@ -88,6 +91,7 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
     try {
       await saveSettings({
         displayName: formData.displayName || undefined,
+        birthDate: formData.birthDate || undefined,
         defaultCurrency: formData.defaultCurrency,
         language: formData.language,
         theme: formData.theme,
@@ -142,6 +146,33 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
                 }
                 className="bg-white/[0.03] border-white/[0.1] text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:ring-[#3B82F6]/20"
               />
+            </motion.div>
+
+            {/* Date of Birth */}
+            <motion.div variants={itemVariants} className="space-y-2">
+              <Label htmlFor="birthDate" className="text-white/70">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4" />
+                  Date of Birth
+                </div>
+              </Label>
+              <Input
+                id="birthDate"
+                type="date"
+                value={formData.birthDate}
+                max={new Date().toISOString().split("T")[0]}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    birthDate: e.target.value,
+                  }))
+                }
+                className="bg-white/[0.03] border-white/[0.1] text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:ring-[#3B82F6]/20 [color-scheme:dark]"
+              />
+              <p className="text-xs text-white/40">
+                Used to personalize planning tools like your retirement
+                forecast.
+              </p>
             </motion.div>
 
             {/* Currency */}

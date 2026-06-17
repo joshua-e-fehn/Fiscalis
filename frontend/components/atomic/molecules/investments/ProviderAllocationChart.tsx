@@ -4,7 +4,7 @@
  * ProviderAllocationChart Component
  *
  * Displays asset allocation breakdown by financial provider
- * (Plaid/Banking, SnapTrade/Brokers, Vezgo/Crypto).
+ * (Plaid/Banking, SnapTrade/Brokers, Bitpanda).
  */
 
 import {
@@ -48,19 +48,19 @@ interface ProviderAllocationChartProps {
 const providerIcons: Record<string, React.ElementType> = {
   plaid: Landmark,
   snaptrade: Briefcase,
-  vezgo: Bitcoin,
+  bitpanda: Bitcoin,
 };
 
 const providerRoutes: Record<string, string> = {
   plaid: "/banking",
   snaptrade: "/brokers",
-  vezgo: "/crypto",
+  bitpanda: "/integrations/brokers",
 };
 
 const providerLabels: Record<string, string> = {
   plaid: "Banking",
   snaptrade: "Brokers",
-  vezgo: "Crypto",
+  bitpanda: "Bitpanda",
 };
 
 export function ProviderAllocationChart({
@@ -180,12 +180,6 @@ export function ProviderAllocationChart({
                 <Link href="/brokers">
                   <Briefcase className="mr-2 h-4 w-4" />
                   Brokers
-                </Link>
-              </Button>
-              <Button size="sm" variant="outline" asChild>
-                <Link href="/crypto">
-                  <Bitcoin className="mr-2 h-4 w-4" />
-                  Crypto
                 </Link>
               </Button>
             </div>

@@ -19,6 +19,20 @@ export {
   useIdentity,
 } from "./banking";
 
+// Re-export all Convex Bitpanda hooks
+export {
+  useBitpandaConnections,
+  useBitpandaConnectionsNeedingAttention,
+  useBitpandaHoldings,
+  useBitpandaHoldingsByCategory,
+  useBitpandaTransactions,
+  useConnectBitpanda,
+  useSyncBitpandaConnection,
+  useSyncAllBitpandaConnections,
+  useDeleteBitpandaConnection,
+  useSetBitpandaOverride,
+} from "./bitpanda";
+
 // Re-export all Convex broker hooks
 export {
   // SnapTrade user hooks

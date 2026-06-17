@@ -16,7 +16,7 @@ import { useSyncContext } from "@/providers/syncProvider";
  * Sync All Button - syncs all financial providers and creates a portfolio snapshot
  *
  * Features:
- * - Syncs Plaid (banking), Snaptrade (brokers), and Vezgo (crypto)
+ * - Syncs Plaid (banking), Snaptrade (brokers), and Bitpanda
  * - Creates a portfolio snapshot after sync
  * - Handles partial failures gracefully
  * - Shows visual feedback for sync status

@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/shadcn/select";
 import { cn } from "@/lib/utils";
+import { todayLocalISO } from "@/lib/utils/date";
 import {
   ProfileFormData,
   Currency,
@@ -160,7 +161,7 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
                 id="birthDate"
                 type="date"
                 value={formData.birthDate}
-                max={new Date().toISOString().split("T")[0]}
+                max={todayLocalISO()}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,

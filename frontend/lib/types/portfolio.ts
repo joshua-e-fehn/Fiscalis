@@ -2,7 +2,7 @@
  * Portfolio Types
  *
  * Unified types for aggregating positions and data across
- * all financial providers (Plaid, SnapTrade, Vezgo) and manual entries.
+ * all financial providers (Plaid, SnapTrade, Bitpanda) and manual entries.
  */
 
 import type { Id } from "../../convex/_generated/dataModel";
@@ -10,7 +10,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 /**
  * Supported financial data providers
  */
-export type FinancialProvider = "plaid" | "snaptrade" | "vezgo" | "manual";
+export type FinancialProvider = "plaid" | "snaptrade" | "bitpanda" | "manual";
 
 /**
  * Provider metadata for display
@@ -41,12 +41,12 @@ export const PROVIDER_INFO: Record<FinancialProvider, ProviderInfo> = {
     color: "#6366F1",
     category: "brokers",
   },
-  vezgo: {
-    id: "vezgo",
-    name: "Vezgo",
-    description: "Cryptocurrency",
-    color: "#F7931A",
-    category: "crypto",
+  bitpanda: {
+    id: "bitpanda",
+    name: "Bitpanda",
+    description: "Crypto, Metals, Stocks & Cash",
+    color: "#16BA53",
+    category: "brokers",
   },
   manual: {
     id: "manual",
@@ -83,7 +83,7 @@ export interface UnifiedPosition {
   _id:
     | Id<"plaidAccounts">
     | Id<"brokerPositions">
-    | Id<"vezgoPositions">
+    | Id<"bitpandaHoldings">
     | string;
 
   /** Source provider */
@@ -143,7 +143,7 @@ export interface UnifiedPosition {
     isin?: string;
     assetType?: string;
 
-    // Vezgo-specific
+    // Crypto-specific
     chain?: string;
     protocol?: string;
     contractAddress?: string;
@@ -197,12 +197,14 @@ export interface NetWorthByProvider {
       positionsCount: number;
       accountsCount: number;
     };
-    vezgo: {
+    bitpanda: {
       total: number;
       crypto: number;
-      defi: number;
-      nft: number;
-      positionsCount: number;
+      equities: number;
+      commodities: number;
+      cash: number;
+      other: number;
+      holdingsCount: number;
       connectionsCount: number;
     };
   };
@@ -232,7 +234,7 @@ export interface UnifiedTransaction {
     brokerName?: string;
     settlementDate?: string;
 
-    // Vezgo
+    // Crypto
     txHash?: string;
     chain?: string;
     fromAddress?: string;
@@ -282,23 +284,6 @@ export function snaptradeTypeToCategory(
   };
 
   return typeMap[assetType.toLowerCase()] || "other";
-}
-
-/**
- * Helper to map Vezgo category to unified category
- */
-export function vezgoTypeToCategory(
-  category: "cryptocurrency" | "token" | "stablecoin" | "defi" | "nft",
-): UnifiedAssetCategory {
-  const typeMap: Record<string, UnifiedAssetCategory> = {
-    cryptocurrency: "crypto",
-    token: "crypto",
-    stablecoin: "crypto",
-    defi: "defi",
-    nft: "nft",
-  };
-
-  return typeMap[category] || "crypto";
 }
 
 /**

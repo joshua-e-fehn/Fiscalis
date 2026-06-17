@@ -147,17 +147,43 @@ export const takeSnapshot = internalMutation({
       commoditiesValue += itemCost;
     }
 
-    // 4. Vezgo crypto positions (crypto exchanges & wallets)
-    const vezgoPositions = await ctx.db
-      .query("vezgoPositions")
+    // 4. Bitpanda holdings (mixed: crypto, metals, commodities, stocks, fiat)
+    const bitpandaHoldings = await ctx.db
+      .query("bitpandaHoldings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    let vezgoCryptoValue = 0;
-    for (const pos of vezgoPositions) {
-      // Use fiatValue if available, otherwise skip (no quantity-based fallback without price)
-      const value = pos.fiatValue ?? 0;
-      vezgoCryptoValue += value;
+    let bitpandaCashValue = 0;
+    let bitpandaEquitiesValue = 0;
+    let bitpandaBondsValue = 0;
+    let bitpandaCryptoValue = 0;
+    let bitpandaCommoditiesValue = 0;
+    let bitpandaLiabilitiesValue = 0;
+
+    for (const h of bitpandaHoldings) {
+      const value = h.valueInBaseCurrency ?? h.marketValue ?? 0;
+      switch (h.investmentCategory) {
+        case "cash":
+          bitpandaCashValue += value;
+          break;
+        case "equities":
+          bitpandaEquitiesValue += value;
+          break;
+        case "bonds":
+          bitpandaBondsValue += value;
+          break;
+        case "crypto":
+          bitpandaCryptoValue += value;
+          break;
+        case "commodities":
+          bitpandaCommoditiesValue += value;
+          break;
+        case "liabilities":
+          bitpandaLiabilitiesValue += Math.abs(value);
+          break;
+        default:
+          bitpandaCryptoValue += value;
+      }
     }
 
     // 5. Manual loans (liabilities)
@@ -172,33 +198,35 @@ export const takeSnapshot = internalMutation({
     }
 
     // Build category breakdown
-    if (cashValue + brokerCashValue > 0) {
+    if (cashValue + brokerCashValue + bitpandaCashValue > 0) {
       categoryBreakdown.push({
         category: "cash",
-        value: cashValue + brokerCashValue,
+        value: cashValue + brokerCashValue + bitpandaCashValue,
       });
     }
 
-    if (equitiesValue > 0) {
+    const totalEquitiesValue = equitiesValue + bitpandaEquitiesValue;
+    if (totalEquitiesValue > 0) {
       categoryBreakdown.push({
         category: "equities",
-        value: equitiesValue,
+        value: totalEquitiesValue,
         costBasis: equitiesCost > 0 ? equitiesCost : undefined,
       });
       if (equitiesCost > 0) hasCostBasis = true;
     }
 
-    if (bondsValue > 0) {
+    const totalBondsValue = bondsValue + bitpandaBondsValue;
+    if (totalBondsValue > 0) {
       categoryBreakdown.push({
         category: "bonds",
-        value: bondsValue,
+        value: totalBondsValue,
         costBasis: bondsCost > 0 ? bondsCost : undefined,
       });
       if (bondsCost > 0) hasCostBasis = true;
     }
 
-    // Combine broker crypto (from SnapTrade) + Vezgo crypto (exchanges & wallets)
-    const totalCryptoValue = cryptoValue + vezgoCryptoValue;
+    // Combine broker crypto (SnapTrade) + Bitpanda crypto
+    const totalCryptoValue = cryptoValue + bitpandaCryptoValue;
     if (totalCryptoValue > 0) {
       categoryBreakdown.push({
         category: "crypto",
@@ -208,10 +236,11 @@ export const takeSnapshot = internalMutation({
       if (cryptoCost > 0) hasCostBasis = true;
     }
 
-    if (commoditiesValue > 0) {
+    const totalCommoditiesValue = commoditiesValue + bitpandaCommoditiesValue;
+    if (totalCommoditiesValue > 0) {
       categoryBreakdown.push({
         category: "commodities",
-        value: commoditiesValue,
+        value: totalCommoditiesValue,
         costBasis: commoditiesCost > 0 ? commoditiesCost : undefined,
       });
       if (commoditiesCost > 0) hasCostBasis = true;
@@ -221,13 +250,21 @@ export const takeSnapshot = internalMutation({
     totalAssets =
       cashValue +
       brokerCashValue +
+      bitpandaCashValue +
       equitiesValue +
+      bitpandaEquitiesValue +
       bondsValue +
+      bitpandaBondsValue +
       cryptoValue +
-      vezgoCryptoValue +
-      commoditiesValue;
+      bitpandaCryptoValue +
+      commoditiesValue +
+      bitpandaCommoditiesValue;
 
-    totalLiabilities = liabilitiesValue + brokerLiabilitiesValue + loansValue;
+    totalLiabilities =
+      liabilitiesValue +
+      brokerLiabilitiesValue +
+      bitpandaLiabilitiesValue +
+      loansValue;
 
     totalCostBasis = equitiesCost + bondsCost + cryptoCost + commoditiesCost;
 
@@ -407,18 +444,6 @@ export const takeManualSnapshot = mutation({
       commoditiesValue += itemCost;
     }
 
-    // 4. Vezgo crypto positions (crypto exchanges & wallets)
-    const vezgoPositions = await ctx.db
-      .query("vezgoPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    let vezgoCryptoValue = 0;
-    for (const pos of vezgoPositions) {
-      const value = pos.fiatValue ?? 0;
-      vezgoCryptoValue += value;
-    }
-
     // 5. Manual loans
     const loans = await ctx.db
       .query("loans")
@@ -456,8 +481,7 @@ export const takeManualSnapshot = mutation({
       if (bondsCost > 0) hasCostBasis = true;
     }
 
-    // Combine broker crypto + Vezgo crypto
-    const totalCryptoValue = cryptoValue + vezgoCryptoValue;
+    const totalCryptoValue = cryptoValue;
     if (totalCryptoValue > 0) {
       categoryBreakdown.push({
         category: "crypto",
@@ -482,7 +506,6 @@ export const takeManualSnapshot = mutation({
       equitiesValue +
       bondsValue +
       cryptoValue +
-      vezgoCryptoValue +
       commoditiesValue;
 
     totalLiabilities = liabilitiesValue + brokerLiabilitiesValue + loansValue;
@@ -572,9 +595,11 @@ export const getUsersWithConnections = internalQuery({
       userIds.add(conn.userId);
     }
 
-    // Get users with Vezgo connections
-    const vezgoConnections = await ctx.db.query("vezgoConnections").collect();
-    for (const conn of vezgoConnections) {
+    // Get users with Bitpanda connections
+    const bitpandaConnections = await ctx.db
+      .query("bitpandaConnections")
+      .collect();
+    for (const conn of bitpandaConnections) {
       userIds.add(conn.userId);
     }
 

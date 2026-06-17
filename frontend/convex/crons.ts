@@ -10,7 +10,7 @@ const crons = cronJobs();
 // ═══════════════════════════════════════════════════════════════
 // Daily Portfolio Sync & Snapshot
 // Runs every day at 6:00 AM UTC
-// Syncs all providers (Plaid, Snaptrade, Vezgo) for all users
+// Syncs all providers (Plaid, Snaptrade, Bitpanda) for all users
 // and creates portfolio snapshots for performance tracking
 // ═══════════════════════════════════════════════════════════════
 crons.daily(
@@ -30,13 +30,13 @@ crons.weekly(
 );
 
 // ═══════════════════════════════════════════════════════════════
-// Crypto Connection Sync (Vezgo)
-// Runs every 6 hours to keep crypto data fresh
+// Bitpanda Connection Sync
+// Runs every 6 hours to keep Bitpanda holdings fresh
 // ═══════════════════════════════════════════════════════════════
 crons.interval(
-  "sync-crypto-connections",
+  "sync-bitpanda-connections",
   { hours: 6 },
-  internal.actions.vezgo.scheduledSyncAllAction,
+  internal.actions.bitpanda.scheduledSyncAllAction,
 );
 
 export default crons;

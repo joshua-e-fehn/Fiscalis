@@ -10,10 +10,12 @@ import type {
   ClassificationRule,
   PlaidAccountContext,
   SnaptradePositionContext,
-  VezgoPositionContext,
+  BitpandaPositionContext,
   InvestmentCategory,
   InvestmentSubcategory,
 } from "../../../lib/types/classification";
+
+import { BASE_CURRENCY } from "./currency";
 
 import {
   CLASSIFICATION_RULES,
@@ -123,14 +125,37 @@ export function classifySnaptradePosition(
 }
 
 /**
- * Classify a Vezgo position (for future crypto integration)
+ * Classify a Bitpanda holding
+ *
+ * Bitpanda spans crypto, metals, commodities, stocks/ETFs, indices and fiat.
+ * Order: fiat handling → symbol-based (BTC/ETH/stablecoins/MMF) → asset-type rules → fallback.
  */
-export function classifyVezgoPosition(
-  context: Omit<VezgoPositionContext, "provider">,
+export function classifyBitpandaPosition(
+  context: Omit<BitpandaPositionContext, "provider">,
 ): ClassificationResult {
-  const fullContext: VezgoPositionContext = { ...context, provider: "vezgo" };
+  const fullContext: BitpandaPositionContext = {
+    ...context,
+    provider: "bitpanda",
+  };
 
-  // Check symbol-based classifications first
+  // Fiat wallets: base currency → cash savings; anything else → forex
+  const assetType = context.assetType.toLowerCase();
+  if (assetType === "fiat" || assetType === "fiatwallet") {
+    const isBase =
+      context.symbol.toUpperCase() === BASE_CURRENCY.toUpperCase();
+    return {
+      category: "cash",
+      subcategory: isBase ? "savings-accounts" : "forex",
+      confidence: 1.0,
+      ruleId: isBase ? "bitpanda_fiat_base" : "bitpanda_fiat_forex",
+      ruleName: isBase
+        ? "Bitpanda Fiat (base currency)"
+        : "Bitpanda Fiat (foreign currency)",
+      source: "auto",
+    };
+  }
+
+  // Check symbol-based classifications first (BTC, ETH, stablecoins, etc.)
   const symbolClassification = classifyBySymbol(context.symbol, context.name);
   if (symbolClassification) {
     return symbolClassification;
@@ -155,13 +180,13 @@ export function classifyVezgoPosition(
     }
   }
 
-  // Default fallback for unknown crypto
+  // Default fallback: treat unknown Bitpanda assets as altcoins
   return {
     category: "crypto",
     subcategory: "altcoins",
     confidence: 0.5,
-    ruleId: "fallback_crypto",
-    ruleName: "Unknown Crypto (defaulted to altcoins)",
+    ruleId: "fallback_bitpanda",
+    ruleName: "Unknown Bitpanda Asset (defaulted to altcoins)",
     source: "auto",
   };
 }
@@ -178,7 +203,7 @@ function matchRule(
   context:
     | PlaidAccountContext
     | SnaptradePositionContext
-    | VezgoPositionContext,
+    | BitpandaPositionContext,
   accountTypeKey?: string,
 ): boolean {
   const { matcher } = rule;

@@ -22,7 +22,7 @@ export interface SyncAllResult {
     positionsProcessed: number;
     error?: string;
   };
-  vezgo: {
+  bitpanda: {
     success: boolean;
     connectionsSynced: number;
     error?: string;
@@ -37,7 +37,7 @@ export interface SyncAllResult {
 }
 
 /**
- * Sync all financial data from all providers (Plaid, Snaptrade, Vezgo)
+ * Sync all financial data from all providers (Plaid, Snaptrade, Bitpanda)
  * and create a portfolio snapshot.
  *
  * This action handles partial failures gracefully:
@@ -60,7 +60,7 @@ export const syncAllProviders = action({
       positionsProcessed: v.number(),
       error: v.optional(v.string()),
     }),
-    vezgo: v.object({
+    bitpanda: v.object({
       success: v.boolean(),
       connectionsSynced: v.number(),
       error: v.optional(v.string()),
@@ -88,7 +88,7 @@ export const syncAllProviders = action({
         accountsProcessed: 0,
         positionsProcessed: 0,
       },
-      vezgo: { success: false, connectionsSynced: 0 },
+      bitpanda: { success: false, connectionsSynced: 0 },
       snapshot: { success: false },
     };
 
@@ -145,22 +145,22 @@ export const syncAllProviders = action({
       };
     }
 
-    // 3. Sync Vezgo crypto data (skip individual snapshot)
+    // 3. Sync Bitpanda data (skip individual snapshot)
     try {
-      const vezgoResult = await ctx.runAction(
-        api.actions.vezgo.syncAllConnections,
+      const bitpandaResult = await ctx.runAction(
+        api.actions.bitpanda.syncAllConnections,
         { skipSnapshot: true },
       );
-      result.vezgo = {
-        success: vezgoResult.success,
-        connectionsSynced: vezgoResult.count,
+      result.bitpanda = {
+        success: bitpandaResult.success,
+        connectionsSynced: bitpandaResult.count,
       };
     } catch (error) {
-      console.error("Vezgo sync error:", error);
-      result.vezgo = {
+      console.error("Bitpanda sync error:", error);
+      result.bitpanda = {
         success: false,
         connectionsSynced: 0,
-        error: error instanceof Error ? error.message : "Vezgo sync failed",
+        error: error instanceof Error ? error.message : "Bitpanda sync failed",
       };
     }
 
@@ -195,7 +195,7 @@ export const syncAllProviders = action({
     result.success =
       (result.plaid.success ||
         result.snaptrade.success ||
-        result.vezgo.success) &&
+        result.bitpanda.success) &&
       result.snapshot.success;
 
     return result;
@@ -217,7 +217,7 @@ export interface ScheduledSyncResult {
     success: boolean;
     plaidSuccess: boolean;
     snaptradeSuccess: boolean;
-    vezgoSuccess: boolean;
+    bitpandaSuccess: boolean;
     snapshotSuccess: boolean;
     error?: string;
   }>;
@@ -235,7 +235,7 @@ export const syncAllForUserInternal = internalAction({
     success: v.boolean(),
     plaidSuccess: v.boolean(),
     snaptradeSuccess: v.boolean(),
-    vezgoSuccess: v.boolean(),
+    bitpandaSuccess: v.boolean(),
     snapshotSuccess: v.boolean(),
     error: v.optional(v.string()),
   }),
@@ -246,7 +246,7 @@ export const syncAllForUserInternal = internalAction({
     success: boolean;
     plaidSuccess: boolean;
     snaptradeSuccess: boolean;
-    vezgoSuccess: boolean;
+    bitpandaSuccess: boolean;
     snapshotSuccess: boolean;
     error?: string;
   }> => {
@@ -254,7 +254,7 @@ export const syncAllForUserInternal = internalAction({
 
     let plaidSuccess = false;
     let snaptradeSuccess = false;
-    let vezgoSuccess = false;
+    let bitpandaSuccess = false;
     let snapshotSuccess = false;
 
     // 1. Sync Plaid accounts
@@ -291,18 +291,21 @@ export const syncAllForUserInternal = internalAction({
       );
     }
 
-    // 3. Sync Vezgo crypto data
+    // 3. Sync Bitpanda data
     try {
-      const vezgoResult: { success: boolean; connectionsSynced: number } =
-        await ctx.runAction(internal.actions.vezgo.syncAllForUserInternal, {
+      const bitpandaResult: { success: boolean; connectionsSynced: number } =
+        await ctx.runAction(internal.actions.bitpanda.syncAllForUserInternal, {
           userId,
         });
-      vezgoSuccess = vezgoResult.success;
+      bitpandaSuccess = bitpandaResult.success;
       console.log(
-        `[SCHEDULED SYNC] Vezgo sync for ${userId}: ${vezgoResult.connectionsSynced} connections`,
+        `[SCHEDULED SYNC] Bitpanda sync for ${userId}: ${bitpandaResult.connectionsSynced} connections`,
       );
     } catch (error) {
-      console.error(`[SCHEDULED SYNC] Vezgo sync failed for ${userId}:`, error);
+      console.error(
+        `[SCHEDULED SYNC] Bitpanda sync failed for ${userId}:`,
+        error,
+      );
     }
 
     // 4. Take portfolio snapshot
@@ -320,13 +323,13 @@ export const syncAllForUserInternal = internalAction({
 
     // Consider successful if at least one provider synced and snapshot created
     const overallSuccess =
-      (plaidSuccess || snaptradeSuccess || vezgoSuccess) && snapshotSuccess;
+      (plaidSuccess || snaptradeSuccess || bitpandaSuccess) && snapshotSuccess;
 
     return {
       success: overallSuccess,
       plaidSuccess,
       snaptradeSuccess,
-      vezgoSuccess,
+      bitpandaSuccess,
       snapshotSuccess,
     };
   },

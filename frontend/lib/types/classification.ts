@@ -2,7 +2,7 @@
  * Investment Classification Types
  *
  * Type definitions for the classification system that maps
- * financial data from providers (Plaid, Snaptrade, Vezgo) to
+ * financial data from providers (Plaid, Snaptrade, Bitpanda) to
  * Fiscalis investment categories and subcategories.
  */
 
@@ -248,7 +248,11 @@ export const subcategoryDisplayNames: Record<InvestmentSubcategory, string> = {
 /**
  * Data providers that feed into classification
  */
-export type ClassificationProvider = "plaid" | "snaptrade" | "vezgo" | "manual";
+export type ClassificationProvider =
+  | "plaid"
+  | "snaptrade"
+  | "bitpanda"
+  | "manual";
 
 /**
  * Rule matcher for account type-based classification (Plaid)
@@ -261,11 +265,11 @@ export interface AccountTypeMatcher {
 }
 
 /**
- * Rule matcher for asset type-based classification (Snaptrade/Vezgo)
+ * Rule matcher for asset type-based classification (Snaptrade/Bitpanda)
  */
 export interface AssetTypeMatcher {
   type: "asset_type";
-  provider: "snaptrade" | "vezgo";
+  provider: "snaptrade" | "bitpanda";
   /** Asset type values to match (e.g., ["equity", "stock"]) */
   values: string[];
 }
@@ -403,20 +407,20 @@ export interface SnaptradePositionContext {
 }
 
 /**
- * Context for Vezgo position classification
+ * Context for Bitpanda holding classification
+ *
+ * Bitpanda holds a mix of asset classes (crypto, metals, commodities,
+ * stocks/ETFs, indices, fiat) behind a single read-only API key.
+ * `assetType` is the normalized Bitpanda asset class (see convex/lib/bitpanda.ts).
  */
-export interface VezgoPositionContext {
-  provider: "vezgo";
-  /** Asset type from Vezgo */
+export interface BitpandaPositionContext {
+  provider: "bitpanda";
+  /** Normalized Bitpanda asset class: "crypto" | "metal" | "commodity" | "stock" | "etf" | "index" | "fiat" */
   assetType: string;
-  /** Token/coin symbol */
+  /** Asset symbol (e.g., "BTC", "XAU", "TSLA", "EUR") */
   symbol: string;
   /** Asset name */
   name: string | null;
-  /** Contract address (for token identification) */
-  contractAddress?: string | null;
-  /** Token ID (for NFTs) */
-  tokenId?: string | null;
 }
 
 /**
@@ -425,7 +429,7 @@ export interface VezgoPositionContext {
 export type ClassificationContext =
   | PlaidAccountContext
   | SnaptradePositionContext
-  | VezgoPositionContext;
+  | BitpandaPositionContext;
 
 // ═══════════════════════════════════════════════════════════════
 // CURRENCY CONVERSION

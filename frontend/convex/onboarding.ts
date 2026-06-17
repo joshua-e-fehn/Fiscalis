@@ -95,17 +95,16 @@ export const getConnectionSummary = query({
       .filter((q) => q.eq(q.field("status"), "connected"))
       .collect();
 
-    // Count Vezgo connections (crypto)
-    const vezgoConnections = await ctx.db
-      .query("vezgoConnections")
+    // Count Bitpanda connections
+    const bitpandaConnections = await ctx.db
+      .query("bitpandaConnections")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("status"), "active"))
       .collect();
 
     return {
       bankingCount: plaidAccounts.length,
-      brokerCount: brokerConnections.length,
-      cryptoCount: vezgoConnections.length,
+      brokerCount: brokerConnections.length + bitpandaConnections.length,
+      cryptoCount: bitpandaConnections.length,
     };
   },
 });

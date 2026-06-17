@@ -687,6 +687,7 @@ export default defineSchema({
 
 		type: v.string(), // buy | sell | deposit | withdrawal | transfer | reward | other
 		symbol: v.string(),
+		assetType: v.optional(v.string()), // crypto | metal | commodity | stock | fiat | unknown
 		quantity: v.number(),
 		price: v.optional(v.number()), // Price per unit
 		amount: v.number(), // Total fiat amount

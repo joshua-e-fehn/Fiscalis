@@ -839,7 +839,8 @@ export const getCryptoTransactions = query({
     const userId = identity.subject;
     const limit = args.limit ?? 100;
 
-    // Symbols held as crypto on Bitpanda
+    // Fallback only: symbols currently held as crypto on Bitpanda. Used to
+    // classify transactions synced before assetType was stored on them.
     const bitpandaCryptoHoldings = await ctx.db
       .query("bitpandaHoldings")
       .withIndex("by_category", (q) =>
@@ -874,10 +875,17 @@ export const getCryptoTransactions = query({
 
     const bitpandaTransactions = await ctx.db
       .query("bitpandaTransactions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_date", (q) => q.eq("userId", userId))
+      .order("desc")
       .collect();
     for (const tx of bitpandaTransactions) {
-      if (!bitpandaCryptoSymbols.has(tx.symbol.toUpperCase())) continue;
+      // Prefer the asset class stored on the transaction (independent of
+      // current holdings); fall back to the held-symbol set for rows synced
+      // before assetType was recorded.
+      const isCrypto = tx.assetType
+        ? tx.assetType === "crypto"
+        : bitpandaCryptoSymbols.has(tx.symbol.toUpperCase());
+      if (!isCrypto) continue;
       unified.push({
         _id: tx._id,
         provider: "bitpanda",

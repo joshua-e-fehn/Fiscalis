@@ -1,9 +1,36 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { query, type QueryCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import type {
   InvestmentCategory,
   InvestmentSubcategory,
 } from "../lib/types/classification";
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Fetch Bitpanda holdings for a category and present them with the same
+ * fields broker positions expose, so category queries can merge them into
+ * their `positions` array without changing the consumer shape.
+ * (Bitpanda holdings carry no cost-basis / P&L, so those read as undefined.)
+ */
+async function getBitpandaPositionsForCategory(
+  ctx: QueryCtx,
+  userId: string,
+  category: InvestmentCategory,
+): Promise<Doc<"brokerPositions">[]> {
+  const holdings = await ctx.db
+    .query("bitpandaHoldings")
+    .withIndex("by_category", (q) =>
+      q.eq("userId", userId).eq("investmentCategory", category),
+    )
+    .collect();
+  // Structurally compatible for the fields category consumers read
+  // (_id, symbol, name, investmentSubcategory, valueInBaseCurrency, marketValue).
+  return holdings as unknown as Doc<"brokerPositions">[];
+}
 
 // ═══════════════════════════════════════════════════════════════
 // CATEGORY-BASED QUERIES
@@ -135,13 +162,18 @@ export const getCashHoldings = query({
       institutionName: itemToInstitution.get(acc.itemId) ?? undefined,
     }));
 
-    // Get all broker positions classified as cash
-    const brokerCashPositions = await ctx.db
+    // Get all broker positions classified as cash, plus Bitpanda fiat cash
+    const brokerCashPositionsRaw = await ctx.db
       .query("brokerPositions")
       .withIndex("by_category", (q) =>
         q.eq("userId", userId).eq("investmentCategory", "cash"),
       )
       .collect();
+
+    const brokerCashPositions = [
+      ...brokerCashPositionsRaw,
+      ...(await getBitpandaPositionsForCategory(ctx, userId, "cash")),
+    ];
 
     // Get all broker positions to check which accounts have positions
     const allBrokerPositions = await ctx.db
@@ -372,12 +404,17 @@ export const getEquities = query({
 
     const userId = identity.subject;
 
-    const positions = await ctx.db
+    const brokerEquities = await ctx.db
       .query("brokerPositions")
       .withIndex("by_category", (q) =>
         q.eq("userId", userId).eq("investmentCategory", "equities"),
       )
       .collect();
+
+    const positions = [
+      ...brokerEquities,
+      ...(await getBitpandaPositionsForCategory(ctx, userId, "equities")),
+    ];
 
     // Calculate totals
     const totalValue = positions.reduce(
@@ -487,12 +524,17 @@ export const getCrypto = query({
 
     const userId = identity.subject;
 
-    const positions = await ctx.db
+    const brokerCrypto = await ctx.db
       .query("brokerPositions")
       .withIndex("by_category", (q) =>
         q.eq("userId", userId).eq("investmentCategory", "crypto"),
       )
       .collect();
+
+    const positions = [
+      ...brokerCrypto,
+      ...(await getBitpandaPositionsForCategory(ctx, userId, "crypto")),
+    ];
 
     const totalValue = positions.reduce(
       (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
@@ -591,12 +633,17 @@ export const getCommodities = query({
 
     const userId = identity.subject;
 
-    const positions = await ctx.db
+    const brokerCommodities = await ctx.db
       .query("brokerPositions")
       .withIndex("by_category", (q) =>
         q.eq("userId", userId).eq("investmentCategory", "commodities"),
       )
       .collect();
+
+    const positions = [
+      ...brokerCommodities,
+      ...(await getBitpandaPositionsForCategory(ctx, userId, "commodities")),
+    ];
 
     const totalValue = positions.reduce(
       (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
@@ -682,6 +729,22 @@ export const getPortfolioSummary = query({
       categories[cat].value += cat === "liabilities" ? -Math.abs(value) : value;
     }
 
+    // Add Bitpanda holdings to categories
+    const bitpandaHoldings = await ctx.db
+      .query("bitpandaHoldings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    for (const h of bitpandaHoldings) {
+      const cat = h.investmentCategory ?? "unclassified";
+      if (!categories[cat]) {
+        categories[cat] = { value: 0, count: 0 };
+      }
+      categories[cat].count++;
+      const value = h.valueInBaseCurrency ?? h.marketValue ?? 0;
+      categories[cat].value += cat === "liabilities" ? -Math.abs(value) : value;
+    }
+
     // Calculate totals
     let totalAssets = 0;
     let totalLiabilities = 0;
@@ -703,7 +766,7 @@ export const getPortfolioSummary = query({
         totalLiabilities,
         netWorth,
         totalAccounts: plaidAccounts.length,
-        totalPositions: brokerPositions.length,
+        totalPositions: brokerPositions.length + bitpandaHoldings.length,
       },
     };
   },
@@ -755,5 +818,117 @@ export const getUnclassifiedItems = query({
       totalUnclassified:
         unclassifiedAccounts.length + unclassifiedPositions.length,
     };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CRYPTO TRANSACTIONS (unified: Bitpanda + broker crypto)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Get unified crypto transactions for the current user.
+ * Sources Bitpanda transactions whose symbol is a held crypto asset, plus
+ * broker (SnapTrade) transactions for symbols classified as crypto.
+ */
+export const getCryptoTransactions = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const userId = identity.subject;
+    const limit = args.limit ?? 100;
+
+    // Symbols held as crypto on Bitpanda
+    const bitpandaCryptoHoldings = await ctx.db
+      .query("bitpandaHoldings")
+      .withIndex("by_category", (q) =>
+        q.eq("userId", userId).eq("investmentCategory", "crypto"),
+      )
+      .collect();
+    const bitpandaCryptoSymbols = new Set(
+      bitpandaCryptoHoldings.map((h) => h.symbol.toUpperCase()),
+    );
+
+    // Symbols held as crypto via brokers
+    const brokerCryptoPositions = await ctx.db
+      .query("brokerPositions")
+      .withIndex("by_category", (q) =>
+        q.eq("userId", userId).eq("investmentCategory", "crypto"),
+      )
+      .collect();
+    const brokerCryptoSymbols = new Set(
+      brokerCryptoPositions.map((p) => p.symbol.toUpperCase()),
+    );
+
+    const unified: Array<{
+      _id: string;
+      provider: "bitpanda" | "snaptrade";
+      type: string;
+      symbol: string;
+      quantity: number;
+      value: number;
+      currency: string;
+      date: string;
+    }> = [];
+
+    const bitpandaTransactions = await ctx.db
+      .query("bitpandaTransactions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const tx of bitpandaTransactions) {
+      if (!bitpandaCryptoSymbols.has(tx.symbol.toUpperCase())) continue;
+      unified.push({
+        _id: tx._id,
+        provider: "bitpanda",
+        type: tx.type,
+        symbol: tx.symbol,
+        quantity: tx.quantity,
+        value: tx.amount,
+        currency: tx.currency,
+        date: tx.transactionDate,
+      });
+    }
+
+    const brokerTransactions = await ctx.db
+      .query("brokerTransactions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const tx of brokerTransactions) {
+      const symbol = tx.symbol?.toUpperCase();
+      if (!symbol || !brokerCryptoSymbols.has(symbol)) continue;
+      unified.push({
+        _id: tx._id,
+        provider: "snaptrade",
+        type: tx.type,
+        symbol: tx.symbol ?? "",
+        quantity: tx.quantity ?? 0,
+        value: tx.amount,
+        currency: tx.currency,
+        date: tx.tradeDate,
+      });
+    }
+
+    // Deduplicate the same economic event reported by multiple Bitpanda
+    // endpoints (e.g. a buy appears in both /trades and /wallets/transactions
+    // with different IDs). Collapse by a signature of the event itself.
+    const seen = new Set<string>();
+    const deduped = unified.filter((tx) => {
+      const key = [
+        tx.provider,
+        tx.type,
+        tx.symbol.toUpperCase(),
+        tx.quantity.toFixed(8),
+        tx.value.toFixed(2),
+        tx.date.slice(0, 10), // day granularity (endpoints may differ by seconds)
+      ].join("|");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // Most recent first
+    deduped.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    return deduped.slice(0, limit);
   },
 });

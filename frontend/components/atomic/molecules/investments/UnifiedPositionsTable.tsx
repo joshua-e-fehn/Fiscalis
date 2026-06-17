@@ -4,7 +4,7 @@
  * UnifiedPositionsTable Component
  *
  * Displays all positions across all financial providers
- * (Plaid, SnapTrade, Vezgo) in a unified, sortable table.
+ * (Plaid, SnapTrade, Bitpanda) in a unified, sortable table.
  */
 
 import {
@@ -40,12 +40,12 @@ import {
   ArrowUpDown,
   Landmark,
   Briefcase,
-  Bitcoin,
   Filter,
   TrendingUp,
   TrendingDown,
   ExternalLink,
   PenLine,
+  HandCoins,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -106,28 +106,28 @@ type SortDirection = "asc" | "desc";
 const providerIcons: Record<FinancialProvider, React.ElementType> = {
   plaid: Landmark,
   snaptrade: Briefcase,
-  vezgo: Bitcoin,
+  bitpanda: HandCoins,
   manual: PenLine,
 };
 
 const providerColors: Record<FinancialProvider, string> = {
   plaid: "bg-green-500/10 text-green-600 border-green-500/20",
   snaptrade: "bg-indigo-500/10 text-indigo-600 border-indigo-500/20",
-  vezgo: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+  bitpanda: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   manual: "bg-purple-500/10 text-purple-600 border-purple-500/20",
 };
 
 const providerLabels: Record<FinancialProvider, string> = {
   plaid: "Banking",
   snaptrade: "Broker",
-  vezgo: "Crypto",
+  bitpanda: "Bitpanda",
   manual: "Manual",
 };
 
 const providerRoutes: Record<FinancialProvider, string> = {
   plaid: "/banking",
   snaptrade: "/brokers",
-  vezgo: "/crypto",
+  bitpanda: "/integrations/brokers",
   manual: "/commodities",
 };
 
@@ -421,7 +421,7 @@ export function UnifiedPositionsTable({
                 <SelectItem value="all">All Providers</SelectItem>
                 <SelectItem value="plaid">Banking</SelectItem>
                 <SelectItem value="snaptrade">Brokers</SelectItem>
-                <SelectItem value="vezgo">Crypto</SelectItem>
+                <SelectItem value="bitpanda">Bitpanda</SelectItem>
                 <SelectItem value="manual">Manual</SelectItem>
               </SelectContent>
             </Select>
@@ -498,7 +498,14 @@ export function UnifiedPositionsTable({
             </TableHeader>
             <TableBody>
               {filteredPositions.map((position) => {
-                const Icon = providerIcons[position.provider];
+                // Defensive lookups: an unrecognized provider must never crash
+                // the row (e.g. legacy data from a removed provider).
+                const Icon = providerIcons[position.provider] ?? PenLine;
+                const providerRoute =
+                  providerRoutes[position.provider] ?? "/dashboard";
+                const providerColor = providerColors[position.provider] ?? "";
+                const providerLabel =
+                  providerLabels[position.provider] ?? position.provider;
                 const hasPL =
                   position.unrealizedPL !== undefined &&
                   position.unrealizedPL !== 0;
@@ -509,14 +516,14 @@ export function UnifiedPositionsTable({
                   <TableRow key={`${position.provider}-${position.id}`}>
                     {/* Provider Badge */}
                     <TableCell>
-                      <Link href={providerRoutes[position.provider]}>
+                      <Link href={providerRoute}>
                         <Badge
                           variant="outline"
                           className={cn(
                             "flex items-center justify-center w-8 h-8 p-0",
-                            providerColors[position.provider],
+                            providerColor,
                           )}
-                          title={providerLabels[position.provider]}
+                          title={providerLabel}
                         >
                           <Icon className="h-4 w-4" />
                         </Badge>

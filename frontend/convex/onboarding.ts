@@ -95,17 +95,16 @@ export const getConnectionSummary = query({
       .filter((q) => q.eq(q.field("status"), "connected"))
       .collect();
 
-    // Count Vezgo connections (crypto)
-    const vezgoConnections = await ctx.db
-      .query("vezgoConnections")
+    // Count Bitpanda connections
+    const bitpandaConnections = await ctx.db
+      .query("bitpandaConnections")
       .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("status"), "active"))
       .collect();
 
     return {
       bankingCount: plaidAccounts.length,
-      brokerCount: brokerConnections.length,
-      cryptoCount: vezgoConnections.length,
+      brokerCount: brokerConnections.length + bitpandaConnections.length,
+      cryptoCount: bitpandaConnections.length,
     };
   },
 });
@@ -358,6 +357,7 @@ export const completeOnboarding = mutation({
 export const saveUserSettings = mutation({
   args: {
     displayName: v.optional(v.string()),
+    birthDate: v.optional(v.string()), // ISO date (YYYY-MM-DD)
     defaultCurrency: v.string(),
     language: v.optional(v.string()),
     theme: v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
@@ -378,6 +378,7 @@ export const saveUserSettings = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         displayName: args.displayName,
+        birthDate: args.birthDate,
         defaultCurrency: args.defaultCurrency,
         language: args.language,
         theme: args.theme,
@@ -388,6 +389,7 @@ export const saveUserSettings = mutation({
       const id = await ctx.db.insert("userSettings", {
         userId,
         displayName: args.displayName,
+        birthDate: args.birthDate,
         defaultCurrency: args.defaultCurrency,
         language: args.language,
         theme: args.theme,
@@ -396,5 +398,43 @@ export const saveUserSettings = mutation({
       });
       return id;
     }
+  },
+});
+
+/**
+ * Set or update just the user's date of birth. Lightweight upsert used when the
+ * value is missing (e.g. collected later in the Retirement Planner). Creates a
+ * settings row with sensible defaults if none exists yet.
+ */
+export const setBirthDate = mutation({
+  args: { birthDate: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const userId = identity.subject;
+    const now = Date.now();
+
+    const existing = await ctx.db
+      .query("userSettings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        birthDate: args.birthDate,
+        updatedAt: now,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("userSettings", {
+      userId,
+      birthDate: args.birthDate,
+      defaultCurrency: "EUR",
+      theme: "system",
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });

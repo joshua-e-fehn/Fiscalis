@@ -41,7 +41,7 @@ export default function CryptoAssetsLayout({
       <PageHeader
         title="Crypto Assets"
         subtitle="Track your cryptocurrency investments and portfolio performance"
-        actions={[{ label: "Connect Crypto", href: "/integrations/crypto" }]}
+        actions={[{ label: "Connect Crypto", href: "/integrations/brokers" }]}
       />
 
       {/* Tab Navigation */}

@@ -2,7 +2,7 @@
  * Investment Classification Rules
  *
  * Rule definitions for classifying financial data from providers
- * (Plaid, Snaptrade, Vezgo) into investment categories and subcategories.
+ * (Plaid, Snaptrade, Bitpanda) into investment categories and subcategories.
  *
  * Rules are evaluated in priority order (highest first).
  * The first matching rule determines the classification.
@@ -510,96 +510,101 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════
-  // VEZGO POSITION RULES (Crypto)
-  // For future Vezgo integration
+  // BITPANDA HOLDING RULES (mixed-asset broker/crypto)
+  // Bitpanda asset classes are normalized in convex/lib/bitpanda.ts to:
+  // "crypto" | "metal" | "commodity" | "stock" | "etf" | "index" | "fiat"
+  // Symbol rules above (BTC/ETH/stablecoins) refine crypto automatically.
   // ═══════════════════════════════════════════════════════════════
 
-  // Bitcoin (by symbol - highest priority)
+  // Precious metals → commodities/metals
   {
-    id: "vezgo_bitcoin",
-    name: "Vezgo Bitcoin",
-    priority: 100,
-    matcher: {
-      type: "symbol_exact",
-      values: [...BITCOIN_SYMBOLS],
-    },
-    result: {
-      category: "crypto",
-      subcategory: "bitcoin",
-    },
-  },
-
-  // Ethereum (by symbol)
-  {
-    id: "vezgo_ethereum",
-    name: "Vezgo Ethereum",
-    priority: 100,
-    matcher: {
-      type: "symbol_exact",
-      values: [...ETHEREUM_SYMBOLS],
-    },
-    result: {
-      category: "crypto",
-      subcategory: "ethereum",
-    },
-  },
-
-  // Stablecoins (by symbol)
-  {
-    id: "vezgo_stablecoin",
-    name: "Vezgo Stablecoins",
-    priority: 95,
-    matcher: {
-      type: "symbol_exact",
-      values: [...STABLECOIN_SYMBOLS],
-    },
-    result: {
-      category: "crypto",
-      subcategory: "stablecoins",
-    },
-  },
-
-  // NFTs → classify as collectibles (not crypto)
-  {
-    id: "vezgo_nft",
-    name: "Vezgo NFTs",
-    priority: 100,
+    id: "bitpanda_metal",
+    name: "Bitpanda Precious Metals",
+    priority: 60,
     matcher: {
       type: "asset_type",
-      provider: "vezgo",
-      values: ["nft", "NFT", "Nft"],
+      provider: "bitpanda",
+      values: ["metal", "metals", "precious_metal"],
     },
     result: {
-      category: "collectibles",
-      subcategory: "nfts",
+      category: "commodities",
+      subcategory: "metals",
     },
   },
 
-  // DeFi positions
+  // Other commodities (energy, etc.) → commodities/energy
   {
-    id: "vezgo_defi",
-    name: "Vezgo DeFi Positions",
-    priority: 90,
+    id: "bitpanda_commodity",
+    name: "Bitpanda Commodities",
+    priority: 50,
     matcher: {
       type: "asset_type",
-      provider: "vezgo",
-      values: ["defi", "DEFI", "DeFi", "lp_token", "LP_TOKEN", "liquidity"],
+      provider: "bitpanda",
+      values: ["commodity", "commodities"],
+    },
+    result: {
+      category: "commodities",
+      subcategory: "energy",
+    },
+  },
+
+  // Fractional stocks → equities/stocks
+  {
+    id: "bitpanda_stock",
+    name: "Bitpanda Stocks",
+    priority: 50,
+    matcher: {
+      type: "asset_type",
+      provider: "bitpanda",
+      values: ["stock", "stocks", "security", "equity"],
+    },
+    result: {
+      category: "equities",
+      subcategory: "stocks",
+    },
+  },
+
+  // ETFs → equities/etfs
+  {
+    id: "bitpanda_etf",
+    name: "Bitpanda ETFs",
+    priority: 60,
+    matcher: {
+      type: "asset_type",
+      provider: "bitpanda",
+      values: ["etf", "etfs"],
+    },
+    result: {
+      category: "equities",
+      subcategory: "etfs",
+    },
+  },
+
+  // Bitpanda Crypto Indices (BCI) → crypto/altcoins
+  {
+    id: "bitpanda_index",
+    name: "Bitpanda Crypto Index",
+    priority: 50,
+    matcher: {
+      type: "asset_type",
+      provider: "bitpanda",
+      values: ["index", "crypto_index", "bci"],
     },
     result: {
       category: "crypto",
-      subcategory: "defi",
+      subcategory: "altcoins",
     },
   },
 
-  // Generic cryptocurrency fallback
+  // Generic crypto fallback → crypto/altcoins (BTC/ETH/stablecoins refined by symbol)
   {
-    id: "vezgo_crypto_fallback",
-    name: "Vezgo Cryptocurrency (fallback)",
+    id: "bitpanda_crypto_fallback",
+    name: "Bitpanda Cryptocurrency (fallback)",
     priority: 10,
     matcher: {
       type: "asset_type",
-      provider: "vezgo",
-      values: ["cryptocurrency", "token", "coin"],
+      provider: "bitpanda",
+      values: ["crypto", "cryptocurrency", "cryptocoin", "token", "coin"],
     },
     result: {
       category: "crypto",
@@ -612,7 +617,7 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
  * Get rules filtered by provider
  */
 export function getRulesByProvider(
-  provider: "plaid" | "snaptrade" | "vezgo",
+  provider: "plaid" | "snaptrade" | "bitpanda",
 ): ClassificationRule[] {
   return CLASSIFICATION_RULES.filter((rule) => {
     if (rule.matcher.type === "account_type") {

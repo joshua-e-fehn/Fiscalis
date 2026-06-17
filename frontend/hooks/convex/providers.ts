@@ -4,7 +4,7 @@
  * Provider Hooks
  *
  * Hooks for aggregating data across all financial providers
- * (Plaid, SnapTrade, Vezgo) for unified portfolio views.
+ * (Plaid, SnapTrade, Bitpanda) for unified portfolio views.
  */
 
 import { useQuery } from "convex/react";
@@ -56,13 +56,15 @@ export function useNetWorthByProvider(): {
           positionsCount: result.providers.snaptrade.positionsCount,
           accountsCount: result.providers.snaptrade.accountsCount,
         },
-        vezgo: {
-          total: result.providers.vezgo.total,
-          crypto: result.providers.vezgo.crypto,
-          defi: result.providers.vezgo.defi,
-          nft: result.providers.vezgo.nft,
-          positionsCount: result.providers.vezgo.positionsCount,
-          connectionsCount: result.providers.vezgo.connectionsCount,
+        bitpanda: {
+          total: result.providers.bitpanda.total,
+          crypto: result.providers.bitpanda.crypto,
+          equities: result.providers.bitpanda.equities,
+          commodities: result.providers.bitpanda.commodities,
+          cash: result.providers.bitpanda.cash,
+          other: result.providers.bitpanda.other,
+          holdingsCount: result.providers.bitpanda.holdingsCount,
+          connectionsCount: result.providers.bitpanda.connectionsCount,
         },
       },
       lastUpdated: result.lastUpdated,

@@ -398,7 +398,7 @@ export default function HomePage() {
                 <SecurityFeature text="AES-256-GCM encryption for all sensitive tokens" />
                 <SecurityFeature text="Read-only access — we can never move your money" />
                 <SecurityFeature text="Your bank credentials never touch our servers" />
-                <SecurityFeature text="Trusted providers: Plaid, SnapTrade, Vezgo" />
+                <SecurityFeature text="Trusted providers: Plaid, SnapTrade, Bitpanda" />
                 <SecurityFeature text="Your data is yours — we never sell it" />
               </ul>
             </motion.div>

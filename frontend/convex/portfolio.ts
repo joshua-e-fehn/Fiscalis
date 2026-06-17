@@ -5,7 +5,7 @@ import { query, internalQuery } from "./_generated/server";
  * Portfolio Queries
  *
  * Server-side aggregation of positions and balances across all
- * financial providers (Plaid, SnapTrade, Vezgo).
+ * financial providers (Plaid, SnapTrade, Bitpanda).
  */
 
 // ═══════════════════════════════════════════════════════════════
@@ -97,34 +97,47 @@ export const getTotalNetWorth = query({
     const snaptradeTotal =
       snaptradeEquities + snaptradeBonds + snaptradeCash + snaptradeOther;
 
-    // Crypto (Vezgo) - Crypto positions
-    const vezgoPositions = await ctx.db
-      .query("vezgoPositions")
+    // Bitpanda - mixed holdings (crypto, metals, stocks, fiat)
+    const bitpandaHoldings = await ctx.db
+      .query("bitpandaHoldings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    // Calculate Vezgo totals by category
-    let vezgoCrypto = 0;
-    let vezgoDefi = 0;
-    let vezgoNft = 0;
-    for (const position of vezgoPositions) {
-      const value = position.fiatValue ?? 0;
-
-      if (
-        position.category === "cryptocurrency" ||
-        position.category === "token" ||
-        position.category === "stablecoin"
-      ) {
-        vezgoCrypto += value;
-      } else if (position.category === "defi") {
-        vezgoDefi += value;
-      } else if (position.category === "nft") {
-        vezgoNft += value;
-      } else {
-        vezgoCrypto += value;
+    let bitpandaCrypto = 0;
+    let bitpandaEquities = 0;
+    let bitpandaCommodities = 0;
+    let bitpandaCash = 0;
+    let bitpandaOther = 0;
+    for (const h of bitpandaHoldings) {
+      const value = h.valueInBaseCurrency ?? h.marketValue ?? 0;
+      switch (h.investmentCategory) {
+        case "crypto":
+          bitpandaCrypto += value;
+          break;
+        case "equities":
+          bitpandaEquities += value;
+          break;
+        case "commodities":
+          bitpandaCommodities += value;
+          break;
+        case "cash":
+          bitpandaCash += value;
+          break;
+        default:
+          bitpandaOther += value;
       }
     }
-    const vezgoTotal = vezgoCrypto + vezgoDefi + vezgoNft;
+    const bitpandaTotal =
+      bitpandaCrypto +
+      bitpandaEquities +
+      bitpandaCommodities +
+      bitpandaCash +
+      bitpandaOther;
+
+    const bitpandaConnections = await ctx.db
+      .query("bitpandaConnections")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
 
     // Get connection/account counts
     const plaidItems = await ctx.db
@@ -137,13 +150,8 @@ export const getTotalNetWorth = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    const vezgoConnections = await ctx.db
-      .query("vezgoConnections")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
     return {
-      total: plaidTotal + snaptradeTotal + vezgoTotal,
+      total: plaidTotal + snaptradeTotal + bitpandaTotal,
       providers: {
         plaid: {
           total: plaidTotal,
@@ -162,13 +170,15 @@ export const getTotalNetWorth = query({
           accountsCount: brokerAccounts.length,
           connectionsCount: brokerConnections.length,
         },
-        vezgo: {
-          total: vezgoTotal,
-          crypto: vezgoCrypto,
-          defi: vezgoDefi,
-          nft: vezgoNft,
-          positionsCount: vezgoPositions.length,
-          connectionsCount: vezgoConnections.length,
+        bitpanda: {
+          total: bitpandaTotal,
+          crypto: bitpandaCrypto,
+          equities: bitpandaEquities,
+          commodities: bitpandaCommodities,
+          cash: bitpandaCash,
+          other: bitpandaOther,
+          holdingsCount: bitpandaHoldings.length,
+          connectionsCount: bitpandaConnections.length,
         },
       },
       lastUpdated: Date.now(),
@@ -207,11 +217,6 @@ export const getProviderAllocation = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    const vezgoPositions = await ctx.db
-      .query("vezgoPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
     // Calculate provider totals (using base currency where available)
     const plaidTotal = plaidAccounts.reduce((sum, a) => {
       const value = a.valueInBaseCurrency ?? a.currentBalance ?? 0;
@@ -234,12 +239,17 @@ export const getProviderAllocation = query({
 
     const snaptradeTotal = snaptradePositionsTotal + snaptradeCashTotal;
 
-    const vezgoTotal = vezgoPositions.reduce(
-      (sum, p) => sum + (p.fiatValue ?? 0),
+    const bitpandaHoldings = await ctx.db
+      .query("bitpandaHoldings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const bitpandaTotal = bitpandaHoldings.reduce(
+      (sum, h) => sum + (h.valueInBaseCurrency ?? h.marketValue ?? 0),
       0,
     );
 
-    const totalValue = plaidTotal + snaptradeTotal + vezgoTotal;
+    const totalValue = plaidTotal + snaptradeTotal + bitpandaTotal;
 
     // Count connections
     const plaidItems = await ctx.db
@@ -252,8 +262,8 @@ export const getProviderAllocation = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    const vezgoConnections = await ctx.db
-      .query("vezgoConnections")
+    const bitpandaConnections = await ctx.db
+      .query("bitpandaConnections")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
@@ -283,15 +293,15 @@ export const getProviderAllocation = query({
       });
     }
 
-    if (vezgoTotal !== 0 || vezgoPositions.length > 0) {
+    if (bitpandaTotal !== 0 || bitpandaHoldings.length > 0) {
       allocations.push({
-        provider: "vezgo" as const,
-        name: "Crypto (Vezgo)",
-        value: vezgoTotal,
-        percentage: totalValue > 0 ? (vezgoTotal / totalValue) * 100 : 0,
-        color: "#F7931A",
-        positionsCount: vezgoPositions.length,
-        connectionsCount: vezgoConnections.length,
+        provider: "bitpanda" as const,
+        name: "Bitpanda",
+        value: bitpandaTotal,
+        percentage: totalValue > 0 ? (bitpandaTotal / totalValue) * 100 : 0,
+        color: "#16BA53",
+        positionsCount: bitpandaHoldings.length,
+        connectionsCount: bitpandaConnections.length,
       });
     }
 
@@ -316,7 +326,7 @@ export const getUnifiedPositions = query({
       v.union(
         v.literal("plaid"),
         v.literal("snaptrade"),
-        v.literal("vezgo"),
+        v.literal("bitpanda"),
         v.literal("manual"),
       ),
     ),
@@ -329,7 +339,7 @@ export const getUnifiedPositions = query({
     const positions: Array<{
       id: string;
       _id: string;
-      provider: "plaid" | "snaptrade" | "vezgo" | "manual";
+      provider: "plaid" | "snaptrade" | "bitpanda" | "manual";
       category: string;
       subcategory?: string;
       symbol: string;
@@ -511,60 +521,30 @@ export const getUnifiedPositions = query({
       }
     }
 
-    // Get Vezgo positions
-    if (!args.provider || args.provider === "vezgo") {
-      const vezgoPositions = await ctx.db
-        .query("vezgoPositions")
+    // Get Bitpanda holdings
+    if (!args.provider || args.provider === "bitpanda") {
+      const bitpandaHoldings = await ctx.db
+        .query("bitpandaHoldings")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect();
 
-      // Get connection info
-      const vezgoConnections = await ctx.db
-        .query("vezgoConnections")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
-
-      const connectionMap = new Map(vezgoConnections.map((c) => [c._id, c]));
-
-      for (const position of vezgoPositions) {
-        const connection = connectionMap.get(position.connectionId);
-
-        // Map Vezgo category to unified category
-        let category: string;
-        if (
-          position.category === "cryptocurrency" ||
-          position.category === "token" ||
-          position.category === "stablecoin"
-        ) {
-          category = "crypto";
-        } else if (position.category === "defi") {
-          category = "defi";
-        } else if (position.category === "nft") {
-          category = "nft";
-        } else {
-          category = "crypto";
-        }
-
+      for (const holding of bitpandaHoldings) {
         positions.push({
-          id: `${position.connectionId}-${position.symbol}`,
-          _id: position._id,
-          provider: "vezgo",
-          category,
-          subcategory: position.category,
-          symbol: position.symbol,
-          name: position.name || position.symbol,
-          quantity: position.quantity,
-          marketValue: position.fiatValue ?? 0,
-          currency: position.fiatCurrency,
-          lastSyncAt: position.lastSyncAt,
+          id: `${holding.connectionId}-${holding.assetType}-${holding.symbol}`,
+          _id: holding._id,
+          provider: "bitpanda",
+          category: holding.investmentCategory || "crypto",
+          subcategory: holding.investmentSubcategory || holding.assetType,
+          symbol: holding.symbol,
+          name: holding.name || holding.symbol,
+          quantity: holding.quantity,
+          currentPrice: holding.currentPrice,
+          marketValue: holding.marketValue ?? 0,
+          currency: holding.currency,
+          valueInBaseCurrency: holding.valueInBaseCurrency,
+          lastSyncAt: holding.lastSyncAt ?? holding.createdAt,
           metadata: {
-            chain: position.chain,
-            protocol: position.protocol,
-            providerName: connection?.name,
-            providerCategories: connection?.categories,
-            contractAddress: position.contractAddress,
-            tokenId: position.tokenId,
-            imageUrl: position.imageUrl,
+            assetType: holding.assetType,
           },
         });
       }
@@ -775,28 +755,20 @@ export const getCategoryBreakdown = query({
       }
     }
 
-    // Process Vezgo positions
-    const vezgoPositions = await ctx.db
-      .query("vezgoPositions")
+    // Process Bitpanda holdings
+    const bitpandaHoldings = await ctx.db
+      .query("bitpandaHoldings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    for (const position of vezgoPositions) {
-      const value = position.fiatValue ?? 0;
-
-      if (
-        position.category === "cryptocurrency" ||
-        position.category === "token" ||
-        position.category === "stablecoin"
-      ) {
-        addToCategory("crypto", "Cryptocurrency", value, "vezgo");
-      } else if (position.category === "defi") {
-        addToCategory("defi", "DeFi", value, "vezgo");
-      } else if (position.category === "nft") {
-        addToCategory("nft", "NFTs", value, "vezgo");
-      } else {
-        addToCategory("crypto", "Cryptocurrency", value, "vezgo");
-      }
+    for (const holding of bitpandaHoldings) {
+      const value = holding.valueInBaseCurrency ?? holding.marketValue ?? 0;
+      const category = holding.investmentCategory ?? "crypto";
+      const label =
+        category === "crypto"
+          ? "Cryptocurrency"
+          : category.charAt(0).toUpperCase() + category.slice(1);
+      addToCategory(category, label, value, "bitpanda");
     }
 
     // Calculate total and percentages
@@ -870,22 +842,22 @@ export const getNetWorthForUser = internalQuery({
         0,
       );
 
-    // Vezgo
-    const vezgoPositions = await ctx.db
-      .query("vezgoPositions")
+    // Bitpanda
+    const bitpandaHoldings = await ctx.db
+      .query("bitpandaHoldings")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    const vezgoTotal = vezgoPositions.reduce(
-      (sum, p) => sum + (p.fiatValue ?? 0),
+    const bitpandaTotal = bitpandaHoldings.reduce(
+      (sum, h) => sum + (h.valueInBaseCurrency ?? h.marketValue ?? 0),
       0,
     );
 
     return {
       plaid: plaidTotal,
       snaptrade: snaptradeTotal,
-      vezgo: vezgoTotal,
-      total: plaidTotal + snaptradeTotal + vezgoTotal,
+      bitpanda: bitpandaTotal,
+      total: plaidTotal + snaptradeTotal + bitpandaTotal,
     };
   },
 });

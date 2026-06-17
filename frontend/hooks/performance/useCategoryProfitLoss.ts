@@ -6,7 +6,7 @@
  * 2. First non-zero snapshot value as inferred cost basis
  *
  * This provides unified P/L calculation across all investment categories,
- * even when providers (like Vezgo for crypto) don't provide cost basis data.
+ * even when providers do not provide cost basis data.
  */
 
 import { useMemo } from "react";
@@ -52,7 +52,7 @@ export interface UseCategoryProfitLossOptions {
 /**
  * Calculate P/L for a category
  *
- * When explicit cost basis is not available (e.g., crypto from Vezgo),
+ * When explicit cost basis is not available (e.g., crypto holdings),
  * uses the first non-zero snapshot value for this category as the cost basis.
  *
  * @example

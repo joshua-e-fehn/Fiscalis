@@ -30,7 +30,7 @@ export interface SyncResult {
     positionsProcessed: number;
     error?: string;
   };
-  vezgo: {
+  bitpanda: {
     success: boolean;
     connectionsSynced: number;
     error?: string;
@@ -54,7 +54,7 @@ export interface SyncContextValue {
   // Per-provider sync state (for granular UI updates)
   isPlaidSyncing: boolean;
   isSnaptradeSyncing: boolean;
-  isVezgoSyncing: boolean;
+  isBitpandaSyncing: boolean;
 
   // Actions
   syncAll: () => Promise<SyncResult>;
@@ -96,7 +96,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   // Per-provider state
   const [isPlaidSyncing, setIsPlaidSyncing] = useState(false);
   const [isSnaptradeSyncing, setIsSnaptradeSyncing] = useState(false);
-  const [isVezgoSyncing, setIsVezgoSyncing] = useState(false);
+  const [isBitpandaSyncing, setIsBitpandaSyncing] = useState(false);
 
   const resetStatus = useCallback(() => {
     setGlobalSyncStatus("idle");
@@ -111,7 +111,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     // Set all providers to syncing
     setIsPlaidSyncing(true);
     setIsSnaptradeSyncing(true);
-    setIsVezgoSyncing(true);
+    setIsBitpandaSyncing(true);
 
     try {
       const result = await syncAllAction();
@@ -133,10 +133,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         failures.push("Brokers");
       }
 
-      if (result.vezgo.success && result.vezgo.connectionsSynced > 0) {
-        successes.push(`Crypto (${result.vezgo.connectionsSynced})`);
-      } else if (result.vezgo.error) {
-        failures.push("Crypto");
+      if (result.bitpanda.success && result.bitpanda.connectionsSynced > 0) {
+        successes.push(`Bitpanda (${result.bitpanda.connectionsSynced})`);
+      } else if (result.bitpanda.error) {
+        failures.push("Bitpanda");
       }
 
       if (result.success) {
@@ -183,7 +183,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           positionsProcessed: 0,
           error: "Sync failed",
         },
-        vezgo: { success: false, connectionsSynced: 0, error: "Sync failed" },
+        bitpanda: { success: false, connectionsSynced: 0, error: "Sync failed" },
         snapshot: { success: false, error: "Sync failed" },
       };
       setLastSyncResult(errorResult);
@@ -197,7 +197,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       setIsGlobalSyncing(false);
       setIsPlaidSyncing(false);
       setIsSnaptradeSyncing(false);
-      setIsVezgoSyncing(false);
+      setIsBitpandaSyncing(false);
     }
   }, [syncAllAction, resetStatus]);
 
@@ -209,7 +209,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       lastSyncResult,
       isPlaidSyncing,
       isSnaptradeSyncing,
-      isVezgoSyncing,
+      isBitpandaSyncing,
       syncAll,
       resetStatus,
     }),
@@ -220,7 +220,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       lastSyncResult,
       isPlaidSyncing,
       isSnaptradeSyncing,
-      isVezgoSyncing,
+      isBitpandaSyncing,
       syncAll,
       resetStatus,
     ],

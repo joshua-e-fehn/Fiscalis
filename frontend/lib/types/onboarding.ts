@@ -46,6 +46,7 @@ export interface OnboardingState {
 
 export interface ProfileFormData {
   displayName: string;
+  birthDate: string; // ISO date (YYYY-MM-DD), "" if unset
   defaultCurrency: Currency;
   language: Language;
   theme: Theme;

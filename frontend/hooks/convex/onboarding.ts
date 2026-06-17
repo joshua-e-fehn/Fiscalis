@@ -81,3 +81,10 @@ export function useCompleteOnboarding() {
 export function useSaveUserSettings() {
   return useMutation(api.onboarding.saveUserSettings);
 }
+
+/**
+ * Set just the user's date of birth (lightweight upsert)
+ */
+export function useSetBirthDate() {
+  return useMutation(api.onboarding.setBirthDate);
+}

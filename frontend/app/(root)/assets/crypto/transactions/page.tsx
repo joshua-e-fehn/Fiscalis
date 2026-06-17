@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
 import {
-  useVezgoTransactions,
-  useVezgoConnections,
+  useCryptoTransactions,
+  useHasCryptoHoldings,
 } from "@/hooks/convex/crypto";
 import {
   ArrowUpRight,
@@ -26,9 +26,12 @@ import {
   History,
 } from "lucide-react";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/utils/currency";
 
-// Simple time ago function
-function formatTimeAgo(timestamp: number): string {
+// Simple time ago function from an ISO date string
+function formatTimeAgo(dateIso: string): string {
+  const timestamp = new Date(dateIso).getTime();
+  if (Number.isNaN(timestamp)) return "Unknown date";
   const now = Date.now();
   const diff = now - timestamp;
 
@@ -44,19 +47,13 @@ function formatTimeAgo(timestamp: number): string {
 }
 
 export default function CryptoAssetsTransactionsPage() {
-  const transactions = useVezgoTransactions(undefined, 100);
-  const connections = useVezgoConnections();
-  const hasConnections = connections && connections.length > 0;
+  const transactions = useCryptoTransactions(100);
+  const hasConnections = useHasCryptoHoldings();
 
   // Format currency
   const formatValue = (value: number | null | undefined) => {
     if (value === null || value === undefined) return "-";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
+    return formatCurrency(value, "eur");
   };
 
   // Get transaction icon
@@ -95,7 +92,7 @@ export default function CryptoAssetsTransactionsPage() {
                 wallets to see your transaction history.
               </p>
               <Button variant="outline" asChild>
-                <Link href="/integrations/crypto">
+                <Link href="/integrations/brokers">
                   Connect Crypto
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -139,9 +136,7 @@ export default function CryptoAssetsTransactionsPage() {
                         </span>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {tx._creationTime
-                          ? formatTimeAgo(tx._creationTime)
-                          : "Unknown date"}
+                        {tx.date ? formatTimeAgo(tx.date) : "Unknown date"}
                       </div>
                     </div>
                   </div>
@@ -150,7 +145,7 @@ export default function CryptoAssetsTransactionsPage() {
                       {tx.quantity?.toFixed(6)} {tx.symbol}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {formatValue(tx.fiatValue)}
+                      {formatValue(tx.value)}
                     </div>
                   </div>
                 </div>

@@ -2,13 +2,17 @@
 
 import { useMemo } from "react";
 import { BrokersCard } from "@/components/atomic/organisms/brokersCard";
+import { BitpandaConnectionsCard } from "@/components/atomic/molecules/BitpandaConnectionsCard";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import { SnaptradeConnectButton } from "@/components/atomic/atoms/snaptradeConnectButton";
+import { BitpandaConnectButton } from "@/components/atomic/atoms/BitpandaConnectButton";
 import {
   useBrokerConnections,
   useBrokerAccounts,
   useBrokerPositions,
   useSyncAll,
+  useBitpandaConnections,
+  useBitpandaHoldings,
 } from "@/hooks/convex";
 import { useSyncContext } from "@/providers/syncProvider";
 import {
@@ -30,6 +34,8 @@ export default function BrokersPage() {
   const connections = useBrokerConnections();
   const accounts = useBrokerAccounts();
   const positions = useBrokerPositions();
+  const bitpandaConnections = useBitpandaConnections();
+  const bitpandaHoldings = useBitpandaHoldings();
   const { syncAll, isLoading: isLocalSyncing } = useSyncAll();
   const { isSnaptradeSyncing: isGlobalSyncing } = useSyncContext();
 
@@ -37,43 +43,56 @@ export default function BrokersPage() {
   const isSyncing = isLocalSyncing || isGlobalSyncing;
 
   const isLoading = connections === undefined;
-  const hasConnections = connections && connections.length > 0;
+  const snaptradeCount = connections?.length ?? 0;
+  const bitpandaCount = bitpandaConnections?.length ?? 0;
+  const hasSnaptrade = snaptradeCount > 0;
+  const hasAnyConnection = snaptradeCount + bitpandaCount > 0;
 
-  // Calculate stats
+  // Calculate stats across all broker providers (SnapTrade + Bitpanda)
   const stats = useMemo(() => {
-    if (!connections || connections.length === 0) return null;
+    if (!hasAnyConnection) return null;
 
-    // Calculate total market value from positions
-    const totalValue =
+    // SnapTrade market value
+    const snaptradeValue =
       positions?.reduce((sum, pos) => sum + (pos.marketValue ?? 0), 0) ?? 0;
+
+    // Bitpanda value (already in EUR base)
+    const bitpandaValue =
+      bitpandaHoldings?.reduce(
+        (sum, h) => sum + (h.valueInBaseCurrency ?? h.marketValue ?? 0),
+        0,
+      ) ?? 0;
+
+    const totalValue = snaptradeValue + bitpandaValue;
 
     // Build a set of account IDs that have positions
     const accountsWithPositions = new Set(
       positions?.map((p) => p.accountId) ?? [],
     );
 
-    // Calculate total cash across all accounts
-    // Use same logic as cash page: if cash > 0 use it, else if no positions treat balance as cash
+    // Calculate total cash across all SnapTrade accounts
     const totalCash =
       accounts?.reduce((sum, acc) => {
         if ((acc.cash ?? 0) > 0) return sum + (acc.cash ?? 0);
-        // If no positions and balance > 0, treat balance as cash
         if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
           return sum + (acc.balance ?? 0);
         }
         return sum;
       }, 0) ?? 0;
 
+    const positionsCount =
+      (positions?.length ?? 0) + (bitpandaHoldings?.length ?? 0);
+
     return [
       {
         label: "Total Value",
         value: formatCurrency(totalValue, "eur"),
         icon: TrendingUp,
-        description: `${positions?.length ?? 0} positions`,
+        description: `${positionsCount} positions`,
       },
       {
         label: "Brokers",
-        value: connections.length,
+        value: snaptradeCount + bitpandaCount,
         icon: Briefcase,
         description: "Connected brokers",
       },
@@ -90,16 +109,23 @@ export default function BrokersPage() {
         description: "Available cash",
       },
     ];
-  }, [connections, accounts, positions]);
+  }, [
+    hasAnyConnection,
+    snaptradeCount,
+    bitpandaCount,
+    accounts,
+    positions,
+    bitpandaHoldings,
+  ]);
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Broker Accounts"
-        subtitle="Manage your brokerage connections and track your investment portfolio."
+        title="Brokers"
+        subtitle="Connect your brokers and exchanges. Today: SnapTrade brokers and Bitpanda — more coming."
         actionsLoading={isLoading}
         actions={
-          hasConnections
+          hasSnaptrade
             ? [
                 {
                   label: "Refresh",
@@ -113,7 +139,12 @@ export default function BrokersPage() {
               ]
             : []
         }
-        customActions={<SnaptradeConnectButton buttonText="Connect Broker" />}
+        customActions={
+          <div className="flex items-center gap-2">
+            <SnaptradeConnectButton buttonText="Connect Broker" />
+            <BitpandaConnectButton buttonVariant="outline" />
+          </div>
+        }
       />
 
       {/* KPI Cards - only show if there are connections */}
@@ -142,6 +173,8 @@ export default function BrokersPage() {
       )}
 
       <BrokersCard />
+
+      <BitpandaConnectionsCard />
     </div>
   );
 }

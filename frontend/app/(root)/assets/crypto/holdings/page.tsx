@@ -18,11 +18,10 @@ import {
 import { Button } from "@/components/ui/shadcn/button";
 import { ArrowRight, Wallet } from "lucide-react";
 import { CryptoPositionsTable } from "@/components/atomic/molecules/crypto";
-import { useVezgoConnections } from "@/hooks/convex/crypto";
+import { useHasCryptoHoldings } from "@/hooks/convex/crypto";
 
 export default function CryptoHoldingsPage() {
-  const connections = useVezgoConnections();
-  const hasConnections = connections && connections.length > 0;
+  const hasConnections = useHasCryptoHoldings();
 
   return (
     <div className="space-y-6">
@@ -51,7 +50,7 @@ export default function CryptoHoldingsPage() {
                 holdings
               </p>
               <Button variant="outline" asChild>
-                <Link href="/integrations/crypto">
+                <Link href="/integrations/brokers">
                   Connect Crypto Accounts
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>

@@ -21,7 +21,7 @@ export {
 export {
   classifyPlaidAccount,
   classifySnaptradePosition,
-  classifyVezgoPosition,
+  classifyBitpandaPosition,
   applyUserOverride,
   hasUserOverride,
   getClassificationFields,

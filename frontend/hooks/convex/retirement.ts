@@ -40,7 +40,7 @@ function planToInputs(plan: RetirementPlanDoc): RetirementInputs {
 		retirementAge: plan.retirementAge,
 		monthlyExpensesToday: plan.monthlyExpensesToday,
 		ownsPrimaryResidence: plan.ownsPrimaryResidence,
-		fundableRealEstateEquity: plan.fundableRealEstateEquity,
+		fundableRealEstateEquity: plan.fundableRealEstateEquity ?? 0,
 		pensionSources: plan.pensionSources,
 		inflationRate: plan.inflationRate,
 		withdrawalRate: plan.withdrawalRate,

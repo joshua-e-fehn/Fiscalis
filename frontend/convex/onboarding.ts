@@ -412,6 +412,33 @@ export const setBirthDate = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    // Validate: must be a real YYYY-MM-DD date, not in the future, and within
+    // a sane human age range. This value is canonical profile data and drives
+    // derived age in the Retirement Planner.
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(args.birthDate.trim());
+    if (!match) {
+      throw new Error("Date of birth must be in YYYY-MM-DD format");
+    }
+    const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
+    const parsed = new Date(y, m - 1, d);
+    const isRealDate =
+      parsed.getFullYear() === y &&
+      parsed.getMonth() === m - 1 &&
+      parsed.getDate() === d;
+    if (!isRealDate) {
+      throw new Error("Date of birth is not a valid calendar date");
+    }
+    const today = new Date();
+    const ty = today.getFullYear();
+    const tm = today.getMonth() + 1;
+    const td = today.getDate();
+    if (y > ty || (y === ty && (m > tm || (m === tm && d > td)))) {
+      throw new Error("Date of birth cannot be in the future");
+    }
+    if (ty - y > 120) {
+      throw new Error("Date of birth is out of the supported range");
+    }
+
     const userId = identity.subject;
     const now = Date.now();
 

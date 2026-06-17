@@ -196,6 +196,8 @@ export interface BitpandaTransaction {
   bitpandaTransactionId: string;
   type: string; // buy | sell | deposit | withdrawal | transfer | reward | other
   symbol: string;
+  /** Asset class: crypto | metal | commodity | stock | fiat | unknown */
+  assetType: string;
   quantity: number;
   price?: number;
   amount: number;
@@ -424,7 +426,29 @@ export function normalizeTransactions(input: {
 }): BitpandaTransaction[] {
   const out: BitpandaTransaction[] = [];
 
-  const pushRecord = (record: any, fallbackPrefix: string) => {
+  // Symbol → asset class derived from the type-specific endpoints. Used to
+  // classify /trades records (which aren't inherently typed) so a transaction
+  // carries its own asset class and never depends on current holdings.
+  const symbolClass = (records: any[]): Set<string> => {
+    const set = new Set<string>();
+    for (const r of records) {
+      set.add(readSymbol(r?.attributes ?? r).toUpperCase());
+    }
+    return set;
+  };
+  const cryptoSymbols = symbolClass(input.cryptoTransactions);
+  const commoditySymbols = symbolClass(input.commodityTransactions);
+  const fiatSymbols = symbolClass(input.fiatTransactions);
+
+  const resolveTradeAssetType = (symbol: string): string => {
+    const s = symbol.toUpperCase();
+    if (cryptoSymbols.has(s)) return "crypto";
+    if (commoditySymbols.has(s)) return "commodity";
+    if (fiatSymbols.has(s)) return "fiat";
+    return "unknown";
+  };
+
+  const pushRecord = (record: any, fallbackPrefix: string, assetType: string) => {
     const attrs = record?.attributes ?? record;
     const id = (record?.id ?? attrs?.id ?? `${fallbackPrefix}-${out.length}`)
       .toString();
@@ -449,6 +473,7 @@ export function normalizeTransactions(input: {
       bitpandaTransactionId: id,
       type: normalizeTransactionType(attrs?.type ?? attrs?.transaction_type),
       symbol,
+      assetType: assetType === "trade" ? resolveTradeAssetType(symbol) : assetType,
       quantity,
       price,
       amount,
@@ -462,10 +487,11 @@ export function normalizeTransactions(input: {
 
   // Order matters: trades first so a buy/sell from /trades wins over the
   // duplicate the same event produces in /wallets/transactions.
-  for (const r of input.trades) pushRecord(r, "trade");
-  for (const r of input.cryptoTransactions) pushRecord(r, "crypto");
-  for (const r of input.fiatTransactions) pushRecord(r, "fiat");
-  for (const r of input.commodityTransactions) pushRecord(r, "commodity");
+  for (const r of input.trades) pushRecord(r, "trade", "trade");
+  for (const r of input.cryptoTransactions) pushRecord(r, "crypto", "crypto");
+  for (const r of input.fiatTransactions) pushRecord(r, "fiat", "fiat");
+  for (const r of input.commodityTransactions)
+    pushRecord(r, "commodity", "commodity");
 
   // A single buy/sell is reported by multiple Bitpanda endpoints (e.g.
   // /trades and /wallets/transactions) with different IDs. Collapse those by

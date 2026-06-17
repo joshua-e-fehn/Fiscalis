@@ -333,6 +333,7 @@ export const syncTransactions = internalMutation({
         bitpandaTransactionId: v.string(),
         type: v.string(),
         symbol: v.string(),
+        assetType: v.optional(v.string()),
         quantity: v.number(),
         price: v.optional(v.number()),
         amount: v.number(),

@@ -5,11 +5,11 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { useSetBirthDate, useUserSettings } from "@/hooks/convex/onboarding";
-import { getAgeFromBirthDate } from "@/lib/utils/date";
+import { getAgeFromBirthDate, todayLocalISO } from "@/lib/utils/date";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
-const TODAY_ISO = new Date().toISOString().split("T")[0];
+const TODAY_ISO = todayLocalISO();
 
 export function PersonalStep({
 	data,

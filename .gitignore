@@ -399,4 +399,5 @@ FodyWeavers.xsd
 
 **/.DS_Store
 
-.vscode/
+.vscode/.worktrees/
+.vibe/sources/

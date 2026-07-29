@@ -402,3 +402,5 @@ FodyWeavers.xsd
 .vscode/.worktrees/
 .vibe/sources/
 .worktrees/
+.vibe/TASK.md
+.vibe/tasks/

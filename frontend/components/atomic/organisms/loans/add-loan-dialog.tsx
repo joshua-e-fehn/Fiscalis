@@ -58,6 +58,13 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { todayLocalISO } from "@/lib/utils/date";
+import { calculateAnnuityPayment } from "@/../services/finance/financeService";
+import {
+  getDueDate,
+  settleLoanBalance,
+  splitLoanPayment,
+} from "@/../services/finance/loanScheduleService";
 
 interface AddLoanDialogProps {
   open: boolean;
@@ -192,40 +199,24 @@ function calculatePayment(
     return principalPayment + interestPayment;
   }
 
-  if (periodicRate === 0) return principal / termPeriods;
-
-  const payment =
-    (principal * periodicRate * Math.pow(1 + periodicRate, termPeriods)) /
-    (Math.pow(1 + periodicRate, termPeriods) - 1);
-
-  return payment;
+  return calculateAnnuityPayment(principal, periodicRate, termPeriods);
 }
 
-function addPeriodToDate(date: Date, frequency: PaymentFrequency): Date {
-  const newDate = new Date(date);
-  const freqInfo = getFrequencyInfo(frequency);
-  const monthsToAdd = 12 / freqInfo.periodsPerYear;
-  newDate.setMonth(newDate.getMonth() + monthsToAdd);
-  return newDate;
-}
-
+// Due dates up to and including today, and the first one after it
 function calculateMissedPayments(
   startDate: string,
   frequency: PaymentFrequency,
-): { count: number; nextDueDate: Date } {
-  if (!startDate) return { count: 0, nextDueDate: new Date() };
+): { count: number; nextDueDate: string } {
+  const today = todayLocalISO();
+  if (!startDate) return { count: 0, nextDueDate: today };
 
-  const start = new Date(startDate);
-  const today = new Date();
-  let nextDue = addPeriodToDate(start, frequency);
+  const loan = { startDate, paymentFrequency: frequency };
   let missed = 0;
-
-  while (nextDue <= today) {
+  while (getDueDate(loan, missed + 1) <= today) {
     missed++;
-    nextDue = addPeriodToDate(nextDue, frequency);
   }
 
-  return { count: missed, nextDueDate: nextDue };
+  return { count: missed, nextDueDate: getDueDate(loan, missed + 1) };
 }
 
 function formatCurrency(value: number, currency: string): string {
@@ -237,11 +228,13 @@ function formatCurrency(value: number, currency: string): string {
   }).format(value);
 }
 
+// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -401,7 +394,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
   const nextPaymentDate = useMemo(() => {
     if (!startDate) return "";
-    return missedPaymentsInfo.nextDueDate.toISOString().split("T")[0];
+    return missedPaymentsInfo.nextDueDate;
   }, [startDate, missedPaymentsInfo]);
 
   // Generate past payment slots based on missed payments
@@ -413,17 +406,14 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
     // Calculate due dates for each missed payment
     const payments: PastPayment[] = [];
-    const start = new Date(startDate);
-    let dueDate = addPeriodToDate(start, paymentFrequency);
 
     for (let i = 0; i < missedPaymentsInfo.count; i++) {
       payments.push({
         id: `past-${i}`,
-        dueDate: dueDate.toISOString().split("T")[0],
+        dueDate: getDueDate({ startDate, paymentFrequency }, i + 1),
         amount: effectivePayment.toFixed(2),
         paid: true, // Default to paid
       });
-      dueDate = addPeriodToDate(dueDate, paymentFrequency);
     }
 
     setPastPayments(payments);
@@ -479,8 +469,37 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     setIsSubmitting(true);
     try {
       const principal = parseFloat(originalPrincipal);
-      const balance = currentBalance ? parseFloat(currentBalance) : principal;
       const rate = parseFloat(annualInterestRate) / 100;
+
+      // Split each confirmed past payment (assumed paid on its due date)
+      let runningBalance = principal;
+      const historicalPayments = pastPayments
+        .filter((p) => p.paid && parseFloat(p.amount) > 0)
+        .map((payment) => {
+          const amount = parseFloat(payment.amount);
+          const split = splitLoanPayment(
+            {
+              currentBalance: runningBalance,
+              annualInterestRate: rate,
+              paymentFrequency,
+            },
+            amount,
+            "scheduled",
+          );
+          runningBalance = settleLoanBalance(
+            runningBalance - split.principalPortion,
+          );
+          return {
+            paymentDate: payment.dueDate,
+            scheduledDate: payment.dueDate,
+            amount,
+            ...split,
+          };
+        });
+      // Blank "Current Balance" = what is left after the confirmed past payments
+      const balance = currentBalance
+        ? parseFloat(currentBalance)
+        : runningBalance;
 
       const loanId = await createLoan({
         userId: user.id,
@@ -494,7 +513,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
         paymentFrequency,
         scheduledPayment: effectivePayment,
         startDate,
-        nextPaymentDate,
+        // First due date not covered by the recorded past payments (what the
+        // schedule derives), so the stored date matches it on any backend
+        nextPaymentDate: getDueDate(
+          { startDate, paymentFrequency },
+          historicalPayments.length + 1,
+        ),
         lender: lender || undefined,
         contractNumber: contractNumber || undefined,
         collateral: collateral || undefined,
@@ -511,30 +535,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
       });
 
       // Record past payments if any were marked as paid
-      const paidPayments = pastPayments.filter(
-        (p) => p.paid && parseFloat(p.amount) > 0,
-      );
-      if (paidPayments.length > 0) {
-        // Calculate principal/interest split for each historical payment
-        // For simplicity, use an approximation based on loan type
-        const periodicRate = rate / frequencyInfo.periodsPerYear;
-        let runningBalance = principal;
-
-        const historicalPayments = paidPayments.map((payment) => {
-          const amount = parseFloat(payment.amount);
-          const interestPortion = runningBalance * periodicRate;
-          const principalPortion = Math.max(0, amount - interestPortion);
-          runningBalance = Math.max(0, runningBalance - principalPortion);
-
-          return {
-            paymentDate: payment.dueDate, // Assume paid on due date
-            scheduledDate: payment.dueDate,
-            amount,
-            principalPortion: Math.round(principalPortion * 100) / 100,
-            interestPortion: Math.round(interestPortion * 100) / 100,
-          };
-        });
-
+      if (historicalPayments.length > 0) {
         await recordHistoricalPayments({
           userId: user.id,
           loanId,

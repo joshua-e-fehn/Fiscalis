@@ -145,7 +145,6 @@ export function useUpdateLoan() {
       currentBalance?: number;
       annualInterestRate?: number;
       scheduledPayment?: number;
-      nextPaymentDate?: string;
       status?: LoanStatus;
       lender?: string;
       contractNumber?: string;

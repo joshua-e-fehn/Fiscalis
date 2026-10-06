@@ -172,7 +172,7 @@ export default function LoansPage() {
                   <div
                     key={`${payment.loanId}-${payment.paymentDate}`}
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
-                    onClick={() => router.push(`/debt/loans/${payment.loanId}`)}
+                    onClick={() => router.push(`/liabilities/loans/${payment.loanId}`)}
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -259,7 +259,7 @@ export default function LoansPage() {
                 key={loan._id}
                 loan={loan}
                 viewMode={viewMode}
-                onClick={() => router.push(`/debt/loans/${loan._id}`)}
+                onClick={() => router.push(`/liabilities/loans/${loan._id}`)}
               />
             ))}
           </div>

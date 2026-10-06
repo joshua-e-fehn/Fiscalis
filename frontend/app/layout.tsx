@@ -21,7 +21,7 @@ export default function AppLayout({
     // `dynamic` is required for strict CSP — the nonce is generated server-side
     // and must be passed to the client via dynamic rendering.
     // In dev mode strict CSP is disabled (see proxy.ts), but `dynamic` is harmless to keep.
-    <ClerkProvider dynamic>
+    <ClerkProvider dynamic signInUrl="/sign-in" signUpUrl="/sign-up">
       <html lang="en">
         <body className={inter.className}>
           <ConvexClientProvider>{children}</ConvexClientProvider>

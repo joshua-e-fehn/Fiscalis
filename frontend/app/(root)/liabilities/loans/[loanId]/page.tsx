@@ -214,7 +214,7 @@ export default function LoanDetailPage() {
 
   const handleDelete = async () => {
     await deleteLoan(loanId);
-    router.push("/debt/loans");
+    router.push("/liabilities/loans");
   };
 
   if (isLoading) {
@@ -230,7 +230,7 @@ export default function LoanDetailPage() {
             The loan you&apos;re looking for doesn&apos;t exist or has been
             deleted.
           </p>
-          <Button onClick={() => router.push("/debt/loans")}>
+          <Button onClick={() => router.push("/liabilities/loans")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Loans
           </Button>
@@ -246,7 +246,7 @@ export default function LoanDetailPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/debt/loans")}
+          onClick={() => router.push("/liabilities/loans")}
           className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />

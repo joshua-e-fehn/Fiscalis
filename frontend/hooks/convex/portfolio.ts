@@ -147,7 +147,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     assetCategories.push({
       id: "equities",
       name: "Equities",
-      href: "/equities",
+      href: "/assets/equities",
       icon: React.createElement(Briefcase, { className: "h-4 w-4" }),
       color: categoryPrimaryColors.equities,
       totalValue: equitiesSummary?.totalValue ?? 0,
@@ -167,7 +167,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     assetCategories.push({
       id: "commodities",
       name: "Commodities",
-      href: "/commodities",
+      href: "/assets/commodities",
       icon: React.createElement(Coins, { className: "h-4 w-4" }),
       color: categoryPrimaryColors.commodities,
       totalValue: commoditiesSummary?.totalValue ?? 0,
@@ -187,7 +187,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     assetCategories.push({
       id: "bonds",
       name: "Bonds",
-      href: "/bonds",
+      href: "/assets/bonds",
       icon: React.createElement(Receipt, { className: "h-4 w-4" }),
       color: categoryPrimaryColors.bonds,
       totalValue: bondsSummary?.totalValue ?? 0,
@@ -207,7 +207,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     assetCategories.push({
       id: "real-estate",
       name: "Real Estate",
-      href: "/real-estate",
+      href: "/assets/real-estate",
       icon: React.createElement(Building2, { className: "h-4 w-4" }),
       color: categoryPrimaryColors["real-estate"],
       totalValue: realEstateSummary?.totalValue ?? 0,
@@ -227,7 +227,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     assetCategories.push({
       id: "cash",
       name: "Cash & Savings",
-      href: "/cash",
+      href: "/assets/cash",
       icon: React.createElement(Banknote, { className: "h-4 w-4" }),
       color: categoryPrimaryColors.cash,
       totalValue: cashSummary?.totalValue ?? 0,
@@ -247,7 +247,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     assetCategories.push({
       id: "crypto",
       name: "Cryptocurrency",
-      href: "/crypto",
+      href: "/assets/crypto",
       icon: React.createElement(Bitcoin, { className: "h-4 w-4" }),
       color: categoryPrimaryColors.crypto,
       totalValue: cryptoSummary?.totalValue ?? 0,
@@ -267,7 +267,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     assetCategories.push({
       id: "collectibles",
       name: "Collectibles",
-      href: "/collectibles",
+      href: "/assets/collectibles",
       icon: React.createElement(Gem, { className: "h-4 w-4" }),
       color: categoryPrimaryColors.collectibles,
       totalValue: collectiblesSummary?.totalValue ?? 0,

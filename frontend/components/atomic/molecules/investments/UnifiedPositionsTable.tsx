@@ -43,7 +43,8 @@ import {
   Filter,
   TrendingUp,
   TrendingDown,
-  ExternalLink,
+  ChevronDown,
+  ChevronUp,
   PenLine,
   HandCoins,
 } from "lucide-react";
@@ -125,10 +126,10 @@ const providerLabels: Record<FinancialProvider, string> = {
 };
 
 const providerRoutes: Record<FinancialProvider, string> = {
-  plaid: "/banking",
-  snaptrade: "/brokers",
+  plaid: "/integrations/banking",
+  snaptrade: "/integrations/brokers",
   bitpanda: "/integrations/brokers",
-  manual: "/commodities",
+  manual: "/assets/commodities/metals",
 };
 
 // Format large numbers
@@ -188,6 +189,7 @@ export function UnifiedPositionsTable({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [providerFilter, setProviderFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [showAll, setShowAll] = useState(false);
 
   // Enrich positions with calculated market values for commodities
   const positions = useMemo(() => {
@@ -297,7 +299,7 @@ export function UnifiedPositionsTable({
     });
 
     // Apply max rows
-    if (maxRows) {
+    if (maxRows && !showAll) {
       result = result.slice(0, maxRows);
     }
 
@@ -310,6 +312,7 @@ export function UnifiedPositionsTable({
     sortField,
     sortDirection,
     maxRows,
+    showAll,
   ]);
 
   const toggleSort = (field: SortField) => {
@@ -386,11 +389,17 @@ export function UnifiedPositionsTable({
             )}
           </div>
           {maxRows && positions.length > maxRows && (
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/dashboard/positions">
-                View All
-                <ExternalLink className="ml-2 h-3 w-3" />
-              </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAll((prev) => !prev)}
+            >
+              {showAll ? "Show Less" : "View All"}
+              {showAll ? (
+                <ChevronUp className="ml-2 h-3 w-3" />
+              ) : (
+                <ChevronDown className="ml-2 h-3 w-3" />
+              )}
             </Button>
           )}
         </div>
@@ -501,8 +510,12 @@ export function UnifiedPositionsTable({
                 // Defensive lookups: an unrecognized provider must never crash
                 // the row (e.g. legacy data from a removed provider).
                 const Icon = providerIcons[position.provider] ?? PenLine;
+                // Manual entries are either vault metals or loans
                 const providerRoute =
-                  providerRoutes[position.provider] ?? "/dashboard";
+                  position.provider === "manual" &&
+                  position.category === "liabilities"
+                    ? `/liabilities/loans/${position.id}`
+                    : (providerRoutes[position.provider] ?? "/dashboard");
                 const providerColor = providerColors[position.provider] ?? "";
                 const providerLabel =
                   providerLabels[position.provider] ?? position.provider;

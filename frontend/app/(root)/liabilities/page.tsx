@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Card,
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 import { InvestmentDashboardSection } from "@/components/atomic/molecules/investments";
 import { useLiabilitiesSummary } from "@/hooks/convex/liabilities";
+import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dialog";
 
 /**
  * Liabilities Overview Page
@@ -35,6 +37,7 @@ interface LiabilityCategory {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   examples: string[];
+  implemented: boolean;
 }
 
 const liabilityCategories: LiabilityCategory[] = [
@@ -45,6 +48,7 @@ const liabilityCategories: LiabilityCategory[] = [
     href: "/liabilities/mortgages",
     icon: Home,
     examples: ["Primary Residence", "Investment Property", "Second Home"],
+    implemented: false,
   },
   {
     id: "loans",
@@ -53,6 +57,7 @@ const liabilityCategories: LiabilityCategory[] = [
     href: "/liabilities/loans",
     icon: Banknote,
     examples: ["Auto Loans", "Student Loans", "Personal Loans"],
+    implemented: true,
   },
   {
     id: "credit-cards",
@@ -61,6 +66,7 @@ const liabilityCategories: LiabilityCategory[] = [
     href: "/liabilities/credit-cards",
     icon: CreditCard,
     examples: ["Visa", "Mastercard", "Amex", "Store Cards"],
+    implemented: false,
   },
   {
     id: "margin-loans",
@@ -69,6 +75,7 @@ const liabilityCategories: LiabilityCategory[] = [
     href: "/liabilities/margin",
     icon: TrendingDown,
     examples: ["Broker Margin", "Securities Lending"],
+    implemented: false,
   },
 ];
 
@@ -98,7 +105,11 @@ const LiabilityCategoryCard = ({
 
   return (
     <Card
-      className={`relative overflow-hidden transition-all hover:shadow-lg hover:border-destructive/50 cursor-pointer`}
+      className={`relative overflow-hidden transition-all ${
+        category.implemented
+          ? "hover:shadow-lg hover:border-destructive/50 cursor-pointer"
+          : "opacity-60"
+      }`}
     >
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -156,16 +167,22 @@ const LiabilityCategoryCard = ({
             ))}
           </div>
         )}
-        <Button
-          asChild
-          className="w-full"
-          variant={hasHoldings ? "destructive" : "outline"}
-        >
-          <Link href={category.href}>
-            {hasHoldings ? "View Details" : "Track Liability"}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        {category.implemented ? (
+          <Button
+            asChild
+            className="w-full"
+            variant={hasHoldings ? "destructive" : "outline"}
+          >
+            <Link href={category.href}>
+              {hasHoldings ? "View Details" : "Track Liability"}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled className="w-full" variant="outline">
+            Coming Soon
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -173,6 +190,7 @@ const LiabilityCategoryCard = ({
 
 export default function LiabilitiesPage() {
   const { summary, isLoading } = useLiabilitiesSummary();
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Check if there are any liabilities
   const hasLiabilities = summary && summary.totalValue > 0;
@@ -196,11 +214,9 @@ export default function LiabilitiesPage() {
             Track your debts, loans, mortgages, and credit card balances.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/liabilities/loans/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Loan
-          </Link>
+        <Button onClick={() => setShowAddDialog(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Loan
         </Button>
       </div>
 
@@ -279,19 +295,21 @@ export default function LiabilitiesPage() {
         </CardHeader>
         <CardContent className="flex gap-4">
           <Button variant="outline" asChild>
-            <Link href="/calculators/loan">
+            <Link href="/tools/calculators/loan">
               Loan Calculator
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/banking">
+            <Link href="/integrations/banking">
               Connect Bank
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </CardContent>
       </Card>
+
+      <AddLoanDialog open={showAddDialog} onOpenChange={setShowAddDialog} />
     </div>
   );
 }

@@ -58,7 +58,6 @@ export function EditLoanDialog({
   const [scheduledPayment, setScheduledPayment] = useState(
     loan.scheduledPayment.toString(),
   );
-  const [nextPaymentDate, setNextPaymentDate] = useState(loan.nextPaymentDate);
   const [status, setStatus] = useState<LoanStatus>(loan.status);
   const [lender, setLender] = useState(loan.lender ?? "");
   const [contractNumber, setContractNumber] = useState(
@@ -73,7 +72,6 @@ export function EditLoanDialog({
     setCurrentBalance(loan.currentBalance.toString());
     setAnnualInterestRate((loan.annualInterestRate * 100).toString());
     setScheduledPayment(loan.scheduledPayment.toString());
-    setNextPaymentDate(loan.nextPaymentDate);
     setStatus(loan.status);
     setLender(loan.lender ?? "");
     setContractNumber(loan.contractNumber ?? "");
@@ -92,7 +90,6 @@ export function EditLoanDialog({
         currentBalance: parseFloat(currentBalance),
         annualInterestRate: parseFloat(annualInterestRate) / 100,
         scheduledPayment: parseFloat(scheduledPayment),
-        nextPaymentDate,
         status,
         lender: lender || undefined,
         contractNumber: contractNumber || undefined,
@@ -202,16 +199,6 @@ export function EditLoanDialog({
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="edit-next-payment">Next Payment Date</Label>
-            <Input
-              id="edit-next-payment"
-              type="date"
-              value={nextPaymentDate}
-              onChange={(e) => setNextPaymentDate(e.target.value)}
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

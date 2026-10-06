@@ -5,6 +5,12 @@ import { useUser } from "@clerk/nextjs";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useSaveScenario, useDeleteScenario } from "@/hooks/convex/loans";
 import {
+  addMonthsToISODate,
+  computeNextPaymentDate,
+  getPaymentsPerYear,
+} from "@/../services/finance/loanScheduleService";
+import { todayLocalISO } from "@/lib/utils/date";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -66,10 +72,12 @@ import {
 } from "lucide-react";
 
 type Loan = Doc<"loans">;
+type LoanPayment = Doc<"loanPayments">;
 type LoanScenario = Doc<"loanScenarios">;
 
 interface LoanScenariosTabProps {
   loan: Loan;
+  payments: LoanPayment[];
   scenarios: LoanScenario[];
 }
 
@@ -189,17 +197,11 @@ const paymentChartConfig: ChartConfig = {
 
 function calculateScenario(
   loan: Loan,
+  payments: LoanPayment[],
   extraPeriodicPayment: number,
   oneTimePrepayments: OneTimePrepayment[] = [],
 ): ScenarioResult {
-  const paymentsPerYear =
-    loan.paymentFrequency === "MONTHLY"
-      ? 12
-      : loan.paymentFrequency === "QUARTERLY"
-        ? 4
-        : loan.paymentFrequency === "SEMI_ANNUAL"
-          ? 2
-          : 1;
+  const paymentsPerYear = getPaymentsPerYear(loan.paymentFrequency);
   const periodicRate = loan.annualInterestRate / paymentsPerYear;
 
   // Sort prepayments by date
@@ -383,16 +385,17 @@ function calculateScenario(
   const periodsSaved = originalPeriods - scenarioPeriods;
   const interestSaved = originalTotalInterest - scenarioTotalInterest;
 
-  const today = new Date();
-  const originalEndDate = new Date(today);
-  for (let i = 0; i < originalPeriods; i++) {
-    addPaymentPeriod(originalEndDate, loan.paymentFrequency);
-  }
-
-  const newEndDate = new Date(today);
-  for (let i = 0; i < scenarioPeriods; i++) {
-    addPaymentPeriod(newEndDate, loan.paymentFrequency);
-  }
+  // Payoff dates count periods from the next due date the schedule derives
+  // (calendar-safe, clamped to month end)
+  const monthsPerPeriod = 12 / paymentsPerYear;
+  const firstDue =
+    computeNextPaymentDate(loan, payments) ??
+    (loan.nextPaymentDate ||
+      addMonthsToISODate(todayLocalISO(), monthsPerPeriod));
+  const endAfter = (periods: number) =>
+    periods > 0
+      ? addMonthsToISODate(firstDue, (periods - 1) * monthsPerPeriod)
+      : firstDue;
 
   // Convert periods to months for display
   const periodsPerYear = paymentsPerYear;
@@ -405,8 +408,8 @@ function calculateScenario(
     originalTotalInterest,
     newTotalInterest: scenarioTotalInterest,
     interestSaved,
-    originalEndDate: originalEndDate.toISOString().split("T")[0],
-    newEndDate: newEndDate.toISOString().split("T")[0],
+    originalEndDate: endAfter(originalPeriods),
+    newEndDate: endAfter(scenarioPeriods),
     totalExtraPayments:
       extraPeriodicPayment * scenarioPeriods + totalPrepaymentAmount,
     balanceHistory,
@@ -414,7 +417,11 @@ function calculateScenario(
   };
 }
 
-export function LoanScenariosTab({ loan, scenarios }: LoanScenariosTabProps) {
+export function LoanScenariosTab({
+  loan,
+  payments,
+  scenarios,
+}: LoanScenariosTabProps) {
   const { user } = useUser();
   const { saveScenario } = useSaveScenario();
   const { deleteScenario } = useDeleteScenario();
@@ -439,8 +446,8 @@ export function LoanScenariosTab({ loan, scenarios }: LoanScenariosTabProps) {
 
   // Calculate live scenario
   const liveScenario = useMemo(
-    () => calculateScenario(loan, extraPayment, oneTimePrepayments),
-    [loan, extraPayment, oneTimePrepayments],
+    () => calculateScenario(loan, payments, extraPayment, oneTimePrepayments),
+    [loan, payments, extraPayment, oneTimePrepayments],
   );
 
   const handleAddPrepayment = () => {

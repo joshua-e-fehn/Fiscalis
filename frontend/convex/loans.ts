@@ -1,6 +1,22 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalMutation,
+  type MutationCtx,
+} from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
+import {
+  addMonthsToISODate,
+  calculateLoanAnnuityPayment,
+  capPrincipalPortion,
+  computeNextPaymentDate,
+  getPaymentsPerYear,
+  getTotalPeriods,
+  isExtraPaymentType,
+  settleLoanBalance,
+} from "../../services/finance/loanScheduleService";
+import { roundMoney } from "../../services/finance/financeService";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -36,58 +52,25 @@ export type PaymentType =
 // Helper Functions
 // ═══════════════════════════════════════════════════════════════
 
-function getPaymentsPerYear(frequency: PaymentFrequency): number {
-  switch (frequency) {
-    case "MONTHLY":
-      return 12;
-    case "QUARTERLY":
-      return 4;
-    case "SEMI_ANNUAL":
-      return 2;
-    case "ANNUAL":
-      return 1;
-  }
+// Period math and the schedule model live in
+// services/finance/loanScheduleService.ts (shared with the loan detail page).
+
+// The next due date is derived from the recorded payments, so recording,
+// editing or deleting payments can never drift it away from the schedule.
+// Keeps the stored date once the loan is paid off.
+async function recomputeNextPaymentDate(
+  ctx: MutationCtx,
+  loan: Loan,
+): Promise<string> {
+  const payments = await ctx.db
+    .query("loanPayments")
+    .withIndex("by_loan", (q) => q.eq("loanId", loan._id))
+    .collect();
+  return computeNextPaymentDate(loan, payments) ?? loan.nextPaymentDate;
 }
 
-function addPaymentPeriod(date: Date, frequency: PaymentFrequency): Date {
-  const newDate = new Date(date);
-  switch (frequency) {
-    case "MONTHLY":
-      newDate.setMonth(newDate.getMonth() + 1);
-      break;
-    case "QUARTERLY":
-      newDate.setMonth(newDate.getMonth() + 3);
-      break;
-    case "SEMI_ANNUAL":
-      newDate.setMonth(newDate.getMonth() + 6);
-      break;
-    case "ANNUAL":
-      newDate.setFullYear(newDate.getFullYear() + 1);
-      break;
-  }
-  return newDate;
-}
-
-function calculateAnnuityPayment(
-  principal: number,
-  annualRate: number,
-  termMonths: number,
-  paymentFrequency: PaymentFrequency,
-): number {
-  const paymentsPerYear = getPaymentsPerYear(paymentFrequency);
-  const periodicRate = annualRate / paymentsPerYear;
-  const totalPeriods = Math.round(termMonths / (12 / paymentsPerYear));
-
-  if (periodicRate === 0) {
-    return principal / totalPeriods;
-  }
-
-  const payment =
-    (principal * periodicRate * Math.pow(1 + periodicRate, totalPeriods)) /
-    (Math.pow(1 + periodicRate, totalPeriods) - 1);
-
-  return Math.round(payment * 100) / 100;
-}
+const HISTORICAL_PAYMENT_NOTE =
+  "Historical payment (recorded during loan import)";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES
@@ -337,14 +320,12 @@ export const createLoan = mutation({
     const now = Date.now();
 
     // Calculate expected end date
-    const startDate = new Date(args.startDate);
-    const expectedEndDate = new Date(startDate);
-    expectedEndDate.setMonth(expectedEndDate.getMonth() + args.termMonths);
+    const expectedEndDate = addMonthsToISODate(args.startDate, args.termMonths);
 
     // Calculate scheduled payment if not provided (for annuity loans)
     let scheduledPayment = args.scheduledPayment;
     if (!scheduledPayment && args.loanType === "ANNUITY") {
-      scheduledPayment = calculateAnnuityPayment(
+      scheduledPayment = calculateLoanAnnuityPayment(
         args.originalPrincipal,
         args.annualInterestRate,
         args.termMonths,
@@ -353,8 +334,9 @@ export const createLoan = mutation({
     } else if (!scheduledPayment) {
       // For other loan types, calculate based on type
       const paymentsPerYear = getPaymentsPerYear(args.paymentFrequency);
-      const totalPayments = Math.round(
-        args.termMonths / (12 / paymentsPerYear),
+      const totalPayments = getTotalPeriods(
+        args.termMonths,
+        args.paymentFrequency,
       );
 
       if (args.loanType === "CONSTANT_PRINCIPAL") {
@@ -383,7 +365,7 @@ export const createLoan = mutation({
       paymentFrequency: args.paymentFrequency,
       scheduledPayment: scheduledPayment ?? 0,
       startDate: args.startDate,
-      expectedEndDate: expectedEndDate.toISOString().split("T")[0],
+      expectedEndDate,
       nextPaymentDate: args.nextPaymentDate,
       gracePeriods: args.gracePeriods,
       maxAnnualPrepaymentRate: args.maxAnnualPrepaymentRate,
@@ -426,15 +408,25 @@ export const updateLoan = mutation({
     prepaymentPenaltyRate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const { loanId, ...updates } = args;
+    // nextPaymentDate is derived from the payments, so a sent one is ignored
+    // (kept as an arg for older clients)
+    const { loanId, nextPaymentDate: _nextPaymentDate, ...updates } = args;
+
+    const loan = await ctx.db.get(loanId);
+    if (!loan) throw new Error("Loan not found");
 
     // Filter out undefined values
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
-    );
+    ) as Partial<Loan>;
 
+    // Balance and status both feed the derived next due date
     await ctx.db.patch(loanId, {
       ...filteredUpdates,
+      nextPaymentDate: await recomputeNextPaymentDate(ctx, {
+        ...loan,
+        ...filteredUpdates,
+      }),
       updatedAt: Date.now(),
     });
   },
@@ -496,18 +488,18 @@ export const recordPayment = mutation({
     const loan = await ctx.db.get(args.loanId);
     if (!loan) throw new Error("Loan not found");
 
-    // Calculate new balance
-    const newBalance = Math.max(0, loan.currentBalance - args.principalPortion);
-
-    // Calculate next payment date
-    const currentNextPayment = new Date(loan.nextPaymentDate);
-    const newNextPaymentDate = addPaymentPeriod(
-      currentNextPayment,
-      loan.paymentFrequency,
+    // Calculate new balance (snapped to 0 once paid off)
+    const principalPortion = capPrincipalPortion(
+      loan.currentBalance,
+      args.principalPortion,
+    );
+    const newBalance = settleLoanBalance(
+      loan.currentBalance - principalPortion,
     );
 
     // Determine if loan is paid off
     const isPaidOff = newBalance === 0;
+    const status: LoanStatus = isPaidOff ? "paid_off" : loan.status;
 
     // Insert payment record
     const paymentId = await ctx.db.insert("loanPayments", {
@@ -516,20 +508,29 @@ export const recordPayment = mutation({
       paymentDate: args.paymentDate,
       scheduledDate: args.scheduledDate,
       amount: args.amount,
-      principalPortion: args.principalPortion,
+      principalPortion,
       interestPortion: args.interestPortion,
       feesPortion: args.feesPortion,
-      paymentType: isPaidOff ? "final" : args.paymentType,
+      // An extra payment that clears the balance stays extra, so it doesn't
+      // cover a due date if the loan is reopened later
+      paymentType:
+        isPaidOff && !isExtraPaymentType(args.paymentType)
+          ? "final"
+          : args.paymentType,
       balanceAfterPayment: newBalance,
       notes: args.notes,
       createdAt: Date.now(),
     });
 
-    // Update loan
+    // Update loan (extra payments don't move the next due date)
     await ctx.db.patch(args.loanId, {
       currentBalance: newBalance,
-      nextPaymentDate: newNextPaymentDate.toISOString().split("T")[0],
-      status: isPaidOff ? "paid_off" : loan.status,
+      nextPaymentDate: await recomputeNextPaymentDate(ctx, {
+        ...loan,
+        currentBalance: newBalance,
+        status,
+      }),
+      status,
       actualEndDate: isPaidOff ? args.paymentDate : undefined,
       updatedAt: Date.now(),
     });
@@ -561,11 +562,52 @@ export const updatePayment = mutation({
   handler: async (ctx, args) => {
     const { paymentId, ...updates } = args;
 
+    const payment = await ctx.db.get(paymentId);
+    if (!payment) throw new Error("Payment not found");
+
+    const loan = await ctx.db.get(payment.loanId);
+    if (!loan) throw new Error("Loan not found");
+
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
     );
 
-    await ctx.db.patch(paymentId, filteredUpdates);
+    // At most what was owed before this payment
+    const principalPortion = capPrincipalPortion(
+      loan.currentBalance + payment.principalPortion,
+      args.principalPortion ?? payment.principalPortion,
+    );
+
+    await ctx.db.patch(paymentId, { ...filteredUpdates, principalPortion });
+
+    // Apply the principal change to the loan balance. Only a change that
+    // raises the balance reopens a paid-off loan (it may have been marked
+    // paid off by hand with a balance left).
+    const principalDelta = principalPortion - payment.principalPortion;
+    const newBalance = settleLoanBalance(loan.currentBalance - principalDelta);
+    const status: LoanStatus =
+      principalDelta === 0
+        ? loan.status
+        : newBalance === 0
+          ? "paid_off"
+          : loan.status === "paid_off" && principalDelta < 0
+            ? "active"
+            : loan.status;
+
+    await ctx.db.patch(loan._id, {
+      currentBalance: newBalance,
+      nextPaymentDate: await recomputeNextPaymentDate(ctx, {
+        ...loan,
+        currentBalance: newBalance,
+        status,
+      }),
+      status,
+      actualEndDate:
+        status === "paid_off"
+          ? (loan.actualEndDate ?? args.paymentDate ?? payment.paymentDate)
+          : undefined,
+      updatedAt: Date.now(),
+    });
   },
 });
 
@@ -582,18 +624,126 @@ export const deletePayment = mutation({
     if (!loan) throw new Error("Loan not found");
 
     // Restore the balance
-    const restoredBalance = loan.currentBalance + payment.principalPortion;
+    const restoredBalance = settleLoanBalance(
+      loan.currentBalance + payment.principalPortion,
+    );
+
+    // Only a delete that raises the balance reopens a paid-off loan (it may
+    // have been marked paid off by hand with a balance left)
+    const status: LoanStatus =
+      loan.status === "paid_off" && restoredBalance > loan.currentBalance
+        ? "active"
+        : loan.status;
+
+    // Delete the payment
+    await ctx.db.delete(args.paymentId);
 
     // Update loan balance
     await ctx.db.patch(payment.loanId, {
       currentBalance: restoredBalance,
-      status: loan.status === "paid_off" ? "active" : loan.status,
-      actualEndDate: undefined,
+      nextPaymentDate: await recomputeNextPaymentDate(ctx, {
+        ...loan,
+        currentBalance: restoredBalance,
+        status,
+      }),
+      status,
+      actualEndDate: status === "paid_off" ? loan.actualEndDate : undefined,
       updatedAt: Date.now(),
     });
+  },
+});
 
-    // Delete the payment
-    await ctx.db.delete(args.paymentId);
+// One-off repair of loans written by earlier builds. Required step after the
+// backend deploy: run from frontend/ (CONVEX_DEPLOYMENT=dev:blessed-ermine-693
+// is the live deployment, so do NOT add --prod), dry run first, review the
+// `changed` list, then apply. Idempotent, so re-running later is safe.
+//   npx convex run loans:repairLoans '{"dryRun": true}'
+//   npx convex run loans:repairLoans '{}'
+// - recordPayment advanced nextPaymentDate on every payment (including extra
+//   ones) and deletePayment never moved it back.
+// - Floating-point leftovers (e.g. 2e-13) kept fully repaid loans active.
+// - Loans imported with a blank "Current Balance" never had their historical
+//   payments deducted.
+export const repairLoans = internalMutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const loans = await ctx.db.query("loans").collect();
+    type RepairedFields = Pick<
+      Loan,
+      "currentBalance" | "status" | "nextPaymentDate"
+    >;
+    const changed: Array<{
+      loanId: Id<"loans">;
+      from: RepairedFields;
+      to: RepairedFields;
+    }> = [];
+
+    for (const loan of loans) {
+      const payments = await ctx.db
+        .query("loanPayments")
+        .withIndex("by_loan", (q) => q.eq("loanId", loan._id))
+        .collect();
+
+      let historicalPrincipal = 0;
+      let laterPrincipal = 0;
+      for (const p of payments) {
+        if (p.notes === HISTORICAL_PAYMENT_NOTE) {
+          historicalPrincipal += p.principalPortion;
+        } else {
+          laterPrincipal += p.principalPortion;
+        }
+      }
+      // Only the payments recorded after the import were deducted from the
+      // original principal
+      const importedWithoutDeduction =
+        historicalPrincipal > 0 &&
+        roundMoney(loan.currentBalance + laterPrincipal) ===
+          roundMoney(loan.originalPrincipal);
+
+      const currentBalance = settleLoanBalance(
+        importedWithoutDeduction
+          ? loan.currentBalance - historicalPrincipal
+          : loan.currentBalance,
+      );
+      const isPaidOff = currentBalance === 0 && loan.status === "active";
+      const status: LoanStatus = isPaidOff ? "paid_off" : loan.status;
+      const latestPaymentDate = payments
+        .map((p) => p.paymentDate)
+        .sort()
+        .pop();
+      const nextPaymentDate = await recomputeNextPaymentDate(ctx, {
+        ...loan,
+        currentBalance,
+        status,
+      });
+
+      const from = {
+        currentBalance: loan.currentBalance,
+        status: loan.status,
+        nextPaymentDate: loan.nextPaymentDate,
+      };
+      const to = { currentBalance, status, nextPaymentDate };
+      if (
+        to.currentBalance === from.currentBalance &&
+        to.status === from.status &&
+        to.nextPaymentDate === from.nextPaymentDate
+      ) {
+        continue;
+      }
+
+      changed.push({ loanId: loan._id, from, to });
+      if (!args.dryRun) {
+        await ctx.db.patch(loan._id, {
+          ...to,
+          actualEndDate: isPaidOff ? latestPaymentDate : loan.actualEndDate,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+
+    return { scanned: loans.length, changed };
   },
 });
 
@@ -700,7 +850,7 @@ export const recordHistoricalPayments = mutation({
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    // Insert all payment records without modifying loan
+    // Insert all payment records without modifying the loan balance
     for (const payment of args.payments) {
       await ctx.db.insert("loanPayments", {
         userId: args.userId,
@@ -712,8 +862,17 @@ export const recordHistoricalPayments = mutation({
         interestPortion: payment.interestPortion,
         paymentType: "scheduled",
         balanceAfterPayment: 0, // Will be calculated when viewing history
-        notes: "Historical payment (recorded during loan import)",
+        notes: HISTORICAL_PAYMENT_NOTE,
         createdAt: now,
+      });
+    }
+
+    // The imported payments cover the first due dates, so the next due date
+    // moves past them (whatever date the client sent to createLoan)
+    const loan = await ctx.db.get(args.loanId);
+    if (loan) {
+      await ctx.db.patch(args.loanId, {
+        nextPaymentDate: await recomputeNextPaymentDate(ctx, loan),
       });
     }
 

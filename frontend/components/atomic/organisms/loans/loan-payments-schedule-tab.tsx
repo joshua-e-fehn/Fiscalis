@@ -2,12 +2,20 @@
 
 import { useState, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   useRecordPayment,
   useDeletePayment,
   PaymentType,
 } from "@/hooks/convex/loans";
+import {
+  buildLoanSchedule,
+  computeNextPaymentDate,
+  isExtraPaymentType,
+  splitLoanPayment,
+  type LoanScheduleRow,
+} from "@/../services/finance/loanScheduleService";
+import { todayLocalISO } from "@/lib/utils/date";
 import {
   Card,
   CardContent,
@@ -83,21 +91,6 @@ interface LoanPaymentsScheduleTabProps {
   payments: LoanPayment[];
 }
 
-interface ScheduleRow {
-  period: number;
-  date: string;
-  openingBalance: number;
-  payment: number;
-  principal: number;
-  interest: number;
-  closingBalance: number;
-  cumulativeInterest: number;
-  cumulativePrincipal: number;
-  status: "paid" | "scheduled" | "extra";
-  paymentId?: string;
-  paymentType?: string;
-}
-
 // Helper functions
 function formatCurrency(value: number, currency: string = "USD"): string {
   return new Intl.NumberFormat("en-US", {
@@ -108,31 +101,14 @@ function formatCurrency(value: number, currency: string = "USD"): string {
   }).format(value);
 }
 
+// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
-}
-
-function addPaymentPeriod(date: Date, frequency: string): Date {
-  const newDate = new Date(date);
-  switch (frequency) {
-    case "MONTHLY":
-      newDate.setMonth(newDate.getMonth() + 1);
-      break;
-    case "QUARTERLY":
-      newDate.setMonth(newDate.getMonth() + 3);
-      break;
-    case "SEMI_ANNUAL":
-      newDate.setMonth(newDate.getMonth() + 6);
-      break;
-    case "ANNUAL":
-      newDate.setFullYear(newDate.getFullYear() + 1);
-      break;
-  }
-  return newDate;
 }
 
 const PAYMENT_TYPES: { value: PaymentType; label: string }[] = [
@@ -143,256 +119,18 @@ const PAYMENT_TYPES: { value: PaymentType; label: string }[] = [
   { value: "late", label: "Late Payment" },
 ];
 
-function groupByYear(schedule: ScheduleRow[]): Map<number, ScheduleRow[]> {
-  const grouped = new Map<number, ScheduleRow[]>();
+function groupByYear(
+  schedule: LoanScheduleRow[],
+): Map<number, LoanScheduleRow[]> {
+  const grouped = new Map<number, LoanScheduleRow[]>();
 
   schedule.forEach((row) => {
-    const year = new Date(row.date).getFullYear();
+    const year = Number(row.date.slice(0, 4));
     const existing = grouped.get(year) || [];
     grouped.set(year, [...existing, row]);
   });
 
-  return grouped;
-}
-
-// Calculate the full amortization schedule from loan start, merging with actual payments
-function calculateFullSchedule(
-  loan: Loan,
-  payments: LoanPayment[],
-): ScheduleRow[] {
-  const schedule: ScheduleRow[] = [];
-  const paymentsPerYear =
-    loan.paymentFrequency === "MONTHLY"
-      ? 12
-      : loan.paymentFrequency === "QUARTERLY"
-        ? 4
-        : loan.paymentFrequency === "SEMI_ANNUAL"
-          ? 2
-          : 1;
-  const periodicRate = loan.annualInterestRate / paymentsPerYear;
-  const totalPeriods = Math.ceil(loan.termMonths / (12 / paymentsPerYear));
-
-  // Sort payments by date
-  const sortedPayments = [...payments].sort(
-    (a, b) =>
-      new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime(),
-  );
-
-  // Separate scheduled payments from extra payments
-  const scheduledPayments = sortedPayments.filter(
-    (p) =>
-      p.paymentType === "scheduled" ||
-      p.paymentType === "partial" ||
-      p.paymentType === "late",
-  );
-  // Filter for additional principal and prepayment types
-  const extraPaymentsList = sortedPayments.filter(
-    (p) =>
-      p.paymentType === "additional_principal" ||
-      p.paymentType === "prepayment",
-  );
-
-  // Calculate first payment date
-  let firstPaymentDate = new Date(loan.startDate);
-  firstPaymentDate = addPaymentPeriod(firstPaymentDate, loan.paymentFrequency);
-
-  // Match scheduled payments to periods (±15 day window)
-  const paymentMap = new Map<number, LoanPayment>();
-
-  scheduledPayments.forEach((payment) => {
-    const paymentDate = new Date(payment.paymentDate);
-    let checkDate = new Date(firstPaymentDate);
-
-    for (let p = 1; p <= totalPeriods + 10; p++) {
-      const periodStart = new Date(checkDate);
-      periodStart.setDate(periodStart.getDate() - 15);
-      const periodEnd = new Date(checkDate);
-      periodEnd.setDate(periodEnd.getDate() + 15);
-
-      if (
-        paymentDate >= periodStart &&
-        paymentDate <= periodEnd &&
-        !paymentMap.has(p)
-      ) {
-        paymentMap.set(p, payment);
-        break;
-      }
-
-      checkDate = addPaymentPeriod(checkDate, loan.paymentFrequency);
-    }
-  });
-
-  // Build the schedule - iterate through ALL periods regardless of balance
-  let balance = loan.originalPrincipal;
-  let currentDate = new Date(firstPaymentDate);
-  let cumulativeInterest = 0;
-  let cumulativePrincipal = 0;
-  let extraPaymentIndex = 0;
-
-  // Sort extra payments by date for insertion
-  extraPaymentsList.sort(
-    (a, b) =>
-      new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime(),
-  );
-
-  // Generate schedule for all periods
-  for (let period = 1; period <= totalPeriods; period++) {
-    const dateStr = currentDate.toISOString().split("T")[0];
-
-    // Check for extra payments that should come before this period's date
-    while (extraPaymentIndex < extraPaymentsList.length) {
-      const extraPayment = extraPaymentsList[extraPaymentIndex];
-      const extraDate = new Date(extraPayment.paymentDate);
-
-      if (extraDate < currentDate) {
-        // Insert extra payment
-        const extraOpeningBalance = balance;
-
-        cumulativeInterest += extraPayment.interestPortion;
-        cumulativePrincipal += extraPayment.principalPortion;
-        balance = Math.max(0, balance - extraPayment.principalPortion);
-
-        schedule.push({
-          period: 0, // Will be renumbered
-          date: extraPayment.paymentDate,
-          openingBalance: extraOpeningBalance,
-          payment: extraPayment.amount,
-          principal: extraPayment.principalPortion,
-          interest: extraPayment.interestPortion,
-          closingBalance: balance,
-          cumulativeInterest,
-          cumulativePrincipal,
-          status: "extra",
-          paymentId: extraPayment._id,
-          paymentType: extraPayment.paymentType,
-        });
-
-        extraPaymentIndex++;
-      } else {
-        break;
-      }
-    }
-
-    // Skip if loan is paid off
-    if (balance <= 0.01) {
-      currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-      continue;
-    }
-
-    const openingBalance = balance;
-    const interest = openingBalance * periodicRate;
-
-    // Check if there's an actual payment for this period
-    const actualPayment = paymentMap.get(period);
-
-    let payment: number;
-    let principal: number;
-    let actualInterest: number;
-    let closingBalance: number;
-    let status: "paid" | "scheduled";
-    let paymentId: string | undefined;
-    let paymentType: string | undefined;
-
-    if (actualPayment) {
-      // Use actual payment data
-      payment = actualPayment.amount;
-      principal = actualPayment.principalPortion;
-      actualInterest = actualPayment.interestPortion;
-      // Calculate balance based on principal paid, not from stored value
-      balance = Math.max(0, openingBalance - principal);
-      closingBalance = balance;
-      status = "paid";
-      paymentId = actualPayment._id;
-      paymentType = actualPayment.paymentType;
-    } else {
-      // Calculate scheduled payment
-      if (loan.loanType === "ANNUITY") {
-        payment = Math.min(loan.scheduledPayment, openingBalance + interest);
-        principal = Math.max(0, payment - interest);
-      } else if (loan.loanType === "CONSTANT_PRINCIPAL") {
-        principal = Math.min(
-          loan.originalPrincipal / totalPeriods,
-          openingBalance,
-        );
-        payment = principal + interest;
-      } else if (loan.loanType === "BULLET") {
-        // Check if this is the last period
-        if (period >= totalPeriods) {
-          principal = openingBalance;
-          payment = principal + interest;
-        } else {
-          principal = 0;
-          payment = interest;
-        }
-      } else {
-        payment = Math.min(loan.scheduledPayment, openingBalance + interest);
-        principal = Math.max(0, payment - interest);
-      }
-
-      principal = Math.min(principal, openingBalance);
-      actualInterest = interest;
-      balance = Math.max(0, openingBalance - principal);
-      closingBalance = balance;
-      status = "scheduled";
-    }
-
-    cumulativeInterest += actualInterest;
-    cumulativePrincipal += principal;
-
-    schedule.push({
-      period: 0, // Will be renumbered
-      date: actualPayment ? actualPayment.paymentDate : dateStr,
-      openingBalance,
-      payment,
-      principal,
-      interest: actualInterest,
-      closingBalance,
-      cumulativeInterest,
-      cumulativePrincipal,
-      status,
-      paymentId,
-      paymentType,
-    });
-
-    currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-  }
-
-  // Add any remaining extra payments after the regular schedule
-  while (extraPaymentIndex < extraPaymentsList.length) {
-    const extraPayment = extraPaymentsList[extraPaymentIndex];
-    const extraOpeningBalance = balance;
-
-    cumulativeInterest += extraPayment.interestPortion;
-    cumulativePrincipal += extraPayment.principalPortion;
-    balance = Math.max(0, balance - extraPayment.principalPortion);
-
-    schedule.push({
-      period: 0, // Will be renumbered
-      date: extraPayment.paymentDate,
-      openingBalance: extraOpeningBalance,
-      payment: extraPayment.amount,
-      principal: extraPayment.principalPortion,
-      interest: extraPayment.interestPortion,
-      closingBalance: balance,
-      cumulativeInterest,
-      cumulativePrincipal,
-      status: "extra",
-      paymentId: extraPayment._id,
-      paymentType: extraPayment.paymentType,
-    });
-
-    extraPaymentIndex++;
-  }
-
-  // Sort by date and renumber periods sequentially
-  schedule.sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  );
-  schedule.forEach((row, index) => {
-    row.period = index + 1;
-  });
-
-  return schedule;
+  return new Map([...grouped.entries()].sort(([a], [b]) => a - b));
 }
 
 export function LoanPaymentsScheduleTab({
@@ -407,15 +145,13 @@ export function LoanPaymentsScheduleTab({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedYears, setExpandedYears] = useState<Set<number>>(() => {
-    const currentYear = new Date().getFullYear();
+    const currentYear = Number(todayLocalISO().slice(0, 4));
     return new Set([currentYear]);
   });
 
   // Form state
-  const [paymentDate, setPaymentDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
-  const [amount, setAmount] = useState(loan.scheduledPayment.toString());
+  const [paymentDate, setPaymentDate] = useState(todayLocalISO);
+  const [amount, setAmount] = useState("");
   const [principalPortion, setPrincipalPortion] = useState("");
   const [interestPortion, setInterestPortion] = useState("");
   const [paymentType, setPaymentType] = useState<PaymentType>("scheduled");
@@ -423,48 +159,30 @@ export function LoanPaymentsScheduleTab({
 
   // Full schedule combining past payments and future projections
   const fullSchedule = useMemo(
-    () => calculateFullSchedule(loan, payments),
+    () => buildLoanSchedule(loan, payments, todayLocalISO()),
+    [loan, payments],
+  );
+  const nextDueDate = useMemo(
+    () => computeNextPaymentDate(loan, payments),
     [loan, payments],
   );
   const groupedSchedule = useMemo(
     () => groupByYear(fullSchedule),
     [fullSchedule],
   );
+  const nextScheduledPayment =
+    fullSchedule.find((r) => r.status === "scheduled")?.payment ??
+    loan.scheduledPayment;
 
   // Auto-calculate principal/interest split
   const calculateSplit = () => {
-    const totalAmount = parseFloat(amount) || 0;
-
-    // Additional principal and prepayments go 100% to principal
-    if (
-      paymentType === "additional_principal" ||
-      paymentType === "prepayment"
-    ) {
-      setPrincipalPortion(totalAmount.toFixed(2));
-      setInterestPortion("0.00");
-      return;
-    }
-
-    // Regular/scheduled payments have interest calculated based on current balance
-    const paymentsPerYear =
-      loan.paymentFrequency === "MONTHLY"
-        ? 12
-        : loan.paymentFrequency === "QUARTERLY"
-          ? 4
-          : loan.paymentFrequency === "SEMI_ANNUAL"
-            ? 2
-            : 1;
-    const periodicRate = loan.annualInterestRate / paymentsPerYear;
-    const interestAmount = loan.currentBalance * periodicRate;
-    const principalAmount = Math.max(0, totalAmount - interestAmount);
-
-    setPrincipalPortion(principalAmount.toFixed(2));
-    setInterestPortion(interestAmount.toFixed(2));
+    const split = splitLoanPayment(loan, parseFloat(amount) || 0, paymentType);
+    setPrincipalPortion(split.principalPortion.toFixed(2));
+    setInterestPortion(split.interestPortion.toFixed(2));
   };
 
   const resetForm = () => {
-    setPaymentDate(new Date().toISOString().split("T")[0]);
-    setAmount(loan.scheduledPayment.toString());
+    setPaymentDate(todayLocalISO());
     setPrincipalPortion("");
     setInterestPortion("");
     setPaymentType("scheduled");
@@ -475,15 +193,21 @@ export function LoanPaymentsScheduleTab({
     e.preventDefault();
     if (!user?.id) return;
 
+    const totalAmount = parseFloat(amount);
+    // Keeps whichever portion was entered; principal is capped at the balance
+    const split = splitLoanPayment(loan, totalAmount, paymentType, {
+      principal: parseFloat(principalPortion),
+      interest: parseFloat(interestPortion),
+    });
+
     setIsSubmitting(true);
     try {
       await recordPayment({
         userId: user.id,
         loanId: loan._id,
         paymentDate,
-        amount: parseFloat(amount),
-        principalPortion: parseFloat(principalPortion),
-        interestPortion: parseFloat(interestPortion),
+        amount: totalAmount,
+        ...split,
         paymentType,
         notes: notes || undefined,
       });
@@ -499,7 +223,7 @@ export function LoanPaymentsScheduleTab({
   const handleDelete = async (paymentId: string) => {
     setDeletingId(paymentId);
     try {
-      await deletePayment(paymentId as any);
+      await deletePayment(paymentId as Id<"loanPayments">);
     } catch (error) {
       console.error("Failed to delete payment:", error);
     } finally {
@@ -523,6 +247,7 @@ export function LoanPaymentsScheduleTab({
     const headers = [
       "Period",
       "Date",
+      "Due Date",
       "Status",
       "Type",
       "Opening Balance",
@@ -537,11 +262,14 @@ export function LoanPaymentsScheduleTab({
     const rows = fullSchedule.map((row) => [
       row.period,
       row.date,
+      row.dueDate ?? "",
       row.status === "paid"
         ? "Paid"
         : row.status === "extra"
           ? "Extra Payment"
-          : "Scheduled",
+          : row.overdue
+            ? "Overdue"
+            : "Scheduled",
       row.paymentType || "scheduled",
       row.openingBalance.toFixed(2),
       row.payment.toFixed(2),
@@ -660,7 +388,12 @@ export function LoanPaymentsScheduleTab({
                 <Download className="h-4 w-4 mr-2" />
                 Export CSV
               </Button>
-              <Button onClick={() => setShowAddDialog(true)}>
+              <Button
+                onClick={() => {
+                  setAmount(nextScheduledPayment.toString());
+                  setShowAddDialog(true);
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Record Payment
               </Button>
@@ -684,6 +417,7 @@ export function LoanPaymentsScheduleTab({
                 const scheduledInYear = rows.filter(
                   (r) => r.status === "scheduled",
                 );
+                const overdueInYear = scheduledInYear.filter((r) => r.overdue);
 
                 // Calculate totals for paid payments
                 const paidTotal = paidInYear.reduce(
@@ -752,10 +486,18 @@ export function LoanPaymentsScheduleTab({
                                 {extraInYear.length} prepayment
                               </Badge>
                             )}
-                            {scheduledInYear.length > 0 && (
+                            {overdueInYear.length > 0 && (
+                              <Badge className="bg-red-100 text-red-700">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                {overdueInYear.length} overdue
+                              </Badge>
+                            )}
+                            {scheduledInYear.length > overdueInYear.length && (
                               <Badge variant="secondary">
                                 <CircleDashed className="h-3 w-3 mr-1" />
-                                {scheduledInYear.length} scheduled
+                                {scheduledInYear.length -
+                                  overdueInYear.length}{" "}
+                                scheduled
                               </Badge>
                             )}
                           </div>
@@ -835,9 +577,9 @@ export function LoanPaymentsScheduleTab({
                           <TableBody>
                             {rows.map((row) => (
                               <TableRow
-                                key={`${row.period}-${row.date}`}
+                                key={row.paymentId ?? `due-${row.dueDate}`}
                                 className={
-                                  row.status === "scheduled"
+                                  row.status === "scheduled" && !row.overdue
                                     ? "opacity-60 bg-muted/30"
                                     : ""
                                 }
@@ -845,9 +587,21 @@ export function LoanPaymentsScheduleTab({
                                 <TableCell className="font-medium">
                                   {row.period}
                                 </TableCell>
-                                <TableCell>{formatDate(row.date)}</TableCell>
                                 <TableCell>
-                                  {row.status === "paid" ? (
+                                  {formatDate(row.date)}
+                                  {row.dueDate && row.dueDate !== row.date && (
+                                    <span className="block text-xs text-muted-foreground">
+                                      Due {formatDate(row.dueDate)}
+                                    </span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {row.overdue ? (
+                                    <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+                                      <AlertCircle className="h-3 w-3 mr-1" />
+                                      Overdue
+                                    </Badge>
+                                  ) : row.status === "paid" ? (
                                     <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
                                       <CheckCircle2 className="h-3 w-3 mr-1" />
                                       Paid
@@ -965,6 +719,7 @@ export function LoanPaymentsScheduleTab({
                 <Input
                   id="payment-date"
                   type="date"
+                  max={todayLocalISO()}
                   value={paymentDate}
                   onChange={(e) => setPaymentDate(e.target.value)}
                 />
@@ -989,6 +744,12 @@ export function LoanPaymentsScheduleTab({
                 </Select>
               </div>
             </div>
+
+            {nextDueDate && !isExtraPaymentType(paymentType) && (
+              <p className="text-sm text-muted-foreground">
+                Covers the payment due {formatDate(nextDueDate)}.
+              </p>
+            )}
 
             <div>
               <Label htmlFor="payment-amount">Total Amount</Label>
@@ -1030,6 +791,7 @@ export function LoanPaymentsScheduleTab({
                     step="0.01"
                     min="0"
                     className="pl-7"
+                    placeholder="Auto"
                     value={principalPortion}
                     onChange={(e) => setPrincipalPortion(e.target.value)}
                   />
@@ -1048,6 +810,7 @@ export function LoanPaymentsScheduleTab({
                     step="0.01"
                     min="0"
                     className="pl-7"
+                    placeholder="Auto"
                     value={interestPortion}
                     onChange={(e) => setInterestPortion(e.target.value)}
                   />
@@ -1075,12 +838,7 @@ export function LoanPaymentsScheduleTab({
               </Button>
               <Button
                 type="submit"
-                disabled={
-                  !amount ||
-                  !principalPortion ||
-                  !interestPortion ||
-                  isSubmitting
-                }
+                disabled={!(parseFloat(amount) > 0) || isSubmitting}
               >
                 {isSubmitting && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

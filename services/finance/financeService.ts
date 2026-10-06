@@ -473,7 +473,7 @@ function addPeriods(
 /**
  * Round to 2 decimal places (cents)
  */
-function roundMoney(value: number): number {
+export function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 

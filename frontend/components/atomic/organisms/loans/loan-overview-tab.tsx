@@ -3,6 +3,11 @@
 import { useMemo } from "react";
 import { Doc } from "@/convex/_generated/dataModel";
 import {
+  buildLoanSchedule,
+  computeNextPaymentDate,
+} from "@/../services/finance/loanScheduleService";
+import { todayLocalISO } from "@/lib/utils/date";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -60,35 +65,18 @@ function formatCurrency(value: number, currency: string = "USD"): string {
   }).format(value);
 }
 
+// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
-}
-
-function addPaymentPeriod(date: Date, frequency: string): Date {
-  const newDate = new Date(date);
-  switch (frequency) {
-    case "MONTHLY":
-      newDate.setMonth(newDate.getMonth() + 1);
-      break;
-    case "QUARTERLY":
-      newDate.setMonth(newDate.getMonth() + 3);
-      break;
-    case "SEMI_ANNUAL":
-      newDate.setMonth(newDate.getMonth() + 6);
-      break;
-    case "ANNUAL":
-      newDate.setFullYear(newDate.getFullYear() + 1);
-      break;
-  }
-  return newDate;
 }
 
 // Chart config
@@ -143,18 +131,20 @@ export function LoanOverviewTab({
   totalPaid,
   totalInterestPaid,
 }: LoanOverviewTabProps) {
+  // Same schedule as the Payments & Schedule tab, so both views agree
+  const schedule = useMemo(
+    () => buildLoanSchedule(loan, payments, todayLocalISO()),
+    [loan, payments],
+  );
+  const nextPaymentDate = useMemo(
+    () => computeNextPaymentDate(loan, payments),
+    [loan, payments],
+  );
+
   // Calculate balance history from payments AND projected future balance
   const balanceHistory = useMemo(() => {
-    const paymentsPerYear =
-      loan.paymentFrequency === "MONTHLY"
-        ? 12
-        : loan.paymentFrequency === "QUARTERLY"
-          ? 4
-          : loan.paymentFrequency === "SEMI_ANNUAL"
-            ? 2
-            : 1;
-    const periodicRate = loan.annualInterestRate / paymentsPerYear;
-    const totalPeriods = Math.ceil(loan.termMonths / (12 / paymentsPerYear));
+    const recordedRows = schedule.filter((r) => r.status !== "scheduled");
+    const projectedRows = schedule.filter((r) => r.status === "scheduled");
 
     // Build combined history with both actual and scheduled data points
     const history: Array<{
@@ -166,98 +156,36 @@ export function LoanOverviewTab({
     // Start with loan origination - actual balance
     history.push({
       date: loan.startDate,
-      balance: loan.originalPrincipal,
+      balance: recordedRows[0]?.openingBalance ?? loan.currentBalance,
       scheduledBalance: null,
     });
 
-    // Calculate actual balance progression based on payments
-    let runningBalance = loan.originalPrincipal;
-    let lastActualDate = loan.startDate;
-
-    if (payments.length > 0) {
-      const sortedPayments = [...payments].sort(
-        (a, b) =>
-          new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime(),
-      );
-
-      sortedPayments.forEach((payment) => {
-        runningBalance = Math.max(0, runningBalance - payment.principalPortion);
-        lastActualDate = payment.paymentDate;
-        history.push({
-          date: payment.paymentDate,
-          balance: runningBalance,
-          scheduledBalance: null,
-        });
+    recordedRows.forEach((row) => {
+      history.push({
+        date: row.date,
+        balance: row.closingBalance,
+        scheduledBalance: null,
       });
-    }
+    });
 
     // The last actual payment point also serves as the bridge to scheduled
     // Add scheduledBalance to the last actual point so lines connect
-    if (history.length > 0) {
-      const lastActualPoint = history[history.length - 1];
-      lastActualPoint.scheduledBalance = lastActualPoint.balance;
-    }
+    const lastActualPoint = history[history.length - 1];
+    lastActualPoint.scheduledBalance = lastActualPoint.balance;
 
-    // Generate projected future balance based on scheduled payments
-    // Start from the last actual payment date and generate all future scheduled payments
-    let balance = loan.currentBalance;
-
-    // Calculate the first scheduled payment date after the last actual payment
-    let currentDate = new Date(loan.startDate);
-    currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency); // First payment date
-
-    // Advance to find the first scheduled date after the last actual payment
-    while (currentDate.toISOString().split("T")[0] <= lastActualDate) {
-      currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-    }
-
-    // Calculate scheduled balance decreases for remaining periods
-    for (let i = 0; i < totalPeriods && balance > 0.01; i++) {
-      const dateStr = currentDate.toISOString().split("T")[0];
-
-      const interest = balance * periodicRate;
-      let principal: number;
-
-      if (loan.loanType === "ANNUITY") {
-        principal = Math.min(
-          Math.max(0, loan.scheduledPayment - interest),
-          balance,
-        );
-      } else if (loan.loanType === "CONSTANT_PRINCIPAL") {
-        principal = Math.min(loan.originalPrincipal / totalPeriods, balance);
-      } else if (loan.loanType === "BULLET") {
-        // Final payment for bullet loans
-        if (dateStr >= loan.expectedEndDate) {
-          principal = balance;
-        } else {
-          principal = 0;
-        }
-      } else {
-        principal = Math.min(
-          Math.max(0, loan.scheduledPayment - interest),
-          balance,
-        );
-      }
-
-      balance = Math.max(0, balance - principal);
-
+    projectedRows.forEach((row) => {
       history.push({
-        date: dateStr,
+        date: row.date,
         balance: null, // No actual balance for future dates
-        scheduledBalance: balance,
+        scheduledBalance: row.closingBalance,
       });
-
-      if (balance <= 0.01) break;
-      currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-    }
+    });
 
     // Sort by date
-    history.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    );
+    history.sort((a, b) => a.date.localeCompare(b.date));
 
     return history;
-  }, [loan, payments]);
+  }, [loan, schedule]);
 
   // Calculate payment breakdown for pie chart
   const paymentBreakdown = useMemo(() => {
@@ -271,16 +199,6 @@ export function LoanOverviewTab({
 
   // Calculate monthly payment breakdown over time (including scheduled future payments)
   const paymentHistory = useMemo(() => {
-    const paymentsPerYear =
-      loan.paymentFrequency === "MONTHLY"
-        ? 12
-        : loan.paymentFrequency === "QUARTERLY"
-          ? 4
-          : loan.paymentFrequency === "SEMI_ANNUAL"
-            ? 2
-            : 1;
-    const periodicRate = loan.annualInterestRate / paymentsPerYear;
-
     // Group past payments by month
     const pastGrouped = new Map<
       string,
@@ -299,40 +217,15 @@ export function LoanOverviewTab({
       });
     });
 
-    // Generate scheduled future payments (next 12 periods)
-    const scheduledPayments: Array<{
-      month: string;
-      principal: number;
-      interest: number;
-    }> = [];
-    let balance = loan.currentBalance;
-    let currentDate = new Date(loan.nextPaymentDate);
-
-    for (let i = 0; i < 12 && balance > 0.01; i++) {
-      const monthKey = currentDate.toISOString().substring(0, 7);
-      const interest = balance * periodicRate;
-      let principal: number;
-
-      if (loan.loanType === "ANNUITY") {
-        principal = Math.min(loan.scheduledPayment - interest, balance);
-      } else if (loan.loanType === "CONSTANT_PRINCIPAL") {
-        const totalPeriods = loan.termMonths / (12 / paymentsPerYear);
-        principal = Math.min(loan.originalPrincipal / totalPeriods, balance);
-      } else if (loan.loanType === "BULLET") {
-        principal = 0;
-      } else {
-        principal = Math.min(loan.scheduledPayment - interest, balance);
-      }
-
-      scheduledPayments.push({
-        month: monthKey,
-        principal: Math.max(0, principal),
-        interest: Math.max(0, interest),
-      });
-
-      balance = Math.max(0, balance - principal);
-      currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-    }
+    // Scheduled future payments (next 12 periods)
+    const scheduledPayments = schedule
+      .filter((r) => r.status === "scheduled")
+      .slice(0, 12)
+      .map((r) => ({
+        month: r.date.substring(0, 7),
+        principal: Math.max(0, r.principal),
+        interest: r.interest,
+      }));
 
     // Combine past and scheduled payments
     const allMonths = new Set([
@@ -341,7 +234,7 @@ export function LoanOverviewTab({
     ]);
 
     const sortedMonths = Array.from(allMonths).sort();
-    const today = new Date().toISOString().substring(0, 7);
+    const today = todayLocalISO().substring(0, 7);
 
     // Take last 6 past + next 6 scheduled (roughly)
     const relevantMonths = sortedMonths.filter((m) => {
@@ -365,6 +258,7 @@ export function LoanOverviewTab({
         month: new Date(month + "-01").toLocaleDateString("en-US", {
           month: "short",
           year: "2-digit",
+          timeZone: "UTC",
         }),
         // Past payments (solid colors)
         principal: isPast ? past?.principal || 0 : 0,
@@ -375,25 +269,11 @@ export function LoanOverviewTab({
         isScheduled: !isPast,
       };
     });
-  }, [payments, loan]);
+  }, [payments, schedule]);
 
-  // Calculate estimated total interest
-  const estimatedTotalInterest = useMemo(() => {
-    // Simple estimation based on current rate
-    const paymentsPerYear =
-      loan.paymentFrequency === "MONTHLY"
-        ? 12
-        : loan.paymentFrequency === "QUARTERLY"
-          ? 4
-          : loan.paymentFrequency === "SEMI_ANNUAL"
-            ? 2
-            : 1;
-    const totalPayments = loan.termMonths / (12 / paymentsPerYear);
-    return Math.max(
-      0,
-      loan.scheduledPayment * totalPayments - loan.originalPrincipal,
-    );
-  }, [loan]);
+  // Estimated total interest: interest paid so far plus projected interest
+  const estimatedTotalInterest =
+    schedule[schedule.length - 1]?.cumulativeInterest ?? 0;
 
   return (
     <div className="space-y-6">
@@ -647,6 +527,7 @@ export function LoanOverviewTab({
                     new Date(value).toLocaleDateString("en-US", {
                       month: "short",
                       year: "2-digit",
+                      timeZone: "UTC",
                     })
                   }
                   tickLine={false}
@@ -721,7 +602,7 @@ export function LoanOverviewTab({
               <div>
                 <p className="text-sm text-muted-foreground">Next Payment</p>
                 <p className="font-semibold">
-                  {formatDate(loan.nextPaymentDate)}
+                  {nextPaymentDate ? formatDate(nextPaymentDate) : "—"}
                 </p>
               </div>
             </div>

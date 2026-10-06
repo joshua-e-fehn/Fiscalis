@@ -426,7 +426,11 @@ export default function LoanDetailPage() {
         </TabsContent>
 
         <TabsContent value="scenarios">
-          <LoanScenariosTab loan={loan} scenarios={scenarios ?? []} />
+          <LoanScenariosTab
+            loan={loan}
+            payments={payments}
+            scenarios={scenarios ?? []}
+          />
         </TabsContent>
 
         <TabsContent value="notes">

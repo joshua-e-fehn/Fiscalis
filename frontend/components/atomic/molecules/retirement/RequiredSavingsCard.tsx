@@ -1,15 +1,16 @@
 "use client";
 
 import { Gauge, PiggyBank } from "lucide-react";
+import { calculateCapitalGainDurationWithCompoundInterest } from "@/../services/finance/financeService";
 import {
 	Card,
 	CardContent,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import type { RetirementResults } from "@/lib/types/retirement";
+import { isOnTrack, type RetirementResults } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatRate } from "@/lib/utils/currency";
 
 interface Props {
 	results: RetirementResults;
@@ -21,8 +22,19 @@ function monthly(value: number): string {
 	return formatCurrency(value, "eur");
 }
 
+/** "assumes 7.18% / yr — a portfolio that doubles roughly every 10 years" */
+function expectedHint(annualReturn: number): string {
+	if (annualReturn <= 0) return `assumes ${formatRate(annualReturn)} / yr`;
+	const doublingYears = calculateCapitalGainDurationWithCompoundInterest(
+		1,
+		2,
+		annualReturn,
+	);
+	return `assumes ${formatRate(annualReturn)} / yr — a portfolio that doubles roughly every ${Math.round(doublingYears)} years`;
+}
+
 export function RequiredSavingsCard({ results, className }: Props) {
-	const onTrack = results.optimistic.onTrack && results.conservative.onTrack;
+	const onTrack = isOnTrack(results);
 
 	return (
 		<Card className={className}>
@@ -35,23 +47,32 @@ export function RequiredSavingsCard({ results, className }: Props) {
 			<CardContent>
 				{onTrack ? (
 					<p className="text-sm text-muted-foreground">
-						Based on your current assets and expected growth, you&apos;re on
-						track to reach your goal without saving anything extra. Keep it up!
+						{results.pensionsCoverAll
+							? "Your pensions cover your expected expenses, so you don't need to save toward a retirement portfolio."
+							: "Based on your current assets and expected growth, you're on track to reach your goal without saving anything extra. Keep it up!"}
 					</p>
 				) : (
-					<div className="grid gap-4 sm:grid-cols-2">
-						<ScenarioBox
-							label="Expected case"
-							hint={`assumes ${(results.optimistic.annualReturn * 100).toFixed(1)}% / yr — a portfolio that doubles roughly every 10 years`}
-							value={monthly(results.optimistic.monthlyContribution)}
-							accent="primary"
-						/>
-						<ScenarioBox
-							label="Conservative case"
-							hint={`assumes a cautious ${(results.conservative.annualReturn * 100).toFixed(1)}% / yr`}
-							value={monthly(results.conservative.monthlyContribution)}
-							accent="muted"
-						/>
+					<div className="space-y-3">
+						<div className="grid gap-4 sm:grid-cols-2">
+							<ScenarioBox
+								label="Expected case"
+								hint={expectedHint(results.optimistic.annualReturn)}
+								value={monthly(results.optimistic.monthlyContribution)}
+								accent="primary"
+							/>
+							<ScenarioBox
+								label="Conservative case"
+								hint={`assumes a cautious ${formatRate(results.conservative.annualReturn)} / yr`}
+								value={monthly(results.conservative.monthlyContribution)}
+								accent="muted"
+							/>
+						</div>
+						{results.hasNetDebt && (
+							<p className="text-xs text-muted-foreground">
+								These amounts start from €0 and don&apos;t include paying down
+								your current debt.
+							</p>
+						)}
 					</div>
 				)}
 			</CardContent>

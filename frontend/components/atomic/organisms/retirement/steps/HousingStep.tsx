@@ -4,6 +4,7 @@ import { Home, Info } from "lucide-react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { Switch } from "@/components/ui/shadcn/switch";
+import { validateRetirementInputs } from "@/lib/types/retirement";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
@@ -14,6 +15,8 @@ export function HousingStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
+	const equityError = validateRetirementInputs(data).fundableRealEstateEquity;
+
 	return (
 		<RetirementStepShell
 			icon={Home}
@@ -21,6 +24,7 @@ export function HousingStep({
 			description="Property is handled differently from investments — let's get it right."
 			onNext={onNext}
 			onBack={onBack}
+			nextDisabled={!!equityError}
 			isSaving={isSaving}
 		>
 			<div className="flex items-center justify-between rounded-lg border border-border p-4">
@@ -74,10 +78,15 @@ export function HousingStep({
 						}
 					/>
 				</div>
-				<p className="text-xs text-muted-foreground">
-					For a rental or second property you plan to sell. This is added to
-					your portfolio basis. Leave at 0 if none.
-				</p>
+				{equityError ? (
+					<p className="text-xs text-destructive">{equityError}.</p>
+				) : (
+					<p className="text-xs text-muted-foreground">
+						For a rental or second property you plan to sell: its value minus
+						any loan on it that isn&apos;t tracked in Fiscalis (tracked loans
+						are already subtracted from your net worth). Leave at 0 if none.
+					</p>
+				)}
 			</div>
 		</RetirementStepShell>
 	);

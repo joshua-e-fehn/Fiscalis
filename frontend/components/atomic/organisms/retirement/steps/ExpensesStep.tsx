@@ -3,8 +3,11 @@
 import { Wallet } from "lucide-react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
-import { inflateToFuture } from "@/lib/types/retirement";
-import { formatCurrency } from "@/lib/utils/currency";
+import {
+	inflateToFuture,
+	validateRetirementInputs,
+} from "@/lib/types/retirement";
+import { formatCurrency, formatRate } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
@@ -21,7 +24,7 @@ export function ExpensesStep({
 		data.inflationRate,
 		years,
 	);
-	const valid = data.monthlyExpensesToday > 0;
+	const valid = !validateRetirementInputs(data).monthlyExpensesToday;
 
 	return (
 		<RetirementStepShell
@@ -57,11 +60,11 @@ export function ExpensesStep({
 				</p>
 			</div>
 
-			{valid && years > 0 && (
+			{valid && years > 0 && Number.isFinite(future) && (
 				<div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
 					<p>
-						After {years} years of ~{(data.inflationRate * 100).toFixed(0)}%
-						inflation, that&apos;s about{" "}
+						After {years} years of {formatRate(data.inflationRate)} inflation,
+						that&apos;s about{" "}
 						<span className="font-semibold text-foreground">
 							{formatCurrency(future, "eur")}/mo
 						</span>{" "}

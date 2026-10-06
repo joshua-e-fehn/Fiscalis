@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import {
 	ArrowRight,
 	CalendarClock,
@@ -36,12 +35,7 @@ const POINTS = [
 
 export function IntroStep({ onNext, hasExistingPlan }: IntroStepProps) {
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 12 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ type: "spring", stiffness: 300, damping: 28 }}
-			className="w-full"
-		>
+		<div className="w-full">
 			<Card>
 				<CardContent className="space-y-8 py-10 text-center">
 					<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -76,6 +70,6 @@ export function IntroStep({ onNext, hasExistingPlan }: IntroStepProps) {
 					</Button>
 				</CardContent>
 			</Card>
-		</motion.div>
+		</div>
 	);
 }

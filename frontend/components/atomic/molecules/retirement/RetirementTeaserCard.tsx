@@ -4,11 +4,44 @@ import { ArrowRight, PiggyBank } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import {
 	useRetirementPlan,
 	useRetirementResults,
 } from "@/hooks/convex/retirement";
-import { formatCurrency } from "@/lib/utils/currency";
+import {
+	isOnTrack,
+	type RetirementResults,
+	retirementPlanProblem,
+} from "@/lib/types/retirement";
+import { formatCurrency, formatRate } from "@/lib/utils/currency";
+
+/** One-line status of an active plan. */
+function activePlanSummary(
+	results: RetirementResults,
+	needsReview: boolean,
+): string {
+	if (needsReview) {
+		return "Your plan needs a quick review — open it to adjust your retirement age or assumptions.";
+	}
+	if (results.pensionsCoverAll) {
+		return "Your pensions already cover your expected expenses.";
+	}
+	if (results.hasNetDebt) {
+		return "Your liabilities currently exceed your assets — paying them down is the first step.";
+	}
+	const target = formatCurrency(results.targetPortfolio, "eur", {
+		compact: true,
+	});
+	// Same rule as the plan page: on track only if both scenarios are
+	if (isOnTrack(results)) {
+		return `You're on track for your ${target} target.`;
+	}
+	if (results.optimistic.onTrack) {
+		return `On track at the expected ${formatRate(results.optimistic.annualReturn)} return; saving ${formatCurrency(results.conservative.monthlyContribution, "eur")}/mo covers the conservative case.`;
+	}
+	return `You're ${(results.progressPct * 100).toFixed(0)}% of the way to your ${target} target.`;
+}
 
 /**
  * Compact dashboard promo for the Retirement Planner. Adapts to whether the user
@@ -18,13 +51,13 @@ export function RetirementTeaserCard() {
 	const plan = useRetirementPlan();
 	const results = useRetirementResults();
 
-	// Avoid a flash before we know the plan state.
-	if (plan === undefined) return null;
-
 	const isActive = plan?.status === "active";
 	const isDraft = !!plan && plan.status !== "active";
-	const hasResults = !!results && !results.invalidTimeline;
-	const pct = hasResults ? Math.max(0, Math.min(1, results.progressPct)) : null;
+
+	// Avoid showing the wrong state while the plan (or an active plan's results) loads.
+	if (plan === undefined || (isActive && results === undefined)) {
+		return <Skeleton className="h-[88px] w-full rounded-xl" />;
+	}
 
 	const title = isActive
 		? "Your retirement plan"
@@ -32,16 +65,22 @@ export function RetirementTeaserCard() {
 			? "Finish your retirement plan"
 			: "Plan your retirement";
 
+	// Same check as the plan page, so the teaser never shows progress for a plan
+	// that opens on "Check your …" instead of results.
+	const needsReview =
+		!!results &&
+		(!!retirementPlanProblem(results, plan ?? undefined) ||
+			!Number.isFinite(results.targetPortfolio));
+
 	const description =
-		isActive && hasResults
-			? `You're ${(results.progressPct * 100).toFixed(0)}% of the way to your ${formatCurrency(
-					results.targetPortfolio,
-					"eur",
-					{ compact: true },
-				)} target.`
+		isActive && results
+			? activePlanSummary(results, needsReview)
 			: isDraft
 				? "Pick up where you left off and see your number."
 				: "Turn your retirement goal into a monthly savings plan in a couple of minutes.";
+
+	const showProgress = isActive && !!results && !needsReview;
+	const pct = showProgress ? Math.min(1, results.progressPct) : 0;
 
 	const cta = isActive ? "View plan" : isDraft ? "Continue" : "Get started";
 
@@ -55,7 +94,7 @@ export function RetirementTeaserCard() {
 					<div className="space-y-1">
 						<p className="font-semibold">{title}</p>
 						<p className="text-sm text-muted-foreground">{description}</p>
-						{isActive && pct !== null && (
+						{showProgress && (
 							<div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-muted">
 								<div
 									className="h-full rounded-full bg-primary"

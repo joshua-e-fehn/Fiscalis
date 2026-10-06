@@ -9,14 +9,19 @@
 //
 // The model (see docs/RETIREMENT_PLANNER_PLAN.md §1):
 //   1. expenseFuture   = monthlyExpensesToday × (1 + inflation)^n
-//   2. pensionMonthly  = Σ pensionSources[i].monthlyAmount
-//   3. gapMonthly      = max(0, expenseFuture − pensionMonthly)
+//   2. pensionFuture   = Σ pensionSources[i].monthlyAmount × (1 + inflation)^n
+//   3. gapMonthly      = max(0, expenseFuture − pensionFuture)
 //   4. gapAnnual       = gapMonthly × 12
 //   5. targetPortfolio = gapAnnual / withdrawalRate            (4% rule ⇒ × 25)
-//   6. fundableNow     = netWorth + fundableRealEstateEquity
-//   7. projected       = fundableNow × (1 + r)^n
+//   6. fundableNow     = netWorth + fundableRealEstateEquity   (investable = max(0, ·))
+//   7. projected       = investableNow × (1 + r)^n
 //   8. remainingGap    = max(0, targetPortfolio − projected)
 //   9. monthlyContribution(r) closes remainingGap by retirement
+//
+// Expenses AND pensions are entered in today's money (a German Renteninformation
+// quotes today's value), so both are inflated to the retirement date before the
+// subtraction. A negative funding base (debt) is never compounded at the
+// portfolio return; growth starts from zero and the UI shows a debt message.
 //
 // Why no double-counting of inflation: pre-retirement we inflate the expense
 // target and grow assets nominally; post-retirement the 4% withdrawal rate
@@ -30,7 +35,7 @@ import {
 } from "./financeService";
 
 // ───────────────────────────────────────────────────────────────
-// Defaults (single source of truth — keep convex/retirement.ts in sync)
+// Defaults (single source of truth — also imported by convex/retirement.ts)
 // ───────────────────────────────────────────────────────────────
 
 export const DEFAULT_INFLATION_RATE = 0.02;
@@ -40,12 +45,19 @@ export const DEFAULT_OPTIMISTIC_RETURN = 0.0718;
 /** Slightly more conservative scenario. */
 export const DEFAULT_CONSERVATIVE_RETURN = 0.05;
 
+/** Upper bound for every rate assumption (inflation, returns, withdrawal rate). */
+export const MAX_RETIREMENT_RATE = 0.2;
+/** Supported age range (inclusive) for the current and the retirement age. */
+export const MIN_RETIREMENT_PLAN_AGE = 0;
+export const MAX_RETIREMENT_PLAN_AGE = 120;
+
 // ───────────────────────────────────────────────────────────────
 // Types
 // ───────────────────────────────────────────────────────────────
 
 export interface PensionSource {
   label: string;
+  /** Monthly amount in today's money (inflated to the retirement date). */
   monthlyAmount: number;
 }
 
@@ -56,7 +68,10 @@ export interface RetirementInputs {
   monthlyExpensesToday: number;
   /** Owner-occupied home: excluded from the funding portfolio (cannot be sold and lived in). */
   ownsPrimaryResidence: boolean;
-  /** Sellable property equity the user wants to count toward retirement funding. */
+  /**
+   * Sellable property value net of loans not tracked in Fiscalis (tracked loans
+   * are already subtracted from net worth), counted toward retirement funding.
+   */
   fundableRealEstateEquity?: number;
   pensionSources: PensionSource[];
   inflationRate: number;
@@ -102,18 +117,35 @@ export interface RetirementResults {
   /** The user's entered monthly expenses in today's money. */
   expenseTodayMonthly: number;
   expenseFutureMonthly: number;
-  pensionMonthly: number;
+  /** Sum of the pension sources in today's money (negative amounts count as 0). */
+  pensionTodayMonthly: number;
+  /** Pensions inflated to the retirement date — the amount subtracted from expenseFutureMonthly. */
+  pensionFutureMonthly: number;
   gapMonthly: number;
   gapAnnual: number;
   targetPortfolio: number;
 
-  /** Simplified target ignoring inflation (for the explainer / transparency). */
+  /**
+   * Simplified target in today's money (today's expenses − today's pensions),
+   * for the explainer. targetPortfolio = simpleTargetPortfolio × (1 + inflation)^n.
+   */
   simpleTargetPortfolio: number;
 
+  /**
+   * Net worth + sellable property value net of loans not tracked in Fiscalis;
+   * negative when debts exceed assets.
+   */
   fundableNow: number;
+  /** max(0, fundableNow): the amount the projections grow (debt is not compounded). */
+  investableNow: number;
+  /** True when fundableNow < 0 — the UI shows a debt message instead of a projection. */
+  hasNetDebt: boolean;
   /** Present value of the target discounted at the optimistic return. */
   presentValueOfTarget: number;
-  /** fundableNow / presentValueOfTarget (raw; may exceed 1). */
+  /**
+   * investableNow / presentValueOfTarget. 1 when pensions cover everything
+   * (target 0), 0 when the target is infinite. Never negative; may exceed 1.
+   */
   progressPct: number;
   /** True when pensions already cover the inflation-adjusted expenses. */
   pensionsCoverAll: boolean;
@@ -223,27 +255,27 @@ export function yearsToTargetWithoutSaving(
 
 function computeScenario(
   annualReturn: number,
-  fundableNow: number,
+  investableNow: number,
   targetPortfolio: number,
   years: number,
   currentAge: number,
 ): ScenarioResult {
   const projectedFromCurrent = calculateEndCapitalValueWithCompoundInterest(
-    fundableNow,
+    investableNow,
     annualReturn,
     years,
   );
   const onTrack = projectedFromCurrent >= targetPortfolio;
   const remainingGap = Math.max(0, targetPortfolio - projectedFromCurrent);
   const monthlyContribution = requiredMonthlyContribution(
-    fundableNow,
+    investableNow,
     targetPortfolio,
     years,
     annualReturn,
   );
 
   const yearsNoSaving = yearsToTargetWithoutSaving(
-    fundableNow,
+    investableNow,
     targetPortfolio,
     annualReturn,
   );
@@ -254,7 +286,7 @@ function computeScenario(
   const lastYear = Math.max(0, Math.round(years));
   for (let k = 0; k <= lastYear; k++) {
     const grown = calculateEndCapitalValueWithCompoundInterest(
-      fundableNow,
+      investableNow,
       annualReturn,
       k,
     );
@@ -303,12 +335,18 @@ export function computeRetirementResults(
     inputs.inflationRate,
     years,
   );
-  const pensionMonthly = inputs.pensionSources.reduce(
-    (sum, s) => sum + (s.monthlyAmount || 0),
+  // Pensions are in today's money, like expenses: inflate them the same way.
+  const pensionTodayMonthly = inputs.pensionSources.reduce(
+    (sum, s) => sum + Math.max(0, s.monthlyAmount || 0),
     0,
   );
+  const pensionFutureMonthly = inflateToFuture(
+    pensionTodayMonthly,
+    inputs.inflationRate,
+    years,
+  );
 
-  const gapMonthly = Math.max(0, expenseFutureMonthly - pensionMonthly);
+  const gapMonthly = Math.max(0, expenseFutureMonthly - pensionFutureMonthly);
   const gapAnnual = gapMonthly * 12;
   const targetPortfolio = portfolioTargetFromAnnualGap(
     gapAnnual,
@@ -316,10 +354,10 @@ export function computeRetirementResults(
   );
   const pensionsCoverAll = gapMonthly <= 0;
 
-  // Simplified target (no pre-retirement inflation) for the explainer.
+  // Simplified target in today's money (same basis on both sides) for the explainer.
   const simpleGapMonthly = Math.max(
     0,
-    inputs.monthlyExpensesToday - pensionMonthly,
+    inputs.monthlyExpensesToday - pensionTodayMonthly,
   );
   const simpleTargetPortfolio = portfolioTargetFromAnnualGap(
     simpleGapMonthly * 12,
@@ -327,6 +365,8 @@ export function computeRetirementResults(
   );
 
   const fundableNow = netWorth + (inputs.fundableRealEstateEquity ?? 0);
+  // Debt is not an investment: never compound it at the portfolio return.
+  const investableNow = Math.max(0, fundableNow);
 
   const presentValueOfTarget = isFinite(targetPortfolio)
     ? calculateStartCapitalValueWithCompoundInterest(
@@ -336,39 +376,247 @@ export function computeRetirementResults(
       )
     : Infinity;
   const progressPct =
-    presentValueOfTarget > 0 && isFinite(presentValueOfTarget)
-      ? fundableNow / presentValueOfTarget
-      : fundableNow > 0
-        ? 1
-        : 0;
+    targetPortfolio <= 0
+      ? 1 // pensions already cover the expenses
+      : isFinite(presentValueOfTarget)
+        ? investableNow / presentValueOfTarget
+        : 0; // infinite target (withdrawal rate 0) can never be reached
 
   return {
     yearsToRetirement: years,
     invalidTimeline,
     expenseTodayMonthly: inputs.monthlyExpensesToday,
     expenseFutureMonthly,
-    pensionMonthly,
+    pensionTodayMonthly,
+    pensionFutureMonthly,
     gapMonthly,
     gapAnnual,
     targetPortfolio,
     simpleTargetPortfolio,
     fundableNow,
+    investableNow,
+    hasNetDebt: fundableNow < 0,
     presentValueOfTarget,
     progressPct,
     pensionsCoverAll,
     optimistic: computeScenario(
       inputs.optimisticReturn,
-      fundableNow,
+      investableNow,
       targetPortfolio,
       years,
       inputs.currentAge,
     ),
     conservative: computeScenario(
       inputs.conservativeReturn,
-      fundableNow,
+      investableNow,
       targetPortfolio,
       years,
       inputs.currentAge,
     ),
   };
+}
+
+/** On track only when current assets alone reach the target in BOTH scenarios. */
+export function isOnTrack(
+  results: Pick<RetirementResults, "optimistic" | "conservative">,
+): boolean {
+  return results.optimistic.onTrack && results.conservative.onTrack;
+}
+
+// ───────────────────────────────────────────────────────────────
+// Input validation (shared by the wizard UI and convex/retirement.ts)
+// ───────────────────────────────────────────────────────────────
+
+/** Field → user-facing error message. An empty object means the input is valid. */
+export type RetirementInputErrors = Partial<
+  Record<keyof RetirementInputs, string>
+>;
+
+export type RetirementAssumptionField =
+  | "inflationRate"
+  | "withdrawalRate"
+  | "optimisticReturn"
+  | "conservativeReturn";
+
+export type RetirementAssumptions = Pick<
+  RetirementInputs,
+  RetirementAssumptionField
+>;
+
+const ASSUMPTION_LABELS: Record<RetirementAssumptionField, string> = {
+  optimisticReturn: "Expected return",
+  conservativeReturn: "Conservative return",
+  inflationRate: "Inflation rate",
+  withdrawalRate: "Withdrawal rate",
+};
+
+const MAX_RATE_LABEL = `${Math.round(MAX_RETIREMENT_RATE * 100)}%`;
+
+function isNonNegativeAmount(amount: number): boolean {
+  return Number.isFinite(amount) && amount >= 0;
+}
+
+function isSupportedAge(age: number): boolean {
+  return (
+    Number.isInteger(age) &&
+    age >= MIN_RETIREMENT_PLAN_AGE &&
+    age <= MAX_RETIREMENT_PLAN_AGE
+  );
+}
+
+/**
+ * Ages must be whole numbers in the supported range. With `requireValidTimeline`
+ * (default) the retirement age must also be after the current age — drafts
+ * saved mid-wizard may skip that check.
+ */
+export function validateRetirementAges(
+  ages: Pick<RetirementInputs, "currentAge" | "retirementAge">,
+  { requireValidTimeline = true }: { requireValidTimeline?: boolean } = {},
+): RetirementInputErrors {
+  const errors: RetirementInputErrors = {};
+  const range = `a whole number between ${MIN_RETIREMENT_PLAN_AGE} and ${MAX_RETIREMENT_PLAN_AGE}`;
+  if (!isSupportedAge(ages.currentAge)) {
+    errors.currentAge = `Current age must be ${range}`;
+  }
+  if (!isSupportedAge(ages.retirementAge)) {
+    errors.retirementAge = `Retirement age must be ${range}`;
+  } else if (
+    requireValidTimeline &&
+    !errors.currentAge &&
+    ages.retirementAge <= ages.currentAge
+  ) {
+    errors.retirementAge = "Retirement age must be after your current age";
+  }
+  return errors;
+}
+
+/**
+ * Rates are fractions (0.04 = 4%) between 0 and MAX_RETIREMENT_RATE. The
+ * withdrawal rate must be above 0 (0% ⇒ infinite target), and the conservative
+ * return may not exceed the expected one.
+ */
+export function validateRetirementAssumptions(
+  assumptions: RetirementAssumptions,
+): Partial<Record<RetirementAssumptionField, string>> {
+  const errors: Partial<Record<RetirementAssumptionField, string>> = {};
+  for (const field of Object.keys(
+    ASSUMPTION_LABELS,
+  ) as RetirementAssumptionField[]) {
+    const rate = assumptions[field];
+    const label = ASSUMPTION_LABELS[field];
+    if (field === "withdrawalRate") {
+      if (!(rate > 0 && rate <= MAX_RETIREMENT_RATE)) {
+        errors[field] = `${label} must be above 0% and at most ${MAX_RATE_LABEL}`;
+      }
+    } else if (!(rate >= 0 && rate <= MAX_RETIREMENT_RATE)) {
+      errors[field] = `${label} must be between 0% and ${MAX_RATE_LABEL}`;
+    }
+  }
+  if (
+    !errors.optimisticReturn &&
+    !errors.conservativeReturn &&
+    assumptions.conservativeReturn > assumptions.optimisticReturn
+  ) {
+    errors.conservativeReturn =
+      "Conservative return can't be higher than the expected return";
+  }
+  return errors;
+}
+
+/** Pension amounts must be finite and zero or more. */
+export function validatePensionSources(
+  sources: PensionSource[],
+): RetirementInputErrors {
+  return sources.every((s) => isNonNegativeAmount(s.monthlyAmount))
+    ? {}
+    : { pensionSources: "Pension amounts must be zero or more" };
+}
+
+/**
+ * Validate a set of inputs (ages, amounts, pensions, assumptions).
+ * `requireValidTimeline` (default) means "complete plan": retirement must be
+ * after the current age and monthly expenses above zero. Drafts saved
+ * mid-wizard pass false.
+ */
+export function validateRetirementInputs(
+  inputs: RetirementInputs,
+  options?: { requireValidTimeline?: boolean },
+): RetirementInputErrors {
+  const { requireValidTimeline = true } = options ?? {};
+  const errors: RetirementInputErrors = {
+    ...validateRetirementAges(inputs, { requireValidTimeline }),
+    ...validatePensionSources(inputs.pensionSources),
+    ...validateRetirementAssumptions(inputs),
+  };
+  if (!isNonNegativeAmount(inputs.monthlyExpensesToday)) {
+    errors.monthlyExpensesToday = "Monthly expenses must be zero or more";
+  } else if (requireValidTimeline && !(inputs.monthlyExpensesToday > 0)) {
+    errors.monthlyExpensesToday = "Monthly expenses must be more than zero";
+  }
+  if (!isNonNegativeAmount(inputs.fundableRealEstateEquity ?? 0)) {
+    errors.fundableRealEstateEquity = "Property value must be zero or more";
+  }
+  return errors;
+}
+
+/** Cross-field rules report on the partner field: checking the key checks it too. */
+const CROSS_FIELD_PARTNERS: Partial<
+  Record<keyof RetirementInputs, keyof RetirementInputs>
+> = {
+  currentAge: "retirementAge",
+  optimisticReturn: "conservativeReturn",
+};
+
+/**
+ * The first validation error among `fields` (every field when omitted), incl.
+ * a cross-field error they cause on a partner field. Drafts check only the
+ * fields being saved, so a value stored under older, looser rules can't block
+ * the rest of the wizard.
+ */
+export function firstRetirementInputError(
+  inputs: RetirementInputs,
+  {
+    fields,
+    requireValidTimeline,
+  }: {
+    fields?: (keyof RetirementInputs)[];
+    requireValidTimeline?: boolean;
+  } = {},
+): string | undefined {
+  const errors = validateRetirementInputs(inputs, { requireValidTimeline });
+  const checked =
+    fields?.flatMap((f) => {
+      const partner = CROSS_FIELD_PARTNERS[f];
+      return partner ? [f, partner] : [f];
+    }) ?? (Object.keys(errors) as (keyof RetirementInputs)[]);
+  return checked.map((f) => errors[f]).find(Boolean);
+}
+
+/** Why a plan's results can't be shown: a short title and explanation. */
+export interface RetirementPlanProblem {
+  title: string;
+  body: string;
+}
+
+/**
+ * Why a plan needs review instead of showing results — an invalid timeline,
+ * then the first invalid assumption (a plan saved before validation existed can
+ * still carry e.g. a 0% withdrawal rate) — or null if there is none.
+ */
+export function retirementPlanProblem(
+  results: Pick<RetirementResults, "invalidTimeline">,
+  assumptions?: RetirementAssumptions,
+): RetirementPlanProblem | null {
+  if (results.invalidTimeline) {
+    return {
+      title: "Check your retirement age",
+      body: "Your retirement age needs to be later than your current age to build a plan.",
+    };
+  }
+  const [assumptionError] = assumptions
+    ? Object.values(validateRetirementAssumptions(assumptions))
+    : [];
+  return assumptionError
+    ? { title: "Check your assumptions", body: `${assumptionError}.` }
+    : null;
 }

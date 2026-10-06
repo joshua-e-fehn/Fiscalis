@@ -7,19 +7,45 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/shadcn/collapsible";
-import type { RetirementResults } from "@/lib/types/retirement";
-import { formatCurrency } from "@/lib/utils/currency";
+import {
+	DEFAULT_WITHDRAWAL_RATE,
+	type RetirementAssumptions,
+	type RetirementResults,
+} from "@/lib/types/retirement";
+import { formatCurrency, formatRate } from "@/lib/utils/currency";
 
 interface Props {
 	results?: RetirementResults;
+	/** The plan's own rates; without them the copy stays generic. */
+	assumptions?: RetirementAssumptions;
 	className?: string;
+}
+
+/** 0.04 → "25", 0.03 → "33.3" */
+function formatMultiple(withdrawalRate: number): string {
+	return new Intl.NumberFormat("de-CH", { maximumFractionDigits: 1 }).format(
+		1 / withdrawalRate,
+	);
 }
 
 /**
  * Plain-language explanation of the 4% rule and the inflation handling, aimed at
  * users without a finance background.
  */
-export function FourPercentRuleExplainer({ results, className }: Props) {
+export function FourPercentRuleExplainer({
+	results,
+	assumptions,
+	className,
+}: Props) {
+	// Only call out the plan's own withdrawal rate when it isn't the 4% default.
+	const withdrawal =
+		assumptions &&
+		assumptions.withdrawalRate > 0 &&
+		assumptions.withdrawalRate !== DEFAULT_WITHDRAWAL_RATE
+			? assumptions.withdrawalRate
+			: undefined;
+	const inflation = assumptions ? formatRate(assumptions.inflationRate) : null;
+
 	return (
 		<Card className={className}>
 			<Collapsible defaultOpen>
@@ -36,6 +62,20 @@ export function FourPercentRuleExplainer({ results, className }: Props) {
 							that around and your portfolio needs to be{" "}
 							<span className="font-medium text-foreground">25×</span> the
 							yearly amount it has to cover.
+							{withdrawal !== undefined && (
+								<>
+									{" "}
+									Your plan uses{" "}
+									<span className="font-medium text-foreground">
+										{formatRate(withdrawal)}
+									</span>{" "}
+									instead, so your portfolio needs to be{" "}
+									<span className="font-medium text-foreground">
+										{formatMultiple(withdrawal)}×
+									</span>{" "}
+									that amount.
+								</>
+							)}
 						</p>
 						<p>Where does 4% come from?</p>
 						<ul className="ml-1 space-y-1.5">
@@ -56,29 +96,33 @@ export function FourPercentRuleExplainer({ results, className }: Props) {
 							</li>
 						</ul>
 						<p>
-							Because the 4% already accounts for inflation during retirement,
-							we don&apos;t add inflation twice. Before retirement we grow your
-							expense target by ~2% a year and grow your investments at the
-							expected return — keeping everything consistent.
+							Because the withdrawal rate already accounts for inflation during
+							retirement, we don&apos;t add inflation twice. Before retirement
+							we grow your expenses and pensions by{" "}
+							{inflation ? `${inflation} a year` : "the inflation rate"} and
+							grow your investments at the expected return — keeping
+							everything consistent.
 						</p>
 						{results && Number.isFinite(results.targetPortfolio) && (
 							<div className="rounded-lg border border-border bg-muted/30 p-3 text-foreground">
 								<p className="text-xs text-muted-foreground">
-									For your plan, using today&apos;s expenses (no inflation) the
-									target would be{" "}
+									For your plan, using today&apos;s expenses and today&apos;s
+									pensions (no inflation) the target would be{" "}
 									<span className="font-medium">
 										{formatCurrency(results.simpleTargetPortfolio, "eur", {
 											compact: true,
 										})}
 									</span>
-									. Adjusted for {results.yearsToRetirement} years of inflation,
-									the realistic target is{" "}
+									. Adjusted for {results.yearsToRetirement} years of
+									{inflation ? ` ${inflation}` : ""} inflation, the realistic
+									target is{" "}
 									<span className="font-medium">
 										{formatCurrency(results.targetPortfolio, "eur", {
 											compact: true,
 										})}
 									</span>
-									.
+									. Both use the same basis, so the difference is inflation
+									alone.
 								</p>
 							</div>
 						)}

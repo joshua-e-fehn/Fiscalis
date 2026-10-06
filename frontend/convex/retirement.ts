@@ -1,4 +1,13 @@
 import { v } from "convex/values";
+import {
+	DEFAULT_CONSERVATIVE_RETURN,
+	DEFAULT_INFLATION_RATE,
+	DEFAULT_OPTIMISTIC_RETURN,
+	DEFAULT_WITHDRAWAL_RATE,
+	firstRetirementInputError,
+	type RetirementInputs,
+} from "../../services/finance/retirementService";
+import { validateBirthDate } from "../lib/utils/date";
 import { mutation, query } from "./_generated/server";
 
 // ═══════════════════════════════════════════════════════════════
@@ -7,14 +16,22 @@ import { mutation, query } from "./_generated/server";
 //
 // This module only stores/serves the user's plan. The financial computation
 // lives in services/finance/retirementService.ts and is composed client-side
-// (see hooks/convex/retirement.ts → useRetirementResults), so the math stays in
-// a single, unit-tested place and Convex never needs to import out-of-tree code.
+// (see hooks/convex/retirement.ts → useRetirementResults). Defaults and input
+// validation are imported from that same pure service (relative path: the
+// `@/` alias is not configured for Convex), so the wizard UI and the server
+// accept exactly the same inputs.
 
-// Defaults — KEEP IN SYNC with services/finance/retirementService.ts.
-const DEFAULT_INFLATION_RATE = 0.02;
-const DEFAULT_WITHDRAWAL_RATE = 0.04;
-const DEFAULT_OPTIMISTIC_RETURN = 0.0718; // doubles every ~10 years: 2^(1/10) − 1
-const DEFAULT_CONSERVATIVE_RETURN = 0.05;
+/** Wizard steps are 1 (intro) … 8 (results) — RetirementStep in lib/types/retirement.ts. */
+const MIN_STEP = 1;
+const MAX_STEP = 8;
+
+function assertValidStep(step: number) {
+	if (!Number.isInteger(step) || step < MIN_STEP || step > MAX_STEP) {
+		throw new Error(
+			`Step must be a whole number between ${MIN_STEP} and ${MAX_STEP}`,
+		);
+	}
+}
 
 const pensionSourceValidator = v.object({
 	label: v.string(),
@@ -76,46 +93,61 @@ export const saveRetirementPlan = mutation({
 		const userId = identity.subject;
 		const now = Date.now();
 
-		// Validation (only when both bounds are known / fields are provided).
-		if (
-			args.currentAge !== undefined &&
-			(args.currentAge < 0 || args.currentAge > 120)
-		) {
-			throw new Error("currentAge must be between 0 and 120");
-		}
-		if (
-			args.retirementAge !== undefined &&
-			(args.retirementAge < 0 || args.retirementAge > 120)
-		) {
-			throw new Error("retirementAge must be between 0 and 120");
-		}
-		if (
-			args.monthlyExpensesToday !== undefined &&
-			args.monthlyExpensesToday < 0
-		) {
-			throw new Error("monthlyExpensesToday cannot be negative");
-		}
-		if (
-			args.fundableRealEstateEquity !== undefined &&
-			args.fundableRealEstateEquity < 0
-		) {
-			throw new Error("fundableRealEstateEquity cannot be negative");
-		}
-		for (const rate of [
-			args.inflationRate,
-			args.withdrawalRate,
-			args.optimisticReturn,
-			args.conservativeReturn,
-		]) {
-			if (rate !== undefined && (rate < 0 || rate > 1)) {
-				throw new Error("Rates must be between 0 and 1");
-			}
-		}
+		if (args.currentStep !== undefined) assertValidStep(args.currentStep);
 
 		const existing = await ctx.db
 			.query("retirementPlans")
 			.withIndex("by_user", (q) => q.eq("userId", userId))
 			.first();
+
+		// Validate the plan as it will be stored (provided fields merged over the
+		// existing plan or the create defaults) with the same rules as the wizard.
+		// A save that activates the plan must leave it complete and valid as a
+		// whole; any other save only checks the fields it sends (plus the
+		// cross-field errors they cause), so a value stored under older, looser
+		// rules can't block the rest of the wizard.
+		const status = args.status ?? existing?.status ?? "draft";
+		const merged: RetirementInputs = {
+			currentAge: args.currentAge ?? existing?.currentAge ?? 0,
+			retirementAge: args.retirementAge ?? existing?.retirementAge ?? 67,
+			monthlyExpensesToday:
+				args.monthlyExpensesToday ?? existing?.monthlyExpensesToday ?? 0,
+			ownsPrimaryResidence:
+				args.ownsPrimaryResidence ?? existing?.ownsPrimaryResidence ?? false,
+			fundableRealEstateEquity:
+				args.fundableRealEstateEquity ?? existing?.fundableRealEstateEquity,
+			pensionSources: args.pensionSources ?? existing?.pensionSources ?? [],
+			inflationRate:
+				args.inflationRate ?? existing?.inflationRate ?? DEFAULT_INFLATION_RATE,
+			withdrawalRate:
+				args.withdrawalRate ??
+				existing?.withdrawalRate ??
+				DEFAULT_WITHDRAWAL_RATE,
+			optimisticReturn:
+				args.optimisticReturn ??
+				existing?.optimisticReturn ??
+				DEFAULT_OPTIMISTIC_RETURN,
+			conservativeReturn:
+				args.conservativeReturn ??
+				existing?.conservativeReturn ??
+				DEFAULT_CONSERVATIVE_RETURN,
+		};
+		const firstError = firstRetirementInputError(merged, {
+			requireValidTimeline: status === "active",
+			fields:
+				args.status === "active"
+					? undefined
+					: (Object.keys(merged) as (keyof RetirementInputs)[]).filter(
+							(k) => args[k] !== undefined,
+						),
+		});
+		if (firstError) throw new Error(firstError);
+
+		// The plan's date of birth is only a snapshot (userSettings is canonical),
+		// so an invalid one is dropped rather than failing the whole save.
+		const birthDateCheck =
+			args.birthDate !== undefined ? validateBirthDate(args.birthDate) : null;
+		const birthDate = birthDateCheck?.ok ? birthDateCheck.value : undefined;
 
 		const ownsHome = args.ownsPrimaryResidence;
 
@@ -123,20 +155,11 @@ export const saveRetirementPlan = mutation({
 			const id = await ctx.db.insert("retirementPlans", {
 				userId,
 				currentStep: args.currentStep ?? 1,
-				status: args.status ?? "draft",
-				birthDate: args.birthDate,
-				currentAge: args.currentAge ?? 0,
-				retirementAge: args.retirementAge ?? 67,
-				monthlyExpensesToday: args.monthlyExpensesToday ?? 0,
-				ownsPrimaryResidence: ownsHome ?? false,
-				primaryResidenceExcluded: ownsHome ?? false,
-				fundableRealEstateEquity: args.fundableRealEstateEquity,
-				pensionSources: args.pensionSources ?? [],
-				inflationRate: args.inflationRate ?? DEFAULT_INFLATION_RATE,
-				withdrawalRate: args.withdrawalRate ?? DEFAULT_WITHDRAWAL_RATE,
-				optimisticReturn: args.optimisticReturn ?? DEFAULT_OPTIMISTIC_RETURN,
-				conservativeReturn:
-					args.conservativeReturn ?? DEFAULT_CONSERVATIVE_RETURN,
+				status,
+				birthDate,
+				...merged,
+				// Owner-occupied home is always excluded from the funding base.
+				primaryResidenceExcluded: merged.ownsPrimaryResidence,
 				createdAt: now,
 				updatedAt: now,
 			});
@@ -147,7 +170,7 @@ export const saveRetirementPlan = mutation({
 		const updates: Record<string, unknown> = { updatedAt: now };
 		if (args.currentStep !== undefined) updates.currentStep = args.currentStep;
 		if (args.status !== undefined) updates.status = args.status;
-		if (args.birthDate !== undefined) updates.birthDate = args.birthDate;
+		if (birthDate !== undefined) updates.birthDate = birthDate;
 		if (args.currentAge !== undefined) updates.currentAge = args.currentAge;
 		if (args.retirementAge !== undefined)
 			updates.retirementAge = args.retirementAge;
@@ -189,6 +212,7 @@ export const updateRetirementStep = mutation({
 			.first();
 
 		if (!plan) throw new Error("Retirement plan not initialized");
+		assertValidStep(args.step);
 
 		await ctx.db.patch(plan._id, {
 			currentStep: args.step,

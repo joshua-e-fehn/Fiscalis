@@ -152,4 +152,6 @@ export {
   useResetRetirementPlan,
   useRetirementResults,
   useRetirementPreview,
+  useRetirementNetWorth,
+  type RetirementNetWorth,
 } from "./retirement";

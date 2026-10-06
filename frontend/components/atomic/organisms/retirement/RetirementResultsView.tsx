@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Pencil } from "lucide-react";
 import {
 	FourPercentRuleExplainer,
 	PensionCoverageBreakdown,
@@ -8,34 +8,53 @@ import {
 	RetirementProgressCard,
 	RetirementProjectionChart,
 } from "@/components/atomic/molecules/retirement";
+import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
-import type { RetirementResults } from "@/lib/types/retirement";
+import {
+	type RetirementAssumptions,
+	type RetirementResults,
+	retirementPlanProblem,
+} from "@/lib/types/retirement";
 
 interface Props {
 	/** undefined = loading, null = no plan/data. */
 	results: RetirementResults | null | undefined;
+	/** The rates behind `results`; personalises the explainer copy. */
+	assumptions?: RetirementAssumptions;
+	/** Saved-plan dashboard: problems point to "Edit plan" instead of "Go back". */
+	onEdit?: () => void;
 }
 
 /**
  * The shared retirement results presentation — reused by both the final wizard
  * step (live preview) and the saved-plan dashboard.
  */
-export function RetirementResultsView({ results }: Props) {
+export function RetirementResultsView({ results, assumptions, onEdit }: Props) {
 	if (results === undefined) return <ResultsLoading />;
 	if (results === null) return null;
 
-	if (results.invalidTimeline) {
+	const problem = retirementPlanProblem(results, assumptions);
+
+	if (problem) {
 		return (
 			<Card>
 				<CardContent className="flex items-start gap-3 py-6 text-sm">
 					<AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
-					<div>
-						<p className="font-medium">Check your retirement age</p>
-						<p className="text-muted-foreground">
-							Your retirement age needs to be later than your current age to
-							build a plan. Go back and adjust it.
-						</p>
+					<div className="space-y-3">
+						<div>
+							<p className="font-medium">{problem.title}</p>
+							<p className="text-muted-foreground">
+								{problem.body}{" "}
+								{onEdit ? "Edit your plan to adjust it." : "Go back and adjust it."}
+							</p>
+						</div>
+						{onEdit && (
+							<Button variant="outline" size="sm" onClick={onEdit}>
+								<Pencil className="h-4 w-4" />
+								Edit plan
+							</Button>
+						)}
 					</div>
 				</CardContent>
 			</Card>
@@ -50,7 +69,7 @@ export function RetirementResultsView({ results }: Props) {
 			</div>
 			<PensionCoverageBreakdown results={results} />
 			<RetirementProjectionChart results={results} />
-			<FourPercentRuleExplainer results={results} />
+			<FourPercentRuleExplainer results={results} assumptions={assumptions} />
 		</div>
 	);
 }

@@ -48,7 +48,11 @@ export function RetirementDashboard({ onEdit }: RetirementDashboardProps) {
 				}
 			/>
 
-			<RetirementResultsView results={results} />
+			<RetirementResultsView
+				results={results}
+				assumptions={plan ?? undefined}
+				onEdit={onEdit}
+			/>
 		</div>
 	);
 }

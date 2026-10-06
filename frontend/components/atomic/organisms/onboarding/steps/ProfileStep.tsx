@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/shadcn/select";
 import { cn } from "@/lib/utils";
-import { todayLocalISO } from "@/lib/utils/date";
+import { todayLocalISO, validateBirthDate } from "@/lib/utils/date";
 import {
   ProfileFormData,
   Currency,
@@ -66,6 +66,14 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
     theme: "dark",
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // An empty date of birth is fine (optional); a filled one must be valid.
+  const birthDateCheck = formData.birthDate
+    ? validateBirthDate(formData.birthDate)
+    : null;
+  const birthDateError =
+    birthDateCheck && !birthDateCheck.ok ? birthDateCheck.error : null;
 
   // Pre-fill from Clerk user and existing settings
   useEffect(() => {
@@ -88,11 +96,13 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
   }, [user, existingSettings]);
 
   const handleSubmit = async () => {
+    if (birthDateError) return;
+    setSaveError(null);
     setIsSaving(true);
     try {
       await saveSettings({
         displayName: formData.displayName || undefined,
-        birthDate: formData.birthDate || undefined,
+        birthDate: birthDateCheck?.ok ? birthDateCheck.value : undefined,
         defaultCurrency: formData.defaultCurrency,
         language: formData.language,
         theme: formData.theme,
@@ -101,6 +111,7 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
       onNext();
     } catch (error) {
       console.error("Failed to save settings:", error);
+      setSaveError("We couldn't save your profile. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -168,12 +179,19 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
                     birthDate: e.target.value,
                   }))
                 }
+                aria-invalid={!!birthDateError}
                 className="bg-white/[0.03] border-white/[0.1] text-white placeholder:text-white/30 focus:border-[#3B82F6]/50 focus:ring-[#3B82F6]/20 [color-scheme:dark]"
               />
-              <p className="text-xs text-white/40">
-                Used to personalize planning tools like your retirement
-                forecast.
-              </p>
+              {birthDateError ? (
+                <p role="alert" className="text-xs text-red-400">
+                  {birthDateError}.
+                </p>
+              ) : (
+                <p className="text-xs text-white/40">
+                  Used to personalize planning tools like your retirement
+                  forecast.
+                </p>
+              )}
             </motion.div>
 
             {/* Currency */}
@@ -284,12 +302,18 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
           <OnboardingButton
             onClick={handleSubmit}
             isLoading={isSaving}
+            disabled={!!birthDateError}
             size="lg"
             className="w-full"
             icon={<ArrowRight className="w-5 h-5" />}
           >
             Continue
           </OnboardingButton>
+          {saveError && (
+            <p role="alert" className="text-sm text-red-400">
+              {saveError}
+            </p>
+          )}
           <div className="flex items-center gap-4">
             <OnboardingButton
               onClick={onBack}

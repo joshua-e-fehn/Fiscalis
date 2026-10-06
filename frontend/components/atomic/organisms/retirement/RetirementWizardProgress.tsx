@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 interface RetirementWizardProgressProps {
 	currentStep: RetirementStep;
+	/** Furthest step reached so far; steps up to it are clickable (defaults to currentStep). */
+	furthestStep?: RetirementStep;
 	onStepClick?: (step: RetirementStep) => void;
 }
 
@@ -15,6 +17,7 @@ const STEPS = Object.values(RetirementStep).filter(
 
 export function RetirementWizardProgress({
 	currentStep,
+	furthestStep = currentStep,
 	onStepClick,
 }: RetirementWizardProgressProps) {
 	const n = STEPS.length;
@@ -34,7 +37,7 @@ export function RetirementWizardProgress({
 					{STEPS.map((step, i) => {
 						const done = step < currentStep;
 						const active = step === currentStep;
-						const reachable = step <= currentStep;
+						const reachable = step <= Math.max(currentStep, furthestStep);
 						const isFirst = i === 0;
 						const isLast = i === n - 1;
 						return (

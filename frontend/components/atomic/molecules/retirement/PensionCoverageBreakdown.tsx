@@ -16,11 +16,12 @@ interface Props {
 
 /**
  * Shows how the inflation-adjusted monthly expense at retirement splits into the
- * part covered by fixed pensions vs. the part the portfolio must fund.
+ * part covered by fixed pensions vs. the part the portfolio must fund. Both are
+ * entered in today's money and inflated to the retirement date.
  */
 export function PensionCoverageBreakdown({ results, className }: Props) {
 	const expense = results.expenseFutureMonthly;
-	const pension = Math.min(results.pensionMonthly, expense);
+	const pension = Math.min(results.pensionFutureMonthly, expense);
 	const portfolio = results.gapMonthly;
 
 	const pensionPct = expense > 0 ? (pension / expense) * 100 : 0;
@@ -44,6 +45,20 @@ export function PensionCoverageBreakdown({ results, className }: Props) {
 						{formatCurrency(expense, "eur")}/mo
 					</span>{" "}
 					in {results.yearsToRetirement} years after inflation.
+					{results.pensionTodayMonthly > 0 && (
+						<>
+							{" "}
+							Your pensions of{" "}
+							<span className="font-medium text-foreground">
+								{formatCurrency(results.pensionTodayMonthly, "eur")}/mo
+							</span>{" "}
+							in today&apos;s money grow the same way, to{" "}
+							<span className="font-medium text-foreground">
+								{formatCurrency(results.pensionFutureMonthly, "eur")}/mo
+							</span>
+							.
+						</>
+					)}
 				</p>
 
 				{/* Stacked bar */}

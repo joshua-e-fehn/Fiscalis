@@ -34,5 +34,11 @@ export function RetirementFlow() {
 		return <RetirementDashboard onEdit={() => setEditing(true)} />;
 	}
 
-	return <RetirementWizard onSaved={() => setEditing(false)} />;
+	// Leaving edit mode unmounts the wizard, so Cancel discards unsaved edits.
+	return (
+		<RetirementWizard
+			onSaved={() => setEditing(false)}
+			onCancel={() => setEditing(false)}
+		/>
+	);
 }

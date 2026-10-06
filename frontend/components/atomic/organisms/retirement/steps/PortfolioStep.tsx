@@ -1,9 +1,8 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { Briefcase, Home } from "lucide-react";
+import { Briefcase, Home, Info } from "lucide-react";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
-import { api } from "@/convex/_generated/api";
+import { useRetirementNetWorth } from "@/hooks/convex/retirement";
 import { formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
@@ -14,9 +13,10 @@ export function PortfolioStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
-	const netWorth = useQuery(api.portfolio.getTotalNetWorth);
+	// Same figure as the dashboard's net worth (incl. vault holdings and manual loans).
+	const netWorth = useRetirementNetWorth();
 	const loading = netWorth === undefined;
-	const nw = netWorth?.total ?? 0;
+	const nw = netWorth?.netWorth ?? 0;
 	const equity = data.fundableRealEstateEquity ?? 0;
 	const fundable = nw + equity;
 
@@ -33,13 +33,17 @@ export function PortfolioStep({
 				<Row
 					icon={Briefcase}
 					label="Net worth"
-					hint="All connected accounts, investments & cash"
+					hint={
+						netWorth
+							? `Same as your dashboard: ${formatCurrency(netWorth.totalAssets, "eur")} in assets minus ${formatCurrency(netWorth.totalLiabilities, "eur")} in liabilities`
+							: "Same as your dashboard: all assets minus liabilities"
+					}
 					value={loading ? null : formatCurrency(nw, "eur")}
 				/>
 				{equity > 0 && (
 					<Row
 						icon={Home}
-						label="Sellable property equity"
+						label="Sellable property"
 						hint="Added from the housing step"
 						value={formatCurrency(equity, "eur")}
 					/>
@@ -61,12 +65,45 @@ export function PortfolioStep({
 				</div>
 			</div>
 
+			{!loading && fundable < 0 && (
+				<Note>
+					Your liabilities exceed your assets by{" "}
+					<span className="font-medium text-foreground">
+						{formatCurrency(-fundable, "eur")}
+					</span>
+					. Your plan starts from €0 — debt isn&apos;t grown at the investment
+					return — so paying it down comes on top of the savings we calculate.
+				</Note>
+			)}
+			{!loading && netWorth.totalLiabilities > 0 && (
+				<Note>
+					Your{" "}
+					<span className="font-medium text-foreground">
+						{formatCurrency(netWorth.totalLiabilities, "eur")}
+					</span>{" "}
+					in tracked loans reduce your net worth here just as on your
+					dashboard
+					{data.ownsPrimaryResidence
+						? " — any mortgage on the home you live in is included, even though the home itself is not counted."
+						: "."}
+				</Note>
+			)}
+
 			<p className="text-xs text-muted-foreground">
-				Your net worth updates automatically as your connected accounts sync, so
-				your progress stays live. A primary residence you live in is not
-				included here.
+				Your net worth updates automatically as your accounts sync, so your
+				progress stays live. A primary residence you live in is not included
+				here.
 			</p>
 		</RetirementStepShell>
+	);
+}
+
+function Note({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="flex items-start gap-2 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+			<Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+			<p>{children}</p>
+		</div>
 	);
 }
 

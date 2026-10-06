@@ -1,5 +1,17 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { validateBirthDate } from "../lib/utils/date";
+
+/**
+ * Validate a date of birth before storing it: a real YYYY-MM-DD date, not in
+ * the future, within a sane human age range. It is canonical profile data and
+ * drives the derived age in the Retirement Planner. Returns the trimmed value.
+ */
+function assertValidBirthDate(birthDate: string): string {
+  const result = validateBirthDate(birthDate);
+  if (!result.ok) throw new Error(result.error);
+  return result.value;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING QUERIES
@@ -366,6 +378,11 @@ export const saveUserSettings = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    // An empty value clears the date of birth; anything else must be valid.
+    const birthDate = args.birthDate?.trim()
+      ? assertValidBirthDate(args.birthDate)
+      : undefined;
+
     const userId = identity.subject;
     const now = Date.now();
 
@@ -378,7 +395,7 @@ export const saveUserSettings = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         displayName: args.displayName,
-        birthDate: args.birthDate,
+        birthDate,
         defaultCurrency: args.defaultCurrency,
         language: args.language,
         theme: args.theme,
@@ -389,7 +406,7 @@ export const saveUserSettings = mutation({
       const id = await ctx.db.insert("userSettings", {
         userId,
         displayName: args.displayName,
-        birthDate: args.birthDate,
+        birthDate,
         defaultCurrency: args.defaultCurrency,
         language: args.language,
         theme: args.theme,
@@ -412,32 +429,7 @@ export const setBirthDate = mutation({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
-    // Validate: must be a real YYYY-MM-DD date, not in the future, and within
-    // a sane human age range. This value is canonical profile data and drives
-    // derived age in the Retirement Planner.
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(args.birthDate.trim());
-    if (!match) {
-      throw new Error("Date of birth must be in YYYY-MM-DD format");
-    }
-    const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
-    const parsed = new Date(y, m - 1, d);
-    const isRealDate =
-      parsed.getFullYear() === y &&
-      parsed.getMonth() === m - 1 &&
-      parsed.getDate() === d;
-    if (!isRealDate) {
-      throw new Error("Date of birth is not a valid calendar date");
-    }
-    const today = new Date();
-    const ty = today.getFullYear();
-    const tm = today.getMonth() + 1;
-    const td = today.getDate();
-    if (y > ty || (y === ty && (m > tm || (m === tm && d > td)))) {
-      throw new Error("Date of birth cannot be in the future");
-    }
-    if (ty - y > 120) {
-      throw new Error("Date of birth is out of the supported range");
-    }
+    const birthDate = assertValidBirthDate(args.birthDate);
 
     const userId = identity.subject;
     const now = Date.now();
@@ -449,7 +441,7 @@ export const setBirthDate = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
-        birthDate: args.birthDate,
+        birthDate,
         updatedAt: now,
       });
       return existing._id;
@@ -457,7 +449,7 @@ export const setBirthDate = mutation({
 
     return await ctx.db.insert("userSettings", {
       userId,
-      birthDate: args.birthDate,
+      birthDate,
       defaultCurrency: "EUR",
       theme: "system",
       createdAt: now,

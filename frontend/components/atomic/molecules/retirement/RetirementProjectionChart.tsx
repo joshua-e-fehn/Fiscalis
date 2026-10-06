@@ -99,7 +99,7 @@ export function RetirementProjectionChart({ results, className }: Props) {
 							<YAxis
 								tickLine={false}
 								axisLine={false}
-								width={48}
+								width={60}
 								className="text-xs"
 								tickFormatter={(v) =>
 									formatCurrency(v as number, "eur", { compact: true })

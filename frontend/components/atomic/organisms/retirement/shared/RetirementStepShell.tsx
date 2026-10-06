@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
 import {
@@ -30,7 +29,8 @@ interface RetirementStepShellProps {
 
 /**
  * Standard card shell for a retirement wizard step. Matches the dashboard
- * (root) theme rather than the onboarding glassmorphism.
+ * (root) theme rather than the onboarding glassmorphism. Step transitions are
+ * animated by RetirementWizard.
  */
 export function RetirementStepShell({
 	icon: Icon,
@@ -46,12 +46,7 @@ export function RetirementStepShell({
 	className,
 }: RetirementStepShellProps) {
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 12 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ type: "spring", stiffness: 300, damping: 28 }}
-			className={cn("w-full", className)}
-		>
+		<div className={cn("w-full", className)}>
 			<Card>
 				<CardHeader>
 					<div className="flex items-center gap-3">
@@ -89,6 +84,6 @@ export function RetirementStepShell({
 					)}
 				</div>
 			)}
-		</motion.div>
+		</div>
 	);
 }

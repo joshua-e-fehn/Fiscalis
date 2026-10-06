@@ -7,7 +7,11 @@
 export type {
 	PensionSource,
 	ProjectionPoint,
+	RetirementAssumptionField,
+	RetirementAssumptions,
+	RetirementInputErrors,
 	RetirementInputs,
+	RetirementPlanProblem,
 	RetirementResults,
 	ScenarioResult,
 } from "@/../services/finance/retirementService";
@@ -18,7 +22,17 @@ export {
 	DEFAULT_INFLATION_RATE,
 	DEFAULT_OPTIMISTIC_RETURN,
 	DEFAULT_WITHDRAWAL_RATE,
+	firstRetirementInputError,
 	inflateToFuture,
+	isOnTrack,
+	MAX_RETIREMENT_PLAN_AGE,
+	MAX_RETIREMENT_RATE,
+	MIN_RETIREMENT_PLAN_AGE,
+	retirementPlanProblem,
+	validatePensionSources,
+	validateRetirementAges,
+	validateRetirementAssumptions,
+	validateRetirementInputs,
 } from "@/../services/finance/retirementService";
 
 import type { RetirementInputs } from "@/../services/finance/retirementService";

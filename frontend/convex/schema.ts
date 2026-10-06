@@ -391,7 +391,8 @@ export default defineSchema({
 
 	// One active plan per user. Computation lives in
 	// services/finance/retirementService.ts (pure, unit-tested) and is composed
-	// client-side from this plan + getTotalNetWorth().
+	// client-side from this plan + the dashboard net worth
+	// (useRetirementNetWorth / usePortfolioOverview).
 	retirementPlans: defineTable({
 		userId: v.string(),
 

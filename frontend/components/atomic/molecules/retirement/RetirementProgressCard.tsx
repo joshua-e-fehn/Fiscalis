@@ -1,6 +1,6 @@
 "use client";
 
-import { Target, TrendingUp } from "lucide-react";
+import { AlertTriangle, Target, TrendingUp } from "lucide-react";
 import {
 	Card,
 	CardContent,
@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/shadcn/card";
 import type { RetirementResults } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatRate } from "@/lib/utils/currency";
 
 interface Props {
 	results: RetirementResults;
@@ -17,10 +17,11 @@ interface Props {
 }
 
 export function RetirementProgressCard({ results, className }: Props) {
+	// progressPct is never negative but may exceed 1 (ahead of the target).
 	const rawPct = results.progressPct;
 	const barPct = Math.max(0, Math.min(1, rawPct));
 	const pctLabel = (rawPct * 100).toFixed(0);
-	const expectedReturnPct = (results.optimistic.annualReturn * 100).toFixed(1);
+	const hasTarget = Number.isFinite(results.targetPortfolio);
 
 	return (
 		<Card className={className}>
@@ -37,9 +38,7 @@ export function RetirementProgressCard({ results, className }: Props) {
 							Target portfolio needed
 						</p>
 						<p className="text-3xl font-bold">
-							{Number.isFinite(results.targetPortfolio)
-								? formatCurrency(results.targetPortfolio, "eur")
-								: "—"}
+							{hasTarget ? formatCurrency(results.targetPortfolio, "eur") : "—"}
 						</p>
 					</div>
 					<div className="text-right">
@@ -65,21 +64,35 @@ export function RetirementProgressCard({ results, className }: Props) {
 							style={{ width: `${barPct * 100}%` }}
 						/>
 					</div>
-					<p className="text-xs text-muted-foreground">
-						If you invest your current{" "}
-						<span className="font-medium text-foreground">
-							{formatCurrency(results.fundableNow, "eur")}
-						</span>{" "}
-						at the expected {expectedReturnPct}% per year, it grows to{" "}
-						<span className="font-medium text-foreground">
-							{formatCurrency(results.optimistic.projectedFromCurrent, "eur")}
-						</span>{" "}
-						by retirement — that&apos;s the{" "}
-						<span className="font-medium text-foreground">{pctLabel}%</span> of
-						your {formatCurrency(results.targetPortfolio, "eur")} target shown
-						above (before adding any monthly savings).
-					</p>
+					{hasTarget && !results.pensionsCoverAll && !results.hasNetDebt && (
+						<p className="text-xs text-muted-foreground">
+							If you invest your current{" "}
+							<span className="font-medium text-foreground">
+								{formatCurrency(results.investableNow, "eur")}
+							</span>{" "}
+							at the expected {formatRate(results.optimistic.annualReturn)} per
+							year, it grows to{" "}
+							<span className="font-medium text-foreground">
+								{formatCurrency(results.optimistic.projectedFromCurrent, "eur")}
+							</span>{" "}
+							by retirement — that&apos;s{" "}
+							<span className="font-medium text-foreground">{pctLabel}%</span>{" "}
+							of the target shown above (before adding any monthly savings).
+						</p>
+					)}
 				</div>
+
+				{results.hasNetDebt && (
+					<div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+						<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+						<span>
+							Your liabilities exceed your assets by{" "}
+							{formatCurrency(-results.fundableNow, "eur")}. Your plan starts
+							from €0, so paying down that debt comes on top of the monthly
+							savings we calculate.
+						</span>
+					</div>
+				)}
 
 				{results.pensionsCoverAll && (
 					<div className="flex items-start gap-2 rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">

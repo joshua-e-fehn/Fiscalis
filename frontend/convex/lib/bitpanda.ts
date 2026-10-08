@@ -213,6 +213,10 @@ export interface BitpandaTransaction {
 /** Map a Bitpanda asset-class key (from the wallet tree path) to our normalized assetType. */
 function normalizeAssetClass(pathKeys: string[]): string {
   const keys = pathKeys.map((k) => k.toLowerCase());
+  // Bitpanda Cash Plus / fiat earn balances are nested below
+  // `security.fiat_earn`, but they remain fiat balances in their native
+  // currencies rather than stocks or other securities.
+  if (keys.includes("fiat_earn") || keys.includes("fiatearn")) return "fiat";
   if (keys.includes("metal")) return "metal";
   if (keys.includes("commodity") || keys.includes("commodities"))
     return "commodity";
@@ -293,6 +297,16 @@ function readName(attrs: any): string | undefined {
   return attrs?.name ?? attrs?.asset_name ?? undefined;
 }
 
+/**
+ * Cash Plus wallets use asset symbols such as BCPEUR/BCPUSD even though the
+ * balance is denominated in the trailing fiat currency.
+ */
+function readFiatSymbol(attrs: any): string {
+  const symbol = readSymbol(attrs);
+  const cashPlusMatch = /^BCP([A-Z]{3})$/.exec(symbol);
+  return cashPlusMatch?.[1] ?? symbol;
+}
+
 /** Price per unit in EUR from the public ticker, if present. */
 function priceFromTicker(
   ticker: Record<string, Record<string, string>>,
@@ -303,6 +317,45 @@ function priceFromTicker(
   if (raw === undefined) return undefined;
   const n = typeof raw === "string" ? parseFloat(raw) : raw;
   return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Derive a live fiat cross-rate from an asset quoted in both currencies.
+ * For example, BTC/EUR divided by BTC/USD yields EUR per USD. Prefer the
+ * deepest common Bitpanda markets before considering the remaining ticker.
+ */
+function exchangeRateFromTicker(
+  ticker: Record<string, Record<string, string>>,
+  fromCurrency: string,
+  toCurrency: string,
+): number | undefined {
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  if (from === to) return 1;
+
+  const preferredSymbols = ["BTC", "ETH", ...Object.keys(ticker)];
+  const visited = new Set<string>();
+
+  for (const symbol of preferredSymbols) {
+    if (visited.has(symbol)) continue;
+    visited.add(symbol);
+
+    const quote = ticker[symbol];
+    if (!quote) continue;
+
+    const fromPrice = Number.parseFloat(quote[from]);
+    const toPrice = Number.parseFloat(quote[to]);
+    if (
+      Number.isFinite(fromPrice) &&
+      fromPrice > 0 &&
+      Number.isFinite(toPrice) &&
+      toPrice > 0
+    ) {
+      return toPrice / fromPrice;
+    }
+  }
+
+  return undefined;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -319,15 +372,45 @@ export function normalizeHoldings(
   ticker: Record<string, Record<string, string>>,
 ): BitpandaHolding[] {
   const holdings: BitpandaHolding[] = [];
+  const seenWalletIds = new Set<string>();
+
+  const wasAlreadySeen = (wallet: any): boolean => {
+    const id = wallet?.id?.toString();
+    if (!id) return false;
+    if (seenWalletIds.has(id)) return true;
+    seenWalletIds.add(id);
+    return false;
+  };
+
+  const pushFiatHolding = (attrs: any, quantity: number) => {
+    const symbol = readFiatSymbol(attrs);
+    const liveRate = exchangeRateFromTicker(ticker, symbol, "EUR");
+    const conversion = convertCurrency(quantity, symbol, "EUR", liveRate);
+
+    holdings.push({
+      assetType: "fiat",
+      symbol,
+      name: readName(attrs) ?? symbol,
+      quantity,
+      currentPrice: conversion.exchangeRate,
+      marketValue: conversion.baseValue,
+      currency: "EUR",
+    });
+  };
 
   // Asset wallets (crypto, metals, commodities, stocks/ETFs, indices)
   const groups = extractWalletGroups(assetWalletsResponse?.data);
   for (const group of groups) {
-    if (group.assetType === "fiat") continue; // fiat handled below
     for (const wallet of group.wallets) {
       const attrs = wallet?.attributes ?? wallet;
       const quantity = readBalance(attrs);
       if (quantity <= 0) continue;
+      if (wasAlreadySeen(wallet)) continue;
+
+      if (group.assetType === "fiat") {
+        pushFiatHolding(attrs, quantity);
+        continue;
+      }
 
       const symbol = readSymbol(attrs);
       const price = priceFromTicker(ticker, symbol);
@@ -354,19 +437,8 @@ export function normalizeHoldings(
     const attrs = wallet?.attributes ?? wallet;
     const quantity = readBalance(attrs);
     if (quantity <= 0) continue;
-
-    const symbol = readSymbol(attrs); // e.g. "EUR", "USD"
-    const conversion = convertCurrency(quantity, symbol, "EUR");
-
-    holdings.push({
-      assetType: "fiat",
-      symbol,
-      name: readName(attrs) ?? symbol,
-      quantity,
-      currentPrice: conversion.exchangeRate,
-      marketValue: conversion.baseValue,
-      currency: "EUR",
-    });
+    if (wasAlreadySeen(wallet)) continue;
+    pushFiatHolding(attrs, quantity);
   }
 
   return holdings;

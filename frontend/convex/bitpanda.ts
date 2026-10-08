@@ -5,6 +5,7 @@ import {
   internalQuery,
   internalMutation,
 } from "./_generated/server";
+import { getBitpandaHoldingIdentityKeys } from "./lib/bitpandaIdentity";
 
 // ═══════════════════════════════════════════════════════════════
 // CONNECTION QUERIES
@@ -294,16 +295,26 @@ export const syncHoldings = internalMutation({
     >();
     for (const h of existing) {
       if (h.userCategoryOverride || h.userSubcategoryOverride) {
-        overrides.set(`${h.assetType}:${h.symbol}`, {
-          category: h.userCategoryOverride ?? undefined,
-          subcategory: h.userSubcategoryOverride ?? undefined,
-        });
+        for (const key of getBitpandaHoldingIdentityKeys(
+          h.assetType,
+          h.symbol,
+        )) {
+          overrides.set(key, {
+            category: h.userCategoryOverride ?? undefined,
+            subcategory: h.userSubcategoryOverride ?? undefined,
+          });
+        }
       }
       await ctx.db.delete(h._id);
     }
 
     for (const holding of args.holdings) {
-      const override = overrides.get(`${holding.assetType}:${holding.symbol}`);
+      const override = getBitpandaHoldingIdentityKeys(
+        holding.assetType,
+        holding.symbol,
+      )
+        .map((key) => overrides.get(key))
+        .find((value) => value !== undefined);
       await ctx.db.insert("bitpandaHoldings", {
         userId: args.userId,
         connectionId: args.connectionId,
@@ -315,7 +326,9 @@ export const syncHoldings = internalMutation({
         investmentCategory: override?.category ?? holding.investmentCategory,
         investmentSubcategory:
           override?.subcategory ?? holding.investmentSubcategory,
-        classificationSource: override ? "user_override" : holding.classificationSource,
+        classificationSource: override
+          ? "user_override"
+          : holding.classificationSource,
         lastSyncAt: now,
         createdAt: now,
       });

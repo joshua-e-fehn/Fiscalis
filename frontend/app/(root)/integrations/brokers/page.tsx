@@ -71,7 +71,7 @@ export default function BrokersPage() {
     );
 
     // Calculate total cash across all SnapTrade accounts
-    const totalCash =
+    const snaptradeCash =
       accounts?.reduce((sum, acc) => {
         if ((acc.cash ?? 0) > 0) return sum + (acc.cash ?? 0);
         if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
@@ -79,6 +79,16 @@ export default function BrokersPage() {
         }
         return sum;
       }, 0) ?? 0;
+    const bitpandaCash =
+      bitpandaHoldings?.reduce(
+        (sum, holding) =>
+          holding.investmentCategory === "cash"
+            ? sum +
+              (holding.valueInBaseCurrency ?? holding.marketValue ?? 0)
+            : sum,
+        0,
+      ) ?? 0;
+    const totalCash = snaptradeCash + bitpandaCash;
 
     const positionsCount =
       (positions?.length ?? 0) + (bitpandaHoldings?.length ?? 0);

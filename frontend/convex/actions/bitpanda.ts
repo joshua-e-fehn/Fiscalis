@@ -275,9 +275,11 @@ export const syncConnectionInternal = internalAction({
           investmentSubcategory: fields.investmentSubcategory,
           classificationSource: fields.classificationSource,
           classificationRule: fields.classificationRule,
-          // Holdings are already valued in EUR by the normalizer
+          // Holdings are already valued in EUR by the normalizer. Fiat
+          // holdings retain the actual native→EUR rate used for traceability.
           valueInBaseCurrency: h.marketValue,
-          exchangeRateUsed: 1,
+          exchangeRateUsed:
+            h.assetType === "fiat" ? h.currentPrice : 1,
           exchangeRateTimestamp: now,
           baseCurrency: "EUR",
         };

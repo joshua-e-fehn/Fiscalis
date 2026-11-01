@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+case "${1:-shell}" in
+  shell)
+    exec ssh -t mya-mini 'cd /Users/mya/Developer/Fiscalis && exec /bin/zsh -l'
+    ;;
+  preview)
+    printf '%s\n' 'Fiscalis preview: http://localhost:3100 (leave this terminal open; Ctrl-C closes the tunnel)'
+    exec ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -L 127.0.0.1:3100:localhost:3100 mya-mini
+    ;;
+  status)
+    exec ssh mya-mini 'cd /Users/mya/Developer/Fiscalis && git status --short --branch && launchctl print gui/$(id -u)/com.mya.fiscalis-dev | awk "/state =|pid =|last exit code =/ {print}" && curl --connect-timeout 5 --max-time 30 --fail --silent --show-error --output /dev/null --write-out "Preview HTTP %{http_code}\n" http://localhost:3100/'
+    ;;
+  *)
+    printf '%s\n' 'Usage: fiscalis-mini [shell|preview|status]' >&2
+    exit 2
+    ;;
+esac

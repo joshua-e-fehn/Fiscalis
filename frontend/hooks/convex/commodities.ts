@@ -20,6 +20,7 @@ import {
   commoditiesSubcategoryUI,
   makeSubcategoryBase,
 } from "@/lib/config/categoryUI";
+import { costLine } from "@/../services/portfolio/unrealizedProfitLoss";
 
 /**
  * Hook to get the commodities category summary
@@ -46,7 +47,10 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
 
   // Calculate current values for the historical values hook
   const currentPortfolioValue = metalsSummary?.totalMarketValue ?? 0;
-  const totalCostValue = metalsSummary?.totalCost ?? null;
+  // The chart's cost line, so value − line is the summary's coverage-based P/L
+  const totalCostValue = metalsSummary
+    ? costLine(metalsSummary.totalMarketValue, metalsSummary.totalProfitLoss)
+    : null;
 
   // Get historical portfolio values using actual spot prices
   const { dataPoints: historicalDataPoints, isLoading: historicalLoading } =

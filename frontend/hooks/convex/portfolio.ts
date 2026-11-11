@@ -24,8 +24,9 @@ import { useCashSummary } from "./cash";
 import { useCollectiblesSummary } from "./collectibles";
 import { useLiabilitiesSummary } from "./liabilities";
 import {
+  costLine,
+  snapshotCostLine,
   summarizeUnrealizedProfitLoss,
-  sumCostCoveredValue,
 } from "@/../services/portfolio/unrealizedProfitLoss";
 import {
   Briefcase,
@@ -49,9 +50,9 @@ export interface AssetCategoryData {
   icon: React.ReactNode;
   color: string;
   totalValue: number;
+  /** Cost basis of the holdings that have one */
   costBasis: number | null;
-  /** Value of the holdings costBasis covers, when only some carry one */
-  costCoveredValue?: number;
+  /** P/L over the holdings costBasis covers (never the uncovered value) */
   profitLoss: number | null;
   profitLossPercent: number | null;
   holdingsCount: number;
@@ -80,6 +81,8 @@ export interface PortfolioSummary {
 
   // Overall performance, over cost-bearing categories only
   totalCostBasis: number | null;
+  /** Chart cost line: totalAssets − unrealizedProfitLoss (see costLine) */
+  costLine: number | null;
   unrealizedProfitLoss: number | null;
   unrealizedProfitLossPercent: number | null;
   /** Share of total assets (0..1) that the unrealised P/L covers */
@@ -128,37 +131,6 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
   const { summary: liabilitiesSummary, isLoading: liabilitiesLoading } =
     useLiabilitiesSummary();
 
-  // Equities, bonds and real estate mix positions with and without a cost
-  // basis (e.g. Bitpanda stocks next to broker stocks). Their partial cost
-  // basis is compared only with the value it covers. These are the same
-  // queries the category hooks subscribe to, so the client shares them.
-  const equitiesData = useQuery(api.categories.getEquities);
-  const bondsData = useQuery(api.categories.getBonds);
-  const realEstateData = useQuery(api.categories.getRealEstate);
-  const costCoveredValues = useMemo(() => {
-    const covered = (
-      positions:
-        | {
-            valueInBaseCurrency?: number;
-            marketValue?: number;
-            totalCostBasis?: number;
-          }[]
-        | undefined,
-    ): number | undefined =>
-      positions &&
-      sumCostCoveredValue(
-        positions.map((p) => ({
-          value: p.valueInBaseCurrency ?? p.marketValue ?? 0,
-          costBasis: p.totalCostBasis,
-        })),
-      );
-    return {
-      equities: covered(equitiesData?.positions),
-      bonds: covered(bondsData?.positions),
-      realEstate: covered(realEstateData?.positions),
-    };
-  }, [equitiesData, bondsData, realEstateData]);
-
   // Fetch portfolio snapshots for historical performance
   const portfolioSnapshots = useQuery(api.portfolioSnapshots.getSnapshots, {
     limit: 365,
@@ -191,7 +163,6 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors.equities,
       totalValue: equitiesSummary?.totalValue ?? 0,
       costBasis: equitiesSummary?.totalCost ?? null,
-      costCoveredValue: costCoveredValues.equities,
       profitLoss: equitiesSummary?.profitLoss ?? null,
       profitLossPercent: equitiesSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -232,7 +203,6 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors.bonds,
       totalValue: bondsSummary?.totalValue ?? 0,
       costBasis: bondsSummary?.totalCost ?? null,
-      costCoveredValue: costCoveredValues.bonds,
       profitLoss: bondsSummary?.profitLoss ?? null,
       profitLossPercent: bondsSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -253,7 +223,6 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors["real-estate"],
       totalValue: realEstateSummary?.totalValue ?? 0,
       costBasis: realEstateSummary?.totalCost ?? null,
-      costCoveredValue: costCoveredValues.realEstate,
       profitLoss: realEstateSummary?.profitLoss ?? null,
       profitLossPercent: realEstateSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -331,13 +300,14 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       0,
     );
 
-    // Unrealised P/L over cost-bearing categories only (value and cost of
-    // the same holdings); cash and other cost-less assets are not profit.
+    // Unrealised P/L over cost-bearing holdings only: each category's P/L
+    // already covers just its holdings with a cost basis; cash and other
+    // cost-less assets are not profit.
     const unrealized = summarizeUnrealizedProfitLoss(
       assetCategories.map((cat) => ({
         value: cat.totalValue,
         costBasis: cat.costBasis,
-        coveredValue: cat.costCoveredValue,
+        profitLoss: cat.profitLoss,
       })),
     );
     const totalCostBasis = unrealized.costBasis;
@@ -374,20 +344,26 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       date: snapshot.date,
       timestamp: snapshot.timestamp,
       value: snapshot.totalAssets,
-      cost: snapshot.totalCostBasis ?? 0,
+      cost:
+        snapshotCostLine({
+          value: snapshot.totalAssets,
+          costBasis: snapshot.totalCostBasis,
+          coveredValue: snapshot.totalCoveredValue,
+        }) ?? 0,
     }));
 
     // If we have no snapshots yet but have current data, add today's point
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
     const hasToday = historyDataPoints.some((p) => p.date === todayStr);
+    const totalCostLine = costLine(totalAssets, unrealizedProfitLoss);
 
     if (!hasToday && totalAssets > 0) {
       historyDataPoints.push({
         date: todayStr,
         timestamp: today.getTime(),
         value: totalAssets,
-        cost: totalCostBasis ?? 0,
+        cost: totalCostLine ?? 0,
       });
     }
 
@@ -418,6 +394,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       totalLiabilities,
       netWorth,
       totalCostBasis,
+      costLine: totalCostLine,
       unrealizedProfitLoss,
       unrealizedProfitLossPercent,
       unrealizedProfitLossCoverage,
@@ -438,7 +415,6 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     collectiblesSummary,
     liabilitiesSummary,
     portfolioSnapshots,
-    costCoveredValues,
   ]);
 
   return { summary, isLoading };

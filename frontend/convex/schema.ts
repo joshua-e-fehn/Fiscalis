@@ -718,6 +718,9 @@ export default defineSchema({
 		totalLiabilities: v.number(), // Sum of all liabilities
 		netWorth: v.number(), // totalAssets - totalLiabilities
 		totalCostBasis: v.optional(v.number()), // Total cost basis if available
+		// Value of the holdings totalCostBasis covers (absent on snapshots
+		// written before it existed; readers fall back to totalAssets)
+		totalCoveredValue: v.optional(v.number()),
 
 		// Breakdown by category (for detailed analysis)
 		categoryBreakdown: v.optional(
@@ -726,6 +729,9 @@ export default defineSchema({
 					category: v.string(), // "equities", "cash", "commodities", etc.
 					value: v.number(),
 					costBasis: v.optional(v.number()),
+					// Value of the holdings costBasis covers (absent on old
+					// snapshots; readers fall back to value)
+					coveredValue: v.optional(v.number()),
 				}),
 			),
 		),

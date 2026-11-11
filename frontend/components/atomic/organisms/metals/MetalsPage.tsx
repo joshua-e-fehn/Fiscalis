@@ -87,6 +87,7 @@ import { MetalDetailSlideOver } from "./MetalDetailSlideOver";
 import { AddMetalSlideOver } from "./AddMetalSlideOver";
 import { BulkSellDialog } from "./BulkSellDialog";
 import { exportTransactionsToCSV } from "@/lib/utils/export";
+import { costLine } from "@/../services/portfolio/unrealizedProfitLoss";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS FOR PRICES TAB
@@ -618,7 +619,11 @@ export function MetalsPage({
                 pricePerUnit: tx.pricePerUnit,
               }))}
               currentValue={summary?.totalMarketValue ?? 0}
-              totalCost={summary?.totalCost ?? null}
+              totalCost={
+                summary
+                  ? costLine(summary.totalMarketValue, summary.totalProfitLoss)
+                  : null
+              }
               currency={initialCurrency}
               isLoading={summaryLoading || transactionsLoading}
             />

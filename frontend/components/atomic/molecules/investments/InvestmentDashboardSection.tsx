@@ -540,7 +540,7 @@ export function InvestmentDashboardSection({
     holdings: holdingsPL,
     enabled: !isLoading && (summary?.totalValue ?? 0) > 0,
   });
-  const { profitLoss, profitLossPercent, costBasis } = plData;
+  const { profitLoss, profitLossPercent, costBasis, costLine } = plData;
 
   // Select appropriate YTD values
   const ytdProfitLoss = needsContinuousYTD
@@ -700,7 +700,7 @@ export function InvestmentDashboardSection({
           <CategoryPerformanceChart
             dataPoints={summary?.historyDataPoints ?? []}
             currentValue={summary?.totalValue ?? 0}
-            totalCost={costBasis}
+            totalCost={costLine}
             currency={currency}
             isLoading={isLoading}
             title={performanceChartTitle}

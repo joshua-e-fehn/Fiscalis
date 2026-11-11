@@ -123,7 +123,11 @@ export interface PerformanceDataPoint {
   date: string;
   /** Total value at this point */
   value: number;
-  /** Cost basis if known */
+  /**
+   * Cost line if known: the cost basis plus the value of holdings without
+   * one, so value − costBasis is the P/L of the cost-bearing holdings
+   * (services/portfolio/unrealizedProfitLoss.ts costLine)
+   */
   costBasis: number | null;
   /** How this data point was derived */
   source: DataSource;
@@ -221,7 +225,10 @@ export interface AssetCategoryConfig {
 export interface SnapshotCategoryBreakdown {
   category: string;
   value: number;
+  /** Cost of the holdings that have one */
   costBasis?: number;
+  /** Value of the holdings costBasis covers; absent on old snapshots */
+  coveredValue?: number;
 }
 
 /**
@@ -234,6 +241,8 @@ export interface SnapshotData {
   totalLiabilities: number;
   netWorth: number;
   totalCostBasis?: number;
+  /** Value of the holdings totalCostBasis covers; absent on old snapshots */
+  totalCoveredValue?: number;
   categoryBreakdown?: SnapshotCategoryBreakdown[];
   source?: string;
 }

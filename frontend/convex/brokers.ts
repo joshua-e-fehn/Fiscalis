@@ -632,9 +632,11 @@ const moneyValidator = v.object({ amount: v.number(), currency: v.string() });
  *
  * Cash (snaptradeAccountFields): a reported cash figure is written, zero
  * and negative included; without one, cash is the broker total minus the
- * positions (cashSource "residual"); with neither, the stored cash is
- * kept. Only a negative reported balance is a margin debit, stored as a
- * liability (cashInvestmentCategory "liabilities", margin-loans).
+ * positions (cashSource "residual"); with neither, or when a position has
+ * no rate, the stored cash is kept. Only a negative reported balance is a
+ * margin debit, stored as a liability (cashInvestmentCategory
+ * "liabilities", margin-loans). When cash cannot be converted it throws
+ * before anything is committed, so the account keeps its stored holdings.
  */
 export const replaceAccountHoldings = internalMutation({
   args: {

@@ -439,6 +439,84 @@ describe("snaptradeAccountFields", () => {
     );
     expect(fields.balanceIsMixed).toBe(true);
   });
+
+  const unpriced = {
+    symbol: { symbol: { symbol: "X", currency: { code: "ZZZ" } } },
+    units: 1,
+    price: 10,
+  };
+
+  it("keeps the stored cash, converted, when a position blocks the residual", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: [unpriced],
+          account: { balance: { total: { amount: 5_000, currency: "USD" } } },
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+      { cash: -800, currency: "EUR" },
+    );
+    // -800 EUR = -1000 USD: the margin debit survives the sync
+    expect(fields.balance).toBe(5_000);
+    expect(fields.balanceCurrency).toBe("USD");
+    expect(fields.cash).toBeCloseTo(-1_000, 9);
+    expect(fields.cashSource).toBeUndefined();
+    expect(fields.cashInvestmentCategory).toBe("liabilities");
+  });
+
+  it("rejects the update when the stored cash it must keep has no rate", () => {
+    expect(() =>
+      snaptradeAccountFields(
+        mapSnaptradeHoldings(
+          {
+            positions: [unpriced],
+            account: { balance: { total: { amount: 5_000, currency: "USD" } } },
+          },
+          "USD",
+        ),
+        "USD",
+        rates,
+        { cash: 300, currency: "ZZZ" },
+      ),
+    ).toThrow(/exchange rate/);
+  });
+
+  it("rejects the update when reported cash has no rate, never a partial sum", () => {
+    const holdings = (balances: { cash: number; currency: { code: string } }[]) =>
+      mapSnaptradeHoldings(
+        {
+          positions: [stock("AAPL", 10, 200)],
+          balances,
+          account: { balance: { total: { amount: 1_000, currency: "USD" } } },
+        },
+        "USD",
+      );
+    // The unconvertible debit would otherwise leave 0 cash
+    expect(() =>
+      snaptradeAccountFields(
+        holdings([
+          { cash: 0, currency: { code: "USD" } },
+          { cash: -500, currency: { code: "ZZZ" } },
+        ]),
+        "USD",
+        rates,
+      ),
+    ).toThrow(/exchange rate/);
+    // Without a total, too
+    expect(() =>
+      snaptradeAccountFields(
+        mapSnaptradeHoldings(
+          { balances: [{ cash: -500, currency: { code: "ZZZ" } }] },
+          "USD",
+        ),
+        "USD",
+        rates,
+      ),
+    ).toThrow(/exchange rate/);
+  });
 });
 
 describe("snaptradeHoldingsCurrency", () => {

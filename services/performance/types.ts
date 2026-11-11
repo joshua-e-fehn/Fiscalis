@@ -140,6 +140,13 @@ export interface PerformanceDataPoint {
    * hybrid strategy adds no continuous value at such a point.
    */
   includesContinuous?: boolean;
+  /**
+   * Discrete points only: the cost line still holds the continuously valued
+   * sources' cost line (a row that does not record costs by source). The
+   * hybrid strategy then takes this cost line alone instead of adding the
+   * continuous part's.
+   */
+  costIncludesContinuous?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════

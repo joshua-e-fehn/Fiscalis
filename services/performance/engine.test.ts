@@ -370,6 +370,66 @@ describe("hybrid strategy", () => {
     });
   });
 
+  describe("a vault purchase after the last snapshot", () => {
+    // Yesterday's snapshot: cash 10000 (no cost) and one gold coin bought
+    // for 1500; a second coin bought today for 2000 at a flat price
+    const flat = { gold: [{ timestamp: NOW - 30 * DAY, price: 2000 }] };
+    const W = calculateSellPrice(2000, 31.1034768, -0.02, 1);
+    const coin = gold({ quantity: 1 });
+    const bought = gold({
+      id: "g2",
+      quantity: 1,
+      purchasePricePerUnit: 2000,
+      purchaseDate: NOW - 3_600_000,
+    });
+    const yesterday = (withSourceCost: boolean): SnapshotData => ({
+      timestamp: NOW - DAY,
+      date: new Date(NOW - DAY).toISOString().slice(0, 10),
+      totalAssets: 10_000 + W,
+      totalLiabilities: 0,
+      netWorth: 10_000 + W,
+      totalCostBasis: 1500,
+      totalCoveredValue: W,
+      categoryBreakdown: [
+        { category: "cash", value: 10_000 },
+        {
+          category: "commodities",
+          value: W,
+          costBasis: 1500,
+          coveredValue: W,
+          sources: [
+            withSourceCost
+              ? { source: "vault", value: W, costBasis: 1500, coveredValue: W }
+              : { source: "vault", value: W },
+          ],
+        },
+      ],
+    });
+    const end = (snap: SnapshotData) =>
+      calculateHybridPerformance(
+        {
+          discrete: { snapshots: [snap], metric: { kind: "totalAssets" } },
+          continuous: { holdings: [coin, bought], prices: flat },
+          continuousSources: VAULT,
+        },
+        { timeRange: "Week", includeDataPoints: true },
+      ).dataPoints.at(-1)!;
+
+    it("brings its cost with it: the purchase is not a profit", () => {
+      const p = end(yesterday(true));
+      expect(p.value).toBeCloseTo(10_000 + 2 * W, 6);
+      // cash at its value, both coins at their purchase price
+      expect(p.costBasis).toBeCloseTo(10_000 + 1500 + 2000, 6);
+      expect(p.value - p.costBasis!).toBeCloseTo(2 * W - 3500, 6);
+    });
+
+    it("keeps the snapshot's cost line on a row without per-source costs", () => {
+      const p = end(yesterday(false));
+      expect(p.value).toBeCloseTo(10_000 + 2 * W, 6);
+      expect(p.costBasis).toBeCloseTo(10_000 + 1500, 6);
+    });
+  });
+
   it("returns no net worth from the vault alone when there are no snapshots", () => {
     const r = calculateHybridPerformance(
       {

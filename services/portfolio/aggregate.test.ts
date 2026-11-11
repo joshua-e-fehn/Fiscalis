@@ -184,6 +184,26 @@ describe("buildSnapshotBreakdown", () => {
     expect(b.categoryBreakdown.find((c) => c.category === "crypto")).not.toHaveProperty("costBasis");
   });
 
+  it("records each source's cost and the value it covers", () => {
+    const commodities = b.categoryBreakdown.find((c) => c.category === "commodities")!;
+    expect(
+      commodities.sources!.map(({ source, costBasis, coveredValue }) => ({
+        source,
+        costBasis,
+        coveredValue,
+      })),
+    ).toEqual([
+      { source: "brokerPosition", costBasis: 150, coveredValue: 200 },
+      { source: "bitpanda", costBasis: undefined, coveredValue: 0 },
+      { source: "vault", costBasis: 1_000, coveredValue: 1_200 },
+    ]);
+    // The sources add up to the category
+    const sum = (k: "costBasis" | "coveredValue") =>
+      commodities.sources!.reduce((t, s) => t + (s[k] ?? 0), 0);
+    expect(sum("costBasis")).toBe(commodities.costBasis);
+    expect(sum("coveredValue")).toBe(commodities.coveredValue);
+  });
+
   it("keeps the holdings of flow-adjusted categories only, with their cost", () => {
     const by = (c: string) => b.categoryBreakdown.find((e) => e.category === c)!;
     const vault = by("commodities").sources!.find((s) => s.source === "vault")!;

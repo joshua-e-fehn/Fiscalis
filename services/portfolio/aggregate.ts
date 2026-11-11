@@ -21,7 +21,9 @@
 
 import {
   buildCategorySummary,
+  summarizeHoldings,
   type CategorySummaryData,
+  type HoldingValuation,
 } from "./categorySummary";
 import {
   summarizeUnrealizedProfitLoss,
@@ -284,6 +286,18 @@ export interface SnapshotSourceEntry {
    * older than the previous day's, and getSnapshots never returns them.
    */
   holdings?: SnapshotHoldingEntry[];
+  /**
+   * Cost of the source's holdings that have one; absent when none has. With
+   * coveredValue it lets a reader take a source's cost line out of the
+   * category's (the hybrid strategy's continuously valued vault).
+   */
+  costBasis?: number;
+  /**
+   * Value of the holdings costBasis covers, 0 when none has a cost. Written
+   * on every source since per-source costs exist; absent on older rows,
+   * whose cost cannot be split by source.
+   */
+  coveredValue?: number;
   /** External flow into the source since the previous snapshot */
   netFlow?: number;
   /** Part of netFlow is assumed (see holdingNetFlow) */
@@ -345,6 +359,32 @@ function mergeHoldingEntries(
   return merged;
 }
 
+/** Cost and covered value of each asset category's holdings by source. */
+function sourceCosts(
+  holdings: readonly NormalizedHolding[],
+): Map<string, Map<string, { costBasis: number | null; coveredValue: number }>> {
+  const grouped = new Map<string, Map<string, HoldingValuation[]>>();
+  for (const h of holdings) {
+    const at = placeHolding(h);
+    const bySource = grouped.get(at.category) ?? new Map<string, HoldingValuation[]>();
+    grouped.set(at.category, bySource);
+    const list = bySource.get(h.source) ?? [];
+    bySource.set(h.source, list);
+    list.push({ value: at.value, costBasis: h.costBase });
+  }
+  return new Map(
+    [...grouped].map(([category, bySource]) => [
+      category,
+      new Map(
+        [...bySource].map(([source, list]) => {
+          const { costBasis, coveredValue } = summarizeHoldings(list);
+          return [source, { costBasis, coveredValue }];
+        }),
+      ),
+    ]),
+  );
+}
+
 /** The holdings of each flow-adjusted category by source, merged by key. */
 function snapshotHoldings(
   holdings: readonly NormalizedHolding[],
@@ -396,6 +436,7 @@ export function buildSnapshotBreakdown(
   let totalCostBasis: number | undefined;
   let totalCoveredValue: number | undefined;
   const holdingsByCategory = snapshotHoldings(holdings);
+  const costsByCategory = sourceCosts(holdings);
 
   for (const category of ASSET_CATEGORIES) {
     const c = aggregate.byCategory[category];
@@ -410,9 +451,12 @@ export function buildSnapshotBreakdown(
     const sources = (Object.keys(c.bySource) as HoldingSource[]).map(
       (source): SnapshotSourceEntry => {
         const list = held?.get(source);
+        const cost = costsByCategory.get(category)?.get(source);
         return {
           source,
           value: c.bySource[source] ?? 0,
+          ...(cost?.costBasis != null ? { costBasis: cost.costBasis } : {}),
+          coveredValue: cost?.coveredValue ?? 0,
           ...(list ? { holdings: list } : {}),
         };
       },

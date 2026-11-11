@@ -52,64 +52,102 @@ interface SnapshotValue {
    * per-source values, or a row without a category breakdown.
    */
   includesContinuous: boolean;
+  /**
+   * The cost line still holds the excluded sources' cost line, because the
+   * snapshot does not record it by source (rows written before per-source
+   * costs, and every row with includesContinuous).
+   */
+  costIncludesContinuous: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // Snapshot value extraction
 // ═══════════════════════════════════════════════════════════════
 
+/** Value and cost line of the excluded sources in a snapshot. */
+interface ExcludedPart {
+  value: number;
+  /** Their cost line; null when the row does not record it by source */
+  costLine: number | null;
+}
+
 /**
- * Value of the excluded sources in one breakdown entry, or null when the
- * entry holds one of them but cannot be split (an entry written before
+ * Cost line of one source entry (snapshotCostLine: its cost plus the value
+ * of its holdings without one), or null on a row written before sources
+ * recorded their cost.
+ */
+function sourceCostLine(source: {
+  value: number;
+  costBasis?: number;
+  coveredValue?: number;
+}): number | null {
+  if (source.coveredValue === undefined) return null;
+  return source.costBasis === undefined
+    ? source.value
+    : snapshotCostLine(source);
+}
+
+/**
+ * The excluded sources' part of one breakdown entry, or null when the entry
+ * holds one of them but cannot be split (an entry written before
  * per-source values existed: old commodities entries were vault plus
  * Bitpanda and broker metals together).
  */
-function excludedValue(
+function excludedPart(
   entry: SnapshotCategoryBreakdown,
   exclude: ContinuousSource[],
-): number | null {
-  let total = 0;
+): ExcludedPart | null {
+  let value = 0;
+  let costLine: number | null = 0;
   for (const ex of exclude) {
     if (entry.sources) {
-      total += entry.sources
-        .filter((s) => s.source === ex.source)
-        .reduce((sum, s) => sum + s.value, 0);
+      for (const s of entry.sources) {
+        if (s.source !== ex.source) continue;
+        value += s.value;
+        const line = sourceCostLine(s);
+        costLine = costLine === null || line === null ? null : costLine + line;
+      }
     } else if (entry.category === ex.category) {
       return null;
     }
   }
-  return total;
+  return { value, costLine };
 }
 
 /**
- * Value of the excluded sources across the entries in scope, or null when
- * the snapshot cannot be split: then its full value is kept, flagged as
+ * The excluded sources' part across the entries in scope, or null when the
+ * snapshot cannot be split: then its full value is kept, flagged as
  * already including them.
  */
 function excludedTotal(
   breakdown: SnapshotCategoryBreakdown[] | undefined,
   metric: SnapshotMetric,
   exclude: ContinuousSource[],
-): number | null {
-  if (exclude.length === 0) return 0;
+): ExcludedPart | null {
+  if (exclude.length === 0) return { value: 0, costLine: 0 };
   if (!breakdown) return null;
-  let total = 0;
+  const total: ExcludedPart = { value: 0, costLine: 0 };
   for (const e of breakdown) {
     if (metric.kind === "category" && e.category !== metric.category) continue;
-    const v = excludedValue(e, exclude);
-    if (v === null) return null;
-    total += v;
+    const part = excludedPart(e, exclude);
+    if (part === null) return null;
+    total.value += part.value;
+    total.costLine =
+      total.costLine === null || part.costLine === null
+        ? null
+        : total.costLine + part.costLine;
   }
   return total;
 }
 
 /**
  * A snapshot's value and cost line for a metric, or null when the snapshot
- * does not record it (a category on a legacy row without a breakdown). The
- * cost line is the stored one for the whole metric: it already covers the
- * excluded sources, so the hybrid strategy uses it as is. A row that cannot
- * be split by source keeps its full value with `includesContinuous` set;
- * it already holds the excluded sources at that day's prices.
+ * does not record it (a category on a legacy row without a breakdown). Both
+ * leave out the excluded (continuously valued) sources where the row
+ * records them by source. A row that cannot be split keeps its full value
+ * with `includesContinuous` set: it already holds the excluded sources at
+ * that day's prices. A row that records values but not costs by source
+ * keeps the full cost line, flagged `costIncludesContinuous`.
  */
 export function snapshotMetricValue(
   s: SnapshotData,
@@ -125,23 +163,29 @@ export function snapshotMetricValue(
       value: s.totalLiabilities,
       costBasis: null,
       includesContinuous: false,
+      costIncludesContinuous: false,
     };
   }
   if (metric.kind === "category" && !breakdown) return null;
 
-  const excludedOrNull = excludedTotal(breakdown, metric, exclude);
-  const includesContinuous = excludedOrNull === null;
-  const excluded = excludedOrNull ?? 0;
+  const excluded = excludedTotal(breakdown, metric, exclude);
+  const includesContinuous = excluded === null;
+  const costIncludesContinuous = excluded?.costLine == null;
+  const without = (value: number, costLine: number | null) => ({
+    timestamp: s.timestamp,
+    value: value - (excluded?.value ?? 0),
+    costBasis:
+      costLine === null || costIncludesContinuous
+        ? costLine
+        : costLine - excluded!.costLine!,
+    includesContinuous,
+    costIncludesContinuous,
+  });
 
   if (metric.kind === "category") {
     const entry = breakdown!.find((c) => c.category === metric.category);
     // A breakdown without the category means it was empty then
-    return {
-      timestamp: s.timestamp,
-      value: (entry?.value ?? 0) - excluded,
-      costBasis: entry ? snapshotCostLine(entry) : null,
-      includesContinuous,
-    };
+    return without(entry?.value ?? 0, entry ? snapshotCostLine(entry) : null);
   }
 
   const assetsCostLine = snapshotCostLine({
@@ -150,21 +194,13 @@ export function snapshotMetricValue(
     coveredValue: s.totalCoveredValue,
   });
   if (metric.kind === "totalAssets") {
-    return {
-      timestamp: s.timestamp,
-      value: s.totalAssets - excluded,
-      costBasis: assetsCostLine,
-      includesContinuous,
-    };
+    return without(s.totalAssets, assetsCostLine);
   }
   // Net worth: the same P/L against the cost line less the debt
-  return {
-    timestamp: s.timestamp,
-    value: s.netWorth - excluded,
-    costBasis:
-      assetsCostLine === null ? null : assetsCostLine - s.totalLiabilities,
-    includesContinuous,
-  };
+  return without(
+    s.netWorth,
+    assetsCostLine === null ? null : assetsCostLine - s.totalLiabilities,
+  );
 }
 
 /**
@@ -256,7 +292,8 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     for (const ts of this.generateTimestampSeries(context)) {
       const found = valueAt(values, ts, lookup);
       if (!found) continue;
-      const { costBasis, includesContinuous } = found.point;
+      const { costBasis, includesContinuous, costIncludesContinuous } =
+        found.point;
       // Never interpolate between a row that holds the excluded sources and
       // one that does not: the two values measure different scopes.
       // ... nor toward a snapshot that received a flow
@@ -274,9 +311,11 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
           : this.createInterpolatedPoint(ts, value, costBasis);
       if (found.kind === "observed") observed++;
       else interpolated++;
-      dataPoints.push(
-        includesContinuous ? { ...point, includesContinuous: true } : point,
-      );
+      dataPoints.push({
+        ...point,
+        ...(includesContinuous && { includesContinuous: true }),
+        ...(costIncludesContinuous && { costIncludesContinuous: true }),
+      });
     }
 
     return {

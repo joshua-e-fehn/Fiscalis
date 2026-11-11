@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import {
   action,
   internalMutation,
@@ -60,11 +60,19 @@ export const create = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    let normalizedName: string;
+    try {
+      normalizedName = normalizeApiKeyName(name);
+    } catch (err) {
+      // ConvexError so the message survives prod error redaction.
+      throw new ConvexError((err as Error).message);
+    }
+
     const key = generateApiKey();
     const keyPrefix = apiKeyDisplayPrefix(key);
     const id: Id<"apiKeys"> = await ctx.runMutation(internal.apiKeys.insert, {
       userId: identity.subject,
-      name: normalizeApiKeyName(name),
+      name: normalizedName,
       keyHash: await hashApiKey(key),
       keyPrefix,
       expiresInDays,
@@ -122,7 +130,7 @@ export const revoke = mutation({
     const key = await ctx.db.get(keyId);
     // Same error whether the key is missing or someone else's: no ownership oracle.
     if (!key || key.userId !== identity.subject) {
-      throw new Error("API key not found");
+      throw new ConvexError("API key not found");
     }
     if (key.revokedAt === undefined) {
       await ctx.db.patch(keyId, { revokedAt: Date.now() });
@@ -153,7 +161,7 @@ export const insert = internalMutation({
       isApiKeyUsable(k, "networth:read", now),
     );
     if (active.length >= MAX_ACTIVE_API_KEYS_PER_USER) {
-      throw new Error(
+      throw new ConvexError(
         `You can have at most ${MAX_ACTIVE_API_KEYS_PER_USER} active API keys. Revoke one first.`,
       );
     }

@@ -50,11 +50,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/shadcn/alert-dialog";
 import {
+  apiKeyErrorMessage,
   netWorthEndpointUrl,
   useApiKeys,
   useCreateApiKey,
   useRevokeApiKey,
 } from "@/hooks/convex";
+import type { Id } from "@/convex/_generated/dataModel";
 import { MAX_API_KEY_NAME_LENGTH } from "@/../services/apiKeys/apiKeyService";
 
 type ExpiryChoice = "30" | "90" | "365" | "never";
@@ -122,13 +124,23 @@ export default function ApiKeysPage() {
       setNewKey(result.key);
       setName("");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message.replace(/^[\s\S]*Uncaught Error: /, "").split("\n")[0]
-          : "Could not create API key",
-      );
+      setError(apiKeyErrorMessage(err, "Could not create API key."));
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleRevoke = async (keyId: Id<"apiKeys">) => {
+    setError(null);
+    try {
+      await revokeKey({ keyId });
+    } catch (err) {
+      setError(
+        apiKeyErrorMessage(
+          err,
+          "Could not revoke the API key. Reload the page and try again.",
+        ),
+      );
     }
   };
 
@@ -140,6 +152,15 @@ export default function ApiKeysPage() {
         title="API Keys"
         subtitle="Read your net worth programmatically. Keys are private and scoped to your account."
       />
+
+      {error && (
+        <p
+          className="border-destructive/50 text-destructive rounded-md border px-4 py-3 text-sm"
+          role="alert"
+        >
+          {error}
+        </p>
+      )}
 
       <Card>
         <CardHeader>
@@ -192,11 +213,6 @@ export default function ApiKeysPage() {
               Create key
             </Button>
           </form>
-          {error && (
-            <p className="text-destructive mt-3 text-sm" role="alert">
-              {error}
-            </p>
-          )}
         </CardContent>
       </Card>
 
@@ -260,7 +276,7 @@ export default function ApiKeysPage() {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => revokeKey({ keyId: k._id })}
+                                  onClick={() => handleRevoke(k._id)}
                                 >
                                   Revoke
                                 </AlertDialogAction>

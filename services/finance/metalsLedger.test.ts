@@ -5,11 +5,13 @@ import {
   type ToBaseAmount,
   itemProjection,
   ledgerHoldings,
+  ledgerOverCounts,
   missingOpeningTransaction,
   replayLedger,
   saleProfitLoss,
   sortLedger,
   sumSaleProfitLoss,
+  transactionUnitAmount,
   validateTransactionInput,
 } from "./metalsLedger";
 import { TROY_OUNCE_GRAMS, summarizeMetalItems } from "./metals";
@@ -90,6 +92,17 @@ describe("replayLedger", () => {
     expect(ledger.realizedProfitLoss).toBe(50);
   });
 
+  it("uses the EUR price stored at write time, not today's rate", () => {
+    // USD 2,000 bought at 1.10 USD/EUR: EUR 1,818.18 whatever the rate now
+    const bought = { ...buy(1, 2000, "2025-01-01", "USD"), pricePerUnitBase: 2000 / 1.1 };
+    const atParity: ToBaseAmount = (amount) => amount;
+    const ledger = replayLedger([bought], atParity);
+    expect(ledger.averageCost).toBeCloseTo(1818.18, 2);
+    expect(transactionUnitAmount(bought, atParity)).toBeCloseTo(1818.18, 2);
+    // Older rows without one fall back to the replay's conversion
+    expect(transactionUnitAmount(buy(1, 2000, null, "USD"), withUsd)).toBe(1000);
+  });
+
   it("keeps an unknown opening cost unknown until sold out", () => {
     const ledger = replayLedger(
       [buy(3, null, null), buy(1, 100, "2025-01-01"), sell(4, 120, "2025-02-01")],
@@ -145,6 +158,24 @@ describe("validateTransactionInput", () => {
       validateTransactionInput({ quantity: 1, pricePerUnit: 0, transactionDate: null }),
     ).not.toThrow();
   });
+
+  it("requires a date except on an opening balance, and none in the future", () => {
+    const now = Date.UTC(2026, 10, 11, 12);
+    expect(() =>
+      validateTransactionInput({ quantity: 1, transactionDate: "" }, { requireDate: true }),
+    ).toThrow("date is required");
+    expect(() =>
+      validateTransactionInput({ quantity: 1, transactionDate: "2026-11-20" }, { now }),
+    ).toThrow("future");
+    // Tomorrow in UTC is still today east of it
+    expect(() =>
+      validateTransactionInput(
+        { quantity: 1, transactionDate: "2026-11-12" },
+        { requireDate: true, now },
+      ),
+    ).not.toThrow();
+    expect(() => validateTransactionInput({ quantity: 1 }, { now })).not.toThrow();
+  });
 });
 
 describe("missingOpeningTransaction", () => {
@@ -175,6 +206,11 @@ describe("missingOpeningTransaction", () => {
       [sell(1, 10, "2025-06-01")],
     );
     expect(opening?.transactionDate).toBeNull();
+  });
+
+  it("flags transactions that add up to more than the cached quantity", () => {
+    expect(ledgerOverCounts({ quantity: 5 }, [buy(10, 1, "2025-01-01")])).toBe(true);
+    expect(ledgerOverCounts({ quantity: 10 }, [buy(10, 1, "2025-01-01")])).toBe(false);
   });
 
   it("is null when the ledger already matches", () => {
@@ -237,6 +273,9 @@ describe("summarizeMetalItems with realized P/L", () => {
   it("keeps the realized P/L of a sold-out vault", () => {
     const s = summarizeMetalItems([item(0, 0, 25, 100)]);
     expect(s.totalProfitLoss).toBe(25);
+    expect(s.realizedProfitLoss).toBe(25);
+    expect(s.unrealizedProfitLoss).toBe(0);
+    expect(s.unrealizedProfitLossPercent).toBeNull();
   });
 
   it("is unknown when a sale's cost is unknown", () => {

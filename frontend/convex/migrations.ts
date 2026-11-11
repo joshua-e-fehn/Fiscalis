@@ -6,12 +6,15 @@ import {
 } from "./lib/classification";
 import { loadFxRates } from "./fxRates";
 import {
+  asLedgerTransaction,
+  basePricePerUnit,
   ensureOpeningTransaction,
   isOpeningTransaction,
   itemTransactions,
   syncProjection,
   toBaseAmountWith,
 } from "./vault";
+import { ledgerOverCounts } from "../../services/finance/metalsLedger";
 import {
   bankAccountBaseFields,
   brokerAccountBaseFields,
@@ -507,8 +510,11 @@ export const backfillBaseCurrencyFields = internalMutation({
  * change went through the ledger is missing (the cached quantity minus what
  * its transactions add up to, at the item's purchase price and date;
  * undated when it has none, D3), then rewrites the cached quantity and
- * average cost (EUR) from the replay. Idempotent. An item whose ledger
- * sells more than it holds keeps its cached fields and is reported.
+ * average cost (EUR) from the replay. Every priced transaction without an
+ * EUR price gets one at the FX rate of its date (`pricePerUnitBase`), so
+ * replays stop moving with today's rates. Idempotent. An item whose ledger
+ * sells more than it holds, or adds up to more than its cached quantity
+ * (an older direct quantity edit), keeps its cached fields and is reported.
  *
  * Run once: npx convex run migrations:backfillVaultLedger
  */
@@ -519,10 +525,28 @@ export const backfillVaultLedger = internalMutation({
     let openingsFlagged = 0;
     let openingsWritten = 0;
     let projectionsUpdated = 0;
+    let basePricesWritten = 0;
     const unreplayable: string[] = [];
+    const overCounted: string[] = [];
 
     for (const item of await ctx.db.query("vaultItems").collect()) {
       const before = await itemTransactions(ctx, item._id);
+      for (const tx of before) {
+        if (tx.pricePerUnitBase !== undefined || tx.pricePerUnit === undefined) {
+          continue;
+        }
+        const pricePerUnitBase = await basePricePerUnit(ctx, tx);
+        if (pricePerUnitBase !== undefined) {
+          await ctx.db.patch(tx._id, { pricePerUnitBase });
+          basePricesWritten++;
+        }
+      }
+      if (ledgerOverCounts(item, before.map(asLedgerTransaction))) {
+        overCounted.push(
+          `${item._id}: transactions exceed the cached quantity ${item.quantity}`,
+        );
+        continue;
+      }
       if (!before.some((tx) => tx.isOpening)) {
         const legacy = before.find(isOpeningTransaction);
         if (legacy) {
@@ -547,9 +571,18 @@ export const backfillVaultLedger = internalMutation({
 
     console.log(
       `backfillVaultLedger: ${openingsFlagged} openings flagged, ` +
-        `${openingsWritten} written, ${projectionsUpdated} projections updated, ` +
-        `${unreplayable.length} items not replayable`,
+        `${openingsWritten} written, ${basePricesWritten} EUR prices written, ` +
+        `${projectionsUpdated} projections updated, ` +
+        `${unreplayable.length} items not replayable, ` +
+        `${overCounted.length} over-counted`,
     );
-    return { openingsFlagged, openingsWritten, projectionsUpdated, unreplayable };
+    return {
+      openingsFlagged,
+      openingsWritten,
+      basePricesWritten,
+      projectionsUpdated,
+      unreplayable,
+      overCounted,
+    };
   },
 });

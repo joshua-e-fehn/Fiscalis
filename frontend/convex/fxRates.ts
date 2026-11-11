@@ -180,24 +180,50 @@ export const upsertFxRates = internalMutation({
 });
 
 /**
- * The current rate table: the latest mirrored rate per currency (flagged
- * "stale" when older than FX_MAX_AGE_DAYS), over the flagged fallback table
- * for currencies the mirror does not cover.
+ * The rate table: per currency the latest mirrored rate (flagged "stale"
+ * when older than FX_MAX_AGE_DAYS), over the flagged fallback table for
+ * currencies the mirror does not cover.
+ *
+ * With `asOf` (YYYY-MM-DD) it is the table of that day: the latest rate on
+ * or before it, else the earliest one the mirror has (a date before its
+ * history), with staleness measured from that day. `currencies` limits the
+ * mirror reads to the codes a caller needs.
  */
-export async function loadFxRates(ctx: {
-  db: QueryCtx["db"];
-}): Promise<FxRates> {
-  const latest = await Promise.all(
-    MIRRORED_CURRENCIES.map((currency) =>
-      ctx.db
+export async function loadFxRates(
+  ctx: { db: QueryCtx["db"] },
+  options: { asOf?: string; currencies?: readonly string[] } = {},
+): Promise<FxRates> {
+  const { asOf } = options;
+  const currencies = options.currencies ?? MIRRORED_CURRENCIES;
+  const rows = await Promise.all(
+    currencies.map(async (currency) => {
+      if (asOf === undefined) {
+        return await ctx.db
+          .query("fxRates")
+          .withIndex("by_currency_date", (q) => q.eq("currency", currency))
+          .order("desc")
+          .first();
+      }
+      const onOrBefore = await ctx.db
         .query("fxRates")
-        .withIndex("by_currency_date", (q) => q.eq("currency", currency))
+        .withIndex("by_currency_date", (q) =>
+          q.eq("currency", currency).lte("date", asOf),
+        )
         .order("desc")
-        .first(),
-    ),
+        .first();
+      return (
+        onOrBefore ??
+        (await ctx.db
+          .query("fxRates")
+          .withIndex("by_currency_date", (q) => q.eq("currency", currency))
+          .order("asc")
+          .first())
+      );
+    }),
   );
+  const now = asOf === undefined ? Date.now() : Date.parse(asOf);
   return fxRatesFromDaily(
-    latest.filter((row) => row !== null),
-    Date.now(),
+    rows.filter((row) => row !== null),
+    Number.isFinite(now) ? now : Date.now(),
   );
 }

@@ -10,8 +10,11 @@
  * - Cost is average cost per item: a buy adds its cost to the pool, a sale
  *   or gift removes `quantity × average cost`; realized P/L of a sale is
  *   `quantity × (proceeds per unit − average cost)`.
- * - All amounts are converted to the base currency (EUR) with the caller's
- *   `toBase`, so one item can mix purchase and sale currencies.
+ * - All amounts are in the base currency (EUR), so one item can mix
+ *   purchase and sale currencies. A transaction carries its EUR price
+ *   (`pricePerUnitBase`, converted at the rate of its date when it was
+ *   written), so a replay is deterministic; only older rows without one
+ *   fall back to the caller's `toBase`.
  * - A transaction without a date is an opening balance held since before
  *   any range (D3): it is never dated at record creation.
  * - A price is unknown only on an opening balance (an item entered without
@@ -34,6 +37,11 @@ export interface LedgerTransaction {
   /** Per unit in `currency`; null/undefined: unknown (opening balance only) */
   pricePerUnit?: number | null;
   currency: string;
+  /**
+   * EUR per unit at the rate of the transaction date, stored at write time;
+   * absent on older rows (converted with the replay's `toBase` instead)
+   */
+  pricePerUnitBase?: number | null;
   /** ISO date; null/undefined: held since before any range (D3) */
   transactionDate?: string | null;
   /** Tie-breaker for transactions on the same day */
@@ -106,15 +114,23 @@ export function ledgerTimestamp(
   return ts;
 }
 
+/** A date up to a day ahead of `now` is still today in some time zone. */
+const FUTURE_TOLERANCE_MS = 86_400_000;
+
 /**
  * Validate what a mutation is about to write: quantity > 0, price ≥ 0 (or
- * unknown), a parseable date. Throws LedgerError.
+ * unknown), a parseable date. With `requireDate` the date must be given
+ * (every transaction but an opening balance is dated, D3); with `now` it
+ * must not lie after today. Throws LedgerError.
  */
-export function validateTransactionInput(tx: {
-  quantity: number;
-  pricePerUnit?: number | null;
-  transactionDate?: string | null;
-}): void {
+export function validateTransactionInput(
+  tx: {
+    quantity: number;
+    pricePerUnit?: number | null;
+    transactionDate?: string | null;
+  },
+  options: { requireDate?: boolean; now?: number } = {},
+): void {
   if (!Number.isFinite(tx.quantity) || tx.quantity <= 0) {
     throw new LedgerError("Quantity must be greater than 0");
   }
@@ -124,7 +140,33 @@ export function validateTransactionInput(tx: {
   ) {
     throw new LedgerError("Price per unit cannot be negative");
   }
-  ledgerTimestamp(tx.transactionDate);
+  const timestamp = ledgerTimestamp(tx.transactionDate);
+  if (timestamp === undefined) {
+    if (options.requireDate) {
+      throw new LedgerError("A transaction date is required");
+    }
+    return;
+  }
+  if (
+    options.now !== undefined &&
+    timestamp > options.now + FUTURE_TOLERANCE_MS
+  ) {
+    throw new LedgerError("The transaction date cannot be in the future");
+  }
+}
+
+/**
+ * EUR per unit of a transaction: the price stored at write time, else its
+ * price converted with `toBase`; null when unknown or not convertible.
+ * Mutations call it with the rates of the transaction date to fill
+ * `pricePerUnitBase`.
+ */
+export function transactionUnitAmount(
+  tx: Pick<LedgerTransaction, "pricePerUnit" | "currency" | "pricePerUnitBase">,
+  toBase: ToBaseAmount,
+): number | null {
+  if (tx.pricePerUnitBase != null) return tx.pricePerUnitBase;
+  return tx.pricePerUnit != null ? toBase(tx.pricePerUnit, tx.currency) : null;
 }
 
 /** Ledger order: undated opening balances first, then by date, then creation. */
@@ -156,8 +198,7 @@ export function replayLedger(
   for (const tx of sortLedger(txs)) {
     validateTransactionInput(tx);
     const timestamp = ledgerTimestamp(tx.transactionDate) ?? null;
-    const unitAmount =
-      tx.pricePerUnit != null ? toBase(tx.pricePerUnit, tx.currency) : null;
+    const unitAmount = transactionUnitAmount(tx, toBase);
 
     if (isAcquisition(tx.transactionType)) {
       cost = cost !== null && unitAmount !== null
@@ -226,6 +267,23 @@ export interface VaultItemFields {
   purchaseCurrency?: string | null;
 }
 
+/** What the transactions add up to (held quantity, ignoring dates). */
+export function recordedQuantity(txs: readonly LedgerTransaction[]): number {
+  return txs.reduce((sum, tx) => sum + signedQuantity(tx), 0);
+}
+
+/**
+ * True when the transactions add up to more than the item's cached
+ * quantity (an older direct quantity edit): no opening balance can
+ * reconcile them, so the item keeps its cached fields until reviewed.
+ */
+export function ledgerOverCounts(
+  item: Pick<VaultItemFields, "quantity">,
+  txs: readonly LedgerTransaction[],
+): boolean {
+  return recordedQuantity(txs) > item.quantity + EPSILON;
+}
+
 /**
  * The opening balance an item stored before every change went through the
  * ledger is missing: the cached quantity minus what the transactions add
@@ -238,8 +296,7 @@ export function missingOpeningTransaction(
   item: VaultItemFields,
   txs: readonly LedgerTransaction[],
 ): (LedgerTransaction & { isOpening: true }) | null {
-  const recorded = txs.reduce((sum, tx) => sum + signedQuantity(tx), 0);
-  const missing = item.quantity - recorded;
+  const missing = item.quantity - recordedQuantity(txs);
   if (missing <= EPSILON) return null;
 
   const purchased = ledgerTimestampOrUndefined(item.purchaseDate);

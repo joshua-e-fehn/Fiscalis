@@ -8,12 +8,18 @@ import {
 import type { Doc, Id } from "./_generated/dataModel";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { resolvePremiums } from "../../services/finance/metals";
-import { toBase, type FxRates } from "../../services/finance/currency";
+import {
+  normalizeCurrency,
+  toBase,
+  type FxRates,
+} from "../../services/finance/currency";
 import {
   LedgerError,
   itemProjection,
+  ledgerOverCounts,
   missingOpeningTransaction,
   replayLedger,
+  transactionUnitAmount,
   validateTransactionInput,
   type ItemLedger,
   type LedgerTransaction,
@@ -55,9 +61,41 @@ export function asLedgerTransaction(tx: VaultTransactionDoc): LedgerTransaction 
     quantity: tx.quantity,
     pricePerUnit: tx.pricePerUnit ?? null,
     currency: tx.currency,
+    pricePerUnitBase: tx.pricePerUnitBase ?? null,
     transactionDate: tx.transactionDate ?? null,
     createdAt: tx.createdAt,
   };
+}
+
+/**
+ * EUR per unit of a price paid or received on `transactionDate`, at the FX
+ * rate of that day (the latest rate for an undated opening balance), to
+ * store as `pricePerUnitBase`. Undefined when the price is unknown or the
+ * currency has no rate.
+ */
+export async function basePricePerUnit(
+  ctx: { db: QueryCtx["db"] },
+  tx: {
+    pricePerUnit?: number | null;
+    currency: string;
+    transactionDate?: string | null;
+  },
+): Promise<number | undefined> {
+  if (tx.pricePerUnit == null) return undefined;
+  const code = normalizeCurrency(tx.currency)?.code;
+  const timestamp = tx.transactionDate ? Date.parse(tx.transactionDate) : NaN;
+  const rates = await loadFxRates(ctx, {
+    asOf: Number.isFinite(timestamp)
+      ? new Date(timestamp).toISOString().slice(0, 10)
+      : undefined,
+    currencies: code ? [code] : [],
+  });
+  return (
+    transactionUnitAmount(
+      { pricePerUnit: tx.pricePerUnit, currency: tx.currency },
+      toBaseAmountWith(rates),
+    ) ?? undefined
+  );
 }
 
 /** The opening balance: flagged, or noted "Initial purchase" on old documents. */
@@ -78,7 +116,9 @@ export async function itemTransactions(
 /**
  * The item's ledger, including the opening balance an item stored before
  * the ledger was complete is missing (computed, not written). Null when the
- * stored ledger cannot be replayed (it sells more than it holds).
+ * stored ledger cannot be replayed (it sells more than it holds) or adds
+ * up to more than the cached quantity (migrations.backfillVaultLedger
+ * reports such items).
  */
 function readItemLedger(
   item: VaultItemDoc,
@@ -86,6 +126,8 @@ function readItemLedger(
   toBaseAmount: ToBaseAmount,
 ): ItemLedger | null {
   const ledger = txs.map(asLedgerTransaction);
+  // Inconsistent with the cached quantity: show the cached fields
+  if (ledgerOverCounts(item, ledger)) return null;
   const opening = missingOpeningTransaction(item, ledger);
   try {
     return replayLedger(opening ? [...ledger, opening] : ledger, toBaseAmount);
@@ -100,9 +142,13 @@ function asUserError(error: unknown): unknown {
   return error instanceof LedgerError ? new ConvexError(error.message) : error;
 }
 
-function validateInput(tx: Parameters<typeof validateTransactionInput>[0]) {
+/** validateTransactionInput against today, as a user-facing error. */
+function validateInput(
+  tx: Parameters<typeof validateTransactionInput>[0],
+  options: { requireDate?: boolean } = {},
+) {
   try {
-    validateTransactionInput(tx);
+    validateTransactionInput(tx, { ...options, now: Date.now() });
   } catch (error) {
     throw asUserError(error);
   }
@@ -127,6 +173,7 @@ export async function ensureOpeningTransaction(
     quantity: opening.quantity,
     pricePerUnit: opening.pricePerUnit ?? undefined,
     currency: opening.currency,
+    pricePerUnitBase: await basePricePerUnit(ctx, opening),
     transactionDate: opening.transactionDate ?? undefined,
     isOpening: true,
     notes: "Opening balance",
@@ -483,6 +530,11 @@ async function createVaultItem(
     quantity: opening.quantity,
     pricePerUnit: opening.purchasePricePerUnit,
     currency,
+    pricePerUnitBase: await basePricePerUnit(ctx, {
+      pricePerUnit: opening.purchasePricePerUnit,
+      currency,
+      transactionDate: opening.purchaseDate,
+    }),
     transactionDate: opening.purchaseDate,
     isOpening: true,
     notes: "Initial purchase",
@@ -670,9 +722,11 @@ export const updateVaultItem = mutation({
         transactionDate: purchaseDate ?? opening.transactionDate,
       };
       validateInput(next);
+      const currency = purchaseCurrency ?? opening.currency;
       await ctx.db.patch(opening._id, {
         ...next,
-        currency: purchaseCurrency ?? opening.currency,
+        currency,
+        pricePerUnitBase: await basePricePerUnit(ctx, { ...next, currency }),
         isOpening: true,
       });
       if (purchaseDate !== undefined) {
@@ -736,7 +790,8 @@ async function recordTransaction(
   tx: TransactionInput,
   toBaseAmount: ToBaseAmount,
 ): Promise<Id<"vaultTransactions">> {
-  validateInput(tx);
+  // Every transaction but the opening balance is dated (D3)
+  validateInput(tx, { requireDate: true });
   // Re-read: an earlier sale in the same mutation changed the projection
   const vaultItem = await getOwnedDoc(ctx, userId, vaultItemId);
   if (!vaultItem) {
@@ -747,6 +802,7 @@ async function recordTransaction(
     userId,
     vaultItemId,
     ...tx,
+    pricePerUnitBase: await basePricePerUnit(ctx, tx),
     createdAt: Date.now(),
   });
   await syncProjection(ctx, vaultItemId, toBaseAmount);

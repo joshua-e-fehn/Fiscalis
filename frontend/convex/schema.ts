@@ -579,6 +579,10 @@ export default defineSchema({
 		// Absent only on an opening balance whose cost is unknown
 		pricePerUnit: v.optional(v.number()),
 		currency: v.string(), // "EUR" | "USD" | "CHF"
+		// EUR per unit at the rate of the transaction date, written with the
+		// row (vault.ts basePricePerUnit) so ledger replays are deterministic.
+		// Absent on older rows and when the price is unknown.
+		pricePerUnitBase: v.optional(v.number()),
 		// ISO date string - can be any past date. Absent only on an opening
 		// balance whose date is unknown: held before any range (D3)
 		transactionDate: v.optional(v.string()),

@@ -1,5 +1,11 @@
 import { v } from "convex/values";
 import { query, internalQuery } from "./_generated/server";
+import {
+  brokerAccountCash,
+  brokerAccountMarginDebt,
+} from "../../services/portfolio/categorySummary";
+import { brokerAccountWithBaseFields } from "../../services/finance/currency";
+import { loadFxRates } from "./fxRates";
 
 /**
  * Portfolio Queries
@@ -423,10 +429,14 @@ export const getUnifiedPositions = query({
         .collect();
 
       // Get broker account info for institution names and cash balances
-      const brokerAccounts = await ctx.db
-        .query("brokerAccounts")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect();
+      // (rows stored before sync-time stamping are stamped here)
+      const rates = await loadFxRates(ctx);
+      const brokerAccounts = (
+        await ctx.db
+          .query("brokerAccounts")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect()
+      ).map((acc) => brokerAccountWithBaseFields(acc, rates));
 
       const accountMap = new Map(brokerAccounts.map((a) => [a._id, a]));
 
@@ -477,47 +487,35 @@ export const getUnifiedPositions = query({
         });
       }
 
-      // Add broker account cash as separate "cash" positions
-      // Check both `cash` field and `balance` field (for accounts with only cash and no positions)
+      // Broker account cash as a separate position: the explicit cash the
+      // sync stored, as cash, or a margin debit (negative cash) as a
+      // liability shown with a negative value. The account balance is
+      // never read as cash.
       for (const account of brokerAccounts) {
-        // Determine cash value: prefer explicit cash field, but for accounts with no positions
-        // the balance IS the cash if there are no positions for this account
-        const hasPositionsForAccount = brokerPositions.some(
-          (p) => p.accountId === account._id,
-        );
+        const cashInBase = brokerAccountCash(account);
+        const marginDebt = brokerAccountMarginDebt(account);
+        if (cashInBase <= 0 && marginDebt <= 0) continue;
+        const isDebit = marginDebt > 0;
 
-        let cashBalance = account.cash ?? 0;
-
-        // If no positions exist for this account and balance > 0, the balance is cash
-        if (
-          !hasPositionsForAccount &&
-          cashBalance === 0 &&
-          (account.balance ?? 0) > 0
-        ) {
-          cashBalance = account.balance ?? 0;
-        }
-
-        if (cashBalance > 0) {
-          positions.push({
-            id: `${account._id}-cash`,
-            _id: account._id,
-            provider: "snaptrade",
-            category: "cash",
-            subcategory: "broker-cash",
-            symbol: "CASH",
-            name: `${account.institutionName || account.name} - Cash`,
-            quantity: 1,
-            marketValue: cashBalance,
-            currency: account.currency,
-            valueInBaseCurrency: account.cashValueInBaseCurrency ?? cashBalance,
-            lastSyncAt: account.lastSyncAt || account.createdAt,
-            metadata: {
-              brokerName: account.institutionName,
-              accountName: account.name,
-              accountType: account.accountType,
-            },
-          });
-        }
+        positions.push({
+          id: `${account._id}-cash`,
+          _id: account._id,
+          provider: "snaptrade",
+          category: isDebit ? "liabilities" : "cash",
+          subcategory: isDebit ? "margin-loans" : "broker-cash",
+          symbol: "CASH",
+          name: `${account.institutionName || account.name} - ${isDebit ? "Margin" : "Cash"}`,
+          quantity: 1,
+          marketValue: account.cash ?? 0,
+          currency: account.balanceCurrency ?? account.currency,
+          valueInBaseCurrency: isDebit ? -marginDebt : cashInBase,
+          lastSyncAt: account.lastSyncAt || account.createdAt,
+          metadata: {
+            brokerName: account.institutionName,
+            accountName: account.name,
+            accountType: account.accountType,
+          },
+        });
       }
     }
 

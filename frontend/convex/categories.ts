@@ -5,6 +5,7 @@ import type { InvestmentCategory } from "../lib/types/classification";
 import {
   bankAccountValue,
   brokerAccountCash,
+  brokerAccountMarginDebt,
   buildCategorySummary,
   loanBalanceInBase,
   loanCountsAsLiability,
@@ -146,12 +147,6 @@ export const getCashHoldings = query({
       ...(await getBitpandaPositionsForCategory(ctx, userId, "cash")),
     ];
 
-    // Get all broker positions to check which accounts have positions
-    const allBrokerPositions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
     // Get broker accounts with cash balances (uninvested cash)
     const brokerAccounts = (
       await ctx.db
@@ -160,21 +155,13 @@ export const getCashHoldings = query({
         .collect()
     ).map((acc) => brokerAccountWithBaseFields(acc, rates));
 
-    // Build a map of accounts that have positions
-    const accountsWithPositions = new Set(
-      allBrokerPositions.map((p) => p.accountId),
-    );
-
-    // Broker account cash in EUR: the cash balance, or the whole balance of
-    // an account without positions (brokerAccountCash); each row carries
-    // it as cashInBaseCurrency for the per-row display
+    // Broker account cash in EUR: the explicit cash balance the sync
+    // stored (a margin debit is a liability, see getLiabilities); each row
+    // carries it as cashInBaseCurrency for the per-row display
     const brokerAccountsWithCash = brokerAccounts
       .map((acc) => ({
         ...acc,
-        cashInBaseCurrency: brokerAccountCash(
-          acc,
-          accountsWithPositions.has(acc._id),
-        ),
+        cashInBaseCurrency: brokerAccountCash(acc),
       }))
       .filter((acc) => acc.cashInBaseCurrency > 0);
 
@@ -282,6 +269,21 @@ export const getLiabilities = query({
         .collect()
     ).map((pos) => positionWithBaseFields(pos, rates));
 
+    // Broker accounts with a negative cash balance (margin debit), each
+    // with the amount owed in EUR
+    const brokerMarginAccounts = (
+      await ctx.db
+        .query("brokerAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    )
+      .map((acc) => brokerAccountWithBaseFields(acc, rates))
+      .map((acc) => ({
+        ...acc,
+        marginDebtInBaseCurrency: brokerAccountMarginDebt(acc),
+      }))
+      .filter((acc) => acc.marginDebtInBaseCurrency > 0);
+
     // Manual loans that count as liabilities (active and defaulted), each
     // with its outstanding balance in EUR for the per-row display
     const manualLoans = (
@@ -305,6 +307,11 @@ export const getLiabilities = query({
 
     const brokerTotal = brokerLiabilities.reduce(
       (sum, pos) => sum + Math.abs(positionValue(pos)),
+      0,
+    );
+
+    const marginDebtTotal = brokerMarginAccounts.reduce(
+      (sum, acc) => sum + acc.marginDebtInBaseCurrency,
       0,
     );
 
@@ -334,6 +341,15 @@ export const getLiabilities = query({
       bySubcategory[sub].total += Math.abs(positionValue(pos));
     }
 
+    // Margin debits go into the "margin-loans" subcategory
+    if (brokerMarginAccounts.length > 0) {
+      if (!bySubcategory["margin-loans"]) {
+        bySubcategory["margin-loans"] = { count: 0, total: 0 };
+      }
+      bySubcategory["margin-loans"].count += brokerMarginAccounts.length;
+      bySubcategory["margin-loans"].total += marginDebtTotal;
+    }
+
     // Manual loans go into the "loans" subcategory
     if (manualLoans.length > 0) {
       if (!bySubcategory["loans"]) {
@@ -346,15 +362,18 @@ export const getLiabilities = query({
     return {
       plaidLiabilities,
       brokerLiabilities,
+      brokerMarginAccounts,
       manualLoans,
       summary: {
-        totalLiabilities: plaidTotal + brokerTotal + manualLoansTotal,
+        totalLiabilities:
+          plaidTotal + brokerTotal + marginDebtTotal + manualLoansTotal,
         plaidTotal,
-        brokerTotal,
+        brokerTotal: brokerTotal + marginDebtTotal,
         manualLoansTotal,
         accountCount:
           plaidLiabilities.length +
           brokerLiabilities.length +
+          brokerMarginAccounts.length +
           manualLoans.length,
         bySubcategory,
       },

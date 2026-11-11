@@ -17,7 +17,7 @@ import {
   sumCostCoveredValue,
   type HoldingValuation,
 } from "./unrealizedProfitLoss";
-import { toBase, type FxRates } from "../finance/currency";
+import { BASE_CURRENCY, toBase, type FxRates } from "../finance/currency";
 import {
   getPaymentsPerYear,
   type LoanPaymentFrequency,
@@ -139,6 +139,24 @@ export interface AverageCost {
   perUnit: number;
   /** Units the trades account for: bought plus rewarded, less sold or withdrawn */
   quantity: number;
+  /**
+   * Cost per unit in the currency every buy in the book was paid in, when
+   * that is one currency other than EUR. perUnit converts it at today's
+   * rate and so moves with the exchange rate; this does not, so a snapshot
+   * flow can be read from it (holdingNetFlow).
+   */
+  native?: { perUnit: number; currency: string };
+}
+
+/** A symbol's running cost book while its trades are replayed. */
+interface CostBook {
+  quantity: number;
+  /** EUR, each buy converted at today's rate */
+  cost: number;
+  /** Cost by the currency it was paid in */
+  native: Map<string, number>;
+  /** A buy since the book last emptied has no rate */
+  unknown: boolean;
 }
 
 /**
@@ -164,13 +182,16 @@ function tradeTime(date: string): number {
  * Deposits and transfers carry no price and are left out (a holding larger
  * than its book is uncovered, see bitpandaCostBasis). A
  * symbol is missing when nothing bought is still held or a buy since the
- * book last emptied has a currency without a rate.
+ * book last emptied has a currency without a rate. A book paid in one
+ * foreign currency also keeps its cost in that currency (AverageCost.native);
+ * one paid in several keeps only the EUR cost at today's rates, which an
+ * exchange rate move shifts.
  */
 export function averageCostPerUnit(
   trades: readonly ProviderTrade[],
   toEur: (amount: number, currency: string) => number | null,
 ): Map<string, AverageCost> {
-  const books = new Map<string, { quantity: number; cost: number; unknown: boolean }>();
+  const books = new Map<string, CostBook>();
   const ordered = [...trades].sort(
     (a, b) => tradeTime(a.transactionDate) - tradeTime(b.transactionDate),
   );
@@ -186,24 +207,39 @@ export function averageCostPerUnit(
     const quantity = Math.abs(t.quantity);
     if (!(quantity > 0)) continue;
     const symbol = t.symbol.toUpperCase();
-    const book = books.get(symbol) ?? { quantity: 0, cost: 0, unknown: false };
+    const book = books.get(symbol) ?? {
+      quantity: 0,
+      cost: 0,
+      native: new Map<string, number>(),
+      unknown: false,
+    };
     books.set(symbol, book);
     if (t.type === "buy") {
-      const eur = toEur(Math.abs(t.amount), t.currency);
+      const paid = Math.abs(t.amount);
+      const currency = t.currency.toUpperCase();
+      const eur = toEur(paid, t.currency);
       if (eur === null) book.unknown = true;
-      else book.cost += eur;
+      else {
+        book.cost += eur;
+        book.native.set(currency, (book.native.get(currency) ?? 0) + paid);
+      }
       book.quantity += quantity;
     } else if (t.type === "reward") {
       book.quantity += quantity;
     } else if (book.quantity > 0) {
       const sold = Math.min(quantity, book.quantity);
-      book.cost -= (book.cost / book.quantity) * sold;
+      const kept = 1 - sold / book.quantity;
+      book.cost *= kept;
+      for (const [currency, paid] of book.native) {
+        book.native.set(currency, paid * kept);
+      }
       book.quantity -= sold;
       // Sold out: the next buy starts a fresh book, so a buy that could
       // not be priced no longer leaves later ones uncosted
       if (book.quantity <= 1e-12) {
         book.quantity = 0;
         book.cost = 0;
+        book.native.clear();
         book.unknown = false;
       }
     }
@@ -211,9 +247,13 @@ export function averageCostPerUnit(
   const average = new Map<string, AverageCost>();
   for (const [symbol, book] of books) {
     if (!book.unknown && book.quantity > 1e-12 && book.cost > 0) {
+      const only = book.native.size === 1 ? [...book.native][0] : undefined;
       average.set(symbol, {
         perUnit: book.cost / book.quantity,
         quantity: book.quantity,
+        ...(only && only[0] !== BASE_CURRENCY
+          ? { native: { perUnit: only[1] / book.quantity, currency: only[0] } }
+          : {}),
       });
     }
   }
@@ -223,24 +263,42 @@ export function averageCostPerUnit(
 /** Quantity held beyond the trades' that is still rounding (fees, dust). */
 const UNTRADED_QUANTITY_TOLERANCE = 0.001;
 
+/** A Bitpanda holding's cost basis (bitpandaCostBasis). */
+export interface BitpandaCost {
+  /** EUR at today's rates */
+  base: number;
+  /** In the one foreign currency it was paid in (AverageCost.native) */
+  native?: { amount: number; currency: string };
+}
+
 /**
- * Cost basis in EUR of a Bitpanda holding: the average cost of its symbol
- * times the quantity held. Undefined for fiat wallets (cash), symbols
- * without an average (averageCostPerUnit), and holdings larger than their
- * trades account for: units transferred in have an unknown cost, so the
- * holding is left uncovered rather than costed at the buys' price.
+ * Cost basis of a Bitpanda holding: the average cost of its symbol times
+ * the quantity held. Undefined for fiat wallets (cash), symbols without an
+ * average (averageCostPerUnit), and holdings larger than their trades
+ * account for: units transferred in have an unknown cost, so the holding is
+ * left uncovered rather than costed at the buys' price.
  */
 export function bitpandaCostBasis(
   holding: { assetType: string; symbol: string; quantity: number },
   averageCost: ReadonlyMap<string, AverageCost>,
-): number | undefined {
+): BitpandaCost | undefined {
   if (holding.assetType === "fiat") return undefined;
   const book = averageCost.get(holding.symbol.toUpperCase());
   if (book === undefined) return undefined;
   if (holding.quantity > book.quantity * (1 + UNTRADED_QUANTITY_TOLERANCE)) {
     return undefined;
   }
-  return book.perUnit * holding.quantity;
+  return {
+    base: book.perUnit * holding.quantity,
+    ...(book.native
+      ? {
+          native: {
+            amount: book.native.perUnit * holding.quantity,
+            currency: book.native.currency,
+          },
+        }
+      : {}),
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════

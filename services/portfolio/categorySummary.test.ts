@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { fxRatesFromDaily } from "../finance/currency";
+import { holdingNetFlow } from "./aggregate";
 import {
   averageCostPerUnit,
   bankAccountValue,
@@ -273,7 +274,7 @@ describe("averageCostPerUnit", () => {
       eur,
     );
     const cost = (books: typeof before, quantity: number) =>
-      bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity }, books);
+      bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity }, books)?.base;
     expect(cost(before, 1)).toBeCloseTo(20_000);
     // The reward's value is a gain on the same cost
     expect(cost(after, 1.1)).toBeCloseTo(20_000);
@@ -365,9 +366,52 @@ describe("averageCostPerUnit", () => {
     expect(avg.has("BTC")).toBe(false);
   });
 
+  it("keeps a cost paid in one foreign currency in that currency", () => {
+    const usdAt = (eurPerUsd: number) => (amount: number, currency: string) =>
+      currency === "EUR" ? amount : currency === "USD" ? amount * eurPerUsd : null;
+    const trades = [
+      trade("buy", 2, 1_000, "2026-01-01", { currency: "USD" }),
+      trade("sell", 1, 700, "2026-01-02"),
+    ];
+    const holding = { assetType: "crypto", symbol: "BTC", quantity: 1 };
+    const before = bitpandaCostBasis(holding, averageCostPerUnit(trades, usdAt(0.9)))!;
+    const after = bitpandaCostBasis(holding, averageCostPerUnit(trades, usdAt(0.8)))!;
+    // The EUR cost moves with the rate, the USD cost does not
+    expect(before.base).toBeCloseTo(450);
+    expect(after.base).toBeCloseTo(400);
+    expect(before.native).toEqual({ amount: 500, currency: "USD" });
+    expect(after.native).toEqual({ amount: 500, currency: "USD" });
+    // So an unchanged holding has no flow across the rate move
+    const entry = (c: typeof before) => ({
+      key: "btc",
+      value: 1_000,
+      cost: c.base,
+      costNative: c.native!.amount,
+      currency: c.native!.currency,
+    });
+    expect(holdingNetFlow(entry(before), entry(after))).toEqual({
+      amount: 0,
+      estimated: false,
+    });
+  });
+
+  it("keeps no foreign cost for EUR or mixed-currency books", () => {
+    const eurOnly = averageCostPerUnit([trade("buy", 1, 100, "2026-01-01")], eur);
+    expect(eurOnly.get("BTC")!.native).toBeUndefined();
+    const mixed = averageCostPerUnit(
+      [
+        trade("buy", 1, 100, "2026-01-01"),
+        trade("buy", 1, 100, "2026-01-02", { currency: "USD" }),
+      ],
+      eur,
+    );
+    expect(mixed.get("BTC")!.native).toBeUndefined();
+    expect(mixed.get("BTC")!.perUnit).toBeCloseTo(95);
+  });
+
   it("costs a holding at the average times the quantity held, never fiat", () => {
     const avg = new Map([["BTC", { perUnit: 20_000, quantity: 2 }]]);
-    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "btc", quantity: 1.5 }, avg)).toBe(30_000);
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "btc", quantity: 1.5 }, avg)).toEqual({ base: 30_000 });
     expect(bitpandaCostBasis({ assetType: "crypto", symbol: "ETH", quantity: 1 }, avg)).toBeUndefined();
     expect(bitpandaCostBasis({ assetType: "fiat", symbol: "BTC", quantity: 1 }, avg)).toBeUndefined();
   });
@@ -377,7 +421,7 @@ describe("averageCostPerUnit", () => {
     const avg = new Map([["BTC", { perUnit: 60_000, quantity: 0.01 }]]);
     expect(bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity: 1.01 }, avg)).toBeUndefined();
     // Rounding within the tolerance still counts
-    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity: 0.010005 }, avg))
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity: 0.010005 }, avg)!.base)
       .toBeCloseTo(600.3);
   });
 });

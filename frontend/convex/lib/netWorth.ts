@@ -189,7 +189,7 @@ export async function loadHoldings(
     const cost =
       category === "liabilities" ? undefined : bitpandaCostBasis(raw, averageCost);
     const doc: BitpandaHoldingDoc =
-      cost === undefined ? raw : { ...raw, costBasisInBaseCurrency: cost };
+      cost === undefined ? raw : { ...raw, costBasisInBaseCurrency: cost.base };
     holdings.push({
       id: doc._id,
       // Holdings are replaced on every sync; the connection and asset stay
@@ -200,7 +200,10 @@ export async function loadHoldings(
       subcategory: doc.investmentSubcategory ?? "unknown",
       name: doc.symbol ?? doc.name ?? "Unknown",
       valueBase: category === "liabilities" ? positionOwed(value) : value,
-      costBase: cost ?? null,
+      costBase: cost?.base ?? null,
+      // A foreign-currency cost stays put when the rate moves, so the
+      // snapshot flow is read from it (holdingNetFlow)
+      ...(cost?.native ? { costNative: cost.native } : {}),
       pricedAt: doc.lastSyncAt ?? doc.createdAt,
       doc,
     });

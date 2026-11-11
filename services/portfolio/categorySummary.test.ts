@@ -297,52 +297,49 @@ describe("averageCostPerUnit", () => {
 
 describe("resolveCategoryProfitLoss", () => {
   const holdings = { costBasis: 1000, profitLoss: 0, profitLossPercent: 0 };
+  const noCost = { costBasis: null, profitLoss: null, profitLossPercent: null };
+  const tracked = {
+    change: 300,
+    changePercent: 7.5,
+    since: 1_700_000_000_000,
+    flowAdjusted: true,
+    flowsEstimated: false,
+  };
+  const none = { since: null, flowAdjusted: false, flowsEstimated: false };
 
   it("prefers the holdings' cost basis, even at break-even", () => {
     expect(
-      resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings,
-        firstSnapshotValue: 4000,
-      }),
+      resolveCategoryProfitLoss({ currentValue: 5000, holdings, sinceTracking: tracked }),
     ).toEqual({
       costBasis: 1000,
       costLine: 5000,
       profitLoss: 0,
       profitLossPercent: 0,
       source: "cost-basis",
+      ...none,
     });
   });
 
-  it("falls back to the first snapshot value when no holding has a cost", () => {
+  it("falls back to the performance since tracking, never a snapshot cost basis", () => {
     expect(
-      resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings: {
-          costBasis: null,
-          profitLoss: null,
-          profitLossPercent: null,
-        },
-        firstSnapshotValue: 4000,
-      }),
+      resolveCategoryProfitLoss({ currentValue: 5000, holdings: noCost, sinceTracking: tracked }),
     ).toEqual({
-      costBasis: 4000,
-      costLine: 4000,
-      profitLoss: 1000,
-      profitLossPercent: 25,
-      source: "first-snapshot",
+      costBasis: null,
+      costLine: 4700,
+      profitLoss: 300,
+      profitLossPercent: 7.5,
+      source: "since-tracking",
+      since: tracked.since,
+      flowAdjusted: true,
+      flowsEstimated: false,
     });
   });
 
   it("draws a cost line whose gap to the value is the KPI P/L", () => {
     // 5000 in the category, of which 1200 carry a cost of 1000
     const partial = { costBasis: 1000, profitLoss: 200, profitLossPercent: 20 };
-    for (const firstSnapshotValue of [4000, null]) {
-      const r = resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings: partial,
-        firstSnapshotValue,
-      });
+    for (const sinceTracking of [tracked, null]) {
+      const r = resolveCategoryProfitLoss({ currentValue: 5000, holdings: partial, sinceTracking });
       expect(r.source).toBe("cost-basis");
       expect(r.costBasis).toBe(1000);
       expect(5000 - r.costLine!).toBe(r.profitLoss);
@@ -350,19 +347,16 @@ describe("resolveCategoryProfitLoss", () => {
     }
   });
 
-  it("reports nothing without a cost basis or snapshot", () => {
+  it("reports nothing without a cost basis or history", () => {
     expect(
-      resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings: null,
-        firstSnapshotValue: null,
-      }),
+      resolveCategoryProfitLoss({ currentValue: 5000, holdings: null, sinceTracking: null }),
     ).toEqual({
       costBasis: null,
       costLine: null,
       profitLoss: null,
       profitLossPercent: null,
       source: null,
+      ...none,
     });
   });
 });

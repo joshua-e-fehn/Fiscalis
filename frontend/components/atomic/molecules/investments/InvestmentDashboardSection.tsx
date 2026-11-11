@@ -45,6 +45,24 @@ import {
 } from "lucide-react";
 import type { MetalsCurrency } from "@/lib/types/metals-extended";
 
+/** A short date for "since …" notes on the KPI cards */
+function formatSince(timestamp: number): string {
+  return new Date(timestamp).toLocaleDateString("de-DE", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
+ * The YTD card's title (D2): a return when it is net of purchases and
+ * deposits, else a plain change.
+ */
+function ytdTitle(flowAdjusted: boolean, flowsEstimated: boolean): string {
+  if (!flowAdjusted) return "YTD Change";
+  return flowsEstimated ? "YTD Return (est.)" : "YTD Return";
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════════════════
@@ -217,6 +235,8 @@ interface ProfitLossCardProps {
   isLoading: boolean;
   hasHoldings: boolean;
   title?: string;
+  /** Shown under the figure, e.g. what it is measured since */
+  note?: string | null;
 }
 
 function ProfitLossCard({
@@ -226,13 +246,13 @@ function ProfitLossCard({
   isLoading,
   hasHoldings,
   title = "Total Profit / Loss",
+  note = null,
 }: ProfitLossCardProps) {
   if (isLoading) {
     return <KPICardSkeleton title={title} />;
   }
 
-  const hasData =
-    hasHoldings && profitLoss !== null && profitLossPercent !== null;
+  const hasData = hasHoldings && profitLoss !== null;
   const isProfit = (profitLoss ?? 0) >= 0;
 
   const formattedValue = hasData
@@ -242,12 +262,13 @@ function ProfitLossCard({
       }).format(Math.abs(profitLoss!))
     : null;
 
-  const formattedPercent = hasData
-    ? new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Math.abs(profitLossPercent!))
-    : null;
+  const formattedPercent =
+    hasData && profitLossPercent !== null
+      ? new Intl.NumberFormat("de-CH", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(Math.abs(profitLossPercent))
+      : null;
 
   return (
     <Card className="h-full">
@@ -267,27 +288,34 @@ function ProfitLossCard({
       </CardHeader>
       <CardContent>
         {hasData ? (
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span
-              className={cn(
-                "text-3xl font-bold",
-                isProfit ? "text-profit" : "text-loss",
+          <>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span
+                className={cn(
+                  "text-3xl font-bold",
+                  isProfit ? "text-profit" : "text-loss",
+                )}
+              >
+                {isProfit ? "+" : "-"}
+                {currencySymbols[currency]}
+                {formattedValue}
+              </span>
+              {formattedPercent !== null && (
+                <span
+                  className={cn(
+                    "text-xl font-semibold",
+                    isProfit ? "text-profit" : "text-loss",
+                  )}
+                >
+                  ({isProfit ? "+" : "-"}
+                  {formattedPercent}%)
+                </span>
               )}
-            >
-              {isProfit ? "+" : "-"}
-              {currencySymbols[currency]}
-              {formattedValue}
-            </span>
-            <span
-              className={cn(
-                "text-xl font-semibold",
-                isProfit ? "text-profit" : "text-loss",
-              )}
-            >
-              ({isProfit ? "+" : "-"}
-              {formattedPercent}%)
-            </span>
-          </div>
+            </div>
+            {note && (
+              <p className="text-xs text-muted-foreground mt-1">{note}</p>
+            )}
+          </>
         ) : (
           <div className="text-muted-foreground text-sm">
             {hasHoldings
@@ -303,26 +331,31 @@ function ProfitLossCard({
 interface YTDPerformanceCardProps {
   ytdProfitLoss: number | null;
   ytdProfitLossPercent: number | null;
+  /** First known value when there is none at 1 Jan */
+  trackingSince: number | null;
+  /** Some holdings could not be priced */
+  partial: boolean;
   currency: InvestmentCurrency;
   isLoading: boolean;
   hasHoldings: boolean;
-  title?: string;
+  title: string;
 }
 
 function YTDPerformanceCard({
   ytdProfitLoss,
   ytdProfitLossPercent,
+  trackingSince,
+  partial,
   currency,
   isLoading,
   hasHoldings,
-  title = "YTD Performance",
+  title,
 }: YTDPerformanceCardProps) {
   if (isLoading) {
     return <KPICardSkeleton title={title} />;
   }
 
-  const hasData =
-    hasHoldings && ytdProfitLoss !== null && ytdProfitLossPercent !== null;
+  const hasData = hasHoldings && ytdProfitLoss !== null;
   const isProfit = (ytdProfitLoss ?? 0) >= 0;
 
   const formattedValue = hasData
@@ -332,12 +365,13 @@ function YTDPerformanceCard({
       }).format(Math.abs(ytdProfitLoss!))
     : null;
 
-  const formattedPercent = hasData
-    ? new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Math.abs(ytdProfitLossPercent!))
-    : null;
+  const formattedPercent =
+    hasData && ytdProfitLossPercent !== null
+      ? new Intl.NumberFormat("de-CH", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(Math.abs(ytdProfitLossPercent))
+      : null;
 
   const currentYear = new Date().getFullYear();
 
@@ -371,23 +405,30 @@ function YTDPerformanceCard({
                 {currencySymbols[currency]}
                 {formattedValue}
               </span>
-              <span
-                className={cn(
-                  "text-xl font-semibold",
-                  isProfit ? "text-profit" : "text-loss",
-                )}
-              >
-                ({isProfit ? "+" : "-"}
-                {formattedPercent}%)
-              </span>
+              {formattedPercent !== null && (
+                <span
+                  className={cn(
+                    "text-xl font-semibold",
+                    isProfit ? "text-profit" : "text-loss",
+                  )}
+                >
+                  ({isProfit ? "+" : "-"}
+                  {formattedPercent}%)
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Since Jan 1, {currentYear}
+              {partial && " · some prices missing"}
             </p>
           </>
         ) : (
           <div className="text-muted-foreground text-sm">
-            {hasHoldings ? "Calculating..." : "No holdings yet"}
+            {!hasHoldings
+              ? "No holdings yet"
+              : trackingSince !== null
+                ? `Not enough history (tracked since ${formatSince(trackingSince)})`
+                : "No data for this year yet"}
           </div>
         )}
       </CardContent>
@@ -521,8 +562,8 @@ export function InvestmentDashboardSection({
     enabled: needsContinuousYTD && !isLoading,
   });
 
-  // One P/L resolution (holdings cost basis, else first snapshot) shared by
-  // the KPI card and the chart's cost line
+  // One P/L resolution (holdings cost basis, else the performance since
+  // tracking started) shared by the KPI card and the chart's cost line
   const holdingsPL = useMemo(
     () =>
       summary
@@ -542,18 +583,29 @@ export function InvestmentDashboardSection({
   });
   const { profitLoss, profitLossPercent, costBasis, costLine } = plData;
 
-  // Select appropriate YTD values
-  const ytdProfitLoss = needsContinuousYTD
-    ? continuousYTD.ytdProfitLoss
-    : discreteYTD.ytdProfitLoss;
-  const ytdProfitLossPercent = needsContinuousYTD
-    ? continuousYTD.ytdProfitLossPercent
-    : discreteYTD.ytdProfitLossPercent;
+  // Without a holdings cost basis the card shows the performance since
+  // tracking started: a profit only when it is net of known flows
+  const sinceTrackingProfit =
+    plData.source === "since-tracking" &&
+    plData.flowAdjusted &&
+    !plData.flowsEstimated;
+  const plTitle =
+    plData.source !== "since-tracking"
+      ? undefined
+      : sinceTrackingProfit
+        ? "Profit / Loss since tracking started"
+        : "Change since tracking started";
+  const plNote =
+    plData.since !== null
+      ? `Since ${formatSince(plData.since)}${
+          sinceTrackingProfit ? ", net of purchases and deposits" : ""
+        }`
+      : null;
 
-  // Loading states
-  const isYTDLoading = needsContinuousYTD
-    ? continuousYTD.isLoading
-    : discreteYTD.isLoading;
+  // YTD values for custom cards
+  const ytd = needsContinuousYTD ? continuousYTD : discreteYTD;
+  const ytdProfitLoss = ytd.ytdProfitLoss;
+  const ytdProfitLossPercent = ytd.ytdProfitLossPercent;
 
   // P/L loading: only show loading when there ARE holdings and P/L is calculating
   // If there are no holdings, we show "No holdings yet" immediately (not skeleton)
@@ -601,7 +653,8 @@ export function InvestmentDashboardSection({
             currency={currency}
             isLoading={isPLLoading}
             hasHoldings={hasHoldings}
-            title={config.title}
+            title={config.title ?? plTitle}
+            note={plNote}
           />
         );
 
@@ -609,12 +662,17 @@ export function InvestmentDashboardSection({
         return (
           <YTDPerformanceCard
             key={key}
-            ytdProfitLoss={ytdProfitLoss}
-            ytdProfitLossPercent={ytdProfitLossPercent}
+            ytdProfitLoss={discreteYTD.ytdProfitLoss}
+            ytdProfitLossPercent={discreteYTD.ytdProfitLossPercent}
+            trackingSince={discreteYTD.trackingSince}
+            partial={discreteYTD.partial}
             currency={currency}
-            isLoading={isLoading || (hasHoldings && isYTDLoading)}
+            isLoading={isLoading || (hasHoldings && discreteYTD.isLoading)}
             hasHoldings={hasHoldings}
-            title={config.title}
+            title={
+              config.title ??
+              ytdTitle(discreteYTD.flowAdjusted, discreteYTD.flowsEstimated)
+            }
           />
         );
 
@@ -624,10 +682,15 @@ export function InvestmentDashboardSection({
             key={key}
             ytdProfitLoss={continuousYTD.ytdProfitLoss}
             ytdProfitLossPercent={continuousYTD.ytdProfitLossPercent}
+            trackingSince={null}
+            partial={false}
             currency={currency}
             isLoading={isLoading || (hasHoldings && continuousYTD.isLoading)}
             hasHoldings={hasHoldings}
-            title={config.title}
+            title={
+              config.title ??
+              ytdTitle(continuousYTD.flowAdjusted, continuousYTD.flowsEstimated)
+            }
           />
         );
 

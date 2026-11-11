@@ -5,24 +5,26 @@
  * `resolveCategoryProfitLoss` (services/portfolio/categorySummary.ts) so the
  * KPI card and the chart's cost line always agree:
  * 1. the holdings' own cost basis (coverage-based, from the category summary);
- * 2. otherwise the category's first non-zero snapshot value as an inferred
- *    cost basis, for providers that report no cost basis at all.
+ * 2. otherwise, for an investment category, its performance since tracking
+ *    started from the one performance entry point: net of purchases and
+ *    deposits where the snapshots show them (D2), else labelled a change.
+ *    The first snapshot is never taken as a cost basis.
  */
 
 import { useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import {
   resolveCategoryProfitLoss,
   type ResolvedProfitLoss,
 } from "@/../services/portfolio/categorySummary";
+import { isFlowAdjustedCategory } from "@/../services/portfolio/aggregate";
+import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════════════════
 
 export interface CategoryProfitLossResult extends ResolvedProfitLoss {
-  /** Loading state (snapshots, only needed without a holdings cost basis) */
+  /** Loading state (history, only needed without a holdings cost basis) */
   isLoading: boolean;
 }
 
@@ -50,7 +52,7 @@ export interface UseCategoryProfitLossOptions {
  *
  * @example
  * ```tsx
- * const { profitLoss, profitLossPercent, costBasis, source } =
+ * const { profitLoss, profitLossPercent, source, flowAdjusted } =
  *   useCategoryProfitLoss({
  *     category: "crypto",
  *     currentValue: summary.totalValue,
@@ -64,35 +66,39 @@ export function useCategoryProfitLoss(
 ): CategoryProfitLossResult {
   const { category, currentValue, holdings, enabled = true } = options;
 
-  // Snapshots are only needed when the holdings carry no cost basis
-  const needsSnapshots =
-    enabled && (holdings?.costBasis == null || holdings.profitLoss == null);
+  // History is only needed when the holdings carry no cost basis, and only
+  // investment categories report performance (cash is a plain balance)
+  const needsHistory =
+    enabled &&
+    isFlowAdjustedCategory(category) &&
+    (holdings?.costBasis == null || holdings.profitLoss == null);
 
-  const rawSnapshots = useQuery(
-    api.portfolioSnapshots.getSnapshots,
-    needsSnapshots ? { limit: 730 } : "skip",
+  const measure = useMemo(
+    () => ({ kind: "category" as const, category }),
+    [category],
   );
+  const { metrics, isLoading } = useCategoryPerformance(measure, "ALL", {
+    baseline: "firstPoint",
+    enabled: needsHistory,
+  });
 
-  const firstSnapshotValue = useMemo(() => {
-    if (!rawSnapshots) return null;
-    const sorted = [...rawSnapshots].sort((a, b) => a.timestamp - b.timestamp);
-    for (const snapshot of sorted) {
-      const value = snapshot.categoryBreakdown?.find(
-        (c) => c.category === category,
-      )?.value;
-      if (value !== undefined && value > 0) return value;
-    }
-    return null;
-  }, [category, rawSnapshots]);
+  const sinceTracking = useMemo(() => {
+    const p = toPeriodChange(metrics);
+    return p.change !== null && metrics?.firstPointTimestamp != null
+      ? {
+          change: p.change,
+          changePercent: p.changePercent,
+          since: metrics.firstPointTimestamp,
+          flowAdjusted: p.flowAdjusted,
+          flowsEstimated: p.flowsEstimated,
+        }
+      : null;
+  }, [metrics]);
 
   const resolved = useMemo(
-    () =>
-      resolveCategoryProfitLoss({ currentValue, holdings, firstSnapshotValue }),
-    [currentValue, holdings, firstSnapshotValue],
+    () => resolveCategoryProfitLoss({ currentValue, holdings, sinceTracking }),
+    [currentValue, holdings, sinceTracking],
   );
 
-  return {
-    ...resolved,
-    isLoading: needsSnapshots && rawSnapshots === undefined,
-  };
+  return { ...resolved, isLoading: needsHistory && isLoading };
 }

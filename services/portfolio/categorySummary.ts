@@ -364,20 +364,44 @@ export function groupSmallSlices<T extends { value: number }>(
 // P/L shown on a category page
 // ═══════════════════════════════════════════════════════════════
 
-export type ProfitLossSource = "cost-basis" | "first-snapshot";
+export type ProfitLossSource = "cost-basis" | "since-tracking";
+
+/**
+ * A category's performance since its first snapshot (the performance
+ * engine with the "firstPoint" baseline): net of flows when flowAdjusted.
+ */
+export interface TrackedChange {
+  change: number;
+  changePercent: number | null;
+  /** Timestamp the history starts at */
+  since: number;
+  flowAdjusted: boolean;
+  flowsEstimated: boolean;
+}
 
 export interface ResolvedProfitLoss {
+  /** The holdings' cost basis; never inferred from a snapshot */
   costBasis: number | null;
   /**
-   * The cost line a chart draws against the category's full value:
+   * The line a chart draws against the category's full value:
    * currentValue − profitLoss, so the chart's gap and the KPI agree even when
-   * only some holdings carry a cost basis. Null when there is no P/L.
+   * only some holdings carry a cost basis. Since tracking started it is the
+   * value then plus the net flows since. Null when there is no P/L.
    */
   costLine: number | null;
   profitLoss: number | null;
   profitLossPercent: number | null;
   /** Where the figures come from; null when there is no P/L to show */
   source: ProfitLossSource | null;
+  /** since-tracking: when the history starts; null otherwise */
+  since: number | null;
+  /**
+   * since-tracking: the figure is net of purchases and deposits. When false
+   * (or flowsEstimated) it is shown as a change since tracking started, not
+   * as a profit.
+   */
+  flowAdjusted: boolean;
+  flowsEstimated: boolean;
 }
 
 /**
@@ -385,8 +409,9 @@ export interface ResolvedProfitLoss {
  * and the chart's cost line (`costLine`) so they never disagree:
  *
  * 1. the holdings' own cost basis (coverage-based, from the summary);
- * 2. otherwise the category's first non-zero snapshot value as an inferred
- *    cost basis (for providers that report no cost at all).
+ * 2. otherwise the performance since tracking started, net of flows where
+ *    they are known. The first snapshot is never taken as a cost basis:
+ *    deposits since then are not profit (D2).
  */
 export function resolveCategoryProfitLoss(input: {
   currentValue: number;
@@ -394,9 +419,9 @@ export function resolveCategoryProfitLoss(input: {
     HoldingsSummary,
     "costBasis" | "profitLoss" | "profitLossPercent"
   > | null;
-  firstSnapshotValue: number | null;
+  sinceTracking: TrackedChange | null;
 }): ResolvedProfitLoss {
-  const { currentValue, holdings, firstSnapshotValue } = input;
+  const { currentValue, holdings, sinceTracking } = input;
 
   if (holdings && holdings.costBasis !== null && holdings.profitLoss !== null) {
     return {
@@ -407,21 +432,22 @@ export function resolveCategoryProfitLoss(input: {
         holdings.profitLossPercent ??
         percentOf(holdings.profitLoss, holdings.costBasis),
       source: "cost-basis",
+      since: null,
+      flowAdjusted: false,
+      flowsEstimated: false,
     };
   }
 
-  if (
-    firstSnapshotValue !== null &&
-    firstSnapshotValue > 0 &&
-    currentValue > 0
-  ) {
-    const profitLoss = currentValue - firstSnapshotValue;
+  if (sinceTracking && currentValue > 0) {
     return {
-      costBasis: firstSnapshotValue,
-      costLine: costLine(currentValue, profitLoss),
-      profitLoss,
-      profitLossPercent: percentOf(profitLoss, firstSnapshotValue),
-      source: "first-snapshot",
+      costBasis: null,
+      costLine: costLine(currentValue, sinceTracking.change),
+      profitLoss: sinceTracking.change,
+      profitLossPercent: sinceTracking.changePercent,
+      source: "since-tracking",
+      since: sinceTracking.since,
+      flowAdjusted: sinceTracking.flowAdjusted,
+      flowsEstimated: sinceTracking.flowsEstimated,
     };
   }
 
@@ -431,5 +457,8 @@ export function resolveCategoryProfitLoss(input: {
     profitLoss: null,
     profitLossPercent: null,
     source: null,
+    since: null,
+    flowAdjusted: false,
+    flowsEstimated: false,
   };
 }

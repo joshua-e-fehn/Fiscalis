@@ -80,19 +80,22 @@ export const connect = action({
     );
 
     // Initial sync (holdings + transactions), then snapshot
-    await ctx.runAction(internal.actions.bitpanda.syncConnectionInternal, {
-      userId,
-      connectionId,
-    });
+    const holdingsSync: { ok: boolean } = await ctx.runAction(
+      internal.actions.bitpanda.syncConnectionInternal,
+      { userId, connectionId },
+    );
     await ctx.runAction(internal.actions.bitpanda.syncTransactionsInternal, {
       userId,
       connectionId,
     });
 
-    await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
-      userId,
-      source: "bitpanda",
-    });
+    // A failed holdings sync is shown on the connection; no snapshot of it
+    if (holdingsSync.ok) {
+      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+        userId,
+        source: "bitpanda",
+      });
+    }
 
     return { success: true, connectionId };
   },
@@ -153,21 +156,24 @@ export const syncConnection = action({
       throw new Error("Connection not found or unauthorized");
     }
 
-    await ctx.runAction(internal.actions.bitpanda.syncConnectionInternal, {
-      userId,
-      connectionId: args.connectionId,
-    });
+    const holdingsSync: { ok: boolean } = await ctx.runAction(
+      internal.actions.bitpanda.syncConnectionInternal,
+      { userId, connectionId: args.connectionId },
+    );
     await ctx.runAction(internal.actions.bitpanda.syncTransactionsInternal, {
       userId,
       connectionId: args.connectionId,
     });
 
-    await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
-      userId,
-      source: "bitpanda",
-    });
+    // Snapshot only holdings that synced; a failure stays on the connection
+    if (holdingsSync.ok) {
+      await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+        userId,
+        source: "bitpanda",
+      });
+    }
 
-    return { success: true };
+    return { success: holdingsSync.ok };
   },
 });
 
@@ -187,17 +193,20 @@ export const syncAllConnections = action({
       { userId },
     );
 
+    let failed = 0;
     for (const connection of connections) {
       try {
-        await ctx.runAction(
+        const holdingsSync: { ok: boolean } = await ctx.runAction(
           internal.actions.bitpanda.syncConnectionInternal,
           { userId, connectionId: connection._id },
         );
+        if (!holdingsSync.ok) failed++;
         await ctx.runAction(
           internal.actions.bitpanda.syncTransactionsInternal,
           { userId, connectionId: connection._id },
         );
       } catch (error) {
+        failed++;
         console.error(
           `Error syncing Bitpanda connection ${connection._id}:`,
           error,
@@ -205,7 +214,8 @@ export const syncAllConnections = action({
       }
     }
 
-    if (!args.skipSnapshot) {
+    // Snapshot only when every connection's holdings synced
+    if (!args.skipSnapshot && failed === 0) {
       try {
         await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
           userId,
@@ -216,7 +226,7 @@ export const syncAllConnections = action({
       }
     }
 
-    return { success: true, count: connections.length };
+    return { success: failed === 0, count: connections.length };
   },
 });
 
@@ -225,19 +235,22 @@ export const syncAllConnections = action({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Fetch holdings from Bitpanda, classify them, and persist.
+ * Fetch holdings from Bitpanda, classify them, and persist. A failure is
+ * recorded on the connection and returned as `ok: false` (the stored
+ * holdings are left as they were).
  */
 export const syncConnectionInternal = internalAction({
   args: {
     userId: v.string(),
     connectionId: v.id("bitpandaConnections"),
   },
-  handler: async (ctx, args) => {
+  returns: v.object({ ok: v.boolean() }),
+  handler: async (ctx, args): Promise<{ ok: boolean }> => {
     const connection = await ctx.runQuery(
       internal.bitpanda.getConnectionInternal,
       { connectionId: args.connectionId },
     );
-    if (!connection) return;
+    if (!connection) return { ok: false };
 
     await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
       connectionId: args.connectionId,
@@ -297,6 +310,7 @@ export const syncConnectionInternal = internalAction({
         status: "active",
         lastSyncAt: now,
       });
+      return { ok: true };
     } catch (error) {
       console.error("Bitpanda sync error:", error);
       const isAuth = error instanceof BitpandaAuthError;
@@ -309,6 +323,7 @@ export const syncConnectionInternal = internalAction({
             ? error.message
             : String(error),
       });
+      return { ok: false };
     }
   },
 });
@@ -430,7 +445,7 @@ export const syncAllForUserInternal = internalAction({
     let connectionsSynced = 0;
     for (const connection of connections) {
       try {
-        await ctx.runAction(
+        const holdingsSync: { ok: boolean } = await ctx.runAction(
           internal.actions.bitpanda.syncConnectionInternal,
           { userId, connectionId: connection._id },
         );
@@ -438,7 +453,7 @@ export const syncAllForUserInternal = internalAction({
           internal.actions.bitpanda.syncTransactionsInternal,
           { userId, connectionId: connection._id },
         );
-        connectionsSynced++;
+        if (holdingsSync.ok) connectionsSynced++;
       } catch (error) {
         console.error(
           `[BITPANDA SCHEDULED] Failed to sync connection ${connection._id}:`,
@@ -447,8 +462,9 @@ export const syncAllForUserInternal = internalAction({
       }
     }
 
+    // Every connection must sync for the daily snapshot to be complete
     return {
-      success: connectionsSynced > 0 || connections.length === 0,
+      success: connectionsSynced === connections.length,
       connectionsSynced,
     };
   },

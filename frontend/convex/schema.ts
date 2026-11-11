@@ -776,6 +776,9 @@ export default defineSchema({
 
 		// Sync source that triggered this snapshot
 		source: v.string(), // "plaid", "snaptrade", "manual", "vault", "scheduled"
+		// true when a provider sync before the snapshot failed, so that
+		// provider's holdings are from its last successful sync
+		partial: v.optional(v.boolean()),
 	})
 		.index("by_user", ["userId"])
 		.index("by_user_date", ["userId", "date"])

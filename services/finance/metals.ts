@@ -329,6 +329,12 @@ export interface ValuedMetalItem {
   marketValue: number;
   meltValue: number;
   totalCost: number | null;
+  /** Valued at a fresh spot price (else at cost, see valueVaultItem) */
+  pricedAtSpot?: boolean;
+  /** EUR realized P/L of the item's sales (metalsLedger); null unknown */
+  realizedProfitLoss?: number | null;
+  /** EUR average cost of the units the item sold */
+  soldCost?: number;
 }
 
 export interface MetalTypeSummary {
@@ -357,9 +363,18 @@ export interface MetalsPortfolioSummary {
   totalMarketValue: number;
   totalMeltValue: number;
   totalCost: number | null;
+  /** Value − cost of what is held (coverage policy) */
+  unrealizedProfitLoss: number | null;
+  unrealizedProfitLossPercent: number | null;
+  /** Realized P/L of every sale; null when a sale's cost is unknown */
+  realizedProfitLoss: number | null;
+  /** Unrealized + realized; null when either is unknown */
   totalProfitLoss: number | null;
+  /** totalProfitLoss over the cost of what is held plus what was sold */
   totalProfitLossPercent: number | null;
   coverage: number | null;
+  /** Every item is valued at a fresh spot price (none fell back to cost) */
+  pricedAtSpot: boolean;
   /** Percent of totalMarketValue per metal */
   allocation: Record<SpotMetal, number>;
 }
@@ -387,9 +402,10 @@ function summarizeMetalType(items: ValuedMetalItem[]): MetalTypeSummary {
 }
 
 /**
- * Per-metal and total summary of valued items. Cost and P/L follow the
- * shared coverage policy (`summarizeHoldings`): only items with a purchase
- * price count, and `coverage` says which share of the value that is.
+ * Per-metal and total summary of valued items. Cost and unrealized P/L
+ * follow the shared coverage policy (`summarizeHoldings`): only items with a
+ * purchase price count, and `coverage` says which share of the value that
+ * is. Total P/L adds the realized P/L of past sales (metalsLedger).
  */
 export function summarizeMetalItems(
   items: ValuedMetalItem[],
@@ -402,6 +418,16 @@ export function summarizeMetalItems(
   );
   const share = (v: number) => (total.value > 0 ? (v / total.value) * 100 : 0);
 
+  // Nothing held is a known 0 unrealized; sold-out items keep their realized
+  const unrealized = total.profitLoss ?? (total.value === 0 ? 0 : null);
+  const realized = items.some((i) => i.realizedProfitLoss === null)
+    ? null
+    : items.reduce((sum, i) => sum + (i.realizedProfitLoss ?? 0), 0);
+  const totalProfitLoss =
+    unrealized !== null && realized !== null ? unrealized + realized : null;
+  const invested =
+    (total.costBasis ?? 0) + items.reduce((sum, i) => sum + (i.soldCost ?? 0), 0);
+
   return {
     gold,
     silver,
@@ -410,9 +436,16 @@ export function summarizeMetalItems(
     totalMarketValue: total.value,
     totalMeltValue: items.reduce((sum, i) => sum + i.meltValue, 0),
     totalCost: total.costBasis,
-    totalProfitLoss: total.profitLoss,
-    totalProfitLossPercent: total.profitLossPercent,
+    unrealizedProfitLoss: total.profitLoss,
+    unrealizedProfitLossPercent: total.profitLossPercent,
+    realizedProfitLoss: realized,
+    totalProfitLoss,
+    totalProfitLossPercent:
+      totalProfitLoss !== null && invested > 0
+        ? (totalProfitLoss / invested) * 100
+        : null,
     coverage: total.coverage,
+    pricedAtSpot: items.every((i) => i.pricedAtSpot !== false),
     allocation: {
       gold: share(gold.marketValue),
       silver: share(silver.marketValue),

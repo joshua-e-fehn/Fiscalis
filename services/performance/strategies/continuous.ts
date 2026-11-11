@@ -34,6 +34,13 @@ import type {
   DataPointGenerationResult,
 } from "./types";
 
+/** Cost per unit on the cost line: costPerUnit, else the purchase price. */
+function unitCostOf(holding: HoldingData): number | null {
+  return holding.costPerUnit !== undefined
+    ? holding.costPerUnit
+    : (holding.purchasePricePerUnit ?? null);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Continuous Performance Strategy
 // ═══════════════════════════════════════════════════════════════
@@ -53,10 +60,12 @@ import type {
  *   as the Total Value cards), otherwise at the last close.
  * - A held asset without any price series is left out and the result is
  *   flagged partial.
- * - Every dated purchase is an external flow (D2): its cost (purchase price
- *   × quantity), or its value at the purchase date when it has no price.
- *   Holdings are current quantities, so a sale changes no past value and
- *   needs no flow.
+ * - Holdings are ledger lots (services/finance/metalsLedger.ts): a sale is
+ *   a lot with a negative quantity from its date on, so the quantity held at
+ *   t is what the ledger says, and a sold-out item keeps its past values.
+ * - Every dated lot is an external flow (D2): purchase price (or sale
+ *   proceeds) × quantity, or its value at that date when it has no price,
+ *   so a sale is an outflow and a buy an inflow, never a gain or loss.
  *
  * Each series is sorted once per calculation and looked up by binary search.
  */
@@ -125,8 +134,9 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
   }
 
   /**
-   * One flow per dated purchase: its cost when paid in the series'
-   * currency, else its value at the purchase date. A purchase with neither (no price on that date) is assumed to be
+   * One flow per dated lot: its price × quantity when paid in the series'
+   * currency (negative for a sale: the proceeds leave), else its value at
+   * that date. A lot with neither (no price on that date) is assumed to be
    * no flow and its date reported as estimated.
    */
   private purchaseFlows(
@@ -180,7 +190,7 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
   /**
    * Value of the holdings held at `timestamp`, or null when a held asset has
    * no price at or before it yet. Holding nothing yet is a known 0. The cost is
-   * the cost line: purchase cost plus the value of items without one.
+   * the cost line: the lots' cost plus the value of lots without one.
    */
   private valueAtTimestamp(
     holdings: HoldingData[],
@@ -209,9 +219,10 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
         value = this.calculateItemValue(holding, price.value);
       }
       totalValue += value;
-      if (holding.purchasePricePerUnit != null) {
+      const unitCost = unitCostOf(holding);
+      if (unitCost !== null) {
         hasCost = true;
-        costLine += holding.purchasePricePerUnit * holding.quantity;
+        costLine += unitCost * holding.quantity;
       } else {
         costLine += value;
       }
@@ -231,7 +242,7 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
         fineWeightGrams: holding.fineWeightGrams,
         quantity: holding.quantity,
         sellPremium: holding.sellPremium,
-        purchasePricePerUnit: holding.purchasePricePerUnit,
+        purchasePricePerUnit: unitCostOf(holding) ?? undefined,
       },
       { eurPerOunce: live.price, sourceTimestamp: live.timestamp },
       now,

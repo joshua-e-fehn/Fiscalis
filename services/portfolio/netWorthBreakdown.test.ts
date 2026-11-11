@@ -9,22 +9,22 @@ import { snapshotCostLine } from "./unrealizedProfitLoss";
 describe("bucketProviderHoldings", () => {
   const buckets = bucketProviderHoldings({
     brokerPositions: [
-      // USD position: value already in EUR, cost converted with the same rate
+      // USD position: value and cost stamped in EUR at sync time
       {
         _id: "aapl",
         investmentCategory: "equities",
-        marketValue: 1_100,
         valueInBaseCurrency: 1_012,
-        exchangeRateUsed: 0.92,
-        totalCostBasis: 1_000,
+        costBasisInBaseCurrency: 920,
       },
+      // Position in a currency without a rate: no base value, counts 0
+      { _id: "vnd", investmentCategory: "equities" },
       // Unclassified and commodity positions count as equities
-      { _id: "x", marketValue: 300 },
-      { _id: "etc", investmentCategory: "commodities", marketValue: 200 },
-      { _id: "bond", investmentCategory: "bonds", marketValue: 500, totalCostBasis: 480 },
-      { _id: "btc", investmentCategory: "crypto", marketValue: 1_100, totalCostBasis: 1_000 },
-      { _id: "mm", investmentCategory: "cash", marketValue: 50 },
-      { _id: "margin", investmentCategory: "liabilities", marketValue: -70 },
+      { _id: "x", valueInBaseCurrency: 300 },
+      { _id: "etc", investmentCategory: "commodities", valueInBaseCurrency: 200 },
+      { _id: "bond", investmentCategory: "bonds", valueInBaseCurrency: 500, costBasisInBaseCurrency: 480 },
+      { _id: "btc", investmentCategory: "crypto", valueInBaseCurrency: 1_100, costBasisInBaseCurrency: 1_000 },
+      { _id: "mm", investmentCategory: "cash", valueInBaseCurrency: 50 },
+      { _id: "margin", investmentCategory: "liabilities", valueInBaseCurrency: -70 },
     ],
     vaultHoldings: [
       { value: 1_200, costBasis: 1_000 },
@@ -39,7 +39,7 @@ describe("bucketProviderHoldings", () => {
     ],
   });
 
-  it("converts a foreign-currency cost basis with the value's rate", () => {
+  it("reads value and cost only from the base-currency fields", () => {
     const e = buckets.categories.equities;
     expect(e.value).toBe(1_012 + 300 + 200 + 40);
     expect(e.costBasis).toBeCloseTo(920, 10);
@@ -86,7 +86,7 @@ describe("bucketProviderHoldings", () => {
 describe("buildSnapshotBreakdown", () => {
   const { categories } = bucketProviderHoldings({
     brokerPositions: [
-      { _id: "s", investmentCategory: "equities", marketValue: 1_000, totalCostBasis: 800 },
+      { _id: "s", investmentCategory: "equities", valueInBaseCurrency: 1_000, costBasisInBaseCurrency: 800 },
     ],
     vaultHoldings: [
       { value: 1_200, costBasis: 1_000 },
@@ -132,7 +132,7 @@ describe("buildSnapshotBreakdown", () => {
     expect(none).toEqual({
       categoryBreakdown: [],
       investmentsValue: 0,
-      totalCostBasis: undefined,
+      costBasisInBaseCurrency: undefined,
       totalCoveredValue: undefined,
     });
   });

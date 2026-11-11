@@ -3,9 +3,15 @@ import { query, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import type { InvestmentCategory } from "../lib/types/classification";
 import {
+  bankAccountValue,
+  brokerAccountCash,
   buildCategorySummary,
+  loanBalanceInBase,
+  loanCountsAsLiability,
   positionToHolding,
+  positionValue,
 } from "../../services/portfolio/categorySummary";
+import { loadFxRates } from "./fxRates";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -140,37 +146,22 @@ export const getCashHoldings = query({
       allBrokerPositions.map((p) => p.accountId),
     );
 
-    // For broker accounts, determine cash:
-    // - If `cash` field is set, use it
-    // - If no positions exist for the account and balance > 0, the balance IS cash
-    const brokerAccountsWithCash = brokerAccounts.filter((acc) => {
-      if ((acc.cash ?? 0) > 0) return true;
-      // If no positions and balance > 0, treat balance as cash
-      if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0)
-        return true;
-      return false;
-    });
+    // Broker account cash in EUR: the cash balance, or the whole balance of
+    // an account without positions (brokerAccountCash)
+    const getEffectiveCash = (acc: (typeof brokerAccounts)[0]) =>
+      brokerAccountCash(acc, accountsWithPositions.has(acc._id));
+    const brokerAccountsWithCash = brokerAccounts.filter(
+      (acc) => getEffectiveCash(acc) > 0,
+    );
 
-    // Helper to get effective cash for an account
-    const getEffectiveCash = (acc: (typeof brokerAccounts)[0]) => {
-      if ((acc.cash ?? 0) > 0) {
-        return acc.cashValueInBaseCurrency ?? acc.cash ?? 0;
-      }
-      // If no positions and balance > 0, treat balance as cash
-      if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
-        return acc.balance ?? 0;
-      }
-      return 0;
-    };
-
-    // Calculate totals
+    // Calculate totals (base currency only)
     const bankTotal = bankAccounts.reduce(
-      (sum, acc) => sum + (acc.currentBalance ?? 0),
+      (sum, acc) => sum + bankAccountValue(acc),
       0,
     );
 
     const brokerCashPositionsTotal = brokerCashPositions.reduce(
-      (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
+      (sum, pos) => sum + positionValue(pos),
       0,
     );
 
@@ -188,7 +179,7 @@ export const getCashHoldings = query({
         bySubcategory[sub] = { count: 0, total: 0 };
       }
       bySubcategory[sub].count++;
-      bySubcategory[sub].total += acc.currentBalance ?? 0;
+      bySubcategory[sub].total += bankAccountValue(acc);
     }
 
     for (const pos of brokerCashPositions) {
@@ -197,8 +188,7 @@ export const getCashHoldings = query({
         bySubcategory[sub] = { count: 0, total: 0 };
       }
       bySubcategory[sub].count++;
-      bySubcategory[sub].total +=
-        pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
+      bySubcategory[sub].total += positionValue(pos);
     }
 
     // Add broker account cash to "broker-cash" subcategory
@@ -261,27 +251,30 @@ export const getLiabilities = query({
       )
       .collect();
 
-    // Get manual loans from the loans table (active loans only)
-    const manualLoans = await ctx.db
-      .query("loans")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .collect();
+    // Manual loans that count as liabilities: active and defaulted
+    const manualLoans = (
+      await ctx.db
+        .query("loans")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).filter((loan) => loanCountsAsLiability(loan.status));
 
-    // Calculate totals (liabilities are typically negative in balance sheets)
+    // Calculate totals in the base currency (liabilities as positive amounts);
+    // loans are converted here by their own currency
+    const rates = await loadFxRates(ctx);
+
     const plaidTotal = plaidLiabilities.reduce(
-      (sum, acc) => sum + Math.abs(acc.currentBalance ?? 0),
+      (sum, acc) => sum + Math.abs(bankAccountValue(acc)),
       0,
     );
 
     const brokerTotal = brokerLiabilities.reduce(
-      (sum, pos) =>
-        sum + Math.abs(pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
+      (sum, pos) => sum + Math.abs(positionValue(pos)),
       0,
     );
 
     const manualLoansTotal = manualLoans.reduce(
-      (sum, loan) => sum + Math.abs(loan.currentBalance ?? 0),
+      (sum, loan) => sum + loanBalanceInBase(loan, rates),
       0,
     );
 
@@ -294,7 +287,7 @@ export const getLiabilities = query({
         bySubcategory[sub] = { count: 0, total: 0 };
       }
       bySubcategory[sub].count++;
-      bySubcategory[sub].total += Math.abs(acc.currentBalance ?? 0);
+      bySubcategory[sub].total += Math.abs(bankAccountValue(acc));
     }
 
     for (const pos of brokerLiabilities) {
@@ -303,9 +296,7 @@ export const getLiabilities = query({
         bySubcategory[sub] = { count: 0, total: 0 };
       }
       bySubcategory[sub].count++;
-      bySubcategory[sub].total += Math.abs(
-        pos.valueInBaseCurrency ?? pos.marketValue ?? 0,
-      );
+      bySubcategory[sub].total += Math.abs(positionValue(pos));
     }
 
     // Manual loans go into the "loans" subcategory

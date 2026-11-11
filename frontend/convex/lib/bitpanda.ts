@@ -21,7 +21,11 @@
  * This file is imported by Convex actions which run in Node.js.
  */
 
-import { convertCurrency } from "./classification/currency";
+import {
+  FALLBACK_FX_RATES,
+  toBase,
+  withMarketRate,
+} from "../../../services/finance/currency";
 
 const BITPANDA_API_BASE = "https://api.bitpanda.com/v1";
 
@@ -385,15 +389,25 @@ export function normalizeHoldings(
   const pushFiatHolding = (attrs: any, quantity: number) => {
     const symbol = readFiatSymbol(attrs);
     const liveRate = exchangeRateFromTicker(ticker, symbol, "EUR");
-    const conversion = convertCurrency(quantity, symbol, "EUR", liveRate);
+    // Bitpanda's live cross-rate first, then the flagged fallback table; a
+    // currency in neither stays unvalued (never 1:1 as EUR)
+    const conversion = toBase(
+      quantity,
+      symbol,
+      liveRate !== undefined
+        ? withMarketRate(FALLBACK_FX_RATES, symbol, liveRate)
+        : FALLBACK_FX_RATES,
+    );
 
     holdings.push({
       assetType: "fiat",
       symbol,
       name: readName(attrs) ?? symbol,
       quantity,
-      currentPrice: conversion.exchangeRate,
-      marketValue: conversion.baseValue,
+      currentPrice: conversion.ok ? conversion.rate : undefined,
+      marketValue: conversion.ok
+        ? Math.round(conversion.value * 100) / 100
+        : undefined,
       currency: "EUR",
     });
   };

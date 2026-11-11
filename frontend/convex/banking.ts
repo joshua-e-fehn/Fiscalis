@@ -11,6 +11,8 @@ import {
   getClassificationFields,
 } from "./lib/classification";
 import { getUserId } from "./lib/auth";
+import { loadFxRates } from "./fxRates";
+import { bankAccountBaseFields } from "../../services/finance/currency";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES (Public - called from frontend)
@@ -423,6 +425,7 @@ export const saveAccounts = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const rates = await loadFxRates(ctx);
 
     for (const account of args.accounts) {
       const existing = await ctx.db
@@ -438,6 +441,9 @@ export const saveAccounts = internalMutation({
       });
 
       const classificationFields = getClassificationFields(classification);
+      // Balance in the base currency (EUR); flagged "unknown" when the
+      // account has no currency or no rate
+      const currencyFields = bankAccountBaseFields(account, rates);
 
       if (existing) {
         // Preserve user overrides if they exist
@@ -446,6 +452,7 @@ export const saveAccounts = internalMutation({
 
         await ctx.db.patch(existing._id, {
           ...account,
+          ...currencyFields,
           lastSynced: now,
           // Only update classification if no user override exists
           ...(preserveUserOverrides ? {} : classificationFields),
@@ -455,6 +462,7 @@ export const saveAccounts = internalMutation({
           userId: args.userId,
           itemId: args.itemId,
           ...account,
+          ...currencyFields,
           ...classificationFields,
           lastSynced: now,
         });

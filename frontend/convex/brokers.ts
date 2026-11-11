@@ -8,10 +8,12 @@ import {
 import {
   classifySnaptradePosition,
   getClassificationFields,
-  convertCurrency,
-  getCurrencyConversionFields,
-  BASE_CURRENCY,
 } from "./lib/classification";
+import { loadFxRates } from "./fxRates";
+import {
+  brokerAccountBaseFields,
+  positionBaseFields,
+} from "../../services/finance/currency";
 
 // ═══════════════════════════════════════════════════════════════
 // SNAPTRADE USER QUERIES
@@ -539,6 +541,8 @@ export const upsertAccount = internalMutation({
     balance: v.optional(v.number()),
     cash: v.optional(v.number()),
     currency: v.string(),
+    // Currency of balance/cash when the holdings API reports one
+    balanceCurrency: v.optional(v.string()),
     institutionName: v.optional(v.string()),
     // Flag to indicate this is a metadata-only update (don't touch balance)
     skipBalanceUpdate: v.optional(v.boolean()),
@@ -573,7 +577,27 @@ export const upsertAccount = internalMutation({
         if (args.cash !== undefined) {
           updateData.cash = args.cash;
         }
+        if (args.balanceCurrency !== undefined) {
+          updateData.balanceCurrency = args.balanceCurrency;
+        }
       }
+
+      // Re-stamp the base-currency values of what is now stored
+      const balanceCurrency =
+        (updateData.balanceCurrency as string | undefined) ??
+        existing.balanceCurrency ??
+        args.currency;
+      Object.assign(
+        updateData,
+        brokerAccountBaseFields(
+          {
+            balance: (updateData.balance as number | undefined) ?? existing.balance,
+            cash: (updateData.cash as number | undefined) ?? existing.cash,
+            currency: balanceCurrency,
+          },
+          await loadFxRates(ctx),
+        ),
+      );
 
       await ctx.db.patch(existing._id, updateData);
       return existing._id;
@@ -589,6 +613,15 @@ export const upsertAccount = internalMutation({
       balance: args.balance,
       cash: args.cash,
       currency: args.currency,
+      balanceCurrency: args.balanceCurrency,
+      ...brokerAccountBaseFields(
+        {
+          balance: args.balance,
+          cash: args.cash,
+          currency: args.balanceCurrency ?? args.currency,
+        },
+        await loadFxRates(ctx),
+      ),
       institutionName: args.institutionName,
       lastSyncAt: now,
       createdAt: now,
@@ -598,7 +631,8 @@ export const upsertAccount = internalMutation({
 
 /**
  * Upsert broker position
- * Automatically classifies positions and converts currency to base (EUR)
+ * Automatically classifies positions and stamps their value, cost basis and
+ * unrealised P&L in the base currency (EUR)
  */
 export const upsertPosition = internalMutation({
   args: {
@@ -644,16 +678,11 @@ export const upsertPosition = internalMutation({
 
     const classificationFields = getClassificationFields(classification);
 
-    // Convert market value to base currency (EUR)
-    let currencyConversionFields = {};
-    if (args.marketValue !== undefined) {
-      const conversion = convertCurrency(
-        args.marketValue,
-        args.currency,
-        BASE_CURRENCY,
-      );
-      currencyConversionFields = getCurrencyConversionFields(conversion);
-    }
+    // Value, cost basis and P&L in the base currency (EUR), one rate
+    const currencyConversionFields = positionBaseFields(
+      args,
+      await loadFxRates(ctx),
+    );
 
     if (existing) {
       // Preserve user overrides if they exist

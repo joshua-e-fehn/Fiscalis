@@ -1086,6 +1086,7 @@ export const syncAll = action({
               balance: finalBalance,
               cash: finalCash,
               currency: account.currency,
+              balanceCurrency: holdings.total_value?.currency ?? undefined,
               institutionName: account.institutionName,
             });
 
@@ -1394,6 +1395,7 @@ export const syncAllForUserInternal = internalAction({
                 balance: calculatedBalance,
                 cash: cashValue,
                 currency: account.currency,
+                balanceCurrency: holdings.total_value?.currency ?? undefined,
               });
             } catch (accountError) {
               console.error(

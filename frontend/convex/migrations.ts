@@ -3,10 +3,13 @@ import {
   classifyPlaidAccount,
   classifySnaptradePosition,
   getClassificationFields,
-  convertCurrency,
-  getCurrencyConversionFields,
-  BASE_CURRENCY,
 } from "./lib/classification";
+import { loadFxRates } from "./fxRates";
+import {
+  bankAccountBaseFields,
+  brokerAccountBaseFields,
+  positionBaseFields,
+} from "../../services/finance/currency";
 
 /**
  * Migration: Update metalCatalog and vaultItems to use buyPremium/sellPremium
@@ -181,6 +184,7 @@ export const classifyBrokerPositions = internalMutation({
     let errors = 0;
 
     const positions = await ctx.db.query("brokerPositions").collect();
+    const rates = await loadFxRates(ctx);
 
     for (const position of positions) {
       try {
@@ -201,18 +205,7 @@ export const classifyBrokerPositions = internalMutation({
         const classificationFields = getClassificationFields(classification);
 
         // Convert to base currency
-        let currencyFields = {};
-        if (
-          position.marketValue !== undefined &&
-          position.marketValue !== null
-        ) {
-          const conversion = convertCurrency(
-            position.marketValue,
-            position.currency,
-            BASE_CURRENCY,
-          );
-          currencyFields = getCurrencyConversionFields(conversion);
-        }
+        const currencyFields = positionBaseFields(position, rates);
 
         await ctx.db.patch(position._id, {
           ...classificationFields,
@@ -272,6 +265,7 @@ export const reclassifyAll = internalMutation({
 
     // Re-classify broker positions
     const positions = await ctx.db.query("brokerPositions").collect();
+    const rates = await loadFxRates(ctx);
     for (const position of positions) {
       // Skip if user has an override
       if (position.userCategoryOverride) {
@@ -290,15 +284,7 @@ export const reclassifyAll = internalMutation({
       const classificationFields = getClassificationFields(classification);
 
       // Update currency conversion
-      let currencyFields = {};
-      if (position.marketValue !== undefined && position.marketValue !== null) {
-        const conversion = convertCurrency(
-          position.marketValue,
-          position.currency,
-          BASE_CURRENCY,
-        );
-        currencyFields = getCurrencyConversionFields(conversion);
-      }
+      const currencyFields = positionBaseFields(position, rates);
 
       await ctx.db.patch(position._id, {
         ...classificationFields,
@@ -443,6 +429,66 @@ export const reclassifyNftsToCollectibles = internalMutation({
         updated: accountsUpdated,
         skippedUserOverride: accountsSkipped,
       },
+    };
+  },
+});
+
+/**
+ * Migration: Backfill base-currency fields
+ *
+ * Stamps every Plaid account, broker account and broker position with the
+ * base-currency (EUR) fields the aggregators now read exclusively
+ * (services/finance/currency.ts), at the current rate table: the mirrored
+ * fxRates, or the flagged fallback table for currencies it does not cover.
+ * Rows in a currency with no rate get no base value and source "unknown".
+ *
+ * Plaid accounts stored with the old "USD" default cannot be told apart from
+ * real USD accounts; the next Plaid sync rewrites their currency.
+ *
+ * Idempotent; the next provider sync re-stamps the same fields.
+ * Run once after deploy, and again after the first successful
+ * fxRates.refreshFxRates so the rows carry market rates:
+ *   npx convex run migrations:backfillBaseCurrencyFields
+ */
+export const backfillBaseCurrencyFields = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const rates = await loadFxRates(ctx);
+    const unknown: string[] = [];
+
+    const bankAccounts = await ctx.db.query("plaidAccounts").collect();
+    for (const account of bankAccounts) {
+      const fields = bankAccountBaseFields(account, rates);
+      if (fields.exchangeRateSource === "unknown") unknown.push(account._id);
+      await ctx.db.patch(account._id, fields);
+    }
+
+    const brokerAccounts = await ctx.db.query("brokerAccounts").collect();
+    for (const account of brokerAccounts) {
+      const fields = brokerAccountBaseFields(
+        {
+          balance: account.balance,
+          cash: account.cash,
+          currency: account.balanceCurrency ?? account.currency,
+        },
+        rates,
+      );
+      if (fields.exchangeRateSource === "unknown") unknown.push(account._id);
+      await ctx.db.patch(account._id, fields);
+    }
+
+    const positions = await ctx.db.query("brokerPositions").collect();
+    for (const position of positions) {
+      const fields = positionBaseFields(position, rates);
+      if (fields.exchangeRateSource === "unknown") unknown.push(position._id);
+      await ctx.db.patch(position._id, fields);
+    }
+
+    return {
+      plaidAccounts: bankAccounts.length,
+      brokerAccounts: brokerAccounts.length,
+      brokerPositions: positions.length,
+      unconverted: unknown,
     };
   },
 });

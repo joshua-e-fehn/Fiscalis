@@ -29,32 +29,4 @@ export {
   reclassifyBrokerPositions,
 } from "./engine";
 
-// Currency Utilities
-export {
-  BASE_CURRENCY,
-  KNOWN_CURRENCIES,
-  EXCHANGE_RATE_CACHE_DURATION_MS,
-  convertCurrency,
-  getExchangeRateToBaseCurrency,
-  getCurrencyConversionFields,
-  convertMultipleCurrencies,
-  calculateTotalInBaseCurrency,
-  isValidCurrencyCode,
-  isKnownCurrency,
-  normalizeCurrencyCode,
-  getCurrencySymbol,
-  formatCurrency,
-  createExchangeRateCache,
-  isCacheStale,
-  getRateFromCache,
-  addRateToCache,
-  isForexPosition,
-  extractCurrencyFromForex,
-} from "./currency";
-
-// Re-export types
-export type {
-  KnownCurrency,
-  ExchangeRate,
-  ExchangeRateCache,
-} from "./currency";
+// Currency conversion lives in services/finance/currency.ts (toBase)

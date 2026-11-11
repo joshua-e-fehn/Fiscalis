@@ -1,98 +1,150 @@
 "use client";
 
-import { Briefcase, Home, Info } from "lucide-react";
+import { Briefcase, Info } from "lucide-react";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/shadcn/select";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
-import { useRetirementNetWorth } from "@/hooks/convex/retirement";
-import { formatCurrency } from "@/lib/utils/currency";
+import { useRetirementPreview } from "@/hooks/convex/retirement";
+import {
+	FUNDING_TREATMENT_LABELS,
+	type FundingTreatment,
+} from "@/lib/types/retirement";
+import { formatCurrency, formatRate } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
+const TREATMENTS = Object.keys(FUNDING_TREATMENT_LABELS) as FundingTreatment[];
+
 export function PortfolioStep({
 	data,
+	update,
 	onNext,
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
-	// Same figure as the dashboard's net worth (incl. vault holdings and manual loans).
-	const netWorth = useRetirementNetWorth();
-	const loading = netWorth === undefined;
-	const nw = netWorth?.netWorth ?? 0;
-	const equity = data.fundableRealEstateEquity ?? 0;
-	const fundable = nw + equity;
+	// The funding base exactly as the plan uses it (dashboard assets per
+	// category, liabilities, the residence mortgage taken out).
+	const results = useRetirementPreview(data);
+	const loading = !results;
+
+	const setTreatment = (category: string, treatment: FundingTreatment) =>
+		update({
+			fundingTreatments: { ...data.fundingTreatments, [category]: treatment },
+		});
 
 	return (
 		<RetirementStepShell
 			icon={Briefcase}
 			title="Your portfolio today"
-			description="This is the starting point we grow toward your target."
+			description="This is the starting point we grow toward your target. Choose how each part is expected to grow, or leave out money you won't invest, like an emergency fund."
 			onNext={onNext}
 			onBack={onBack}
 			isSaving={isSaving}
 		>
-			<div className="space-y-3">
-				<Row
-					icon={Briefcase}
-					label="Net worth"
-					hint={
-						netWorth
-							? `Same as your dashboard: ${formatCurrency(netWorth.totalAssets, "eur")} in assets minus ${formatCurrency(netWorth.totalLiabilities, "eur")} in liabilities`
-							: "Same as your dashboard: all assets minus liabilities"
-					}
-					value={loading ? null : formatCurrency(nw, "eur")}
-				/>
-				{equity > 0 && (
-					<Row
-						icon={Home}
-						label="Sellable property"
-						hint="Added from the housing step"
-						value={formatCurrency(equity, "eur")}
-					/>
-				)}
-				<div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-4">
-					<div>
-						<p className="font-medium">Fundable assets</p>
-						<p className="text-xs text-muted-foreground">
-							The basis for your retirement plan
+			{loading ? (
+				<Skeleton className="h-48 w-full rounded-lg" />
+			) : (
+				<div className="space-y-3">
+					{results.fundingLines.length === 0 && (
+						<p className="text-sm text-muted-foreground">
+							No assets tracked yet — your plan starts from €0.
 						</p>
-					</div>
-					{loading ? (
-						<Skeleton className="h-7 w-28" />
-					) : (
-						<span className="text-xl font-bold">
-							{formatCurrency(fundable, "eur")}
-						</span>
 					)}
-				</div>
-			</div>
+					{results.fundingLines.map((line) => (
+						<div
+							key={line.category}
+							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+						>
+							<div>
+								<p className="text-sm font-medium">{line.label}</p>
+								<p
+									className={
+										line.treatment === "exclude"
+											? "text-xs text-muted-foreground line-through"
+											: "text-xs text-muted-foreground"
+									}
+								>
+									{formatCurrency(line.value, "eur")}
+								</p>
+							</div>
+							<Select
+								value={line.treatment}
+								onValueChange={(value: FundingTreatment) =>
+									setTreatment(line.category, value)
+								}
+							>
+								<SelectTrigger
+									className="w-64"
+									aria-label={`${line.label}: growth`}
+								>
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{TREATMENTS.map((t) => (
+										<SelectItem key={t} value={t}>
+											{FUNDING_TREATMENT_LABELS[t]}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+					))}
 
-			{!loading && fundable < 0 && (
+					{results.liabilitiesCounted > 0 && (
+						<div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
+							<span>Liabilities</span>
+							<span className="font-medium">
+								−{formatCurrency(results.liabilitiesCounted, "eur")}
+							</span>
+						</div>
+					)}
+
+					<div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-4">
+						<div>
+							<p className="font-medium">Fundable assets</p>
+							<p className="text-xs text-muted-foreground">
+								Expected growth {formatRate(results.optimistic.baseReturn)} / yr
+								(conservative {formatRate(results.conservative.baseReturn)})
+							</p>
+						</div>
+						<span className="text-xl font-bold">
+							{formatCurrency(results.fundableNow, "eur")}
+						</span>
+					</div>
+				</div>
+			)}
+
+			{results?.hasNetDebt && (
 				<Note>
 					Your liabilities exceed your assets by{" "}
 					<span className="font-medium text-foreground">
-						{formatCurrency(-fundable, "eur")}
+						{formatCurrency(-results.fundableNow, "eur")}
 					</span>
 					. Your plan starts from €0 — debt isn&apos;t grown at the investment
 					return — so paying it down comes on top of the savings we calculate.
 				</Note>
 			)}
-			{!loading && netWorth.totalLiabilities > 0 && (
+			{results?.residenceMortgage && (
 				<Note>
-					Your{" "}
+					The{" "}
 					<span className="font-medium text-foreground">
-						{formatCurrency(netWorth.totalLiabilities, "eur")}
+						{formatCurrency(results.residenceMortgage.balance, "eur")}
 					</span>{" "}
-					in tracked loans reduce your net worth here just as on your
-					dashboard
-					{data.ownsPrimaryResidence
-						? " — any mortgage on the home you live in is included, even though the home itself is not counted."
-						: "."}
+					mortgage on your home is not subtracted here: its{" "}
+					{formatCurrency(results.residenceMortgage.monthlyPayment, "eur")}/mo
+					repayments come from your income until retirement.
 				</Note>
 			)}
 
 			<p className="text-xs text-muted-foreground">
-				Your net worth updates automatically as your accounts sync, so your
-				progress stays live. A primary residence you live in is not included
-				here.
+				Asset values update automatically as your accounts sync, so your
+				progress stays live. Each part grows at its own rate; new savings grow
+				at the scenario return. A home you live in is not included.
 			</p>
 		</RetirementStepShell>
 	);
@@ -103,37 +155,6 @@ function Note({ children }: { children: React.ReactNode }) {
 		<div className="flex items-start gap-2 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
 			<Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
 			<p>{children}</p>
-		</div>
-	);
-}
-
-function Row({
-	icon: Icon,
-	label,
-	hint,
-	value,
-}: {
-	icon: typeof Briefcase;
-	label: string;
-	hint: string;
-	value: string | null;
-}) {
-	return (
-		<div className="flex items-center justify-between rounded-lg border border-border p-4">
-			<div className="flex items-center gap-3">
-				<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
-					<Icon className="h-4 w-4" />
-				</div>
-				<div>
-					<p className="text-sm font-medium">{label}</p>
-					<p className="text-xs text-muted-foreground">{hint}</p>
-				</div>
-			</div>
-			{value === null ? (
-				<Skeleton className="h-6 w-24" />
-			) : (
-				<span className="font-semibold">{value}</span>
-			)}
 		</div>
 	);
 }

@@ -15,9 +15,23 @@ import {
   DEFAULT_WITHDRAWAL_RATE,
   DEFAULT_OPTIMISTIC_RETURN,
   DEFAULT_CONSERVATIVE_RETURN,
+  futureValueOfMonthlyContributions,
+  monthlyRateFromAnnual,
+  mortgageBalanceAfterMonths,
+  residenceMortgageFromLoan,
+  retirementTimeline,
+  type RetirementFundingBase,
   type RetirementInputs,
 } from "./retirementService";
 import { calculateEndCapitalValueWithCompoundInterest } from "./financeService";
+
+/** A funding base equal to `netWorth`, all of it growing at the scenario return. */
+function nw(netWorth: number): RetirementFundingBase {
+  return {
+    assetsByCategory: { equities: Math.max(0, netWorth) },
+    totalLiabilities: Math.max(0, -netWorth),
+  };
+}
 
 const baseInputs: RetirementInputs = {
   currentAge: 40,
@@ -25,7 +39,7 @@ const baseInputs: RetirementInputs = {
   monthlyExpensesToday: 4000,
   ownsPrimaryResidence: false,
   fundableRealEstateEquity: 0,
-  pensionSources: [{ label: "State", monthlyAmount: 2000 }],
+  pensionSources: [{ label: "State", monthlyAmount: 2000, gross: false }],
   inflationRate: DEFAULT_INFLATION_RATE,
   withdrawalRate: DEFAULT_WITHDRAWAL_RATE,
   optimisticReturn: DEFAULT_OPTIMISTIC_RETURN,
@@ -61,7 +75,7 @@ describe("helpers", () => {
 });
 
 describe("worked example (inflation-adjusted)", () => {
-  const r = computeRetirementResults(baseInputs, 100000);
+  const r = computeRetirementResults(baseInputs, nw(100000));
 
   it("passes through today's expenses unchanged", () => {
     expect(r.expenseTodayMonthly).toBe(4000);
@@ -103,52 +117,73 @@ describe("worked example (inflation-adjusted)", () => {
         ...baseInputs,
         retirementAge: 67,
         monthlyExpensesToday: 3000,
-        pensionSources: [{ label: "State", monthlyAmount: 1500 }],
-      },
-      100000,
-    );
+        pensionSources: [{ label: "State", monthlyAmount: 1500, gross: false }],
+      }, nw(100000));
     expect(long.targetPortfolio).toBeCloseTo(1500 * 1.02 ** 27 * 300, 4);
     expect(long.targetPortfolio).toBeCloseTo(768098.91, 0);
   });
 });
 
-describe("required contribution round-trip", () => {
-  // Saving the computed contribution + grown current portfolio must equal target.
+describe("required contribution round-trip (monthly deposits)", () => {
+  // Monthly deposits at r_m = (1+r)^(1/12) − 1 plus the grown current
+  // portfolio must rebuild the target exactly.
   for (const annualReturn of [DEFAULT_OPTIMISTIC_RETURN, DEFAULT_CONSERVATIVE_RETURN]) {
-    it(`reproduces the target at r=${annualReturn}`, () => {
-      const fundableNow = 120000;
-      const years = 5;
-      const target = portfolioTargetFromAnnualGap(28995.86, 0.04);
+    for (const growth of [0, DEFAULT_INFLATION_RATE]) {
+      it(`reproduces the target at r=${annualReturn}, g=${growth}`, () => {
+        const fundableNow = 120000;
+        const years = 5;
+        const target = portfolioTargetFromAnnualGap(28995.86, 0.04);
+        const grown = calculateEndCapitalValueWithCompoundInterest(
+          fundableNow,
+          annualReturn,
+          years,
+        );
+        const monthly = requiredMonthlyContribution(
+          target - grown,
+          years,
+          annualReturn,
+          growth,
+        );
 
-      const monthly = requiredMonthlyContribution(
-        fundableNow,
-        target,
-        years,
-        annualReturn,
-      );
-      const annual = monthly * 12;
-
-      const grown = calculateEndCapitalValueWithCompoundInterest(
-        fundableNow,
-        annualReturn,
-        years,
-      );
-      const fvAnnuity =
-        (annual * ((1 + annualReturn) ** years - 1)) / annualReturn;
-
-      // Within a few cents — contribution is rounded to whole cents by the PMT helper.
-      expect(grown + fvAnnuity).toBeCloseTo(target, 1);
-    });
+        // Rebuild month by month: deposit at month end, then compound.
+        const rm = monthlyRateFromAnnual(annualReturn);
+        const gm = monthlyRateFromAnnual(growth);
+        let balance = 0;
+        for (let k = 0; k < years * 12; k++) {
+          balance = balance * (1 + rm) + monthly * (1 + gm) ** k;
+        }
+        expect(grown + balance).toBeCloseTo(target, 4);
+      });
+    }
   }
 
-  it("requires no saving when current assets already grow past target", () => {
-    const monthly = requiredMonthlyContribution(1_000_000, 500_000, 5, 0.05);
-    expect(monthly).toBe(0);
+  it("is cheaper than an end-of-year annual payment / 12 (intra-year growth)", () => {
+    const r = 0.0718;
+    const n = 28;
+    const gap = 500_000;
+    const annualPmtOver12 = (gap * r) / ((1 + r) ** n - 1) / 12;
+    const monthly = requiredMonthlyContribution(gap, n, r);
+    expect(monthly).toBeLessThan(annualPmtOver12);
+    expect(monthly / annualPmtOver12).toBeCloseTo(0.9686, 2); // ≈ 3% less
+  });
+
+  it("requires no saving when nothing remains to close", () => {
+    expect(requiredMonthlyContribution(0, 5, 0.05)).toBe(0);
+    expect(requiredMonthlyContribution(-10_000, 5, 0.05)).toBe(0);
+    expect(requiredMonthlyContribution(10_000, 0, 0.05)).toBe(0);
+  });
+
+  it("handles r = g (no real growth) as P · N · (1+r)^(N−1)", () => {
+    expect(futureValueOfMonthlyContributions(100, 0.02, 12, 0.02)).toBeCloseTo(
+      100 * 12 * (1 + monthlyRateFromAnnual(0.02)) ** 11,
+      8,
+    );
+    expect(futureValueOfMonthlyContributions(100, 0, 12)).toBe(1200);
   });
 });
 
 describe("scenarios", () => {
-  const r = computeRetirementResults(baseInputs, 100000);
+  const r = computeRetirementResults(baseInputs, nw(100000));
 
   it("conservative requires saving at least as much as optimistic", () => {
     expect(r.conservative.monthlyContribution).toBeGreaterThanOrEqual(
@@ -180,9 +215,7 @@ describe("scenarios", () => {
 describe("edge cases", () => {
   it("pensions covering all expenses ⇒ zero target and no saving", () => {
     const r = computeRetirementResults(
-      { ...baseInputs, pensionSources: [{ label: "State", monthlyAmount: 9000 }] },
-      50000,
-    );
+      { ...baseInputs, pensionSources: [{ label: "State", monthlyAmount: 9000 }] }, nw(50000));
     expect(r.pensionsCoverAll).toBe(true);
     expect(r.targetPortfolio).toBe(0);
     expect(r.optimistic.monthlyContribution).toBe(0);
@@ -190,7 +223,7 @@ describe("edge cases", () => {
   });
 
   it("already past target ⇒ onTrack with no contribution", () => {
-    const r = computeRetirementResults(baseInputs, 2_000_000);
+    const r = computeRetirementResults(baseInputs, nw(2_000_000));
     expect(r.optimistic.onTrack).toBe(true);
     expect(r.optimistic.monthlyContribution).toBe(0);
     expect(r.optimistic.ageReachTargetWithoutSaving).toBe(40);
@@ -198,19 +231,15 @@ describe("edge cases", () => {
 
   it("flags an invalid timeline when retirementAge ≤ currentAge", () => {
     const r = computeRetirementResults(
-      { ...baseInputs, currentAge: 50, retirementAge: 45 },
-      100000,
-    );
+      { ...baseInputs, currentAge: 50, retirementAge: 45 }, nw(100000));
     expect(r.invalidTimeline).toBe(true);
     expect(r.yearsToRetirement).toBe(0);
   });
 
   it("counts fundable real-estate equity toward the funding basis", () => {
-    const without = computeRetirementResults(baseInputs, 100000);
+    const without = computeRetirementResults(baseInputs, nw(100000));
     const withEquity = computeRetirementResults(
-      { ...baseInputs, fundableRealEstateEquity: 50000 },
-      100000,
-    );
+      { ...baseInputs, fundableRealEstateEquity: 50000 }, nw(100000));
     expect(withEquity.fundableNow).toBe(150000);
     expect(withEquity.optimistic.monthlyContribution).toBeLessThan(
       without.optimistic.monthlyContribution,
@@ -222,12 +251,10 @@ describe("edge cases", () => {
       {
         ...baseInputs,
         pensionSources: [
-          { label: "State", monthlyAmount: 2000 },
-          { label: "Typo", monthlyAmount: -500 },
+          { label: "State", monthlyAmount: 2000, gross: false },
+          { label: "Typo", monthlyAmount: -500, gross: false },
         ],
-      },
-      100000,
-    );
+      }, nw(100000));
     expect(r.pensionTodayMonthly).toBe(2000);
   });
 });
@@ -239,7 +266,7 @@ describe("progress and funding-base edge cases", () => {
   };
 
   it("zero net worth ⇒ 0% progress and saving from scratch", () => {
-    const r = computeRetirementResults(baseInputs, 0);
+    const r = computeRetirementResults(baseInputs, nw(0));
     expect(r.fundableNow).toBe(0);
     expect(r.investableNow).toBe(0);
     expect(r.hasNetDebt).toBe(false);
@@ -251,8 +278,8 @@ describe("progress and funding-base edge cases", () => {
   });
 
   it("negative net worth is flagged and never compounded", () => {
-    const zero = computeRetirementResults(baseInputs, 0);
-    const r = computeRetirementResults(baseInputs, -50000);
+    const zero = computeRetirementResults(baseInputs, nw(0));
+    const r = computeRetirementResults(baseInputs, nw(-50000));
     expect(r.fundableNow).toBe(-50000);
     expect(r.investableNow).toBe(0);
     expect(r.hasNetDebt).toBe(true);
@@ -272,9 +299,7 @@ describe("progress and funding-base edge cases", () => {
 
   it("property equity can offset a negative net worth", () => {
     const r = computeRetirementResults(
-      { ...baseInputs, fundableRealEstateEquity: 80000 },
-      -30000,
-    );
+      { ...baseInputs, fundableRealEstateEquity: 80000 }, nw(-30000));
     expect(r.fundableNow).toBe(50000);
     expect(r.investableNow).toBe(50000);
     expect(r.hasNetDebt).toBe(false);
@@ -282,7 +307,7 @@ describe("progress and funding-base edge cases", () => {
 
   it("pensions covering everything ⇒ 100% progress at any net worth", () => {
     for (const netWorth of [50000, 0, -50000]) {
-      const r = computeRetirementResults(coveredByPensions, netWorth);
+      const r = computeRetirementResults(coveredByPensions, nw(netWorth));
       expect(r.pensionsCoverAll).toBe(true);
       expect(r.targetPortfolio).toBe(0);
       expect(r.progressPct).toBe(1);
@@ -294,16 +319,14 @@ describe("progress and funding-base edge cases", () => {
   });
 
   it("pensions covering everything with net debt still flags the debt", () => {
-    const r = computeRetirementResults(coveredByPensions, -50000);
+    const r = computeRetirementResults(coveredByPensions, nw(-50000));
     expect(r.hasNetDebt).toBe(true);
     expect(r.investableNow).toBe(0);
   });
 
   it("withdrawalRate = 0 ⇒ infinite target and 0% progress (never 100%)", () => {
     const r = computeRetirementResults(
-      { ...baseInputs, withdrawalRate: 0 },
-      50000,
-    );
+      { ...baseInputs, withdrawalRate: 0 }, nw(50000));
     expect(r.targetPortfolio).toBe(Infinity);
     expect(r.progressPct).toBe(0);
     expect(r.optimistic.onTrack).toBe(false);
@@ -312,8 +335,305 @@ describe("progress and funding-base edge cases", () => {
   });
 
   it("progress can exceed 100% when already ahead of the target", () => {
-    const r = computeRetirementResults(baseInputs, 2_000_000);
+    const r = computeRetirementResults(baseInputs, nw(2_000_000));
     expect(r.progressPct).toBeGreaterThan(1);
+  });
+});
+
+describe("horizon from the date of birth (fractional years)", () => {
+  const today = new Date(2026, 10, 11); // 11 Nov 2026, local calendar date
+
+  it("runs to date of birth + retirement age, not retirementAge − floor(age)", () => {
+    const t = retirementTimeline(
+      { birthDate: "1986-12-01", currentAge: 39, retirementAge: 67 },
+      today,
+    );
+    expect(t.yearsToRetirement).toBeCloseTo(27.056, 2);
+    expect(t.currentAgeExact).toBeCloseTo(39.95, 2);
+  });
+
+  it("falls back to whole years without a (valid) date of birth", () => {
+    for (const birthDate of [undefined, "", "not-a-date"]) {
+      const t = retirementTimeline(
+        { birthDate, currentAge: 39, retirementAge: 67 },
+        today,
+      );
+      expect(t).toEqual({ currentAgeExact: 39, yearsToRetirement: 28 });
+    }
+  });
+
+  it("asks for more saving than the overstated whole-year horizon", () => {
+    const inputs: RetirementInputs = {
+      ...baseInputs,
+      currentAge: 39,
+      retirementAge: 67,
+      monthlyExpensesToday: 3000,
+      pensionSources: [{ label: "State", monthlyAmount: 1500, gross: false }],
+    };
+    const exact = computeRetirementResults(
+      { ...inputs, birthDate: "1986-12-01" },
+      nw(50000),
+      today,
+    );
+    const whole = computeRetirementResults(inputs, nw(50000), today);
+    expect(exact.yearsToRetirement).toBeCloseTo(27.056, 2);
+    expect(whole.yearsToRetirement).toBe(28);
+    expect(exact.optimistic.monthlyContribution).toBeGreaterThan(
+      whole.optimistic.monthlyContribution * 1.05,
+    );
+  });
+
+  it("series starts at the exact age, steps through birthdays and ends at retirement", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, birthDate: "1986-12-01", currentAge: 39, retirementAge: 45 },
+      nw(100000),
+      today,
+    );
+    const series = r.optimistic.projectionSeries;
+    expect(series[0].age).toBeCloseTo(39.9, 5);
+    expect(series[1].age).toBe(40);
+    expect(series[series.length - 1].age).toBe(45);
+    expect(series[series.length - 1].yearOffset).toBeCloseTo(r.yearsToRetirement, 8);
+    expect(series[series.length - 1].portfolioValue).toBeCloseTo(
+      r.targetPortfolio,
+      2,
+    );
+  });
+
+  it("flags a retirement date already passed", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, birthDate: "1960-01-01", currentAge: 66, retirementAge: 65 },
+      nw(0),
+      today,
+    );
+    expect(r.invalidTimeline).toBe(true);
+    expect(r.yearsToRetirement).toBe(0);
+  });
+});
+
+describe("asset-class-weighted funding base", () => {
+  const mixed: RetirementFundingBase = {
+    assetsByCategory: { equities: 40000, cash: 60000 },
+    totalLiabilities: 0,
+  };
+
+  it("weights each category's expected return by value", () => {
+    const r = computeRetirementResults(baseInputs, mixed);
+    // 40% at 7.18%, 60% cash at inflation (2%).
+    expect(r.optimistic.baseReturn).toBeCloseTo(0.4 * 0.0718 + 0.6 * 0.02, 10);
+    expect(r.conservative.baseReturn).toBeCloseTo(0.4 * 0.05 + 0.6 * 0.02, 10);
+    expect(r.optimistic.projectedFromCurrent).toBeCloseTo(
+      100000 * (1 + r.optimistic.baseReturn) ** 5,
+      6,
+    );
+    expect(r.optimistic.annualReturn).toBe(DEFAULT_OPTIMISTIC_RETURN);
+  });
+
+  it("bonds sit halfway between the scenario return and inflation", () => {
+    const r = computeRetirementResults(baseInputs, {
+      assetsByCategory: { bonds: 10000 },
+      totalLiabilities: 0,
+    });
+    expect(r.optimistic.baseReturn).toBeCloseTo((0.0718 + 0.02) / 2, 10);
+  });
+
+  it("lets the user exclude a category (e.g. the emergency fund)", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, fundingTreatments: { cash: "exclude" } },
+      mixed,
+    );
+    expect(r.includedAssets).toBe(40000);
+    expect(r.excludedAssets).toBe(60000);
+    expect(r.fundableNow).toBe(40000);
+    expect(r.optimistic.baseReturn).toBeCloseTo(0.0718, 10);
+    expect(r.fundingLines.map((l) => [l.category, l.treatment])).toEqual([
+      ["equities", "growth"],
+      ["cash", "exclude"],
+    ]);
+  });
+
+  it("lets the user override a default (crypto at inflation)", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, fundingTreatments: { crypto: "inflation" } },
+      { assetsByCategory: { crypto: 5000 }, totalLiabilities: 0 },
+    );
+    expect(r.optimistic.baseReturn).toBeCloseTo(0.02, 10);
+  });
+
+  it("liabilities reduce the base but not the weights", () => {
+    const r = computeRetirementResults(baseInputs, {
+      ...mixed,
+      totalLiabilities: 20000,
+    });
+    expect(r.fundableNow).toBe(80000);
+    expect(r.liabilitiesCounted).toBe(20000);
+    expect(r.optimistic.baseReturn).toBeCloseTo(0.4 * 0.0718 + 0.6 * 0.02, 10);
+  });
+});
+
+describe("inflation-indexed contributions", () => {
+  it("starts lower and rises with inflation, reaching the same target", () => {
+    const flat = computeRetirementResults(
+      { ...baseInputs, retirementAge: 67 },
+      nw(50000),
+    );
+    const indexed = computeRetirementResults(
+      { ...baseInputs, retirementAge: 67, indexContributions: true },
+      nw(50000),
+    );
+    expect(flat.contributionsIndexed).toBe(false);
+    expect(flat.optimistic.finalMonthlyContribution).toBe(
+      flat.optimistic.monthlyContribution,
+    );
+    expect(indexed.contributionsIndexed).toBe(true);
+    expect(indexed.optimistic.monthlyContribution).toBeLessThan(
+      flat.optimistic.monthlyContribution,
+    );
+    expect(indexed.optimistic.finalMonthlyContribution).toBeCloseTo(
+      indexed.optimistic.monthlyContribution *
+        (1 + monthlyRateFromAnnual(0.02)) ** (27 * 12 - 1),
+      6,
+    );
+    const last = indexed.optimistic.projectionSeries.at(-1);
+    expect(last?.portfolioValue).toBeCloseTo(indexed.targetPortfolio, 2);
+  });
+});
+
+describe("pension sources: gross/net and indexed/nominal", () => {
+  it("takes the flat deduction off gross sources only", () => {
+    const r = computeRetirementResults(
+      {
+        ...baseInputs,
+        pensionDeductionRate: 0.2,
+        pensionSources: [
+          { label: "State", monthlyAmount: 1500 }, // gross by default
+          { label: "Private", monthlyAmount: 500, gross: false },
+        ],
+      },
+      nw(100000),
+    );
+    expect(r.pensionEnteredMonthly).toBe(2000);
+    expect(r.pensionDeductionsMonthly).toBeCloseTo(300, 8);
+    expect(r.pensionTodayMonthly).toBeCloseTo(1700, 8);
+    expect(r.pensionFutureMonthly).toBeCloseTo(1700 * 1.02 ** 5, 6);
+  });
+
+  it("uses the default deduction rate when none is set", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, pensionSources: [{ label: "State", monthlyAmount: 1500 }] },
+      nw(0),
+    );
+    expect(r.pensionTodayMonthly).toBeCloseTo(1500 * (1 - 0.17), 8);
+  });
+
+  it("does not inflate a nominal source", () => {
+    const r = computeRetirementResults(
+      {
+        ...baseInputs,
+        pensionSources: [
+          { label: "State", monthlyAmount: 1000, gross: false },
+          { label: "Company", monthlyAmount: 500, gross: false, indexed: false },
+        ],
+      },
+      nw(0),
+    );
+    expect(r.pensionFutureMonthly).toBeCloseTo(1000 * 1.02 ** 5 + 500, 6);
+  });
+});
+
+describe("withdrawal tax gross-up", () => {
+  it("defaults to a pre-tax target", () => {
+    const r = computeRetirementResults(baseInputs, nw(0));
+    expect(r.withdrawalTaxRate).toBe(0);
+    expect(r.targetPortfolio).toBeCloseTo(r.gapAnnual / 0.04, 6);
+  });
+
+  it("grosses the annual need up by 1 / (1 − tax)", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, withdrawalTaxRate: 0.2 },
+      nw(0),
+    );
+    expect(r.targetPortfolio).toBeCloseTo(r.gapAnnual / 0.8 / 0.04, 6);
+    expect(r.simpleTargetPortfolio).toBeCloseTo((2000 * 12) / 0.8 / 0.04, 6);
+  });
+});
+
+describe("primary residence mortgage", () => {
+  const mortgage = { balance: 250000, monthlyPayment: 1500, annualInterestRate: 0.03 };
+  const base: RetirementFundingBase = {
+    assetsByCategory: { equities: 100000 },
+    totalLiabilities: 260000, // mortgage + a €10k car loan
+    primaryResidenceMortgage: mortgage,
+  };
+
+  it("takes the residence mortgage out of the funding base", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, ownsPrimaryResidence: true },
+      base,
+    );
+    expect(r.liabilitiesCounted).toBe(10000);
+    expect(r.fundableNow).toBe(90000);
+    expect(r.hasNetDebt).toBe(false);
+    expect(r.residenceMortgage?.monthlyPayment).toBe(1500);
+  });
+
+  it("adds what is still owed at retirement to the target", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, ownsPrimaryResidence: true },
+      base,
+    );
+    const owed = mortgageBalanceAfterMonths(mortgage, 60);
+    expect(owed).toBeGreaterThan(0);
+    expect(r.residenceMortgage?.balanceAtRetirement).toBeCloseTo(owed, 6);
+    expect(r.targetPortfolio).toBeCloseTo(r.gapAnnual / 0.04 + owed, 6);
+  });
+
+  it("adds nothing once the mortgage is repaid before retirement", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, retirementAge: 67, ownsPrimaryResidence: true },
+      base,
+    );
+    expect(r.residenceMortgage?.balanceAtRetirement).toBe(0);
+    expect(r.targetPortfolio).toBeCloseTo(r.gapAnnual / 0.04, 6);
+  });
+
+  it("is ignored when the user doesn't own the home they live in", () => {
+    const r = computeRetirementResults(baseInputs, base);
+    expect(r.residenceMortgage).toBeNull();
+    expect(r.fundableNow).toBe(-160000);
+  });
+
+  it("amortises like an annuity loan", () => {
+    // 3% / 12 monthly; one payment: 250000 · 1.0025 − 1500.
+    expect(mortgageBalanceAfterMonths(mortgage, 1)).toBeCloseTo(249125, 6);
+    expect(mortgageBalanceAfterMonths({ ...mortgage, annualInterestRate: 0 }, 12)).toBe(232000);
+    expect(mortgageBalanceAfterMonths(mortgage, 10_000)).toBe(0);
+  });
+
+  it("normalises a tracked loan's payment to monthly", () => {
+    expect(
+      residenceMortgageFromLoan({
+        currentBalance: 100000,
+        annualInterestRate: 0.04,
+        scheduledPayment: 3000,
+        paymentFrequency: "QUARTERLY",
+      }),
+    ).toEqual({ balance: 100000, monthlyPayment: 1000, annualInterestRate: 0.04 });
+  });
+});
+
+describe("progress per scenario", () => {
+  it("headline progress is the conservative scenario's (as isOnTrack)", () => {
+    const r = computeRetirementResults(
+      { ...baseInputs, retirementAge: 68 },
+      nw(150000),
+    );
+    expect(r.optimistic.progressPct).toBeCloseTo(
+      r.optimistic.projectedFromCurrent / r.targetPortfolio,
+      10,
+    );
+    expect(r.conservative.progressPct).toBeLessThan(r.optimistic.progressPct);
+    expect(r.progressPct).toBe(r.conservative.progressPct);
   });
 });
 
@@ -517,5 +837,25 @@ describe("retirementPlanProblem", () => {
   it("returns null for a valid plan or when no assumptions are given", () => {
     expect(retirementPlanProblem(results, baseInputs)).toBeNull();
     expect(retirementPlanProblem(results)).toBeNull();
+  });
+});
+
+describe("deduction rate validation", () => {
+  it("accepts unset and 0–60% rates, rejects the rest", () => {
+    expect(validateRetirementInputs(baseInputs)).toEqual({});
+    expect(
+      validateRetirementInputs({
+        ...baseInputs,
+        pensionDeductionRate: 0.6,
+        withdrawalTaxRate: 0,
+      }),
+    ).toEqual({});
+    const errors = validateRetirementInputs({
+      ...baseInputs,
+      pensionDeductionRate: -0.1,
+      withdrawalTaxRate: Number.NaN,
+    });
+    expect(errors.pensionDeductionRate).toMatch(/between 0% and 60%/);
+    expect(errors.withdrawalTaxRate).toMatch(/between 0% and 60%/);
   });
 });

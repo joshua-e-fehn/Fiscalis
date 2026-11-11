@@ -3,10 +3,22 @@
 import { Home, Info } from "lucide-react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/shadcn/select";
 import { Switch } from "@/components/ui/shadcn/switch";
+import { useRetirementMortgageCandidates } from "@/hooks/convex/retirement";
 import { validateRetirementInputs } from "@/lib/types/retirement";
+import { formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
+
+/** Select value for "no residence mortgage linked". */
+const NO_LOAN = "none";
 
 export function HousingStep({
 	data,
@@ -16,6 +28,7 @@ export function HousingStep({
 	isSaving,
 }: RetirementStepProps) {
 	const equityError = validateRetirementInputs(data).fundableRealEstateEquity;
+	const loans = useRetirementMortgageCandidates();
 
 	return (
 		<RetirementStepShell
@@ -51,6 +64,40 @@ export function HousingStep({
 						count your home toward the portfolio that funds retirement — you
 						can&apos;t sell it and still live in it. Its real benefit is already
 						reflected in your lower monthly expenses (no rent).
+					</p>
+				</div>
+			)}
+
+			{data.ownsPrimaryResidence && (
+				<div className="space-y-2">
+					<Label htmlFor="residenceLoan">
+						Mortgage on this home{" "}
+						<span className="font-normal text-muted-foreground">(optional)</span>
+					</Label>
+					<Select
+						value={data.primaryResidenceLoanId ?? NO_LOAN}
+						onValueChange={(value) =>
+							update({
+								primaryResidenceLoanId: value === NO_LOAN ? undefined : value,
+							})
+						}
+					>
+						<SelectTrigger id="residenceLoan">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value={NO_LOAN}>No mortgage / not tracked</SelectItem>
+							{loans?.map((loan) => (
+								<SelectItem key={loan._id} value={loan._id}>
+									{loan.name} — {formatCurrency(loan.currentBalance, "eur")}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<p className="text-xs text-muted-foreground">
+						Its balance is not subtracted from your retirement funding: you pay
+						the repayments from your income until retirement, like rent. Any
+						balance still owed when you retire is added to your target.
 					</p>
 				</div>
 			)}

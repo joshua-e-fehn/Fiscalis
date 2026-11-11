@@ -9,6 +9,11 @@ import {
 } from "../../services/finance/retirementService";
 import { validateBirthDate } from "../lib/utils/date";
 import { mutation, query } from "./_generated/server";
+import { getOwnedDoc } from "./lib/auth";
+import {
+	retirementFundingTreatmentValidator,
+	retirementPensionSourceValidator,
+} from "./schema";
 
 // ═══════════════════════════════════════════════════════════════
 // RETIREMENT PLANNER ("Rentenplaner") — persistence layer
@@ -32,11 +37,6 @@ function assertValidStep(step: number) {
 		);
 	}
 }
-
-const pensionSourceValidator = v.object({
-	label: v.string(),
-	monthlyAmount: v.number(),
-});
 
 // ───────────────────────────────────────────────────────────────
 // Queries
@@ -77,9 +77,17 @@ export const saveRetirementPlan = mutation({
 		monthlyExpensesToday: v.optional(v.number()),
 
 		ownsPrimaryResidence: v.optional(v.boolean()),
+		// null unlinks the residence mortgage.
+		primaryResidenceLoanId: v.optional(v.union(v.id("loans"), v.null())),
 		fundableRealEstateEquity: v.optional(v.number()),
+		fundingTreatments: v.optional(
+			v.record(v.string(), retirementFundingTreatmentValidator),
+		),
 
-		pensionSources: v.optional(v.array(pensionSourceValidator)),
+		pensionSources: v.optional(v.array(retirementPensionSourceValidator)),
+		pensionDeductionRate: v.optional(v.number()),
+		withdrawalTaxRate: v.optional(v.number()),
+		indexContributions: v.optional(v.boolean()),
 
 		inflationRate: v.optional(v.number()),
 		withdrawalRate: v.optional(v.number()),
@@ -116,7 +124,14 @@ export const saveRetirementPlan = mutation({
 				args.ownsPrimaryResidence ?? existing?.ownsPrimaryResidence ?? false,
 			fundableRealEstateEquity:
 				args.fundableRealEstateEquity ?? existing?.fundableRealEstateEquity,
+			fundingTreatments:
+				args.fundingTreatments ?? existing?.fundingTreatments,
 			pensionSources: args.pensionSources ?? existing?.pensionSources ?? [],
+			pensionDeductionRate:
+				args.pensionDeductionRate ?? existing?.pensionDeductionRate,
+			withdrawalTaxRate: args.withdrawalTaxRate ?? existing?.withdrawalTaxRate,
+			indexContributions:
+				args.indexContributions ?? existing?.indexContributions,
 			inflationRate:
 				args.inflationRate ?? existing?.inflationRate ?? DEFAULT_INFLATION_RATE,
 			withdrawalRate:
@@ -149,7 +164,12 @@ export const saveRetirementPlan = mutation({
 			args.birthDate !== undefined ? validateBirthDate(args.birthDate) : null;
 		const birthDate = birthDateCheck?.ok ? birthDateCheck.value : undefined;
 
-		const ownsHome = args.ownsPrimaryResidence;
+		// The residence mortgage must be one of the user's own loans.
+		if (args.primaryResidenceLoanId) {
+			const loan = await getOwnedDoc(ctx, userId, args.primaryResidenceLoanId);
+			if (!loan) throw new Error("Loan not found");
+		}
+		const primaryResidenceLoanId = args.primaryResidenceLoanId ?? undefined;
 
 		if (!existing) {
 			const id = await ctx.db.insert("retirementPlans", {
@@ -158,8 +178,7 @@ export const saveRetirementPlan = mutation({
 				status,
 				birthDate,
 				...merged,
-				// Owner-occupied home is always excluded from the funding base.
-				primaryResidenceExcluded: merged.ownsPrimaryResidence,
+				primaryResidenceLoanId,
 				createdAt: now,
 				updatedAt: now,
 			});
@@ -176,15 +195,23 @@ export const saveRetirementPlan = mutation({
 			updates.retirementAge = args.retirementAge;
 		if (args.monthlyExpensesToday !== undefined)
 			updates.monthlyExpensesToday = args.monthlyExpensesToday;
-		if (ownsHome !== undefined) {
-			updates.ownsPrimaryResidence = ownsHome;
-			// Owner-occupied home is always excluded from the funding base.
-			updates.primaryResidenceExcluded = ownsHome;
-		}
+		if (args.ownsPrimaryResidence !== undefined)
+			updates.ownsPrimaryResidence = args.ownsPrimaryResidence;
+		// null → undefined removes the field (unlinks the mortgage).
+		if (args.primaryResidenceLoanId !== undefined)
+			updates.primaryResidenceLoanId = primaryResidenceLoanId;
 		if (args.fundableRealEstateEquity !== undefined)
 			updates.fundableRealEstateEquity = args.fundableRealEstateEquity;
+		if (args.fundingTreatments !== undefined)
+			updates.fundingTreatments = args.fundingTreatments;
 		if (args.pensionSources !== undefined)
 			updates.pensionSources = args.pensionSources;
+		if (args.pensionDeductionRate !== undefined)
+			updates.pensionDeductionRate = args.pensionDeductionRate;
+		if (args.withdrawalTaxRate !== undefined)
+			updates.withdrawalTaxRate = args.withdrawalTaxRate;
+		if (args.indexContributions !== undefined)
+			updates.indexContributions = args.indexContributions;
 		if (args.inflationRate !== undefined)
 			updates.inflationRate = args.inflationRate;
 		if (args.withdrawalRate !== undefined)

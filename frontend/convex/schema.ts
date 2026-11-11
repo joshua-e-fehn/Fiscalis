@@ -18,6 +18,24 @@ export const loanStatusValidator = oneOf(LOAN_STATUSES);
 export const loanPaymentTypeValidator = oneOf(LOAN_PAYMENT_TYPES);
 export const prepaymentEffectValidator = oneOf(PREPAYMENT_EFFECTS);
 
+/** Retirement plan: how a funding category grows (FundingTreatment in retirementService). */
+export const retirementFundingTreatmentValidator = v.union(
+	v.literal("growth"),
+	v.literal("moderate"),
+	v.literal("inflation"),
+	v.literal("exclude"),
+);
+
+/** Retirement plan: one pension source (PensionSource in retirementService). */
+export const retirementPensionSourceValidator = v.object({
+	label: v.string(),
+	monthlyAmount: v.number(),
+	// Absent = gross (the plan's deduction rate is taken off).
+	gross: v.optional(v.boolean()),
+	// Absent = indexed to inflation until retirement.
+	indexed: v.optional(v.boolean()),
+});
+
 export default defineSchema({
 	// ═══════════════════════════════════════════════════════════════
 	// BANKING (Plaid)
@@ -462,19 +480,27 @@ export default defineSchema({
 
 		// Housing / real estate
 		ownsPrimaryResidence: v.boolean(),
-		// Owner-occupied home is excluded from the 4%-rule funding base (cannot be
-		// sold and lived in). Stored explicitly for UI clarity.
-		primaryResidenceExcluded: v.boolean(),
+		// DEPRECATED: write-only copy of ownsPrimaryResidence, never read. No
+		// longer written; kept optional for existing documents.
+		primaryResidenceExcluded: v.optional(v.boolean()),
+		// The tracked loan on the home the user lives in: taken out of the
+		// funding base, its repayments are a pre-retirement expense.
+		primaryResidenceLoanId: v.optional(v.id("loans")),
 		// Sellable property equity the user wants to count toward funding.
 		fundableRealEstateEquity: v.optional(v.number()),
+		// Growth treatment per funding category id (absent = service defaults).
+		fundingTreatments: v.optional(
+			v.record(v.string(), retirementFundingTreatmentValidator),
+		),
 
 		// Pension income (flexible list of monthly sources)
-		pensionSources: v.array(
-			v.object({
-				label: v.string(),
-				monthlyAmount: v.number(),
-			}),
-		),
+		pensionSources: v.array(retirementPensionSourceValidator),
+		// Flat tax + health-insurance rate on gross pensions (absent = default).
+		pensionDeductionRate: v.optional(v.number()),
+		// Tax on withdrawals (absent = 0, i.e. a pre-tax target).
+		withdrawalTaxRate: v.optional(v.number()),
+		// Monthly saving rises with inflation (absent = flat nominal amount).
+		indexContributions: v.optional(v.boolean()),
 
 		// Assumptions (defaults applied on create)
 		inflationRate: v.number(), // default 0.02

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useSetBirthDate, useUserSettings } from "@/hooks/convex/onboarding";
 import {
 	planToInputs,
@@ -42,12 +43,24 @@ const STEP_FIELDS: [RetirementStep, PlanField[]][] = [
 	[RetirementStep.EXPENSES, ["monthlyExpensesToday"]],
 	[
 		RetirementStep.HOUSING,
-		["ownsPrimaryResidence", "fundableRealEstateEquity"],
+		[
+			"ownsPrimaryResidence",
+			"primaryResidenceLoanId",
+			"fundableRealEstateEquity",
+		],
 	],
-	[RetirementStep.PENSIONS, ["pensionSources"]],
+	[RetirementStep.PENSIONS, ["pensionSources", "pensionDeductionRate"]],
+	[RetirementStep.PORTFOLIO, ["fundingTreatments"]],
 	[
 		RetirementStep.ASSUMPTIONS,
-		["inflationRate", "withdrawalRate", "optimisticReturn", "conservativeReturn"],
+		[
+			"inflationRate",
+			"withdrawalRate",
+			"optimisticReturn",
+			"conservativeReturn",
+			"withdrawalTaxRate",
+			"indexContributions",
+		],
 	],
 ];
 
@@ -56,11 +69,23 @@ function fieldsThrough(step: RetirementStep): PlanField[] {
 	return STEP_FIELDS.filter(([s]) => s <= step).flatMap(([, fields]) => fields);
 }
 
-function pickFields(
-	values: RetirementInputs,
-	fields: PlanField[],
-): Partial<RetirementInputs> {
-	return Object.fromEntries(fields.map((f) => [f, values[f]]));
+/**
+ * The mutation args for `fields`. Unset optional fields are left out, except
+ * the residence loan: null unlinks it.
+ */
+function pickFields(values: RetirementInputs, fields: PlanField[]) {
+	const { primaryResidenceLoanId, ...rest } = Object.fromEntries(
+		fields.map((f) => [f, values[f]]),
+	) as Partial<RetirementInputs>;
+	return {
+		...rest,
+		...(fields.includes("primaryResidenceLoanId")
+			? {
+					primaryResidenceLoanId:
+						(primaryResidenceLoanId as Id<"loans"> | undefined) ?? null,
+				}
+			: {}),
+	};
 }
 
 // Convex hides server error messages in production, so failures that pass the
@@ -120,14 +145,20 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 		setHydrated(true);
 	}, [hydrated, plan, settings]);
 
-	// The current age always follows the date of birth being edited.
+	// The current age (and the exact horizon) follow the date of birth being edited.
 	useEffect(() => {
 		const age = getAgeFromBirthDate(birthDate);
-		if (age !== null) {
-			setData((prev) =>
-				prev.currentAge === age ? prev : { ...prev, currentAge: age },
-			);
-		}
+		setData((prev) => {
+			const next = {
+				...prev,
+				birthDate: age !== null ? birthDate : undefined,
+				currentAge: age ?? prev.currentAge,
+			};
+			return next.currentAge === prev.currentAge &&
+				next.birthDate === prev.birthDate
+				? prev
+				: next;
+		});
 	}, [birthDate]);
 
 	const update = useCallback((patch: Partial<RetirementInputs>) => {

@@ -4,24 +4,38 @@
 //
 // Framework-free so it can be imported by both the frontend (live wizard
 // preview) and any server code via a single, unit-tested source of truth.
-// All amounts are in the user's base currency (EUR). All compounding is
-// annual, consistent with the primitives in `financeService.ts`.
+// All amounts are in the user's base currency (EUR). Asset growth compounds
+// annually (the primitives in `financeService.ts`); savings are monthly
+// deposits at the equivalent monthly rate r_m = (1 + r)^(1/12) − 1.
 //
 // The model (see docs/RETIREMENT_PLANNER_PLAN.md §1):
+//   0. n               = years from today to (date of birth + retirementAge),
+//                        fractional; whole years only without a date of birth
 //   1. expenseFuture   = monthlyExpensesToday × (1 + inflation)^n
-//   2. pensionFuture   = Σ pensionSources[i].monthlyAmount × (1 + inflation)^n
-//   3. gapMonthly      = max(0, expenseFuture − pensionFuture)
+//   2. pensionFuture   = Σ net(source) × (1 + inflation)^n for indexed sources,
+//                        Σ net(source) for nominal ones; net = gross × (1 − d)
+//                        for a gross source (d = flat tax + health-insurance rate)
+//   3. gapMonthly      = max(0, expenseFuture − pensionFuture)   (net need)
 //   4. gapAnnual       = gapMonthly × 12
-//   5. targetPortfolio = gapAnnual / withdrawalRate            (4% rule ⇒ × 25)
-//   6. fundableNow     = netWorth + fundableRealEstateEquity   (investable = max(0, ·))
-//   7. projected       = investableNow × (1 + r)^n
-//   8. remainingGap    = max(0, targetPortfolio − projected)
-//   9. monthlyContribution(r) closes remainingGap by retirement
+//   5. targetPortfolio = gapAnnual / (1 − withdrawalTax) / withdrawalRate
+//                        + residence mortgage still owed at retirement
+//      With withdrawalTax = 0 (default) the target is a PRE-TAX figure.
+//   6. fundableNow     = Σ included asset categories + fundable property
+//                        − liabilities (a primary-residence mortgage excluded)
+//   7. baseReturn(r)   = value-weighted return of the included categories:
+//                        growth → r, moderate → (r + inflation)/2,
+//                        inflation → inflation; excluded categories don't count
+//   8. projected       = max(0, fundableNow) × (1 + baseReturn)^n
+//   9. remainingGap    = max(0, targetPortfolio − projected)
+//  10. monthlyContribution closes remainingGap with 12·n monthly deposits
+//      invested at r — flat in nominal euros, or (optional) rising with
+//      inflation (growing annuity, g = inflation; the figure is the first one).
 //
-// Expenses AND pensions are entered in today's money (a German Renteninformation
-// quotes today's value), so both are inflated to the retirement date before the
-// subtraction. A negative funding base (debt) is never compounded at the
-// portfolio return; growth starts from zero and the UI shows a debt message.
+// A primary residence the user lives in is never funding: its equity is not in
+// the net worth, and its mortgage is taken OUT of the liabilities here. The
+// mortgage repayments are a pre-retirement expense paid from income (reported,
+// not part of the savings figure); what is still owed at retirement is added
+// to the target, as it must then be paid off from the portfolio.
 //
 // Why no double-counting of inflation: pre-retirement we inflate the expense
 // target and grow assets nominally; post-retirement the 4% withdrawal rate
@@ -29,10 +43,12 @@
 
 import {
   calculateEndCapitalValueWithCompoundInterest,
-  calculateStartCapitalValueWithCompoundInterest,
-  calculateAnnuityPayment,
   calculateCapitalGainDurationWithCompoundInterest,
 } from "./financeService";
+import {
+  getPaymentsPerYear,
+  type LoanPaymentFrequency,
+} from "./loanScheduleService";
 
 // ───────────────────────────────────────────────────────────────
 // Defaults (single source of truth — also imported by convex/retirement.ts)
@@ -44,12 +60,94 @@ export const DEFAULT_WITHDRAWAL_RATE = 0.04;
 export const DEFAULT_OPTIMISTIC_RETURN = 0.0718;
 /** Slightly more conservative scenario. */
 export const DEFAULT_CONSERVATIVE_RETURN = 0.05;
+/**
+ * Flat deduction from a GROSS pension: health and long-term care insurance
+ * (KVdR/PV ≈ 11–12%) plus a typical income-tax share. €1,500 gross ≈ €1,245 net.
+ */
+export const DEFAULT_PENSION_DEDUCTION_RATE = 0.17;
+/** Tax on portfolio withdrawals. 0 ⇒ the target is a pre-tax figure. */
+export const DEFAULT_WITHDRAWAL_TAX_RATE = 0;
 
 /** Upper bound for every rate assumption (inflation, returns, withdrawal rate). */
 export const MAX_RETIREMENT_RATE = 0.2;
+/** Upper bound for the pension deduction and the withdrawal tax rate. */
+export const MAX_RETIREMENT_DEDUCTION_RATE = 0.6;
 /** Supported age range (inclusive) for the current and the retirement age. */
 export const MIN_RETIREMENT_PLAN_AGE = 0;
 export const MAX_RETIREMENT_PLAN_AGE = 120;
+
+// ───────────────────────────────────────────────────────────────
+// Funding base: categories and how each one is expected to grow
+// ───────────────────────────────────────────────────────────────
+
+/**
+ * How a funding category grows in a scenario with return r:
+ * - growth:    r (the scenario return)
+ * - moderate:  halfway between r and inflation (e.g. bonds)
+ * - inflation: keeps pace with inflation, i.e. 0% real (e.g. cash, gold)
+ * - exclude:   not counted at all (e.g. an emergency fund)
+ */
+export type FundingTreatment = "growth" | "moderate" | "inflation" | "exclude";
+
+export const FUNDING_TREATMENT_LABELS: Record<FundingTreatment, string> = {
+  growth: "Grows at the scenario return",
+  moderate: "Halfway between return and inflation",
+  inflation: "Keeps pace with inflation",
+  exclude: "Not counted (e.g. emergency fund)",
+};
+
+export interface FundingCategoryDef {
+  /** Asset category id (InvestmentCategory), or "property" for the manual equity. */
+  id: string;
+  label: string;
+  defaultTreatment: FundingTreatment;
+}
+
+/** Funding categories in display order, with their default growth treatment. */
+export const FUNDING_CATEGORIES: readonly FundingCategoryDef[] = [
+  { id: "equities", label: "Equities", defaultTreatment: "growth" },
+  { id: "real-estate", label: "Real estate funds", defaultTreatment: "growth" },
+  { id: "crypto", label: "Crypto", defaultTreatment: "growth" },
+  { id: "bonds", label: "Bonds", defaultTreatment: "moderate" },
+  { id: "commodities", label: "Commodities & metals", defaultTreatment: "inflation" },
+  { id: "cash", label: "Cash & savings", defaultTreatment: "inflation" },
+  { id: "collectibles", label: "Collectibles", defaultTreatment: "inflation" },
+  { id: "property", label: "Sellable property", defaultTreatment: "inflation" },
+];
+
+/** Funding category id of `fundableRealEstateEquity`. */
+export const PROPERTY_FUNDING_CATEGORY = "property";
+
+/** User overrides of the default treatment, by funding category id. */
+export type FundingTreatments = Record<string, FundingTreatment>;
+
+/** The treatment in effect for `category` (override, else default, else growth). */
+export function fundingTreatmentFor(
+  category: string,
+  treatments?: FundingTreatments,
+): FundingTreatment {
+  return (
+    treatments?.[category] ??
+    FUNDING_CATEGORIES.find((c) => c.id === category)?.defaultTreatment ??
+    "growth"
+  );
+}
+
+/** Expected annual return of a treatment in a scenario with return `scenarioReturn`. */
+export function treatmentReturn(
+  treatment: Exclude<FundingTreatment, "exclude">,
+  scenarioReturn: number,
+  inflationRate: number,
+): number {
+  switch (treatment) {
+    case "growth":
+      return scenarioReturn;
+    case "moderate":
+      return (scenarioReturn + inflationRate) / 2;
+    case "inflation":
+      return inflationRate;
+  }
+}
 
 // ───────────────────────────────────────────────────────────────
 // Types
@@ -57,34 +155,91 @@ export const MAX_RETIREMENT_PLAN_AGE = 120;
 
 export interface PensionSource {
   label: string;
-  /** Monthly amount in today's money (inflated to the retirement date). */
+  /** Monthly amount in today's money. */
   monthlyAmount: number;
+  /** Gross amount (default): the flat pension deduction rate is taken off. */
+  gross?: boolean;
+  /**
+   * Rises with inflation until retirement (default; e.g. the statutory
+   * pension). false = fixed in nominal euros (e.g. many company pensions).
+   */
+  indexed?: boolean;
 }
 
 export interface RetirementInputs {
+  /** Whole years; the display age. The horizon uses `birthDate` when given. */
   currentAge: number;
   retirementAge: number;
+  /**
+   * ISO date of birth. When valid, the horizon runs to the exact date of
+   * birth + retirementAge years, not to retirementAge − currentAge.
+   */
+  birthDate?: string;
   /** Desired minimum monthly living expenses in today's money. */
   monthlyExpensesToday: number;
-  /** Owner-occupied home: excluded from the funding portfolio (cannot be sold and lived in). */
+  /**
+   * Owner-occupied home. Its equity is never funding, and the mortgage on it
+   * (`primaryResidenceLoanId`) is treated as a pre-retirement expense.
+   */
   ownsPrimaryResidence: boolean;
+  /**
+   * The tracked loan financing that home. The caller resolves it into
+   * `RetirementFundingBase.primaryResidenceMortgage` (the math never reads it).
+   */
+  primaryResidenceLoanId?: string;
   /**
    * Sellable property value net of loans not tracked in Fiscalis (tracked loans
    * are already subtracted from net worth), counted toward retirement funding.
    */
   fundableRealEstateEquity?: number;
+  /** Growth treatment per funding category (defaults: FUNDING_CATEGORIES). */
+  fundingTreatments?: FundingTreatments;
   pensionSources: PensionSource[];
+  /** Flat tax + health-insurance rate taken off gross pensions. */
+  pensionDeductionRate?: number;
+  /** Tax on withdrawals; the need is grossed up by 1 / (1 − rate). Default 0. */
+  withdrawalTaxRate?: number;
+  /** Raise the monthly saving with inflation (default: flat nominal amount). */
+  indexContributions?: boolean;
   inflationRate: number;
   withdrawalRate: number;
   optimisticReturn: number;
   conservativeReturn: number;
 }
 
+/** A tracked mortgage on the home the user lives in. */
+export interface ResidenceMortgage {
+  /** Outstanding balance today (part of the tracked liabilities). */
+  balance: number;
+  /** Repayment per month (scheduled payment normalised to monthly). */
+  monthlyPayment: number;
+  /** Nominal annual interest rate (0.035 = 3.5%), compounded monthly. */
+  annualInterestRate: number;
+}
+
+/** What the plan is funded from: today's assets per category and the debts. */
+export interface RetirementFundingBase {
+  /** Asset value per category id (e.g. "equities", "cash"), base currency. */
+  assetsByCategory: Record<string, number>;
+  /** All tracked liabilities, incl. a primary-residence mortgage. */
+  totalLiabilities: number;
+  /** The loan on the home the user lives in, when one is linked. */
+  primaryResidenceMortgage?: ResidenceMortgage | null;
+}
+
+export interface FundingLine {
+  category: string;
+  label: string;
+  value: number;
+  treatment: FundingTreatment;
+}
+
 export interface ProjectionPoint {
   /** Years from today (0 … yearsToRetirement). */
   yearOffset: number;
+  /** Age at this point (whole birthdays after the first point). */
   age: number;
-  /** Portfolio value if the user saves `monthlyContribution` each year. */
+  /** Portfolio value if the user saves `monthlyContribution` each month. */
   portfolioValue: number;
   /** Portfolio value from the current assets ALONE (no further saving). */
   portfolioValueNoContrib: number;
@@ -93,13 +248,20 @@ export interface ProjectionPoint {
 }
 
 export interface ScenarioResult {
+  /** Scenario return: what new savings (and "growth" assets) earn. */
   annualReturn: number;
+  /** Value-weighted expected return of today's funding base. */
+  baseReturn: number;
   /** Current fundable assets grown to retirement with no further saving. */
   projectedFromCurrent: number;
   /** Shortfall the contributions must close (≥ 0). */
   remainingGap: number;
-  /** Required monthly saving to hit the target exactly at retirement. */
+  /** Required monthly saving (the first one when indexed) to hit the target. */
   monthlyContribution: number;
+  /** The last monthly saving before retirement (= first unless indexed). */
+  finalMonthlyContribution: number;
+  /** projectedFromCurrent / target: the share current assets alone reach. */
+  progressPct: number;
   /** True when current assets alone already grow past the target. */
   onTrack: boolean;
   /** Years for current assets ALONE to reach the target (null if unreachable). */
@@ -110,45 +272,69 @@ export interface ScenarioResult {
 }
 
 export interface RetirementResults {
+  /** Fractional years until the retirement date. */
   yearsToRetirement: number;
-  /** True when retirementAge ≤ currentAge (caller should surface a validation hint). */
+  /** Exact (fractional) age today. */
+  currentAgeExact: number;
+  /** True when the retirement date is not in the future. */
   invalidTimeline: boolean;
 
   /** The user's entered monthly expenses in today's money. */
   expenseTodayMonthly: number;
   expenseFutureMonthly: number;
-  /** Sum of the pension sources in today's money (negative amounts count as 0). */
+  /** Sum of the pension amounts as entered (negative amounts count as 0). */
+  pensionEnteredMonthly: number;
+  /** Tax and health insurance taken off the gross sources (today's money). */
+  pensionDeductionsMonthly: number;
+  /** Net pensions in today's money (entered − deductions). */
   pensionTodayMonthly: number;
-  /** Pensions inflated to the retirement date — the amount subtracted from expenseFutureMonthly. */
+  /** Net pensions at the retirement date — the amount subtracted from expenseFutureMonthly. */
   pensionFutureMonthly: number;
+  /** Net monthly need the portfolio must cover at retirement. */
   gapMonthly: number;
   gapAnnual: number;
+  /** Tax rate the withdrawals are grossed up for (0 ⇒ pre-tax target). */
+  withdrawalTaxRate: number;
   targetPortfolio: number;
 
   /**
-   * Simplified target in today's money (today's expenses − today's pensions),
-   * for the explainer. targetPortfolio = simpleTargetPortfolio × (1 + inflation)^n.
+   * Simplified target in today's money (today's expenses − today's net
+   * pensions, no mortgage), for the explainer.
    */
   simpleTargetPortfolio: number;
 
-  /**
-   * Net worth + sellable property value net of loans not tracked in Fiscalis;
-   * negative when debts exceed assets.
-   */
+  /** Every funding category with a value, and how it is treated. */
+  fundingLines: FundingLine[];
+  /** Assets counted toward funding (incl. fundable property). */
+  includedAssets: number;
+  /** Assets the user excluded (e.g. an emergency fund). */
+  excludedAssets: number;
+  /** Liabilities subtracted from the funding base (residence mortgage excluded). */
+  liabilitiesCounted: number;
+  /** The primary-residence mortgage treatment, when one applies. */
+  residenceMortgage: {
+    balance: number;
+    monthlyPayment: number;
+    /** Still owed at retirement; added to targetPortfolio. */
+    balanceAtRetirement: number;
+  } | null;
+
+  /** includedAssets − liabilitiesCounted; negative when debts exceed assets. */
   fundableNow: number;
   /** max(0, fundableNow): the amount the projections grow (debt is not compounded). */
   investableNow: number;
   /** True when fundableNow < 0 — the UI shows a debt message instead of a projection. */
   hasNetDebt: boolean;
-  /** Present value of the target discounted at the optimistic return. */
-  presentValueOfTarget: number;
   /**
-   * investableNow / presentValueOfTarget. 1 when pensions cover everything
-   * (target 0), 0 when the target is infinite. Never negative; may exceed 1.
+   * Headline progress: the CONSERVATIVE scenario's progressPct (the same
+   * scenario isOnTrack requires). 1 when pensions cover everything, 0 when the
+   * target is infinite. Never negative; may exceed 1.
    */
   progressPct: number;
   /** True when pensions already cover the inflation-adjusted expenses. */
   pensionsCoverAll: boolean;
+  /** True when the monthly saving rises with inflation. */
+  contributionsIndexed: boolean;
 
   optimistic: ScenarioResult;
   conservative: ScenarioResult;
@@ -181,52 +367,52 @@ export function portfolioTargetFromAnnualGap(
   return annualGap / withdrawalRate;
 }
 
-/** Future value of `annualContribution` saved for `years` at annual `rate`. */
-function futureValueOfAnnuity(
-  annualContribution: number,
-  rate: number,
-  years: number,
-): number {
-  if (years <= 0) return 0;
-  if (rate === 0) return annualContribution * years;
-  return (annualContribution * (Math.pow(1 + rate, years) - 1)) / rate;
+/** Monthly rate equivalent to an annual rate: (1 + r)^(1/12) − 1. */
+export function monthlyRateFromAnnual(annualRate: number): number {
+  return Math.pow(1 + annualRate, 1 / 12) - 1;
 }
 
 /**
- * Required MONTHLY saving so that current assets (grown at `rate`) plus the
- * future value of the contributions equal `targetPortfolio` at retirement.
- *
- * Sinking-fund payment: discount the shortfall to a present value, then amortise
- * it with the PMT formula — `calculateAnnuityPayment(PV(gap), r, n)` resolves to
- * `gap · r / ((1+r)^n − 1)`, the exact future-value-of-annuity contribution.
+ * Future value of `months` end-of-month deposits invested at `annualReturn`;
+ * the first deposit is `firstPayment` and each one grows by `annualGrowth`
+ * per year (both converted to monthly rates). `months` may be fractional.
+ * FV = P · ((1+r)^N − (1+g)^N) / (r − g); P · N · (1+r)^(N−1) when r = g.
+ */
+export function futureValueOfMonthlyContributions(
+  firstPayment: number,
+  annualReturn: number,
+  months: number,
+  annualGrowth = 0,
+): number {
+  if (months <= 0) return 0;
+  const r = monthlyRateFromAnnual(annualReturn);
+  const g = monthlyRateFromAnnual(annualGrowth);
+  if (Math.abs(r - g) < 1e-12) {
+    return firstPayment * months * Math.pow(1 + r, months - 1);
+  }
+  return (
+    (firstPayment * (Math.pow(1 + r, months) - Math.pow(1 + g, months))) /
+    (r - g)
+  );
+}
+
+/**
+ * Required MONTHLY saving (the first deposit when `annualGrowth` > 0) that
+ * grows to `remainingGap` by retirement: the inverse of
+ * futureValueOfMonthlyContributions over 12·years months.
  */
 export function requiredMonthlyContribution(
-  currentFundable: number,
-  targetPortfolio: number,
+  remainingGap: number,
   years: number,
   annualReturn: number,
+  annualGrowth = 0,
 ): number {
-  if (!isFinite(targetPortfolio)) return Infinity;
-  if (years <= 0) return 0; // no time left to contribute over
-  const projected = calculateEndCapitalValueWithCompoundInterest(
-    currentFundable,
-    annualReturn,
-    years,
+  if (!isFinite(remainingGap)) return Infinity;
+  if (years <= 0 || remainingGap <= 0) return 0; // nothing to close / no time
+  return (
+    remainingGap /
+    futureValueOfMonthlyContributions(1, annualReturn, years * 12, annualGrowth)
   );
-  const gap = targetPortfolio - projected;
-  if (gap <= 0) return 0;
-
-  const presentValueOfGap = calculateStartCapitalValueWithCompoundInterest(
-    gap,
-    annualReturn,
-    years,
-  );
-  const annualContribution = calculateAnnuityPayment(
-    presentValueOfGap,
-    annualReturn,
-    years,
-  );
-  return annualContribution / 12;
 }
 
 /**
@@ -249,66 +435,183 @@ export function yearsToTargetWithoutSaving(
   );
 }
 
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const MS_PER_YEAR = 365.2425 * 24 * 60 * 60 * 1000;
+
+/**
+ * Exact age today and fractional years until the retirement date
+ * (date of birth + retirementAge years). Calendar fields only, so the result
+ * doesn't depend on the timezone. Without a valid date of birth: whole years.
+ */
+export function retirementTimeline(
+  inputs: Pick<RetirementInputs, "birthDate" | "currentAge" | "retirementAge">,
+  today: Date = new Date(),
+): { currentAgeExact: number; yearsToRetirement: number } {
+  const match = inputs.birthDate ? ISO_DATE.exec(inputs.birthDate.trim()) : null;
+  if (!match) {
+    return {
+      currentAgeExact: inputs.currentAge,
+      yearsToRetirement: inputs.retirementAge - inputs.currentAge,
+    };
+  }
+  const [y, m, d] = [Number(match[1]), Number(match[2]) - 1, Number(match[3])];
+  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  // A 29 February birthday rolls over to 1 March in non-leap years.
+  const retirementDate = Date.UTC(y + inputs.retirementAge, m, d);
+  return {
+    currentAgeExact: (now - Date.UTC(y, m, d)) / MS_PER_YEAR,
+    yearsToRetirement: (retirementDate - now) / MS_PER_YEAR,
+  };
+}
+
+/** Normalise a tracked loan to the residence-mortgage input (monthly payment). */
+export function residenceMortgageFromLoan(loan: {
+  currentBalance: number;
+  annualInterestRate: number;
+  scheduledPayment: number;
+  paymentFrequency: LoanPaymentFrequency;
+}): ResidenceMortgage {
+  return {
+    balance: Math.max(0, loan.currentBalance),
+    monthlyPayment:
+      (loan.scheduledPayment * getPaymentsPerYear(loan.paymentFrequency)) / 12,
+    annualInterestRate: loan.annualInterestRate,
+  };
+}
+
+/**
+ * Outstanding balance of an annuity loan after `months` repayments of
+ * `monthlyPayment` at `annualInterestRate` / 12 per month (never negative).
+ */
+export function mortgageBalanceAfterMonths(
+  mortgage: ResidenceMortgage,
+  months: number,
+): number {
+  const { balance, monthlyPayment, annualInterestRate } = mortgage;
+  if (months <= 0) return balance;
+  const i = annualInterestRate / 12;
+  if (i === 0) return Math.max(0, balance - monthlyPayment * months);
+  const factor = Math.pow(1 + i, months);
+  return Math.max(0, balance * factor - (monthlyPayment * (factor - 1)) / i);
+}
+
 // ───────────────────────────────────────────────────────────────
 // Per-scenario computation
 // ───────────────────────────────────────────────────────────────
 
-function computeScenario(
+interface ScenarioContext {
+  investableNow: number;
+  /** Included lines only (treatment ≠ exclude). */
+  includedLines: FundingLine[];
+  includedAssets: number;
+  targetPortfolio: number;
+  years: number;
+  currentAgeExact: number;
+  inflationRate: number;
+  contributionGrowth: number;
+}
+
+/** Value-weighted return of the included categories (scenario return if none). */
+function fundingBaseReturn(
+  ctx: ScenarioContext,
   annualReturn: number,
-  investableNow: number,
-  targetPortfolio: number,
-  years: number,
-  currentAge: number,
-): ScenarioResult {
-  const projectedFromCurrent = calculateEndCapitalValueWithCompoundInterest(
-    investableNow,
-    annualReturn,
-    years,
+): number {
+  if (ctx.includedAssets <= 0) return annualReturn;
+  const weighted = ctx.includedLines.reduce(
+    (sum, line) =>
+      sum +
+      line.value *
+        treatmentReturn(
+          line.treatment as Exclude<FundingTreatment, "exclude">,
+          annualReturn,
+          ctx.inflationRate,
+        ),
+    0,
   );
+  return weighted / ctx.includedAssets;
+}
+
+/** Year offsets of the series: today, each following birthday, retirement. */
+function seriesOffsets(years: number, currentAgeExact: number): number[] {
+  if (years <= 0) return [0];
+  const offsets = [0];
+  const firstBirthday = Math.floor(currentAgeExact) + 1 - currentAgeExact;
+  for (let t = firstBirthday; t < years - 1e-6; t += 1) offsets.push(t);
+  offsets.push(years);
+  return offsets;
+}
+
+function computeScenario(
+  ctx: ScenarioContext,
+  annualReturn: number,
+): ScenarioResult {
+  const { investableNow, targetPortfolio, years, contributionGrowth } = ctx;
+  const baseReturn = fundingBaseReturn(ctx, annualReturn);
+  const growBase = (t: number) =>
+    calculateEndCapitalValueWithCompoundInterest(investableNow, baseReturn, t);
+
+  const projectedFromCurrent = growBase(years);
   const onTrack = projectedFromCurrent >= targetPortfolio;
   const remainingGap = Math.max(0, targetPortfolio - projectedFromCurrent);
   const monthlyContribution = requiredMonthlyContribution(
-    investableNow,
-    targetPortfolio,
+    remainingGap,
     years,
     annualReturn,
+    contributionGrowth,
   );
+  const progressPct =
+    targetPortfolio <= 0
+      ? 1 // pensions already cover the expenses
+      : isFinite(targetPortfolio)
+        ? projectedFromCurrent / targetPortfolio
+        : 0; // infinite target (withdrawal rate 0) can never be reached
 
   const yearsNoSaving = yearsToTargetWithoutSaving(
     investableNow,
     targetPortfolio,
-    annualReturn,
+    baseReturn,
   );
 
-  // Year-by-year portfolio value when saving the required contribution.
-  const annualContribution = monthlyContribution * 12;
-  const projectionSeries: ProjectionPoint[] = [];
-  const lastYear = Math.max(0, Math.round(years));
-  for (let k = 0; k <= lastYear; k++) {
-    const grown = calculateEndCapitalValueWithCompoundInterest(
-      investableNow,
-      annualReturn,
-      k,
-    );
-    const contributed = futureValueOfAnnuity(annualContribution, annualReturn, k);
-    projectionSeries.push({
-      yearOffset: k,
-      age: currentAge + k,
-      portfolioValue: grown + contributed,
+  // The same monthly annuity as the contribution, evaluated at each point.
+  const contributing = isFinite(monthlyContribution) ? monthlyContribution : 0;
+  const projectionSeries: ProjectionPoint[] = seriesOffsets(
+    years,
+    ctx.currentAgeExact,
+  ).map((t) => {
+    const grown = growBase(t);
+    return {
+      yearOffset: t,
+      age: Math.round((ctx.currentAgeExact + t) * 10) / 10,
+      portfolioValue:
+        grown +
+        futureValueOfMonthlyContributions(
+          contributing,
+          annualReturn,
+          t * 12,
+          contributionGrowth,
+        ),
       portfolioValueNoContrib: grown,
       targetPortfolio,
-    });
-  }
+    };
+  });
 
   return {
     annualReturn,
+    baseReturn,
     projectedFromCurrent,
     remainingGap,
     monthlyContribution,
+    finalMonthlyContribution:
+      monthlyContribution *
+      Math.pow(
+        1 + monthlyRateFromAnnual(contributionGrowth),
+        Math.max(0, years * 12 - 1),
+      ),
+    progressPct,
     onTrack,
     yearsToTargetWithoutSaving: yearsNoSaving,
     ageReachTargetWithoutSaving:
-      yearsNoSaving === null ? null : currentAge + yearsNoSaving,
+      yearsNoSaving === null ? null : ctx.currentAgeExact + yearsNoSaving,
     projectionSeries,
   };
 }
@@ -317,42 +620,104 @@ function computeScenario(
 // Top-level orchestration
 // ───────────────────────────────────────────────────────────────
 
+/** Net monthly amount of a pension source in today's money. */
+export function netPensionMonthly(
+  source: PensionSource,
+  deductionRate: number,
+): number {
+  const amount = Math.max(0, source.monthlyAmount || 0);
+  return source.gross === false ? amount : amount * (1 - deductionRate);
+}
+
+/** Funding lines (non-zero categories + fundable property), in display order. */
+function buildFundingLines(
+  inputs: RetirementInputs,
+  fundingBase: RetirementFundingBase,
+): FundingLine[] {
+  const values: Record<string, number> = {
+    ...fundingBase.assetsByCategory,
+    [PROPERTY_FUNDING_CATEGORY]: inputs.fundableRealEstateEquity ?? 0,
+  };
+  const known = FUNDING_CATEGORIES.map((c) => c.id);
+  const ids = [
+    ...known,
+    ...Object.keys(values).filter((id) => !known.includes(id)),
+  ];
+  return ids
+    .filter((id) => (values[id] ?? 0) !== 0)
+    .map((id) => ({
+      category: id,
+      label: FUNDING_CATEGORIES.find((c) => c.id === id)?.label ?? id,
+      value: values[id],
+      treatment: fundingTreatmentFor(id, inputs.fundingTreatments),
+    }));
+}
+
 /**
  * Compute the full retirement picture from the user's inputs and their current
- * net worth (the funding basis). `netWorth` is passed in so this stays pure —
- * the caller fetches it from the portfolio layer.
+ * funding base (assets per category and liabilities). The funding base is
+ * passed in so this stays pure — the caller fetches it from the portfolio
+ * layer. `today` anchors the date-of-birth horizon.
  */
 export function computeRetirementResults(
   inputs: RetirementInputs,
-  netWorth: number,
+  fundingBase: RetirementFundingBase,
+  today: Date = new Date(),
 ): RetirementResults {
-  const rawYears = inputs.retirementAge - inputs.currentAge;
-  const invalidTimeline = rawYears <= 0;
-  const years = Math.max(0, rawYears);
+  const timeline = retirementTimeline(inputs, today);
+  const invalidTimeline = timeline.yearsToRetirement <= 0;
+  const years = Math.max(0, timeline.yearsToRetirement);
 
   const expenseFutureMonthly = inflateToFuture(
     inputs.monthlyExpensesToday,
     inputs.inflationRate,
     years,
   );
-  // Pensions are in today's money, like expenses: inflate them the same way.
-  const pensionTodayMonthly = inputs.pensionSources.reduce(
+
+  // Pensions are in today's money: net them, then inflate the indexed ones.
+  const deductionRate =
+    inputs.pensionDeductionRate ?? DEFAULT_PENSION_DEDUCTION_RATE;
+  const pensionEnteredMonthly = inputs.pensionSources.reduce(
     (sum, s) => sum + Math.max(0, s.monthlyAmount || 0),
     0,
   );
-  const pensionFutureMonthly = inflateToFuture(
-    pensionTodayMonthly,
-    inputs.inflationRate,
-    years,
+  const pensionTodayMonthly = inputs.pensionSources.reduce(
+    (sum, s) => sum + netPensionMonthly(s, deductionRate),
+    0,
   );
+  const pensionFutureMonthly = inputs.pensionSources.reduce((sum, s) => {
+    const net = netPensionMonthly(s, deductionRate);
+    return (
+      sum +
+      (s.indexed === false ? net : inflateToFuture(net, inputs.inflationRate, years))
+    );
+  }, 0);
+
+  const withdrawalTaxRate =
+    inputs.withdrawalTaxRate ?? DEFAULT_WITHDRAWAL_TAX_RATE;
+  const grossUp = (annualNeed: number) =>
+    withdrawalTaxRate < 1 ? annualNeed / (1 - withdrawalTaxRate) : Infinity;
 
   const gapMonthly = Math.max(0, expenseFutureMonthly - pensionFutureMonthly);
   const gapAnnual = gapMonthly * 12;
-  const targetPortfolio = portfolioTargetFromAnnualGap(
-    gapAnnual,
-    inputs.withdrawalRate,
-  );
   const pensionsCoverAll = gapMonthly <= 0;
+
+  // Primary residence: the mortgage leaves the funding base; what is still
+  // owed at retirement is added to the target.
+  const mortgage = inputs.ownsPrimaryResidence
+    ? (fundingBase.primaryResidenceMortgage ?? null)
+    : null;
+  const residenceMortgage = mortgage
+    ? {
+        balance: Math.min(mortgage.balance, Math.max(0, fundingBase.totalLiabilities)),
+        monthlyPayment: mortgage.monthlyPayment,
+        balanceAtRetirement: mortgageBalanceAfterMonths(mortgage, years * 12),
+      }
+    : null;
+
+  const targetPortfolio =
+    portfolioTargetFromAnnualGap(grossUp(gapAnnual), inputs.withdrawalRate) +
+    (residenceMortgage?.balanceAtRetirement ?? 0);
 
   // Simplified target in today's money (same basis on both sides) for the explainer.
   const simpleGapMonthly = Math.max(
@@ -360,59 +725,67 @@ export function computeRetirementResults(
     inputs.monthlyExpensesToday - pensionTodayMonthly,
   );
   const simpleTargetPortfolio = portfolioTargetFromAnnualGap(
-    simpleGapMonthly * 12,
+    grossUp(simpleGapMonthly * 12),
     inputs.withdrawalRate,
   );
 
-  const fundableNow = netWorth + (inputs.fundableRealEstateEquity ?? 0);
+  const fundingLines = buildFundingLines(inputs, fundingBase);
+  const includedLines = fundingLines.filter((l) => l.treatment !== "exclude");
+  const includedAssets = includedLines.reduce((s, l) => s + l.value, 0);
+  const excludedAssets = fundingLines
+    .filter((l) => l.treatment === "exclude")
+    .reduce((s, l) => s + l.value, 0);
+  const liabilitiesCounted = Math.max(
+    0,
+    fundingBase.totalLiabilities - (residenceMortgage?.balance ?? 0),
+  );
+
+  const fundableNow = includedAssets - liabilitiesCounted;
   // Debt is not an investment: never compound it at the portfolio return.
   const investableNow = Math.max(0, fundableNow);
 
-  const presentValueOfTarget = isFinite(targetPortfolio)
-    ? calculateStartCapitalValueWithCompoundInterest(
-        targetPortfolio,
-        inputs.optimisticReturn,
-        years,
-      )
-    : Infinity;
-  const progressPct =
-    targetPortfolio <= 0
-      ? 1 // pensions already cover the expenses
-      : isFinite(presentValueOfTarget)
-        ? investableNow / presentValueOfTarget
-        : 0; // infinite target (withdrawal rate 0) can never be reached
+  const contributionsIndexed = inputs.indexContributions === true;
+  const ctx: ScenarioContext = {
+    investableNow,
+    includedLines,
+    includedAssets,
+    targetPortfolio,
+    years,
+    currentAgeExact: timeline.currentAgeExact,
+    inflationRate: inputs.inflationRate,
+    contributionGrowth: contributionsIndexed ? inputs.inflationRate : 0,
+  };
+  const optimistic = computeScenario(ctx, inputs.optimisticReturn);
+  const conservative = computeScenario(ctx, inputs.conservativeReturn);
 
   return {
     yearsToRetirement: years,
+    currentAgeExact: timeline.currentAgeExact,
     invalidTimeline,
     expenseTodayMonthly: inputs.monthlyExpensesToday,
     expenseFutureMonthly,
+    pensionEnteredMonthly,
+    pensionDeductionsMonthly: pensionEnteredMonthly - pensionTodayMonthly,
     pensionTodayMonthly,
     pensionFutureMonthly,
     gapMonthly,
     gapAnnual,
+    withdrawalTaxRate,
     targetPortfolio,
     simpleTargetPortfolio,
+    fundingLines,
+    includedAssets,
+    excludedAssets,
+    liabilitiesCounted,
+    residenceMortgage,
     fundableNow,
     investableNow,
     hasNetDebt: fundableNow < 0,
-    presentValueOfTarget,
-    progressPct,
+    progressPct: conservative.progressPct,
     pensionsCoverAll,
-    optimistic: computeScenario(
-      inputs.optimisticReturn,
-      investableNow,
-      targetPortfolio,
-      years,
-      inputs.currentAge,
-    ),
-    conservative: computeScenario(
-      inputs.conservativeReturn,
-      investableNow,
-      targetPortfolio,
-      years,
-      inputs.currentAge,
-    ),
+    contributionsIndexed,
+    optimistic,
+    conservative,
   };
 }
 
@@ -421,6 +794,12 @@ export function isOnTrack(
   results: Pick<RetirementResults, "optimistic" | "conservative">,
 ): boolean {
   return results.optimistic.onTrack && results.conservative.onTrack;
+}
+
+/** "27.1 years" / "28 years" — fractional horizons to one decimal. */
+export function formatYears(years: number): string {
+  const rounded = Math.round(years * 10) / 10;
+  return `${rounded} ${rounded === 1 ? "year" : "years"}`;
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -555,6 +934,28 @@ export function validateRetirementInputs(
   }
   if (!isNonNegativeAmount(inputs.fundableRealEstateEquity ?? 0)) {
     errors.fundableRealEstateEquity = "Property value must be zero or more";
+  }
+  return { ...errors, ...validateRetirementDeductions(inputs) };
+}
+
+const DEDUCTION_LABELS = {
+  pensionDeductionRate: "Pension tax & health insurance",
+  withdrawalTaxRate: "Tax on withdrawals",
+} as const;
+
+/** Deduction rates (when set) are fractions from 0 to MAX_RETIREMENT_DEDUCTION_RATE. */
+export function validateRetirementDeductions(
+  inputs: Pick<RetirementInputs, keyof typeof DEDUCTION_LABELS>,
+): RetirementInputErrors {
+  const errors: RetirementInputErrors = {};
+  const max = `${Math.round(MAX_RETIREMENT_DEDUCTION_RATE * 100)}%`;
+  for (const field of Object.keys(
+    DEDUCTION_LABELS,
+  ) as (keyof typeof DEDUCTION_LABELS)[]) {
+    const rate = inputs[field];
+    if (rate !== undefined && !(rate >= 0 && rate <= MAX_RETIREMENT_DEDUCTION_RATE)) {
+      errors[field] = `${DEDUCTION_LABELS[field]} must be between 0% and ${max}`;
+    }
   }
   return errors;
 }

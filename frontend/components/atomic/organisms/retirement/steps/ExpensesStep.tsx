@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import {
 	inflateToFuture,
+	retirementTimeline,
 	validateRetirementInputs,
 } from "@/lib/types/retirement";
 import { formatCurrency, formatRate } from "@/lib/utils/currency";
@@ -18,7 +19,7 @@ export function ExpensesStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
-	const years = Math.max(0, data.retirementAge - data.currentAge);
+	const years = Math.max(0, retirementTimeline(data).yearsToRetirement);
 	const future = inflateToFuture(
 		data.monthlyExpensesToday,
 		data.inflationRate,

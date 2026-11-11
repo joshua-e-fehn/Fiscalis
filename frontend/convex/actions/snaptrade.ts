@@ -627,14 +627,20 @@ async function syncSnaptrade(
       (targetSnaptradeAccountId === undefined ||
         account.id === targetSnaptradeAccountId),
   );
-  if (allConnections.length > 1) {
-    for (const account of apiAccounts) {
-      if (!account.brokerage_authorization) {
-        console.warn(
-          `[SNAPTRADE SYNC] Account ${account.id} reports no authorization; skipped`,
-        );
-      }
-    }
+  // With several connections, an account without an authorization cannot
+  // be placed, so its holdings are not synced: a failure, not a success
+  // with stale holdings
+  const unplacedAccounts =
+    allConnections.length > 1
+      ? apiAccounts.filter((account) => !account.brokerage_authorization)
+      : [];
+  for (const account of unplacedAccounts) {
+    console.warn(
+      `[SNAPTRADE SYNC] Account ${account.id} reports no authorization; skipped`,
+    );
+    result.errors.push(
+      `Account ${account.name || account.id}: the broker did not say which connection it belongs to, so its holdings were not synced`,
+    );
   }
 
   // An account belongs to the connection whose authorization it reports;
@@ -656,7 +662,11 @@ async function syncSnaptrade(
     return true;
   });
   if (scope.kind === "account" && connections.length === 0) {
-    throw new Error("This account is no longer available from your broker.");
+    throw new Error(
+      unplacedAccounts.length > 0
+        ? result.errors.join("; ")
+        : "This account is no longer available from your broker.",
+    );
   }
 
   for (const connection of connections) {
@@ -738,6 +748,14 @@ async function syncSnaptrade(
           connectionId: connection._id,
           status: "error",
           errorMessage: lastAccountError,
+        });
+      } else if (accountsAttempted === 0 && unplacedAccounts.length > 0) {
+        // The unplaced accounts may be this connection's: not a good sync
+        await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+          connectionId: connection._id,
+          status: "error",
+          errorMessage:
+            "The broker did not say which accounts belong to this connection, so none were synced.",
         });
       } else {
         await ctx.runMutation(internal.brokers.updateConnectionStatus, {

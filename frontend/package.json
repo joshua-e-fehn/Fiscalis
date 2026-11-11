@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "bunx convex codegen && next build --webpack",
+    "build:vercel": "if [ \"$VERCEL_ENV\" = \"production\" ]; then bunx convex deploy --cmd 'bun run build'; else bun run build; fi",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",

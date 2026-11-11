@@ -69,10 +69,26 @@ bun run dev                                     # app on :3000
 bun run build                                   # convex codegen, then webpack build
 bun run lint
 bun run db:generate | db:migrate | db:studio    # SQL schema only
-bunx convex deploy                              # backend deploy
+# (no manual backend deploy: Vercel production builds run `convex deploy`)
 
 cd services && bun install && bun run test      # vitest — the repo's only tests
 ```
+
+## Deployments
+
+- **Production:** Convex deployment `handsome-gecko-941`. Only the Vercel
+  production build deploys it: `bun run build:vercel` runs
+  `convex deploy --cmd 'bun run build'` when `VERCEL_ENV=production`, with the
+  production `CONVEX_DEPLOY_KEY` from Vercel. Every merge to `main` therefore
+  ships matching frontend and backend. Never push functions to prod by hand.
+- **Dev:** Convex deployment `blessed-ermine-693` (`frontend/.env.local`).
+  `bunx convex dev` pushes there; Vercel preview builds also use it, for
+  codegen only.
+- Provider-syncing crons (daily sync, Bitpanda) run only where
+  `SCHEDULED_SYNC_ENABLED=true`, which is set on prod alone.
+- A deploy key in `.env.local` silently overrides `--prod`. To run a command
+  against prod, pass the prod key explicitly (for example
+  `--env-file <prod env file>`).
 
 There is no CI config. `frontend/` has no test runner; put testable logic in
 `services/`.

@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
 import { internal, api } from "../_generated/api";
+import { scheduledSyncEnabled } from "../lib/scheduledSync";
 
 // ═══════════════════════════════════════════════════════════════
 // SYNC ALL ACTION
@@ -362,6 +363,18 @@ export const scheduledDailySync = internalAction({
     timestamp: number;
   }> => {
     const timestamp = Date.now();
+    if (!scheduledSyncEnabled()) {
+      console.log(
+        "[SCHEDULED DAILY SYNC] Skipped: SCHEDULED_SYNC_ENABLED is not true on this deployment",
+      );
+      return {
+        usersProcessed: 0,
+        usersSuccessful: 0,
+        usersFailed: 0,
+        snapshotsCreated: 0,
+        timestamp,
+      };
+    }
     console.log(
       `[SCHEDULED DAILY SYNC] Starting at ${new Date(timestamp).toISOString()}`,
     );

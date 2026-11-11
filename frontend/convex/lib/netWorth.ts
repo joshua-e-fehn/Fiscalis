@@ -23,6 +23,7 @@ import {
   positionOwed,
   toHoldingCategory,
   type NormalizedHolding,
+  type SnapshotCategoryEntry,
 } from "../../../services/portfolio/aggregate";
 
 /**
@@ -225,12 +226,17 @@ export async function loadHoldings(
 
 /**
  * Server-side net worth for one user: the aggregate of loadHoldings plus
- * the snapshot's category breakdown and cost totals.
+ * the snapshot's category breakdown and cost totals. With the previous
+ * snapshot's breakdown, each entry also records its net flow since then.
  */
-export async function computeNetWorth(ctx: QueryCtx, userId: string) {
+export async function computeNetWorth(
+  ctx: QueryCtx,
+  userId: string,
+  previousBreakdown?: readonly SnapshotCategoryEntry[],
+) {
   const aggregate = aggregateNetWorth(await loadHoldings(ctx, userId));
   const { categoryBreakdown, totalCostBasis, totalCoveredValue } =
-    buildSnapshotBreakdown(aggregate);
+    buildSnapshotBreakdown(aggregate, previousBreakdown);
 
   return {
     totalAssets: aggregate.totalAssets,

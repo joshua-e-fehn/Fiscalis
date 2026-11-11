@@ -5,7 +5,8 @@
  * a provider sync, a manual vault or loan change) upserts today's row with
  * the current net worth (lib/netWorth.ts computeNetWorth), so the series has
  * one point per day however often the data changed. Manual changes schedule
- * the snapshot through scheduleSnapshot, debounced.
+ * the snapshot through scheduleSnapshot, debounced. Each category entry
+ * records its net external flow since the previous day's row.
  */
 
 import { v } from "convex/values";
@@ -80,6 +81,16 @@ export const takeSnapshot = internalMutation({
       };
     }
 
+    // The newest row of an earlier day: each category's netFlow is the
+    // money moved in or out since then (aggregate.ts snapshotCategoryFlow)
+    const previous = await ctx.db
+      .query("portfolioSnapshots")
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", userId).lt("date", today),
+      )
+      .order("desc")
+      .first();
+
     const {
       totalAssets,
       totalLiabilities,
@@ -88,7 +99,7 @@ export const takeSnapshot = internalMutation({
       totalCoveredValue,
       categoryBreakdown,
       asOf,
-    } = await computeNetWorth(ctx, userId);
+    } = await computeNetWorth(ctx, userId, previous?.categoryBreakdown);
 
     const fields = {
       timestamp: now,

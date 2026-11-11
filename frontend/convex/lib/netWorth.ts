@@ -1,5 +1,16 @@
 import { QueryCtx } from "../_generated/server";
+import { loadFxRates } from "../fxRates";
+import {
+  bankAccountWithBaseFields,
+  brokerAccountWithBaseFields,
+  positionWithBaseFields,
+} from "../../../services/finance/currency";
 import { valueVaultItem } from "../../../services/finance/metals";
+import {
+  bankAccountValue,
+  brokerAccountCash,
+  loanBalanceInBase,
+} from "../../../services/portfolio/categorySummary";
 import {
   bucketProviderHoldings,
   buildSnapshotBreakdown,
@@ -10,8 +21,12 @@ import {
  *
  * Single source of truth for the nightly/sync portfolio snapshot
  * (`portfolioSnapshots.takeSnapshot`) and the public API
- * (`GET /api/v1/net-worth`). Values are in the base currency (EUR) that the
- * providers' `valueInBaseCurrency` fields are normalised to.
+ * (`GET /api/v1/net-worth`). Values are in the base currency (EUR): provider
+ * documents are read only through their *InBaseCurrency fields, stamped at
+ * sync time from the fxRates mirror (rows stored before that are stamped
+ * here at read time), and manual loans are converted here by their
+ * currency (services/finance/currency.ts). An amount in a currency
+ * without a rate is left out rather than counted 1:1 as EUR.
  *
  * Vault items are valued at live spot (metalSpotPrices, refreshed by
  * convex/metalPrices.ts) using the dashboard's formula; an item falls back to
@@ -25,17 +40,21 @@ import {
  * basis add value only.
  */
 export async function computeNetWorth(ctx: QueryCtx, userId: string) {
+  const rates = await loadFxRates(ctx);
+
   // 1. Bank accounts (Plaid)
-  const bankAccounts = await ctx.db
-    .query("plaidAccounts")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
+  const bankAccounts = (
+    await ctx.db
+      .query("plaidAccounts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+  ).map((acc) => bankAccountWithBaseFields(acc, rates));
 
   let cashValue = 0;
   let liabilitiesValue = 0;
 
   for (const acc of bankAccounts) {
-    const value = acc.valueInBaseCurrency ?? acc.currentBalance ?? 0;
+    const value = bankAccountValue(acc);
     if (acc.investmentCategory === "liabilities") {
       liabilitiesValue += Math.abs(value);
     } else {
@@ -44,36 +63,32 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
   }
 
   // 2. Broker accounts (SnapTrade)
-  const brokerAccounts = await ctx.db
-    .query("brokerAccounts")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
+  const brokerAccounts = (
+    await ctx.db
+      .query("brokerAccounts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+  ).map((acc) => brokerAccountWithBaseFields(acc, rates));
 
-  const brokerPositions = await ctx.db
-    .query("brokerPositions")
-    .withIndex("by_user", (q) => q.eq("userId", userId))
-    .collect();
+  const brokerPositions = (
+    await ctx.db
+      .query("brokerPositions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect()
+  ).map((pos) => positionWithBaseFields(pos, rates));
 
   // Build set of accounts that have positions
   const accountsWithPositions = new Set(
     brokerPositions.map((p) => p.accountId),
   );
 
+  // Broker account cash (uninvested)
   let brokerCashValue = 0;
-
-  // Process broker account cash (uninvested)
   for (const acc of brokerAccounts) {
-    let cashBalance = 0;
-    if ((acc.cash ?? 0) > 0) {
-      cashBalance = acc.cashValueInBaseCurrency ?? acc.cash ?? 0;
-    } else if (
-      !accountsWithPositions.has(acc._id) &&
-      (acc.balance ?? 0) > 0
-    ) {
-      // If no positions and balance > 0, treat balance as cash
-      cashBalance = acc.balance ?? 0;
-    }
-    brokerCashValue += cashBalance;
+    brokerCashValue += brokerAccountCash(
+      acc,
+      accountsWithPositions.has(acc._id),
+    );
   }
 
   // 3. Vault items (commodities), valued at live spot like the dashboard,
@@ -112,7 +127,8 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     bitpandaHoldings,
   });
 
-  // 5. Manual loans (liabilities)
+  // 5. Manual loans (liabilities): active and defaulted ones, converted by
+  //    each loan's currency
   const loans = await ctx.db
     .query("loans")
     .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -120,7 +136,7 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
 
   let loansValue = 0;
   for (const loan of loans) {
-    loansValue += loan.currentBalance ?? loan.originalPrincipal ?? 0;
+    loansValue += loanBalanceInBase(loan, rates);
   }
 
   const { categoryBreakdown, investmentsValue, totalCostBasis, totalCoveredValue } =

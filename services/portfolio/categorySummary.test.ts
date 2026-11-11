@@ -1,9 +1,14 @@
 import { describe, it, expect } from "vitest";
 
+import { fxRatesFromDaily } from "../finance/currency";
 import {
+  bankAccountValue,
+  brokerAccountCash,
   buildCategorySummary,
   groupSmallSlices,
   holdingProfitLoss,
+  loanBalanceInBase,
+  loanCountsAsLiability,
   positionCostBasis,
   positionToHolding,
   resolveCategoryProfitLoss,
@@ -71,33 +76,72 @@ describe("summarizeHoldings", () => {
 });
 
 describe("positionCostBasis / positionToHolding", () => {
-  it("converts the cost basis with the rate used for the value", () => {
+  it("reads the base-currency value and cost stamped at sync time", () => {
     const usd = {
       _id: "p1",
       symbol: "AAPL",
-      marketValue: 1100,
       valueInBaseCurrency: 1000,
-      exchangeRateUsed: 1000 / 1100,
-      totalCostBasis: 880,
+      costBasisInBaseCurrency: 800,
     };
-    expect(positionCostBasis(usd)).toBeCloseTo(800, 9);
+    expect(positionCostBasis(usd)).toBe(800);
     expect(positionToHolding(usd)).toEqual({
       id: "p1",
       name: "AAPL",
       subcategory: "unknown",
       value: 1000,
-      costBasis: positionCostBasis(usd),
+      costBasis: 800,
     });
   });
 
-  it("keeps the raw cost without a conversion and null without a cost", () => {
-    expect(positionCostBasis({ _id: "a", totalCostBasis: 50 })).toBe(50);
+  it("has no cost and no value without the base-currency fields", () => {
     expect(positionCostBasis({ _id: "b", valueInBaseCurrency: 10 })).toBeNull();
+    expect(positionToHolding({ _id: "c" })).toMatchObject({
+      value: 0,
+      costBasis: null,
+    });
+  });
+});
+
+describe("accounts and loans", () => {
+  it("values a bank account by its base-currency balance only", () => {
+    expect(bankAccountValue({ valueInBaseCurrency: 850 })).toBe(850);
+    expect(bankAccountValue({})).toBe(0);
   });
 
-  it("falls back from valueInBaseCurrency to marketValue to 0", () => {
-    expect(positionToHolding({ _id: "a", marketValue: 7 }).value).toBe(7);
-    expect(positionToHolding({ _id: "b" }).value).toBe(0);
+  it("counts broker cash, or the whole balance of an account without positions", () => {
+    const usd = {
+      cash: 1_170,
+      balance: 11_700,
+      cashValueInBaseCurrency: 1_000,
+      balanceInBaseCurrency: 10_000,
+    };
+    expect(brokerAccountCash(usd, true)).toBe(1_000);
+    expect(brokerAccountCash({ ...usd, cash: 0 }, false)).toBe(10_000);
+    expect(brokerAccountCash({ ...usd, cash: 0 }, true)).toBe(0);
+    // Native amounts without a base value are never counted as EUR
+    expect(brokerAccountCash({ cash: 500 }, true)).toBe(0);
+  });
+
+  it("converts outstanding loans by their currency (D1 statuses)", () => {
+    const rates = fxRatesFromDaily([
+      { date: "2026-11-10", currency: "CHF", unitsPerEur: 0.94 },
+    ]);
+    const mortgage = { currentBalance: 188_000, currency: "CHF" };
+    expect(
+      loanBalanceInBase({ ...mortgage, status: "active" }, rates),
+    ).toBeCloseTo(200_000, 6);
+    expect(
+      loanBalanceInBase({ ...mortgage, status: "defaulted" }, rates),
+    ).toBeCloseTo(200_000, 6);
+    expect(loanBalanceInBase({ ...mortgage, status: "paid_off" }, rates)).toBe(0);
+    expect(loanBalanceInBase({ ...mortgage, status: "refinanced" }, rates)).toBe(0);
+    expect(
+      loanBalanceInBase(
+        { currentBalance: 1_000, currency: "VND", status: "active" },
+        rates,
+      ),
+    ).toBe(0);
+    expect(loanCountsAsLiability("defaulted")).toBe(true);
   });
 });
 

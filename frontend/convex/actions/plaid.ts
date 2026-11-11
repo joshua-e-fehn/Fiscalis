@@ -11,6 +11,7 @@ import {
   CountryCode,
 } from "plaid";
 import { encrypt, decrypt } from "../lib/encryption";
+import { NO_CURRENCY } from "../../../services/finance/currency";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -388,7 +389,14 @@ export const syncAccountsInternal = internalAction({
         mask: acc.mask ?? undefined,
         currentBalance: acc.balances.current ?? undefined,
         availableBalance: acc.balances.available ?? undefined,
-        currency: acc.balances.iso_currency_code ?? "USD",
+        // Plaid sets iso_currency_code to null exactly when the account uses
+        // a non-ISO currency (unofficial_currency_code). With neither, store
+        // "XXX" (ISO 4217 "no currency"): saveAccounts flags it as
+        // unconverted instead of reading it as USD.
+        currency:
+          acc.balances.iso_currency_code ??
+          acc.balances.unofficial_currency_code ??
+          NO_CURRENCY,
       }));
 
       await ctx.runMutation(internal.banking.saveAccounts, {

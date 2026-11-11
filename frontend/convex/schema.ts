@@ -46,10 +46,21 @@ export default defineSchema({
 		classificationRule: v.optional(v.string()), // Rule ID that matched
 		userCategoryOverride: v.optional(v.string()), // User's manual category override
 		userSubcategoryOverride: v.optional(v.string()), // User's manual subcategory override
-		// Currency conversion fields
-		valueInBaseCurrency: v.optional(v.number()), // Balance in EUR
-		exchangeRateUsed: v.optional(v.number()), // Rate at sync time
-		exchangeRateTimestamp: v.optional(v.number()), // When rate was fetched
+		// Currency conversion fields, stamped at sync time
+		// (services/finance/currency.ts bankAccountBaseFields)
+		valueInBaseCurrency: v.optional(v.number()), // Balance in EUR; absent when the currency has no rate
+		exchangeRateUsed: v.optional(v.number()), // EUR per unit at sync time
+		exchangeRateTimestamp: v.optional(v.number()), // DEPRECATED - no longer written
+		exchangeRateDate: v.optional(v.string()), // Day of the rate (YYYY-MM-DD); absent for identity/fallback
+		exchangeRateSource: v.optional(
+			v.union(
+				v.literal("identity"),
+				v.literal("market"),
+				v.literal("stale"),
+				v.literal("fallback"),
+				v.literal("unknown"),
+			),
+		), // "stale": mirrored rate older than 7 days; "unknown": currency missing or without a rate
 		baseCurrency: v.optional(v.string()), // "EUR"
 	})
 		.index("by_user", ["userId"])
@@ -135,8 +146,22 @@ export default defineSchema({
 		// Cash classification fields (for uninvested cash tracking)
 		cashInvestmentCategory: v.optional(v.string()), // "cash" or "liabilities" (if margin)
 		cashInvestmentSubcategory: v.optional(v.string()), // "broker-cash" or "margin-loans"
+		// Base-currency fields, stamped at sync time
+		// (services/finance/currency.ts brokerAccountBaseFields)
+		balanceCurrency: v.optional(v.string()), // Currency of balance/cash when the API reports one; else `currency`
+		balanceInBaseCurrency: v.optional(v.number()), // Balance in EUR
 		cashValueInBaseCurrency: v.optional(v.number()), // Cash value in EUR
-		cashExchangeRateUsed: v.optional(v.number()), // Rate at sync time
+		cashExchangeRateUsed: v.optional(v.number()), // EUR per unit at sync time
+		exchangeRateDate: v.optional(v.string()), // Day of the rate (YYYY-MM-DD)
+		exchangeRateSource: v.optional(
+			v.union(
+				v.literal("identity"),
+				v.literal("market"),
+				v.literal("stale"),
+				v.literal("fallback"),
+				v.literal("unknown"),
+			),
+		),
 	})
 		.index("by_user", ["userId"])
 		.index("by_connection", ["connectionId"])
@@ -173,10 +198,23 @@ export default defineSchema({
 		classificationRule: v.optional(v.string()), // Rule ID that matched
 		userCategoryOverride: v.optional(v.string()), // User's manual category override
 		userSubcategoryOverride: v.optional(v.string()), // User's manual subcategory override
-		// Currency conversion fields
+		// Currency conversion fields, stamped at sync time with one rate
+		// (services/finance/currency.ts positionBaseFields)
 		valueInBaseCurrency: v.optional(v.number()), // Market value in EUR
-		exchangeRateUsed: v.optional(v.number()), // Rate at sync time
-		exchangeRateTimestamp: v.optional(v.number()), // When rate was fetched
+		costBasisInBaseCurrency: v.optional(v.number()), // Total cost basis in EUR
+		unrealizedPLInBaseCurrency: v.optional(v.number()), // valueInBaseCurrency - costBasisInBaseCurrency
+		exchangeRateUsed: v.optional(v.number()), // EUR per unit at sync time
+		exchangeRateTimestamp: v.optional(v.number()), // DEPRECATED - no longer written
+		exchangeRateDate: v.optional(v.string()), // Day of the rate (YYYY-MM-DD)
+		exchangeRateSource: v.optional(
+			v.union(
+				v.literal("identity"),
+				v.literal("market"),
+				v.literal("stale"),
+				v.literal("fallback"),
+				v.literal("unknown"),
+			),
+		),
 		baseCurrency: v.optional(v.string()), // "EUR"
 		// Metadata
 		lastSyncAt: v.optional(v.number()),
@@ -761,6 +799,23 @@ export default defineSchema({
 		sourceTimestamp: v.number(), // When the price was observed upstream
 		fetchedAt: v.number(),
 	}).index("by_metal", ["metalType"]),
+
+	// ═══════════════════════════════════════════════════════════════
+	// FX RATES
+	// ═══════════════════════════════════════════════════════════════
+	// Daily EUR-base exchange rates, one row per (date, currency), mirrored
+	// from the SQL currency_exchange_rates store by convex/fxRates.ts. The
+	// single rate source for base-currency conversion
+	// (services/finance/currency.ts).
+
+	fxRates: defineTable({
+		date: v.string(), // UTC day, YYYY-MM-DD
+		currency: v.string(), // ISO 4217 code, e.g. "USD"
+		unitsPerEur: v.number(), // Units of the currency per 1 EUR
+		fetchedAt: v.number(),
+	})
+		.index("by_currency_date", ["currency", "date"])
+		.index("by_date", ["date"]),
 
 	// ═══════════════════════════════════════════════════════════════
 	// API KEYS

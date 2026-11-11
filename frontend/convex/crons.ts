@@ -50,4 +50,18 @@ crons.interval(
   internal.metalPrices.refreshSpotPrices,
 );
 
+// ═══════════════════════════════════════════════════════════════
+// FX Rates
+// Every 6 hours from 05:30 UTC: mirror the last days of EUR-base rates used
+// to convert every provider value to the base currency. Fails softly and
+// keeps the stored rates when the app's FX route is unreachable. The 05:30
+// run precedes the 6:00 daily sync, so the sync converts at the latest rate.
+// ═══════════════════════════════════════════════════════════════
+crons.cron(
+  "refresh-fx-rates",
+  "30 5,11,17,23 * * *",
+  internal.fxRates.refreshFxRates,
+  {},
+);
+
 export default crons;

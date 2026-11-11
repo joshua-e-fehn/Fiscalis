@@ -1086,6 +1086,9 @@ export const syncAll = action({
               balance: finalBalance,
               cash: finalCash,
               currency: account.currency,
+              balanceCurrency: holdings.total_value?.currency ?? undefined,
+              // Without an API total the balance sums mixed-currency values
+              balanceIsMixed: apiTotalValue == null && hasValidNewBalance,
               institutionName: account.institutionName,
             });
 
@@ -1394,6 +1397,9 @@ export const syncAllForUserInternal = internalAction({
                 balance: calculatedBalance,
                 cash: cashValue,
                 currency: account.currency,
+                balanceCurrency: holdings.total_value?.currency ?? undefined,
+                // Without an API total the balance sums mixed-currency values
+                balanceIsMixed: apiTotalValue == null,
               });
             } catch (accountError) {
               console.error(

@@ -17,6 +17,7 @@ import {
   sumCostCoveredValue,
   type HoldingValuation,
 } from "./unrealizedProfitLoss";
+import { toBase, type FxRates } from "../finance/currency";
 
 export type { HoldingValuation };
 
@@ -72,20 +73,20 @@ function percentOf(part: number | null, whole: number | null): number | null {
 // Provider positions
 // ═══════════════════════════════════════════════════════════════
 
-/** The fields of a stored provider position (broker or Bitpanda) we read. */
+/**
+ * The fields of a stored provider position (broker or Bitpanda) we read:
+ * only the base-currency (EUR) fields stamped at sync time
+ * (services/finance/currency.ts), never the native amounts.
+ */
 export interface PositionLike {
   _id: string;
   symbol?: string;
   name?: string;
   investmentSubcategory?: string;
-  /** Value in the position's currency */
-  marketValue?: number;
-  /** Value converted to the base currency (EUR) */
+  /** Value in the base currency (EUR); absent when it has no rate */
   valueInBaseCurrency?: number;
-  /** Rate used for valueInBaseCurrency (position currency → base) */
-  exchangeRateUsed?: number;
-  /** Total cost basis in the position's currency */
-  totalCostBasis?: number;
+  /** Total cost basis in the base currency, converted with the value's rate */
+  costBasisInBaseCurrency?: number;
 }
 
 /** A holding normalised for summaries: base-currency value and cost. */
@@ -95,20 +96,14 @@ export interface CategoryHolding extends HoldingValuation {
   subcategory: string;
 }
 
+/** Value in EUR; 0 for a position that could not be converted. */
 export function positionValue(p: PositionLike): number {
-  return p.valueInBaseCurrency ?? p.marketValue ?? 0;
+  return p.valueInBaseCurrency ?? 0;
 }
 
-/**
- * Cost basis in the base currency. Providers report cost in the position's
- * currency, while the value is compared in EUR, so the cost is converted
- * with the same rate as the value.
- */
+/** Cost basis in EUR; null without one (or without a rate). */
 export function positionCostBasis(p: PositionLike): number | null {
-  if (p.totalCostBasis == null) return null;
-  return p.valueInBaseCurrency != null && p.exchangeRateUsed != null
-    ? p.totalCostBasis * p.exchangeRateUsed
-    : p.totalCostBasis;
+  return p.costBasisInBaseCurrency ?? null;
 }
 
 export function positionToHolding(p: PositionLike): CategoryHolding {
@@ -119,6 +114,59 @@ export function positionToHolding(p: PositionLike): CategoryHolding {
     value: positionValue(p),
     costBasis: positionCostBasis(p),
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Accounts and loans
+// ═══════════════════════════════════════════════════════════════
+
+/** Bank (Plaid) account balance in EUR; 0 when it could not be converted. */
+export function bankAccountValue(account: {
+  valueInBaseCurrency?: number;
+}): number {
+  return account.valueInBaseCurrency ?? 0;
+}
+
+/**
+ * Uninvested cash of a broker account in EUR: its cash balance, or, for an
+ * account without positions, its whole balance (the holdings are cash).
+ */
+export function brokerAccountCash(
+  account: {
+    cash?: number;
+    balance?: number;
+    cashValueInBaseCurrency?: number;
+    balanceInBaseCurrency?: number;
+  },
+  hasPositions: boolean,
+): number {
+  if ((account.cash ?? 0) > 0) return account.cashValueInBaseCurrency ?? 0;
+  if (!hasPositions && (account.balance ?? 0) > 0) {
+    return account.balanceInBaseCurrency ?? 0;
+  }
+  return 0;
+}
+
+/**
+ * Loan statuses that count as a liability (D1): paid off and refinanced
+ * loans do not.
+ */
+export function loanCountsAsLiability(status: string): boolean {
+  return status === "active" || status === "defaulted";
+}
+
+/**
+ * Outstanding loan balance in EUR, converted at read time by the loan's
+ * currency. 0 for a loan that does not count (loanCountsAsLiability) or
+ * whose currency has no rate (never read 1:1 as EUR).
+ */
+export function loanBalanceInBase(
+  loan: { currentBalance: number; currency: string; status: string },
+  rates: FxRates,
+): number {
+  if (!loanCountsAsLiability(loan.status)) return 0;
+  const converted = toBase(Math.abs(loan.currentBalance), loan.currency, rates);
+  return converted.ok ? converted.value : 0;
 }
 
 // ═══════════════════════════════════════════════════════════════

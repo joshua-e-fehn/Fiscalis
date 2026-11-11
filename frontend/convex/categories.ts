@@ -2,23 +2,15 @@ import { v } from "convex/values";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import type { InvestmentCategory } from "../lib/types/classification";
+import { getUserId } from "./lib/auth";
+import { loadHoldings, type LoadedHolding } from "./lib/netWorth";
 import {
-  bankAccountValue,
-  brokerAccountCash,
-  brokerAccountMarginDebt,
-  buildCategorySummary,
-  loanBalanceInBase,
-  loanCountsAsLiability,
-  positionToHolding,
-  positionValue,
-} from "../../services/portfolio/categorySummary";
-import {
-  bankAccountWithBaseFields,
-  brokerAccountWithBaseFields,
-  positionWithBaseFields,
-  type FxRates,
-} from "../../services/finance/currency";
-import { loadFxRates } from "./fxRates";
+  aggregateNetWorth,
+  placeHolding,
+  type CategoryAggregate,
+  type HoldingSource,
+  type NetWorthAggregate,
+} from "../../services/portfolio/aggregate";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -38,63 +30,78 @@ export type CategoryPosition =
     });
 
 /**
- * Broker positions in a category; rows stored before sync-time stamping get
- * their base-currency fields at read time (positionWithBaseFields).
+ * The user's holdings and their aggregate (lib/netWorth.ts loadHoldings,
+ * services/portfolio/aggregate.ts): every category query reads through the
+ * same loader as the server-side net worth, so a category page, the
+ * dashboard and the snapshots always agree. Null when unauthenticated.
  */
-async function getBrokerPositionsForCategory(
+async function loadAggregate(
   ctx: QueryCtx,
-  userId: string,
-  category: InvestmentCategory,
-  rates: FxRates,
-): Promise<CategoryPosition[]> {
-  const positions = await ctx.db
-    .query("brokerPositions")
-    .withIndex("by_category", (q) =>
-      q.eq("userId", userId).eq("investmentCategory", category),
-    )
-    .collect();
-  return positions.map((p) => ({
-    ...positionWithBaseFields(p, rates),
-    provider: "snaptrade" as const,
-  }));
+): Promise<{
+  userId: string;
+  holdings: LoadedHolding[];
+  aggregate: NetWorthAggregate;
+} | null> {
+  const userId = await getUserId(ctx);
+  if (!userId) return null;
+  const holdings = await loadHoldings(ctx, userId);
+  return { userId, holdings, aggregate: aggregateNetWorth(holdings) };
 }
 
-async function getBitpandaPositionsForCategory(
-  ctx: QueryCtx,
-  userId: string,
+/** The holdings counted in a category (a credit balance counts as cash). */
+function inCategory(
+  holdings: LoadedHolding[],
   category: InvestmentCategory,
-): Promise<CategoryPosition[]> {
-  const holdings = await ctx.db
-    .query("bitpandaHoldings")
-    .withIndex("by_category", (q) =>
-      q.eq("userId", userId).eq("investmentCategory", category),
-    )
-    .collect();
-  return holdings.map((h) => ({ ...h, provider: "bitpanda" as const }));
+): LoadedHolding[] {
+  return holdings.filter((h) => placeHolding(h).category === category);
+}
+
+/** The provider positions (broker, Bitpanda) among some holdings. */
+function toCategoryPositions(holdings: LoadedHolding[]): CategoryPosition[] {
+  const positions: CategoryPosition[] = [];
+  for (const h of holdings) {
+    if (h.source === "brokerPosition") {
+      positions.push({ ...h.doc, provider: "snaptrade" });
+    } else if (h.source === "bitpanda") {
+      positions.push({ ...h.doc, provider: "bitpanda" });
+    }
+  }
+  return positions;
+}
+
+/** Per-subcategory count and total of a category aggregate. */
+function subcategoryTotals(
+  category: CategoryAggregate,
+): Record<string, { count: number; total: number }> {
+  return Object.fromEntries(
+    Object.entries(category.bySubcategory).map(([sub, s]) => [
+      sub,
+      { count: s.count, total: s.value },
+    ]),
+  );
+}
+
+function sourceTotal(
+  category: CategoryAggregate,
+  sources: HoldingSource[],
+): number {
+  return sources.reduce((sum, s) => sum + (category.bySource[s] ?? 0), 0);
 }
 
 /**
  * All positions in a category across providers, with the category summary
- * (value, cost-covered P&L and coverage, per subcategory too) computed by
- * the shared buildCategorySummary.
+ * (value, cost-covered P&L and coverage, per subcategory too) from the
+ * shared aggregator.
  */
 async function getCategoryPositions(
   ctx: QueryCtx,
   category: InvestmentCategory,
 ) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return null;
-  const userId = identity.subject;
-  const rates = await loadFxRates(ctx);
-
-  const positions = [
-    ...(await getBrokerPositionsForCategory(ctx, userId, category, rates)),
-    ...(await getBitpandaPositionsForCategory(ctx, userId, category)),
-  ];
-
+  const loaded = await loadAggregate(ctx);
+  if (!loaded) return null;
   return {
-    positions,
-    summary: buildCategorySummary(positions.map(positionToHolding)),
+    positions: toCategoryPositions(inCategory(loaded.holdings, category)),
+    summary: loaded.aggregate.byCategory[category],
   };
 }
 
@@ -109,122 +116,53 @@ async function getCategoryPositions(
 export const getCashHoldings = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    const loaded = await loadAggregate(ctx);
+    if (!loaded) return null;
+    const { userId } = loaded;
+    const cash = inCategory(loaded.holdings, "cash");
+    const summary = loaded.aggregate.byCategory.cash;
 
-    const userId = identity.subject;
-    // Rows stored before sync-time stamping are stamped at read time
-    const rates = await loadFxRates(ctx);
-
-    // Get all Plaid accounts classified as cash
-    const bankAccountsRaw = await ctx.db
-      .query("plaidAccounts")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "cash"),
-      )
-      .collect();
-
-    // Get plaid items to map institution names
+    // Institution names for the bank accounts
     const plaidItems = await ctx.db
       .query("plaidItems")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-
-    // Create a map of itemId to institution name
     const itemToInstitution = new Map(
       plaidItems.map((item) => [item.itemId, item.institutionName]),
     );
 
-    // Enrich bank accounts with institution name
-    const bankAccounts = bankAccountsRaw.map((acc) => ({
-      ...bankAccountWithBaseFields(acc, rates),
-      institutionName: itemToInstitution.get(acc.itemId) ?? undefined,
-    }));
-
-    // Get all broker positions classified as cash, plus Bitpanda fiat cash
-    const brokerCashPositions = [
-      ...(await getBrokerPositionsForCategory(ctx, userId, "cash", rates)),
-      ...(await getBitpandaPositionsForCategory(ctx, userId, "cash")),
-    ];
-
-    // Get broker accounts with cash balances (uninvested cash)
-    const brokerAccounts = (
-      await ctx.db
-        .query("brokerAccounts")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect()
-    ).map((acc) => brokerAccountWithBaseFields(acc, rates));
-
-    // Broker account cash in EUR: the explicit cash balance the sync
-    // stored (a margin debit is a liability, see getLiabilities); each row
-    // carries it as cashInBaseCurrency for the per-row display
-    const brokerAccountsWithCash = brokerAccounts
-      .map((acc) => ({
-        ...acc,
-        cashInBaseCurrency: brokerAccountCash(acc),
-      }))
-      .filter((acc) => acc.cashInBaseCurrency > 0);
-
-    // Calculate totals (base currency only)
-    const bankTotal = bankAccounts.reduce(
-      (sum, acc) => sum + bankAccountValue(acc),
-      0,
+    const bankAccounts = cash.flatMap((h) =>
+      h.source === "bank" && h.category === "cash"
+        ? [
+            {
+              ...h.doc,
+              institutionName:
+                itemToInstitution.get(h.doc.itemId) ?? undefined,
+            },
+          ]
+        : [],
     );
 
-    const brokerCashPositionsTotal = brokerCashPositions.reduce(
-      (sum, pos) => sum + positionValue(pos),
-      0,
+    // Uninvested broker account cash, each row with its EUR amount (a
+    // margin debit is a liability, see getLiabilities)
+    const brokerAccountCash = cash.flatMap((h) =>
+      h.source === "brokerAccount"
+        ? [{ ...h.doc, cashInBaseCurrency: h.valueBase }]
+        : [],
     );
 
-    const brokerAccountCashTotal = brokerAccountsWithCash.reduce(
-      (sum, acc) => sum + acc.cashInBaseCurrency,
-      0,
-    );
-
-    // Group by subcategory
-    const bySubcategory: Record<string, { count: number; total: number }> = {};
-
-    for (const acc of bankAccounts) {
-      const sub = acc.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total += bankAccountValue(acc);
-    }
-
-    for (const pos of brokerCashPositions) {
-      const sub = pos.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total += positionValue(pos);
-    }
-
-    // Add broker account cash to "broker-cash" subcategory
-    if (brokerAccountsWithCash.length > 0) {
-      if (!bySubcategory["broker-cash"]) {
-        bySubcategory["broker-cash"] = { count: 0, total: 0 };
-      }
-      bySubcategory["broker-cash"].count += brokerAccountsWithCash.length;
-      bySubcategory["broker-cash"].total += brokerAccountCashTotal;
-    }
+    const bankTotal = sourceTotal(summary, ["bank"]);
 
     return {
       bankAccounts,
-      brokerCash: brokerCashPositions,
-      brokerAccountCash: brokerAccountsWithCash,
+      brokerCash: toCategoryPositions(cash),
+      brokerAccountCash,
       summary: {
-        totalValue:
-          bankTotal + brokerCashPositionsTotal + brokerAccountCashTotal,
+        totalValue: summary.value,
         bankTotal,
-        brokerCashTotal: brokerCashPositionsTotal + brokerAccountCashTotal,
-        accountCount:
-          bankAccounts.length +
-          brokerCashPositions.length +
-          brokerAccountsWithCash.length,
-        bySubcategory,
+        brokerCashTotal: summary.value - bankTotal,
+        accountCount: summary.count,
+        bySubcategory: subcategoryTotals(summary),
       },
     };
   },
@@ -234,148 +172,49 @@ export const getCashHoldings = query({
 // LIABILITIES
 // ═══════════════════════════════════════════════════════════════
 
+/** One liability row: the amount owed in EUR (positive). */
+export interface LiabilityRow {
+  id: string;
+  source: HoldingSource;
+  name: string;
+  subcategory: string;
+  owedInBaseCurrency: number;
+}
+
 /**
- * Get all liability holdings
- * Includes: mortgages, loans, credit cards, margin loans, manual loans
+ * Get all liability holdings: Plaid credit and loan accounts, broker margin
+ * debits and liability positions, Bitpanda liabilities and manual loans
+ * (active and defaulted). Totals come from the shared aggregator, so they
+ * equal the dashboard's and the snapshots' liabilities; a credit balance
+ * counts as cash there, not as negative debt.
  */
 export const getLiabilities = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    const loaded = await loadAggregate(ctx);
+    if (!loaded) return null;
+    const { aggregate } = loaded;
+    const summary = aggregate.byCategory.liabilities;
 
-    const userId = identity.subject;
-    // Rows stored before sync-time stamping are stamped at read time; loans
-    // are converted here by their own currency
-    const rates = await loadFxRates(ctx);
-
-    // Get all Plaid accounts classified as liabilities
-    const plaidLiabilities = (
-      await ctx.db
-        .query("plaidAccounts")
-        .withIndex("by_category", (q) =>
-          q.eq("userId", userId).eq("investmentCategory", "liabilities"),
-        )
-        .collect()
-    ).map((acc) => bankAccountWithBaseFields(acc, rates));
-
-    // Get broker positions classified as liabilities (margin loans)
-    const brokerLiabilities = (
-      await ctx.db
-        .query("brokerPositions")
-        .withIndex("by_category", (q) =>
-          q.eq("userId", userId).eq("investmentCategory", "liabilities"),
-        )
-        .collect()
-    ).map((pos) => positionWithBaseFields(pos, rates));
-
-    // Broker accounts with a negative cash balance (margin debit), each
-    // with the amount owed in EUR
-    const brokerMarginAccounts = (
-      await ctx.db
-        .query("brokerAccounts")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect()
-    )
-      .map((acc) => brokerAccountWithBaseFields(acc, rates))
-      .map((acc) => ({
-        ...acc,
-        marginDebtInBaseCurrency: brokerAccountMarginDebt(acc),
-      }))
-      .filter((acc) => acc.marginDebtInBaseCurrency > 0);
-
-    // Manual loans that count as liabilities (active and defaulted), each
-    // with its outstanding balance in EUR for the per-row display
-    const manualLoans = (
-      await ctx.db
-        .query("loans")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
-        .collect()
-    )
-      .filter((loan) => loanCountsAsLiability(loan.status))
-      .map((loan) => ({
-        ...loan,
-        valueInBaseCurrency: loanBalanceInBase(loan, rates),
-      }));
-
-    // Calculate totals in the base currency (liabilities as positive amounts)
-
-    const plaidTotal = plaidLiabilities.reduce(
-      (sum, acc) => sum + Math.abs(bankAccountValue(acc)),
-      0,
-    );
-
-    const brokerTotal = brokerLiabilities.reduce(
-      (sum, pos) => sum + Math.abs(positionValue(pos)),
-      0,
-    );
-
-    const marginDebtTotal = brokerMarginAccounts.reduce(
-      (sum, acc) => sum + acc.marginDebtInBaseCurrency,
-      0,
-    );
-
-    const manualLoansTotal = manualLoans.reduce(
-      (sum, loan) => sum + loan.valueInBaseCurrency,
-      0,
-    );
-
-    // Group by subcategory
-    const bySubcategory: Record<string, { count: number; total: number }> = {};
-
-    for (const acc of plaidLiabilities) {
-      const sub = acc.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total += Math.abs(bankAccountValue(acc));
-    }
-
-    for (const pos of brokerLiabilities) {
-      const sub = pos.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total += Math.abs(positionValue(pos));
-    }
-
-    // Margin debits go into the "margin-loans" subcategory
-    if (brokerMarginAccounts.length > 0) {
-      if (!bySubcategory["margin-loans"]) {
-        bySubcategory["margin-loans"] = { count: 0, total: 0 };
-      }
-      bySubcategory["margin-loans"].count += brokerMarginAccounts.length;
-      bySubcategory["margin-loans"].total += marginDebtTotal;
-    }
-
-    // Manual loans go into the "loans" subcategory
-    if (manualLoans.length > 0) {
-      if (!bySubcategory["loans"]) {
-        bySubcategory["loans"] = { count: 0, total: 0 };
-      }
-      bySubcategory["loans"].count += manualLoans.length;
-      bySubcategory["loans"].total += manualLoansTotal;
-    }
+    const rows: LiabilityRow[] = inCategory(
+      loaded.holdings,
+      "liabilities",
+    ).map((h) => ({
+      id: h.id,
+      source: h.source,
+      name: h.name,
+      subcategory: h.subcategory,
+      owedInBaseCurrency: h.valueBase,
+    }));
 
     return {
-      plaidLiabilities,
-      brokerLiabilities,
-      brokerMarginAccounts,
-      manualLoans,
+      rows,
       summary: {
-        totalLiabilities:
-          plaidTotal + brokerTotal + marginDebtTotal + manualLoansTotal,
-        plaidTotal,
-        brokerTotal: brokerTotal + marginDebtTotal,
-        manualLoansTotal,
-        accountCount:
-          plaidLiabilities.length +
-          brokerLiabilities.length +
-          brokerMarginAccounts.length +
-          manualLoans.length,
-        bySubcategory,
+        totalLiabilities: summary.value,
+        accountCount: summary.count,
+        loansCount: aggregate.loansCount,
+        monthlyPayment: aggregate.monthlyLoanPayment,
+        bySubcategory: subcategoryTotals(summary),
       },
     };
   },

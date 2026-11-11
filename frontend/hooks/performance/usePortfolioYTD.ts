@@ -148,6 +148,19 @@ export function useNetWorthYTD(options?: {
     const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
     const currentValue = latest?.netWorth ?? null;
 
+    // Only the baseline exists (no snapshot yet this year): nothing to
+    // compare, so say "No data for this year" rather than a 0.00% change.
+    if (latest !== null && latest.timestamp <= ytdStart) {
+      return {
+        ytdChange: null,
+        ytdChangePercent: null,
+        valueAtYearStart: null,
+        currentValue,
+        trackingSince: null,
+        isLoading,
+      };
+    }
+
     if (valueAtYearStart === null || currentValue === null) {
       return {
         ytdChange: null,

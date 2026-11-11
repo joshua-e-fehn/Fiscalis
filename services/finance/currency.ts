@@ -137,7 +137,8 @@ export function parseFxDailyRates(payload: unknown): FxDailyRate[] {
   for (const item of list) {
     if (!item || typeof item !== "object") continue;
     const { date, currency, unitsPerEur } = item as Record<string, unknown>;
-    const rate = typeof unitsPerEur === "string" ? Number(unitsPerEur) : unitsPerEur;
+    const rate =
+      typeof unitsPerEur === "string" ? Number(unitsPerEur) : unitsPerEur;
     if (
       typeof date === "string" &&
       /^\d{4}-\d{2}-\d{2}$/.test(date) &&

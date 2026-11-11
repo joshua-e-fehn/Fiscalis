@@ -147,7 +147,10 @@ export function brokerAccountCash(
   return 0;
 }
 
-/** Loan statuses that count as a liability (D1): paid off and refinanced do not. */
+/**
+ * Loan statuses that count as a liability (D1): paid off and refinanced
+ * loans do not.
+ */
 export function loanCountsAsLiability(status: string): boolean {
   return status === "active" || status === "defaulted";
 }

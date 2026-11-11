@@ -591,7 +591,8 @@ export const upsertAccount = internalMutation({
         updateData,
         brokerAccountBaseFields(
           {
-            balance: (updateData.balance as number | undefined) ?? existing.balance,
+            balance:
+              (updateData.balance as number | undefined) ?? existing.balance,
             cash: (updateData.cash as number | undefined) ?? existing.cash,
             currency: balanceCurrency,
           },

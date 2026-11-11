@@ -71,7 +71,10 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
   // Broker account cash (uninvested)
   let brokerCashValue = 0;
   for (const acc of brokerAccounts) {
-    brokerCashValue += brokerAccountCash(acc, accountsWithPositions.has(acc._id));
+    brokerCashValue += brokerAccountCash(
+      acc,
+      accountsWithPositions.has(acc._id),
+    );
   }
 
   // 3. Vault items (commodities), valued at live spot like the dashboard,

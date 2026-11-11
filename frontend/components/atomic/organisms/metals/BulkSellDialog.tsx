@@ -30,6 +30,7 @@ import {
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
+import { todayLocalISO } from "@/lib/utils/date";
 import {
   saleProfitLoss,
   sumSaleProfitLoss,
@@ -69,7 +70,7 @@ export function BulkSellDialog({
     currency.toUpperCase(),
   );
   const [saleDate, setSaleDate] = useState(
-    new Date().toISOString().split("T")[0],
+    todayLocalISO(),
   );
 
   // Track each item's sell data
@@ -88,7 +89,7 @@ export function BulkSellDialog({
         })),
       );
       setSaleCurrency(currency.toUpperCase());
-      setSaleDate(new Date().toISOString().split("T")[0]);
+      setSaleDate(todayLocalISO());
       setError(null);
     }
   }, [isOpen, items, currency]);
@@ -199,7 +200,7 @@ export function BulkSellDialog({
                 type="date"
                 value={saleDate}
                 onChange={(e) => setSaleDate(e.target.value)}
-                max={new Date().toISOString().split("T")[0]}
+                max={todayLocalISO()}
               />
             </div>
             <div className="space-y-2">

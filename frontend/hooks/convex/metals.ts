@@ -10,6 +10,7 @@ import {
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import {
+  convertAtSpotRates,
   resolvePremiums,
   summarizeMetalItems,
   valueMetalItem,
@@ -86,6 +87,16 @@ function enrichItemWithValuation(
   const averageCost = ledger
     ? ledger.averageCost
     : (item.purchasePricePerUnit ?? null);
+  // The ledger is in EUR; the cached fields in their purchase currency
+  const costCurrency = ledger ? "EUR" : (item.purchaseCurrency ?? "EUR");
+
+  // Costs and realized P/L in the display currency, at the rates the spot
+  // prices were served with, so they compare with the spot values; unknown
+  // when a rate is missing
+  const rates = prices?.all?.exchangeRates;
+  const toDisplay = (amount: number | null, from: string) =>
+    amount === null ? null : convertAtSpotRates(amount, from, currency, rates);
+  const unitCost = toDisplay(averageCost, costCurrency);
 
   const valuation = valueMetalItem(
     {
@@ -93,7 +104,7 @@ function enrichItemWithValuation(
       quantity,
       buyPremium,
       sellPremium,
-      purchasePricePerUnit: averageCost ?? undefined,
+      purchasePricePerUnit: unitCost ?? undefined,
     },
     { pricePerOunce: spotPrice, sourceTimestamp: spotTimestamp },
     Date.now(),
@@ -112,10 +123,10 @@ function enrichItemWithValuation(
     quantity,
     buyPremium,
     sellPremium,
-    purchasePricePerUnit: averageCost ?? undefined,
+    purchasePricePerUnit: unitCost ?? undefined,
     purchaseDate: item.purchaseDate ?? undefined,
-    // The ledger's average cost is in EUR whatever the purchases were paid in
-    purchaseCurrency: ledger ? "EUR" : (item.purchaseCurrency ?? undefined),
+    // The unit cost above, converted to the display currency
+    purchaseCurrency: currency.toUpperCase(),
     storageLocation: item.storageLocation ?? undefined,
     notes: item.notes ?? undefined,
     createdAt: item.createdAt,
@@ -133,8 +144,10 @@ function enrichItemWithValuation(
     averageCost,
     // An unreplayable ledger's sales have an unknown realized P/L
     realizedProfitLoss:
-      ledger?.realizedComplete === true ? ledger.realizedProfitLoss : null,
-    soldCost: ledger?.soldCost ?? 0,
+      ledger?.realizedComplete === true
+        ? toDisplay(ledger.realizedProfitLoss, "EUR")
+        : null,
+    soldCost: toDisplay(ledger?.soldCost ?? 0, "EUR") ?? 0,
   };
 }
 

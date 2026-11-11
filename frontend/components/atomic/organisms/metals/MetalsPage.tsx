@@ -37,6 +37,8 @@ import {
   useMetalPricesRange,
 } from "@/hooks/metals";
 import { useMetalsYTD } from "@/hooks/performance";
+import { useVaultPerformance } from "@/hooks/performance/useContinuousPerformance";
+import { labelToTimeRange } from "@/lib/performance";
 import {
   MetalsType,
   MetalsCurrency,
@@ -47,6 +49,7 @@ import { TimeRange } from "@/../services/finance/financeService";
 import {
   TotalValueCard,
   TotalProfitLossCard,
+  type ChartTimeRange,
   YTDPerformanceCard,
   MetalCard,
   AllocationChart,
@@ -87,7 +90,6 @@ import { MetalDetailSlideOver } from "./MetalDetailSlideOver";
 import { AddMetalSlideOver } from "./AddMetalSlideOver";
 import { BulkSellDialog } from "./BulkSellDialog";
 import { exportTransactionsToCSV } from "@/lib/utils/export";
-import { costLine } from "@/../services/portfolio/unrealizedProfitLoss";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS FOR PRICES TAB
@@ -305,7 +307,12 @@ export function MetalsPage({
     isLoading: itemsLoading,
     prices,
   } = useMetals(initialCurrency);
-  const { summary, isLoading: summaryLoading } = useMetalsSummary(initialCurrency);
+  // Gated on the spot prices: loading until they arrive
+  const {
+    summary,
+    isLoading: summaryLoading,
+    pricesAsOf,
+  } = useMetalsSummary(initialCurrency);
   const {
     data: pricesData,
     isLoading: pricesLoading,
@@ -437,9 +444,23 @@ export function MetalsPage({
   // ─────────────────────────────────────────────────────────────
   const isLoading = itemsLoading || summaryLoading || pricesLoading;
 
-  // Calculate YTD performance using the unified performance service
-  // Uses continuous strategy with historical metal prices
+  // YTD and the value history from the one vault engine: ledger
+  // quantities at historical spot, purchases and sales as flows
   const ytdPerformance = useMetalsYTD(initialCurrency);
+  const [chartRange, setChartRange] = useState<ChartTimeRange>("3M");
+  const vaultHistory = useVaultPerformance(labelToTimeRange(chartRange), {
+    currency: initialCurrency,
+    includeDataPoints: true,
+  });
+  const chartPoints = useMemo(
+    () =>
+      vaultHistory.dataPoints.map((p) => ({
+        timestamp: p.timestamp,
+        value: p.value,
+        cost: p.costBasis,
+      })),
+    [vaultHistory.dataPoints],
+  );
 
   // ─────────────────────────────────────────────────────────────
   // FILTER & SORT ITEMS
@@ -495,18 +516,27 @@ export function MetalsPage({
   const transactions: Transaction[] = useMemo(() => {
     if (!rawTransactions) return [];
 
-    let result = rawTransactions.map((tx) => ({
-      _id: tx._id,
-      transactionType: tx.transactionType as Transaction["transactionType"],
-      quantity: tx.quantity,
-      pricePerUnit: tx.pricePerUnit,
-      currency: tx.currency,
-      transactionDate: tx.transactionDate,
-      spotPriceAtTransaction: tx.spotPriceAtTransaction ?? undefined,
-      notes: tx.notes ?? undefined,
-      itemName: tx.itemName,
-      metalType: tx.metalType,
-    }));
+    // Opening balances of unknown cost or date are ledger entries, not
+    // dealings: they are not listed (the holdings tab shows them)
+    let result = rawTransactions.flatMap((tx) =>
+      tx.pricePerUnit === undefined || tx.transactionDate === undefined
+        ? []
+        : [
+            {
+              _id: tx._id,
+              transactionType:
+                tx.transactionType as Transaction["transactionType"],
+              quantity: tx.quantity,
+              pricePerUnit: tx.pricePerUnit,
+              currency: tx.currency,
+              transactionDate: tx.transactionDate,
+              spotPriceAtTransaction: tx.spotPriceAtTransaction ?? undefined,
+              notes: tx.notes ?? undefined,
+              itemName: tx.itemName,
+              metalType: tx.metalType,
+            },
+          ],
+    );
 
     if (txSearchQuery) {
       const query = txSearchQuery.toLowerCase();
@@ -591,9 +621,14 @@ export function MetalsPage({
               currency={initialCurrency}
               isLoading={summaryLoading}
             />
+            {/* Unrealized + realized; unavailable while not priced at spot */}
             <TotalProfitLossCard
-              profitLoss={summary?.totalProfitLoss ?? null}
-              profitLossPercent={summary?.totalProfitLossPercent ?? null}
+              profitLoss={
+                summary?.pricedAtSpot ? summary.totalProfitLoss : null
+              }
+              profitLossPercent={
+                summary?.pricedAtSpot ? summary.totalProfitLossPercent : null
+              }
               currency={initialCurrency}
               isLoading={summaryLoading}
             />
@@ -605,27 +640,22 @@ export function MetalsPage({
             />
           </div>
 
+          {!summaryLoading && !isEmpty && (
+            <p className="text-xs text-muted-foreground -mt-3">
+              {summary?.pricedAtSpot && pricesAsOf !== null
+                ? `Spot prices as of ${new Date(pricesAsOf).toLocaleString("de-DE")}`
+                : "Spot prices unavailable or out of date: holdings are valued at cost"}
+            </p>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <AllocationChart summary={summary} isLoading={summaryLoading} />
             <PortfolioChart
-              transactions={rawTransactions?.map((tx) => ({
-                transactionDate: tx.transactionDate,
-                transactionType: tx.transactionType as
-                  | "buy"
-                  | "sell"
-                  | "gift_received"
-                  | "gift_given",
-                quantity: tx.quantity,
-                pricePerUnit: tx.pricePerUnit,
-              }))}
-              currentValue={summary?.totalMarketValue ?? 0}
-              totalCost={
-                summary
-                  ? costLine(summary.totalMarketValue, summary.totalProfitLoss)
-                  : null
-              }
+              dataPoints={chartPoints}
+              timeRange={chartRange}
+              onTimeRangeChange={setChartRange}
               currency={initialCurrency}
-              isLoading={summaryLoading || transactionsLoading}
+              isLoading={vaultHistory.isLoading}
             />
           </div>
 
@@ -774,7 +804,11 @@ export function MetalsPage({
                 <TransactionSummary
                   transactions={transactions}
                   displayCurrency={initialCurrency}
-                  unrealizedPL={summary?.totalProfitLoss ?? null}
+                  realizedPL={summary?.realizedProfitLoss ?? null}
+                  unrealizedPL={
+                    summary?.pricedAtSpot ? summary.unrealizedProfitLoss : null
+                  }
+                  totalPL={summary?.pricedAtSpot ? summary.totalProfitLoss : null}
                 />
               )}
 

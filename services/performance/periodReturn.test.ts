@@ -11,6 +11,14 @@ import { ContinuousPerformanceStrategy } from "./strategies/continuous";
 import { HybridPerformanceStrategy } from "./strategies/hybrid";
 import type { HoldingData, SnapshotCategoryBreakdown, SnapshotData } from "./types";
 import { TROY_OUNCE_GRAMS } from "../finance/metals";
+import {
+  aggregateNetWorth,
+  buildSnapshotBreakdown,
+  withoutSnapshotHoldings,
+  type HoldingSource,
+  type NormalizedHolding,
+  type SnapshotCategoryEntry,
+} from "../portfolio/aggregate";
 
 const DAY = 86_400_000;
 const JAN_1 = Date.UTC(2026, 0, 1);
@@ -86,6 +94,35 @@ describe("computePeriodReturn", () => {
     expect(r.modifiedDietzPercent).toBeCloseTo(20);
   });
 
+  it("weights a flow known only within its span from the span's middle", () => {
+    // Dust, then a 1 000 purchase found by the next snapshot, then +10%
+    const points = [
+      { timestamp: 0, value: 5 },
+      { timestamp: 1, value: 990 },
+      { timestamp: 2, value: 1_089 },
+    ];
+    const r = computePeriodReturn(points, [{ timestamp: 1, amount: 1_000, spanStart: 0 }])!;
+    expect(r.profitLoss).toBe(84);
+    // 84 / (5 + 1 000 × (2 − 0.5)/2)
+    expect(r.modifiedDietzPercent).toBeCloseTo((84 / 755) * 100, 9);
+    // (990 − 5 − 1 000) / (5 + 500), then 99 / 990
+    expect(r.timeWeightedPercent).toBeCloseTo(((490 / 505) * 1.1 - 1) * 100, 9);
+  });
+
+  it("has no time-weighted return when a span loses more than its capital", () => {
+    // The same purchase dated exactly at the point: −300% on the dust
+    const r = computePeriodReturn(
+      [
+        { timestamp: 0, value: 5 },
+        { timestamp: 1, value: 990 },
+        { timestamp: 2, value: 1_089 },
+      ],
+      [{ timestamp: 1, amount: 1_000 }],
+    )!;
+    expect(r.timeWeightedPercent).toBeNull();
+    expect(r.modifiedDietzPercent).toBeCloseTo((84 / 505) * 100, 9);
+  });
+
   it("ignores flows outside the span and has no percent without capital", () => {
     const r = computePeriodReturn(
       [
@@ -119,11 +156,47 @@ function snap(
   };
 }
 
-const equities = (value: number, costBasis?: number): SnapshotCategoryBreakdown => ({
+const equities = (value: number): SnapshotCategoryBreakdown => ({
   category: "equities",
   value,
-  ...(costBasis !== undefined && { costBasis, coveredValue: value }),
 });
+
+/** A holding as lib/netWorth.ts loads it, matched across days by key. */
+function held(
+  key: string,
+  source: HoldingSource,
+  category: string,
+  valueBase: number,
+  costBase: number | null,
+): NormalizedHolding {
+  return {
+    id: `${key}-${valueBase}`,
+    key,
+    provider: source === "vault" ? "manual" : source === "bitpanda" ? "bitpanda" : "snaptrade",
+    source,
+    category: category as NormalizedHolding["category"],
+    subcategory: "unknown",
+    name: key,
+    valueBase,
+    costBase,
+    pricedAt: null,
+  };
+}
+
+/** Snapshots as takeSnapshot writes them and getSnapshots returns them. */
+function written(days: [number, NormalizedHolding[]][]): SnapshotData[] {
+  let previous: SnapshotCategoryEntry[] | undefined;
+  return days.map(([timestamp, holdings]) => {
+    const { categoryBreakdown } = buildSnapshotBreakdown(
+      aggregateNetWorth(holdings),
+      holdings,
+      previous,
+    );
+    previous = categoryBreakdown;
+    return snap(timestamp, withoutSnapshotHoldings(categoryBreakdown));
+  });
+}
+const stock = (value: number, cost: number) => [held("aapl", "brokerPosition", "equities", value, cost)];
 
 describe("discrete strategy flows", () => {
   const discrete = new DiscretePerformanceStrategy();
@@ -132,11 +205,11 @@ describe("discrete strategy flows", () => {
   it("reports a deposit as a flow, not a gain", () => {
     const { metrics } = discrete.calculate(
       {
-        snapshots: [
-          snap(JAN_1, [equities(1_000, 1_000)]),
-          snap(JAN_1 + 14 * DAY, [equities(2_000, 2_000)]),
-          snap(END, [equities(2_000, 2_000)]),
-        ],
+        snapshots: written([
+          [JAN_1, stock(1_000, 1_000)],
+          [JAN_1 + 14 * DAY, stock(2_000, 2_000)],
+          [END, stock(2_000, 2_000)],
+        ]),
         metric: EQUITIES,
       },
       ytd,
@@ -151,11 +224,11 @@ describe("discrete strategy flows", () => {
   it("separates a mid-period purchase from the gain", () => {
     const { metrics, dataPoints } = discrete.calculate(
       {
-        snapshots: [
-          snap(JAN_1, [equities(1_000, 1_000)]),
-          snap(JAN_1 + 14 * DAY, [equities(2_000, 2_000)]),
-          snap(END, [equities(2_100, 2_000)]),
-        ],
+        snapshots: written([
+          [JAN_1, stock(1_000, 1_000)],
+          [JAN_1 + 14 * DAY, stock(2_000, 2_000)],
+          [END, stock(2_100, 2_000)],
+        ]),
         metric: EQUITIES,
       },
       ytd,
@@ -212,10 +285,10 @@ describe("discrete strategy flows", () => {
   });
 
   it("measures since the first snapshot with the firstPoint baseline", () => {
-    const snapshots = [
-      snap(JAN_1 + 10 * DAY, [equities(1_000, 1_000)]),
-      snap(END, [equities(1_300, 1_200)]),
-    ];
+    const snapshots = written([
+      [JAN_1 + 10 * DAY, stock(1_000, 1_000)],
+      [END, stock(1_300, 1_200)],
+    ]);
     const fromStart = discrete.calculate({ snapshots, metric: EQUITIES }, ytd);
     expect(fromStart.metrics.profitLoss).toBeNull();
     const sinceTracking = discrete.calculate(
@@ -265,6 +338,34 @@ describe("continuous strategy flows", () => {
     expect(metrics.flowCoverage).toBe("complete");
   });
 
+  it("values a purchase priced in another currency at the spot of its date", () => {
+    const { metrics } = new ContinuousPerformanceStrategy().calculate(
+      {
+        holdings: [
+          ounce("bought", { purchaseDate: MID, purchasePricePerUnit: 2_400, purchaseCurrency: "USD" }),
+        ],
+        prices: prices(JAN_1 - 7 * DAY, END, (t) => (t < MID ? 2_000 : 2_200)),
+        currency: "eur",
+      },
+      ytd,
+    );
+    // Not $2 400 taken as €2 400: the coin's EUR value that day
+    expect(metrics.netFlows).toBeCloseTo(2_200);
+    expect(metrics.profitLoss).toBeCloseTo(0);
+    // A price in the series' currency is used as is
+    const same = new ContinuousPerformanceStrategy().calculate(
+      {
+        holdings: [
+          ounce("bought", { purchaseDate: MID, purchasePricePerUnit: 2_100, purchaseCurrency: "EUR" }),
+        ],
+        prices: prices(JAN_1 - 7 * DAY, END, (t) => (t < MID ? 2_000 : 2_200)),
+        currency: "eur",
+      },
+      ytd,
+    );
+    expect(same.metrics.netFlows).toBe(2_100);
+  });
+
   it("values a purchase without a price at the spot of its date", () => {
     const { metrics } = new ContinuousPerformanceStrategy().calculate(
       {
@@ -301,21 +402,17 @@ describe("continuous strategy flows", () => {
   });
 
   it("combines snapshot and vault flows for commodities in the hybrid strategy", () => {
-    const commodities = (vault: number, bitpanda: number, bitpandaCost: number) => ({
-      category: "commodities",
-      value: vault + bitpanda,
-      sources: [
-        { source: "vault", value: vault, coveredValue: 0 },
-        { source: "bitpanda", value: bitpanda, costBasis: bitpandaCost, coveredValue: bitpanda },
-      ],
-    });
+    const commodities = (vault: number, bitpanda: number, bitpandaCost: number) => [
+      ...(vault > 0 ? [held("coin", "vault", "commodities", vault, vault)] : []),
+      held("xau", "bitpanda", "commodities", bitpanda, bitpandaCost),
+    ];
     const { metrics } = new HybridPerformanceStrategy().calculate(
       {
         discrete: {
-          snapshots: [
-            snap(JAN_1, [commodities(0, 500, 500)]),
-            snap(END, [commodities(2_000, 1_100, 1_000)]),
-          ],
+          snapshots: written([
+            [JAN_1, commodities(0, 500, 500)],
+            [END, commodities(2_000, 1_100, 1_000)],
+          ]),
           metric: { kind: "category", category: "commodities" },
         },
         continuous: {

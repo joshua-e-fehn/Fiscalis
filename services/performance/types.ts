@@ -152,8 +152,16 @@ export interface PerformanceDataPoint {
  * a time. A flow changes the value without being performance.
  */
 export interface CashFlow {
+  /** When the flow is in the value: exactly then, or by then (spanStart) */
   timestamp: number;
   amount: number;
+  /**
+   * The flow happened at an unknown time after this and up to `timestamp`
+   * (a flow derived by comparing two snapshots, a purchase known only to
+   * the day). Modified Dietz then weights it at the middle of that span
+   * rather than at its end, where it would count as never invested.
+   */
+  spanStart?: number;
 }
 
 /**
@@ -322,8 +330,13 @@ export interface HoldingData {
    * any range start: an item is never dated at record creation.
    */
   purchaseDate?: number;
-  /** Cost per unit at purchase */
+  /** Cost per unit at purchase, in purchaseCurrency */
   purchasePricePerUnit?: number;
+  /**
+   * Currency of purchasePricePerUnit (vaultItems.purchaseCurrency). A price
+   * in another currency than the series' is not used as the purchase flow.
+   */
+  purchaseCurrency?: string;
 }
 
 /**

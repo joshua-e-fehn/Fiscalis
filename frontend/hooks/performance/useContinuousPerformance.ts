@@ -110,6 +110,8 @@ export function useVaultPerformanceInput(
         ? new Date(item.purchaseDate).getTime()
         : undefined,
       purchasePricePerUnit: item.purchasePricePerUnit ?? undefined,
+      // Stored items without one were entered in EUR (vault.ts default)
+      purchaseCurrency: item.purchaseCurrency ?? "EUR",
     }));
 
     // Per-ounce closes; the client's gap-filled points are dropped so the
@@ -136,7 +138,7 @@ export function useVaultPerformanceInput(
       }
     }
 
-    return { holdings, prices, livePrices };
+    return { holdings, prices, livePrices, currency };
   }, [vaultItems, held, goldData, silverData, platinumData, palladiumData, live.data, currency]);
 
   return { input, isLoading };

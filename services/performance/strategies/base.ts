@@ -197,15 +197,18 @@ export interface PeriodReturn {
   profitLoss: number;
   /**
    * Modified Dietz: profitLoss / (start + Σ wᵢ·Fᵢ) × 100, each flow weighted
-   * by the share of the period it was invested. Null when nothing was
-   * invested (the denominator is not positive).
+   * by the share of the period it was invested (a flow known only within a
+   * span, CashFlow.spanStart, from the middle of that span). Null when
+   * nothing was invested (the denominator is not positive).
    */
   modifiedDietzPercent: number | null;
   /**
    * Time-weighted return: Modified Dietz within each span between two
    * consecutive points, chained. Flows inside a span are weighted as above;
    * a span with nothing invested contributes 0. Null when no span had
-   * capital.
+   * capital, or when a span lost more than everything invested in it (its
+   * growth factor is not positive, so the chain means nothing): callers
+   * then fall back to Modified Dietz.
    */
   timeWeightedPercent: number | null;
 }
@@ -251,12 +254,14 @@ function modifiedDietz(
   flows: readonly CashFlow[],
 ): number | null {
   const length = end.timestamp - start.timestamp;
-  const weighted = flows.reduce(
-    (sum, f) =>
-      sum +
-      f.amount * (length > 0 ? (end.timestamp - f.timestamp) / length : 0),
-    0,
-  );
+  const weighted = flows.reduce((sum, f) => {
+    // A flow known only within a span counts from the span's middle
+    const at =
+      f.spanStart === undefined
+        ? f.timestamp
+        : (Math.max(f.spanStart, start.timestamp) + f.timestamp) / 2;
+    return sum + f.amount * (length > 0 ? (end.timestamp - at) / length : 0);
+  }, 0);
   const invested = start.value + weighted;
   if (!(invested > 0)) return null;
   const net = flows.reduce((sum, f) => sum + f.amount, 0);
@@ -276,6 +281,7 @@ function timeWeighted(
       inSpan(points[i - 1].timestamp, points[i].timestamp),
     );
     if (r === null) continue;
+    if (!(1 + r / 100 > 0)) return null;
     growth *= 1 + r / 100;
     spansWithCapital++;
   }

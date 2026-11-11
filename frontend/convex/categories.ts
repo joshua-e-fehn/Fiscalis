@@ -19,16 +19,13 @@ import {
 
 /**
  * A position in a category, from any provider. `provider` discriminates the
- * stored document: SnapTrade broker positions carry the provider's cost
- * basis and P&L; a Bitpanda holding carries only the EUR cost basis derived
- * from its synced trades (costBasisInBaseCurrency, lib/netWorth.ts), never
- * native cost or P&L fields.
+ * stored document: SnapTrade broker positions carry cost basis and P&L,
+ * Bitpanda holdings do not (those fields are always undefined for them).
  */
 export type CategoryPosition =
   | (Doc<"brokerPositions"> & { provider: "snaptrade" })
   | (Doc<"bitpandaHoldings"> & {
       provider: "bitpanda";
-      costBasisInBaseCurrency?: number;
       totalCostBasis?: undefined;
       unrealizedPL?: undefined;
     });

@@ -169,10 +169,10 @@ export function snapshotMetricValue(
 
 /**
  * External flow into a flow-adjusted category between two consecutive
- * snapshots (services/portfolio/aggregate.ts snapshotCategoryFlow), less
- * the excluded sources; null for a measure that is not flow-adjusted (net
- * worth, total assets, cash, liabilities: D2). The netFlow stored by the
- * snapshot writer is used when no source is excluded.
+ * snapshots (services/portfolio/aggregate.ts snapshotCategoryFlow: the
+ * flow the snapshot writer stored, else an estimate), less the excluded
+ * sources; null for a measure that is not flow-adjusted (net worth, total
+ * assets, cash, liabilities: D2).
  */
 export function snapshotMetricFlow(
   prev: SnapshotData,
@@ -185,17 +185,10 @@ export function snapshotMetricFlow(
   }
   const find = (s: SnapshotData) =>
     s.categoryBreakdown?.find((c) => c.category === metric.category);
-  const current = find(cur);
   const excluded = new Set(
     exclude.filter((e) => e.category === metric.category).map((e) => e.source),
   );
-  if (excluded.size === 0 && current?.netFlow !== undefined) {
-    return {
-      amount: current.netFlow,
-      estimated: current.netFlowEstimated ?? false,
-    };
-  }
-  return snapshotCategoryFlow(find(prev), current, excluded);
+  return snapshotCategoryFlow(find(prev), find(cur), excluded);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -242,10 +235,15 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       isFlowAdjustedCategory(input.metric.category);
     const flows: CashFlow[] = [];
     const estimatedFlowTimestamps: number[] = [];
-    for (const v of values) {
+    for (const [i, v] of values.entries()) {
       if (!v.flow) continue;
       if (v.flow.amount !== 0) {
-        flows.push({ timestamp: v.timestamp, amount: v.flow.amount });
+        // Somewhere between the previous snapshot and this one
+        flows.push({
+          timestamp: v.timestamp,
+          amount: v.flow.amount,
+          spanStart: values[i - 1].timestamp,
+        });
       }
       if (v.flow.estimated) estimatedFlowTimestamps.push(v.timestamp);
     }

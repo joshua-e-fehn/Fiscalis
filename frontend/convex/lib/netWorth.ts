@@ -2,6 +2,7 @@ import { QueryCtx } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
 import { loadFxRates } from "../fxRates";
 import {
+  BASE_CURRENCY,
   bankAccountWithBaseFields,
   brokerAccountWithBaseFields,
   positionWithBaseFields,
@@ -11,6 +12,7 @@ import { valueVaultItem } from "../../../services/finance/metals";
 import {
   averageCostPerUnit,
   bankAccountValue,
+  type AverageCost,
   bitpandaCostBasis,
   brokerAccountCash,
   brokerAccountMarginDebt,
@@ -50,8 +52,12 @@ import {
  * - Vault items are valued at live spot (metalSpotPrices) with the shared
  *   metals valuation, falling back to cost when no fresh spot price exists.
  * - A Bitpanda holding's cost basis is the average cost of its symbol from
- *   the synced trades times the quantity held (categorySummary.ts
- *   averageCostPerUnit); Bitpanda reports none itself.
+ *   the synced trades (rewards at no cost) times the quantity held, and
+ *   none when more is held than the trades account for (categorySummary.ts
+ *   averageCostPerUnit, bitpandaCostBasis); Bitpanda reports none itself.
+ * - Each holding carries a key that survives provider re-syncs, and a
+ *   foreign-currency position its native cost, for the snapshot flows
+ *   (aggregate.ts holdingNetFlow).
  * - Loans count when active or defaulted (D1).
  */
 
@@ -90,6 +96,7 @@ export async function loadHoldings(
     const category = toHoldingCategory(doc.investmentCategory);
     holdings.push({
       id: doc._id,
+      key: `bank:${doc.accountId}`,
       provider: "plaid",
       source: "bank",
       category,
@@ -112,15 +119,23 @@ export async function loadHoldings(
     const doc = positionWithBaseFields(raw, rates);
     const category = toHoldingCategory(doc.investmentCategory);
     const value = positionValue(doc);
+    const costBase = positionCostBasis(doc);
     holdings.push({
       id: doc._id,
+      // Positions are replaced on every sync; the account and symbol stay
+      key: `brokerPosition:${doc.accountId}:${doc.symbol}`,
       provider: "snaptrade",
       source: "brokerPosition",
       category,
       subcategory: doc.investmentSubcategory ?? "unknown",
       name: doc.symbol ?? doc.name ?? "Unknown",
       valueBase: category === "liabilities" ? positionOwed(value) : value,
-      costBase: positionCostBasis(doc),
+      costBase,
+      ...(costBase !== null &&
+      doc.totalCostBasis !== undefined &&
+      doc.currency !== BASE_CURRENCY
+        ? { costNative: { amount: doc.totalCostBasis, currency: doc.currency } }
+        : {}),
       pricedAt: doc.lastSyncAt ?? doc.createdAt,
       doc,
     });
@@ -167,7 +182,7 @@ export async function loadHoldings(
             return converted.ok ? converted.value : null;
           },
         )
-      : new Map<string, number>();
+      : new Map<string, AverageCost>();
   for (const raw of bitpandaHoldings) {
     const category = toHoldingCategory(raw.investmentCategory);
     const value = positionValue(raw);
@@ -177,6 +192,8 @@ export async function loadHoldings(
       cost === undefined ? raw : { ...raw, costBasisInBaseCurrency: cost };
     holdings.push({
       id: doc._id,
+      // Holdings are replaced on every sync; the connection and asset stay
+      key: `bitpanda:${doc.connectionId}:${doc.assetType}:${doc.symbol.toUpperCase()}`,
       provider: "bitpanda",
       source: "bitpanda",
       category,
@@ -257,9 +274,10 @@ export async function computeNetWorth(
   userId: string,
   previousBreakdown?: readonly SnapshotCategoryEntry[],
 ) {
-  const aggregate = aggregateNetWorth(await loadHoldings(ctx, userId));
+  const holdings = await loadHoldings(ctx, userId);
+  const aggregate = aggregateNetWorth(holdings);
   const { categoryBreakdown, totalCostBasis, totalCoveredValue } =
-    buildSnapshotBreakdown(aggregate, previousBreakdown);
+    buildSnapshotBreakdown(aggregate, holdings, previousBreakdown);
 
   return {
     totalAssets: aggregate.totalAssets,

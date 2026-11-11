@@ -92,6 +92,8 @@ export interface ContinuousPerformanceInput {
    * with valueVaultItem, the function behind the Total Value cards.
    */
   livePrices?: Partial<Record<string, PricePoint>>;
+  /** Currency of `prices` and `livePrices` (e.g. "eur") */
+  currency?: string;
 }
 
 /**

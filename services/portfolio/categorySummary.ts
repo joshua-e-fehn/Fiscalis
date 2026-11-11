@@ -129,32 +129,50 @@ export interface ProviderTrade {
   /** Fiat amount paid (buy) or received (sell) */
   amount: number;
   currency: string;
-  /** ISO 8601 */
+  /** ISO 8601, or epoch seconds as a string (see tradeTime) */
   transactionDate: string;
 }
 
+/** A symbol's cost book from its trades. */
+export interface AverageCost {
+  /** EUR cost per unit of the quantity the trades account for */
+  perUnit: number;
+  /** Units the trades account for: bought plus rewarded, less sold */
+  quantity: number;
+}
+
 /**
- * Average cost per unit in EUR by symbol (upper-case), from buy and sell
- * trades replayed in date order: a buy adds its quantity and EUR amount, a
- * sell removes its quantity at the running average (so the average does
- * not change). Deposits, rewards and transfers carry no price and are left
- * out. A symbol is missing when nothing bought is still held or a buy's
- * currency has no rate.
- *
- * A holding's cost basis is this average times the quantity held
- * (bitpandaCostBasis), so a reward or transfer-in held next to bought units
- * is costed at the average buy price.
+ * Time of a trade in ms. Stored dates are ISO 8601, or epoch seconds (or
+ * ms) as a string when the provider sent a unix time; unknown is 0.
+ */
+function tradeTime(date: string): number {
+  if (/^\d+(\.\d+)?$/.test(date.trim())) {
+    const n = Number(date);
+    return n < 1e12 ? n * 1000 : n;
+  }
+  const parsed = Date.parse(date);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Cost book in EUR by symbol (upper-case), from the trades replayed in
+ * date order: a buy adds its quantity and EUR amount; a reward adds its
+ * quantity at zero cost (it is income, so it shows as P/L, never as money
+ * put in); a sell removes its quantity at the running average (so the
+ * average does not change). Deposits, withdrawals and transfers carry no
+ * price and are left out. A symbol is missing when nothing bought is still
+ * held or a buy's currency has no rate.
  */
 export function averageCostPerUnit(
   trades: readonly ProviderTrade[],
   toEur: (amount: number, currency: string) => number | null,
-): Map<string, number> {
+): Map<string, AverageCost> {
   const books = new Map<string, { quantity: number; cost: number; unknown: boolean }>();
-  const ordered = [...trades].sort((a, b) =>
-    a.transactionDate.localeCompare(b.transactionDate),
+  const ordered = [...trades].sort(
+    (a, b) => tradeTime(a.transactionDate) - tradeTime(b.transactionDate),
   );
   for (const t of ordered) {
-    if (t.type !== "buy" && t.type !== "sell") continue;
+    if (t.type !== "buy" && t.type !== "sell" && t.type !== "reward") continue;
     const quantity = Math.abs(t.quantity);
     if (!(quantity > 0)) continue;
     const symbol = t.symbol.toUpperCase();
@@ -165,33 +183,47 @@ export function averageCostPerUnit(
       if (eur === null) book.unknown = true;
       else book.cost += eur;
       book.quantity += quantity;
+    } else if (t.type === "reward") {
+      book.quantity += quantity;
     } else if (book.quantity > 0) {
       const sold = Math.min(quantity, book.quantity);
       book.cost -= (book.cost / book.quantity) * sold;
       book.quantity -= sold;
     }
   }
-  const average = new Map<string, number>();
+  const average = new Map<string, AverageCost>();
   for (const [symbol, book] of books) {
     if (!book.unknown && book.quantity > 1e-12 && book.cost > 0) {
-      average.set(symbol, book.cost / book.quantity);
+      average.set(symbol, {
+        perUnit: book.cost / book.quantity,
+        quantity: book.quantity,
+      });
     }
   }
   return average;
 }
 
+/** Quantity held beyond the trades' that is still rounding (fees, dust). */
+const UNTRADED_QUANTITY_TOLERANCE = 0.001;
+
 /**
  * Cost basis in EUR of a Bitpanda holding: the average cost of its symbol
- * times the quantity held; undefined for fiat wallets (cash) and symbols
- * without an average (averageCostPerUnit).
+ * times the quantity held. Undefined for fiat wallets (cash), symbols
+ * without an average (averageCostPerUnit), and holdings larger than their
+ * trades account for: units transferred in have an unknown cost, so the
+ * holding is left uncovered rather than costed at the buys' price.
  */
 export function bitpandaCostBasis(
   holding: { assetType: string; symbol: string; quantity: number },
-  averageCost: ReadonlyMap<string, number>,
+  averageCost: ReadonlyMap<string, AverageCost>,
 ): number | undefined {
   if (holding.assetType === "fiat") return undefined;
-  const unit = averageCost.get(holding.symbol.toUpperCase());
-  return unit === undefined ? undefined : unit * holding.quantity;
+  const book = averageCost.get(holding.symbol.toUpperCase());
+  if (book === undefined) return undefined;
+  if (holding.quantity > book.quantity * (1 + UNTRADED_QUANTITY_TOLERANCE)) {
+    return undefined;
+  }
+  return book.perUnit * holding.quantity;
 }
 
 // ═══════════════════════════════════════════════════════════════

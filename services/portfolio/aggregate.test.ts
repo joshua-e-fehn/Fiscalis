@@ -4,13 +4,16 @@ import {
   aggregateNetWorth,
   buildSnapshotBreakdown,
   isFlowAdjustedCategory,
+  categoryFlowFromHoldings,
+  holdingNetFlow,
   snapshotCategoryFlow,
-  snapshotNetFlow,
+  withoutSnapshotHoldings,
   HOLDING_CATEGORIES,
   placeHolding,
   positionOwed,
   toHoldingCategory,
   type NormalizedHolding,
+  type SnapshotCategoryEntry,
 } from "./aggregate";
 import { loanMonthlyPaymentInBase } from "./categorySummary";
 import { fxRatesFromDaily } from "../finance/currency";
@@ -156,7 +159,7 @@ describe("aggregateNetWorth", () => {
 });
 
 describe("buildSnapshotBreakdown", () => {
-  const b = buildSnapshotBreakdown(aggregateNetWorth(holdings));
+  const b = buildSnapshotBreakdown(aggregateNetWorth(holdings), holdings);
 
   it("lists asset categories with value, cost, covered value and sources", () => {
     expect(b.categoryBreakdown.map((c) => c.category)).toEqual([
@@ -169,14 +172,31 @@ describe("buildSnapshotBreakdown", () => {
     ]);
     const commodities = b.categoryBreakdown.find((c) => c.category === "commodities")!;
     expect(commodities).toMatchObject({ value: 7_200, costBasis: 1_150, coveredValue: 1_400 });
-    expect(commodities.sources).toEqual([
-      { source: "brokerPosition", value: 200, costBasis: 150, coveredValue: 200 },
-      { source: "bitpanda", value: 800, coveredValue: 0 },
-      { source: "vault", value: 6_200, costBasis: 1_000, coveredValue: 1_200 },
+    expect(commodities.sources!.map(({ source, value }) => ({ source, value }))).toEqual([
+      { source: "brokerPosition", value: 200 },
+      { source: "bitpanda", value: 800 },
+      { source: "vault", value: 6_200 },
     ]);
     expect(commodities).not.toHaveProperty("netFlow");
     expect(commodities.value - snapshotCostLine(commodities)!).toBe(250);
     expect(b.categoryBreakdown.find((c) => c.category === "crypto")).not.toHaveProperty("costBasis");
+  });
+
+  it("keeps the holdings of flow-adjusted categories only, with their cost", () => {
+    const by = (c: string) => b.categoryBreakdown.find((e) => e.category === c)!;
+    const vault = by("commodities").sources!.find((s) => s.source === "vault")!;
+    expect(vault.holdings!.map(({ value, cost }) => ({ value, cost }))).toEqual([
+      { value: 1_200, cost: 1_000 },
+      { value: 5_000, cost: undefined },
+    ]);
+    expect(by("cash").sources!.every((s) => s.holdings === undefined)).toBe(true);
+    expect(by("unclassified").sources!.every((s) => s.holdings === undefined)).toBe(true);
+  });
+
+  it("strips the holdings for readers", () => {
+    const stripped = withoutSnapshotHoldings(b.categoryBreakdown);
+    expect(stripped.every((c) => c.sources!.every((s) => !("holdings" in s)))).toBe(true);
+    expect(stripped.map((c) => c.value)).toEqual(b.categoryBreakdown.map((c) => c.value));
   });
 
   it("sums cost totals over the categories that have a cost basis", () => {
@@ -185,7 +205,7 @@ describe("buildSnapshotBreakdown", () => {
   });
 
   it("leaves the cost totals undefined when nothing has a cost basis", () => {
-    expect(buildSnapshotBreakdown(aggregateNetWorth([]))).toEqual({
+    expect(buildSnapshotBreakdown(aggregateNetWorth([]), [])).toEqual({
       categoryBreakdown: [],
       totalCostBasis: undefined,
       totalCoveredValue: undefined,
@@ -193,92 +213,182 @@ describe("buildSnapshotBreakdown", () => {
   });
 });
 
-describe("snapshotNetFlow", () => {
+describe("holdingNetFlow", () => {
+  const h = (value: number, cost?: number, native?: { amount: number; currency: string }) => ({
+    key: "k",
+    value,
+    ...(cost !== undefined && { cost }),
+    ...(native && { costNative: native.amount, currency: native.currency }),
+  });
+
   it("counts a purchase at its cost and a price move as no flow", () => {
-    const prev = { value: 1_000, costBasis: 800, coveredValue: 1_000 };
-    // Bought 500 worth at cost 500, and the old holdings rose by 100
-    expect(snapshotNetFlow(prev, { value: 1_600, costBasis: 1_300, coveredValue: 1_600 }))
-      .toEqual({ amount: 500, estimated: false });
-    expect(snapshotNetFlow(prev, { value: 1_100, costBasis: 800, coveredValue: 1_100 }))
+    // Bought 500 worth at cost 500, and the old holding rose by 100
+    expect(holdingNetFlow(h(1_000, 800), h(1_600, 1_300))).toEqual({ amount: 500, estimated: false });
+    expect(holdingNetFlow(h(1_000, 800), h(1_100, 800))).toEqual({ amount: 0, estimated: false });
+  });
+
+  it("estimates a sale's proceeds at the previous value of the share sold", () => {
+    // Half of a holding worth 1 000 (cost 800) sold: cost falls by 400
+    expect(holdingNetFlow(h(1_000, 800), h(500, 400)).amount).toBeCloseTo(-500);
+  });
+
+  it("treats a holding that appears or disappears as money in or out at value", () => {
+    expect(holdingNetFlow(undefined, h(700, 300))).toEqual({ amount: 700, estimated: false });
+    expect(holdingNetFlow(h(700), undefined)).toEqual({ amount: -700, estimated: false });
+  });
+
+  it("never takes an exchange rate move for a purchase or sale", () => {
+    // $10k cost, $12k value; EURUSD 1.10 → 1.00: the EUR cost rises by 909
+    const usd = { amount: 10_000, currency: "USD" };
+    expect(holdingNetFlow(h(12_000 / 1.1, 10_000 / 1.1, usd), h(12_000, 10_000, usd)))
       .toEqual({ amount: 0, estimated: false });
-  });
-
-  it("estimates a sale's proceeds at the previous market/cost ratio", () => {
-    // Half of a position worth 1 000 (cost 800) sold: cost falls by 400
-    const flow = snapshotNetFlow(
-      { value: 1_000, costBasis: 800, coveredValue: 1_000 },
-      { value: 500, costBasis: 400, coveredValue: 500 },
-    );
-    expect(flow.amount).toBeCloseTo(-500);
-  });
-
-  it("treats a group that appears or disappears as money in or out at value", () => {
-    expect(snapshotNetFlow(undefined, { value: 700, costBasis: 300, coveredValue: 700 }))
-      .toEqual({ amount: 700, estimated: false });
-    expect(snapshotNetFlow({ value: 700 }, undefined)).toEqual({ amount: -700, estimated: false });
-  });
-
-  it("counts value without a cost basis as a flow inside a covered group", () => {
-    // A transfer-in without cost (+300) next to covered holdings
-    expect(snapshotNetFlow(
-      { value: 1_000, costBasis: 800, coveredValue: 1_000 },
-      { value: 1_300, costBasis: 800, coveredValue: 1_000 },
-    )).toEqual({ amount: 300, estimated: false });
+    // $1k bought: converted at today's rate
+    expect(
+      holdingNetFlow(
+        h(12_000 / 1.1, 10_000 / 1.1, usd),
+        h(13_200, 11_000, { amount: 11_000, currency: "USD" }),
+      ),
+    ).toEqual({ amount: 1_000, estimated: false });
   });
 
   it("assumes no flow, flagged, when one end has no cost basis", () => {
-    expect(snapshotNetFlow({ value: 1_000 }, { value: 1_200 }))
-      .toEqual({ amount: 0, estimated: true });
-    expect(snapshotNetFlow({ value: 1_000 }, { value: 1_000, costBasis: 900, coveredValue: 1_000 }))
-      .toEqual({ amount: 0, estimated: true });
+    expect(holdingNetFlow(h(1_000), h(1_200))).toEqual({ amount: 0, estimated: true });
+    // First costed (trades synced after the holdings): not a sale of the gain
+    expect(holdingNetFlow(h(5_000), h(5_000, 3_000))).toEqual({ amount: 0, estimated: true });
   });
 });
 
-describe("snapshotCategoryFlow", () => {
-  const entry = (
-    sources: { source: string; value: number; costBasis?: number; coveredValue?: number }[],
-  ) => ({
-    category: "commodities",
-    value: sources.reduce((s, x) => s + x.value, 0),
-    sources,
-  });
-
-  it("sums the sources and leaves the excluded ones out", () => {
-    const prev = entry([
-      { source: "vault", value: 1_000, costBasis: 900, coveredValue: 1_000 },
-      { source: "bitpanda", value: 500, costBasis: 400, coveredValue: 500 },
-    ]);
-    const cur = entry([
-      { source: "vault", value: 2_100, costBasis: 1_900, coveredValue: 2_100 },
-      { source: "bitpanda", value: 520, costBasis: 400, coveredValue: 520 },
-      { source: "brokerPosition", value: 300, coveredValue: 0 },
-    ]);
-    expect(snapshotCategoryFlow(prev, cur)).toEqual({ amount: 1_300, estimated: false });
-    expect(snapshotCategoryFlow(prev, cur, new Set(["vault"])))
-      .toEqual({ amount: 300, estimated: false });
-  });
-
-  it("compares rows without per-source costs category-wide", () => {
-    const prev = { category: "crypto", value: 1_000, costBasis: 900 };
-    const cur = { category: "crypto", value: 1_500, costBasis: 1_300 };
-    expect(snapshotCategoryFlow(prev, cur)).toEqual({ amount: 400, estimated: false });
-  });
+describe("snapshot flows", () => {
+  const position = (
+    key: string,
+    valueBase: number,
+    costBase: number | null,
+    extra: Partial<NormalizedHolding> = {},
+  ) =>
+    holding({
+      key,
+      source: key.startsWith("bp") ? "bitpanda" : "brokerPosition",
+      category: "equities",
+      valueBase,
+      costBase,
+      ...extra,
+    });
+  const write = (hs: NormalizedHolding[], previous?: SnapshotCategoryEntry[]) =>
+    buildSnapshotBreakdown(aggregateNetWorth(hs), hs, previous).categoryBreakdown;
+  const equitiesOf = (breakdown: SnapshotCategoryEntry[]) =>
+    breakdown.find((e) => e.category === "equities");
 
   it("records each entry's flow since the previous snapshot when writing", () => {
-    const previous = buildSnapshotBreakdown(aggregateNetWorth([
-      holding({ source: "brokerPosition", category: "equities", valueBase: 1_000, costBase: 900 }),
-    ])).categoryBreakdown;
-    const { categoryBreakdown } = buildSnapshotBreakdown(
-      aggregateNetWorth([
-        holding({ source: "brokerPosition", category: "equities", valueBase: 1_550, costBase: 1_400 }),
-        holding({ source: "bitpanda", category: "crypto", valueBase: 200 }),
-      ]),
+    const previous = write([position("aapl", 1_000, 900)]);
+    const breakdown = write(
+      [
+        position("aapl", 1_550, 1_400),
+        holding({ key: "btc", source: "bitpanda", category: "crypto", valueBase: 200 }),
+      ],
       previous,
     );
-    const by = (c: string) => categoryBreakdown.find((e) => e.category === c)!;
+    const by = (c: string) => breakdown.find((e) => e.category === c)!;
     expect(by("equities").netFlow).toBe(500);
     expect(by("crypto").netFlow).toBe(200);
     expect(by("equities")).not.toHaveProperty("netFlowEstimated");
+    expect(by("equities").sources![0]).toMatchObject({ netFlow: 500 });
+  });
+
+  it("matches holdings across syncs by key, not by document id", () => {
+    const previous = write([position("aapl", 1_000, 900)]);
+    // The sync replaced the document: a new id, the same key
+    const breakdown = write([position("aapl", 1_100, 900)], previous);
+    expect(equitiesOf(breakdown)!.netFlow).toBe(0);
+  });
+
+  it("never compares a row written before flows existed with a new one", () => {
+    // A production row: category cost, no per-source cost or holdings.
+    // Equities = SnapTrade 5 000 (cost 4 000) + Bitpanda 10 000 (no cost)
+    const now = [position("aapl", 5_000, 4_000), position("bp-tsla", 10_000, null)];
+    for (const old of [
+      { category: "equities", value: 15_000, costBasis: 4_000 },
+      { category: "equities", value: 15_000, costBasis: 4_000, coveredValue: 5_000 },
+      {
+        category: "equities",
+        value: 15_000,
+        costBasis: 4_000,
+        coveredValue: 5_000,
+        sources: [
+          { source: "brokerPosition", value: 5_000 },
+          { source: "bitpanda", value: 10_000 },
+        ],
+      },
+    ]) {
+      const cur = equitiesOf(write(now, [old]))!;
+      expect(cur).not.toHaveProperty("netFlow");
+      expect(snapshotCategoryFlow(old, cur)).toEqual({ amount: 0, estimated: true });
+    }
+  });
+
+  it("counts a newly costed holding as a reclassification, not a flow", () => {
+    // Bitpanda's trades synced after its holdings: 5 000 first costed at 3 000
+    const previous = write([position("aapl", 5_000, 4_000), position("bp-btc", 5_000, null)]);
+    const cur = equitiesOf(
+      write([position("aapl", 5_000, 4_000), position("bp-btc", 5_000, 3_000)], previous),
+    )!;
+    expect(cur.netFlow).toBe(0);
+    expect(cur.netFlowEstimated).toBe(true);
+  });
+
+  it("flags the flow estimated when a holding without cost moves", () => {
+    const previous = write([position("aapl", 5_000, 4_000), position("aapl-2", 1_000, null, { source: "brokerPosition" })]);
+    const cur = equitiesOf(
+      write([position("aapl", 5_000, 4_000), position("aapl-2", 1_300, null, { source: "brokerPosition" })], previous),
+    )!;
+    expect(cur.netFlow).toBe(0);
+    expect(cur.netFlowEstimated).toBe(true);
+  });
+
+  it("derives a foreign-currency position's flow from its native cost", () => {
+    const usd = (value: number, cost: number, native: number) =>
+      position("msft", value, cost, { costNative: { amount: native, currency: "USD" } });
+    const previous = write([usd(12_000 / 1.1, 10_000 / 1.1, 10_000)]);
+    const cur = equitiesOf(write([usd(12_000, 10_000, 10_000)], previous))!;
+    expect(cur.netFlow).toBe(0);
+  });
+
+  it("leaves excluded sources out of the stored flow", () => {
+    const metal = (key: string, source: "vault" | "bitpanda", value: number, cost: number) =>
+      holding({ key, source, category: "commodities", valueBase: value, costBase: cost });
+    const previous = write([metal("coin", "vault", 1_000, 900), metal("xau", "bitpanda", 500, 400)]);
+    const cur = write(
+      [
+        metal("coin", "vault", 1_050, 900),
+        metal("bar", "vault", 1_000, 1_000),
+        metal("xau", "bitpanda", 520, 400),
+        holding({ key: "gld", source: "brokerPosition", category: "commodities", valueBase: 300 }),
+      ],
+      previous,
+    );
+    const p = previous.find((e) => e.category === "commodities");
+    const c = cur.find((e) => e.category === "commodities");
+    expect(snapshotCategoryFlow(p, c)).toEqual({ amount: 1_300, estimated: false });
+    expect(snapshotCategoryFlow(p, c, new Set(["vault"]))).toEqual({ amount: 300, estimated: false });
+    // An excluded source that disappeared: its last value went out
+    const gone = write([metal("xau", "bitpanda", 520, 400)], cur);
+    expect(
+      snapshotCategoryFlow(c, gone.find((e) => e.category === "commodities"), new Set(["vault"])),
+    ).toEqual({ amount: -300, estimated: false });
+  });
+
+  it("estimates rows without a stored flow from values alone", () => {
+    const prev = { category: "crypto", value: 1_000, sources: [{ source: "bitpanda", value: 1_000 }] };
+    const cur = {
+      category: "crypto",
+      value: 1_700,
+      sources: [
+        { source: "bitpanda", value: 1_200 },
+        { source: "brokerPosition", value: 500 },
+      ],
+    };
+    // The new account came in at its value; Bitpanda's move is assumed a gain
+    expect(snapshotCategoryFlow(prev, cur)).toEqual({ amount: 500, estimated: true });
+    expect(categoryFlowFromHoldings(prev, cur)).toBeNull();
   });
 
   it("flow-adjusts the investment categories only", () => {

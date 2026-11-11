@@ -781,17 +781,32 @@ export default defineSchema({
 							v.object({
 								source: v.string(),
 								value: v.number(),
-								// Cost of the source's holdings that have one
-								costBasis: v.optional(v.number()),
-								// Value that cost covers (0 without one); absent
-								// on rows written before flows existed
-								coveredValue: v.optional(v.number()),
+								// Holdings of a flow-adjusted category, for the
+								// next day's flows (aggregate.ts
+								// SnapshotHoldingEntry); kept on the two newest
+								// rows only, never returned by getSnapshots
+								holdings: v.optional(
+									v.array(
+										v.object({
+											key: v.string(), // identity across syncs
+											value: v.number(),
+											cost: v.optional(v.number()), // base currency
+											costNative: v.optional(v.number()), // in `currency`
+											currency: v.optional(v.string()),
+										}),
+									),
+								),
+								// External flow into the source since the
+								// previous day's snapshot
+								netFlow: v.optional(v.number()),
+								netFlowEstimated: v.optional(v.boolean()),
 							}),
 						),
 					),
 					// External flow into the category since the previous
-					// day's snapshot (aggregate.ts snapshotCategoryFlow);
-					// absent on older rows, which readers recompute
+					// day's snapshot (aggregate.ts categoryFlowFromHoldings);
+					// absent on rows that could not be compared with the
+					// previous one, which readers estimate
 					netFlow: v.optional(v.number()),
 					// Part of netFlow is assumed (holdings without cost basis)
 					netFlowEstimated: v.optional(v.boolean()),

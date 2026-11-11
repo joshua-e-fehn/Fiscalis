@@ -105,7 +105,7 @@ spot price from the last 7 days is available.
 | ------------------ | ---------------- | ------- |
 | `object`           | `"net_worth"`    | Resource type |
 | `netWorth`         | number           | `totalAssets` minus `totalLiabilities` |
-| `totalAssets`      | number           | Sum of everything owned |
+| `totalAssets`      | number           | Sum of everything owned, net of any negative asset balance |
 | `totalLiabilities` | number           | Sum of everything owed, as a positive number |
 | `currency`         | `"EUR"`          | Every amount is in EUR |
 | `asOf`             | ISO 8601 string  | When the request was served. It says nothing about the data's age |
@@ -129,6 +129,9 @@ Each entry of `categories`:
   practice, not at most one. A part that rounds to zero is left out, so a
   non-zero category can list fewer parts than it has, or none. Compare sums
   with a tolerance, not for equality.
+- **Negative assets.** An asset category, subcategory or source can be
+  negative (an overdrawn account, a short position). It nets against the rest
+  of its category and of `totalAssets`, and sorts after the positive parts.
 - **Credit balances.** A liability account that is in credit (an overpaid card
   or loan) is money owed to you. It appears under `cash` with the subcategory
   `credit-balance`, never as negative debt.

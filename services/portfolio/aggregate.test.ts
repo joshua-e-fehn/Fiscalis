@@ -331,6 +331,25 @@ describe("netWorthApiBreakdown", () => {
     expect(of("liabilities").subcategories.map((s) => s.subcategory)).not.toContain("credit-balance");
   });
 
+  it("passes a negative asset value through, netted and sorted last", () => {
+    // Only a liability in credit is rerouted (placeHolding); an overdrawn
+    // account or short position stays a negative part of its asset category
+    const overdrawn = aggregateNetWorth([
+      holding({ source: "bank", category: "cash", subcategory: "checking-accounts", valueBase: -250 }),
+      holding({ source: "bank", category: "cash", subcategory: "savings-accounts", valueBase: 100 }),
+    ]);
+    expect(overdrawn.totalAssets).toBe(-150);
+    expect(netWorthApiBreakdown(overdrawn).find((c) => c.category === "cash")).toEqual({
+      category: "cash",
+      value: -150,
+      subcategories: [
+        { subcategory: "savings-accounts", value: 100 },
+        { subcategory: "checking-accounts", value: -250 },
+      ],
+      sources: [{ source: "bank", value: -150 }],
+    });
+  });
+
   it("keeps vault, Bitpanda and broker metals apart in sources", () => {
     expect(of("commodities")).toEqual({
       category: "commodities",

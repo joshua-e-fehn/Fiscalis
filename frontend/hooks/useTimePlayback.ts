@@ -83,6 +83,9 @@ export function useTimePlayback({
   });
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Mirrors `year` so the next year is computed outside setState updaters,
+  // which must stay pure (StrictMode runs them twice).
+  const yearRef = useRef(initialYear);
   const onYearChangeRef = useRef(onYearChange);
   const isYearCachedRef = useRef(isYearCached);
 
@@ -95,14 +98,19 @@ export function useTimePlayback({
     isYearCachedRef.current = isYearCached;
   }, [isYearCached]);
 
+  // The single place that changes the year and fires the callback
+  const commitYear = useCallback((next: number) => {
+    yearRef.current = next;
+    setYearState(next);
+    onYearChangeRef.current?.(next);
+  }, []);
+
   // Wrapper to set year and trigger callback
   const setYear = useCallback(
     (newYear: number) => {
-      const clampedYear = Math.max(minYear, Math.min(maxYear, newYear));
-      setYearState(clampedYear);
-      onYearChangeRef.current?.(clampedYear);
+      commitYear(Math.max(minYear, Math.min(maxYear, newYear)));
     },
-    [minYear, maxYear],
+    [minYear, maxYear, commitYear],
   );
 
   // Playback controls
@@ -133,24 +141,16 @@ export function useTimePlayback({
 
   const stepForward = useCallback(
     (years: number = 1) => {
-      setYearState((prev) => {
-        const next = Math.min(maxYear, prev + years);
-        onYearChangeRef.current?.(next);
-        return next;
-      });
+      commitYear(Math.min(maxYear, yearRef.current + years));
     },
-    [maxYear],
+    [maxYear, commitYear],
   );
 
   const stepBackward = useCallback(
     (years: number = 1) => {
-      setYearState((prev) => {
-        const next = Math.max(minYear, prev - years);
-        onYearChangeRef.current?.(next);
-        return next;
-      });
+      commitYear(Math.max(minYear, yearRef.current - years));
     },
-    [minYear],
+    [minYear, commitYear],
   );
 
   // Find next cached year (for skipUncachedYears mode)
@@ -197,53 +197,49 @@ export function useTimePlayback({
       const { interval, step } = speed;
 
       intervalRef.current = setInterval(() => {
-        setYearState((prev) => {
-          let next = prev + step;
+        const prev = yearRef.current;
+        let next = prev + step;
 
-          // If skipUncachedYears is enabled, find the next cached year
-          if (skipUncachedYears && isYearCachedRef.current) {
-            // Check if next year is cached, if not find closest cached year
+        // If skipUncachedYears is enabled, find the next cached year
+        if (skipUncachedYears && isYearCachedRef.current) {
+          // Check if next year is cached, if not find closest cached year
+          if (!isYearCachedRef.current(next)) {
+            // Try to find a cached year between prev and next
+            for (let y = prev + 1; y <= Math.min(next, maxYear); y++) {
+              if (isYearCachedRef.current(y)) {
+                next = y;
+                break;
+              }
+            }
+            // If still not cached, find any cached year forward
             if (!isYearCachedRef.current(next)) {
-              // Try to find a cached year between prev and next
-              for (let y = prev + 1; y <= Math.min(next, maxYear); y++) {
-                if (isYearCachedRef.current(y)) {
-                  next = y;
-                  break;
-                }
+              const cachedYear = findNextCachedYear(prev, 1, step);
+              if (cachedYear === null) {
+                // No cached years available, stay on current
+                return;
               }
-              // If still not cached, find any cached year forward
-              if (!isYearCachedRef.current(next)) {
-                const cachedYear = findNextCachedYear(prev, 1, step);
-                if (cachedYear !== null) {
-                  next = cachedYear;
-                } else {
-                  // No cached years available, stay on current
-                  return prev;
-                }
-              }
+              next = cachedYear;
             }
           }
+        }
 
-          if (next > maxYear) {
-            if (loop) {
-              // When looping, find first cached year from start
-              if (skipUncachedYears && isYearCachedRef.current) {
-                const firstCached = findNextCachedYear(minYear - 1, 1, step);
-                if (firstCached !== null) {
-                  onYearChangeRef.current?.(firstCached);
-                  return firstCached;
-                }
-              }
-              onYearChangeRef.current?.(minYear);
-              return minYear;
-            } else {
-              setIsPlaying(false);
-              return prev;
+        if (next > maxYear) {
+          if (!loop) {
+            setIsPlaying(false);
+            return;
+          }
+          // When looping, find first cached year from start
+          if (skipUncachedYears && isYearCachedRef.current) {
+            const firstCached = findNextCachedYear(minYear - 1, 1, step);
+            if (firstCached !== null) {
+              commitYear(firstCached);
+              return;
             }
           }
-          onYearChangeRef.current?.(next);
-          return next;
-        });
+          commitYear(minYear);
+          return;
+        }
+        commitYear(next);
       }, interval);
     }
 
@@ -261,6 +257,7 @@ export function useTimePlayback({
     loop,
     skipUncachedYears,
     findNextCachedYear,
+    commitYear,
   ]);
 
   // Cleanup on unmount
@@ -286,65 +283,5 @@ export function useTimePlayback({
     stepBackward,
     setSpeed,
     speed,
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Debounced Year Hook (for slider scrubbing)
-// ═══════════════════════════════════════════════════════════════
-
-interface UseDebouncedYearOptions {
-  /** Initial year */
-  initialYear?: number;
-  /** Debounce delay in milliseconds */
-  delay?: number;
-  /** Callback when debounced year changes */
-  onDebouncedChange?: (year: number) => void;
-}
-
-interface UseDebouncedYearReturn {
-  /** Current year (updates immediately) */
-  year: number;
-  /** Debounced year (updates after delay) */
-  debouncedYear: number;
-  /** Set the year */
-  setYear: (year: number) => void;
-  /** Whether we're waiting for debounce */
-  isPending: boolean;
-}
-
-export function useDebouncedYear({
-  initialYear = 2020,
-  delay = 300,
-  onDebouncedChange,
-}: UseDebouncedYearOptions = {}): UseDebouncedYearReturn {
-  const [year, setYear] = useState(initialYear);
-  const [debouncedYear, setDebouncedYear] = useState(initialYear);
-  const [isPending, setIsPending] = useState(false);
-
-  const onDebouncedChangeRef = useRef(onDebouncedChange);
-  useEffect(() => {
-    onDebouncedChangeRef.current = onDebouncedChange;
-  }, [onDebouncedChange]);
-
-  useEffect(() => {
-    if (year !== debouncedYear) {
-      setIsPending(true);
-    }
-
-    const timer = setTimeout(() => {
-      setDebouncedYear(year);
-      setIsPending(false);
-      onDebouncedChangeRef.current?.(year);
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [year, delay, debouncedYear]);
-
-  return {
-    year,
-    debouncedYear,
-    setYear,
-    isPending,
   };
 }

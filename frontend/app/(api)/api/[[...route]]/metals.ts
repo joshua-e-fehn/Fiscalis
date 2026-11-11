@@ -14,7 +14,6 @@ import {
   MetalType,
   metalColumns,
 } from "@/lib/types/metals";
-import { time } from "console";
 
 const timeRangeEnum = z.enum([
   "Hour",
@@ -420,43 +419,45 @@ const app = new Hono()
             )
             .orderBy(precious_metal_prices.timestamp);
         } else if (aggregationInterval === "hour") {
-          // For hourly data, get data at the beginning of each hour
+          // For hourly data, get the closing price of each hour (hh:59),
+          // the same last-price-in-bucket rule as the daily branch.
           const rawPrices = await db.execute(sql`
           WITH hour_intervals AS (
-            -- Generate hourly timestamps aligned to the current minute
-            SELECT generate_series(
-              date_trunc('hour', ${parsedStartDate}::timestamp - INTERVAL '24 hours') + 
-                date_part('minute', ${parsedStartDate}::timestamp * INTERVAL '1 minute',
-              date_trunc('hour', ${parsedEndDate}::timestamp - INTERVAL '24 hours') + 
-                date_part('minute', ${parsedEndDate}::timestamp * INTERVAL '1 minute',
+            -- One bucket per hour, ending at hh:59
+            SELECT (hour_start + INTERVAL '59 minutes') AS timestamp
+            FROM generate_series(
+              date_trunc('hour', ${parsedStartDate}::timestamp),
+              date_trunc('hour', ${parsedEndDate}::timestamp),
               INTERVAL '1 hour'
-            ) AS timestamp
+            ) AS hour_start
           ),
           -- Pre-filter the prices to the relevant time window
           filtered_prices AS (
-            SELECT 
+            SELECT
               timestamp,
               ${metalColumns[currency][metal]} AS price
             FROM ${precious_metal_prices}
-            WHERE timestamp >= ${parsedStartDate}::timestamp
+            WHERE timestamp >= date_trunc('hour', ${parsedStartDate}::timestamp)
               AND timestamp <= ${parsedEndDate}::timestamp
+          ),
+          bucketed AS (
+            SELECT
+              hi.timestamp,
+              (
+                SELECT price
+                FROM filtered_prices fp
+                WHERE date_trunc('hour', fp.timestamp) = date_trunc('hour', hi.timestamp)
+                ORDER BY fp.timestamp DESC -- Get last price in the hour
+                LIMIT 1
+              ) AS price
+            FROM hour_intervals hi
           )
-          SELECT 
-            hi.timestamp AT TIME ZONE 'UTC' AS timestamp,
-            (
-              SELECT price
-              FROM filtered_prices fp
-              WHERE date_trunc('hour', fp.timestamp) = hi.timestamp
-              ORDER BY fp.timestamp ASC -- Get earliest price in the hour
-              LIMIT 1
-            ) AS price
-          FROM hour_intervals hi
-          WHERE EXISTS (
-            SELECT 1 
-            FROM filtered_prices 
-            WHERE date_trunc('hour', timestamp) = hi.timestamp
-          )
-          ORDER BY hi.timestamp
+          SELECT
+            b.timestamp AT TIME ZONE 'UTC' AS timestamp,
+            b.price
+          FROM bucketed b
+          WHERE b.price IS NOT NULL -- Skip hours without prices
+          ORDER BY b.timestamp
         `);
           prices = rawPrices.rows;
         } else if (aggregationInterval === "day") {

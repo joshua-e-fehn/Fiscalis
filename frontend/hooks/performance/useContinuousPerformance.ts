@@ -1,8 +1,9 @@
 /**
- * Continuous Performance Hook
+ * Continuous (price-based) performance input for the vault.
  *
- * Calculates performance from historical price data for continuous value assets
- * (precious metals with real-time price feeds)
+ * Loads what the continuous strategy values the vault from: the vault items
+ * as holdings, each held metal's price history and the live spot. It does
+ * not calculate; useCategoryPerformance runs the strategy.
  */
 
 import { useMemo } from "react";
@@ -12,315 +13,131 @@ import { api } from "@/convex/_generated/api";
 
 import type {
   TimeRange,
-  TimeInterval,
-  PerformanceMetrics,
-  PerformanceDataPoint,
   HoldingData,
   PriceData,
+  PricePoint,
+  ContinuousPerformanceInput,
 } from "@/lib/performance";
 import {
-  getContinuousStrategy,
-  type ContinuousPerformanceInput,
-  type PerformanceCalculationOptions,
-} from "@/lib/performance";
-import {
+  MS,
   getDefaultIntervalForRange,
   getTimeRangeStartTimestamp,
 } from "@/../services/finance/financeService";
+import { resolvePremiums } from "@/../services/finance/metals";
 
-import { useMetalPricesRange } from "@/hooks/metals";
+import { getSpotPrice, useMetalPricesRange, useMetalsPrices } from "@/hooks/metals";
 import type { MetalCurrency, MetalType } from "@/lib/types/metals";
 import type { MetalsCurrency, MetalsType } from "@/lib/types/metals-extended";
 
+/** Prices are fetched from this long before the range start, so the start
+ * takes the last close at or before it (31 Dec for YTD), not a later one. */
+const PRICE_LOOKBACK_MS = 7 * MS.DAY;
 
-// ═══════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════
+const METALS: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
 
-export interface UseContinuousPerformanceOptions {
-  /** Time range for performance calculation */
+export interface UseVaultPerformanceInputOptions {
   timeRange: TimeRange;
   /** Currency for price data (default: "eur") */
   currency?: MetalsCurrency;
-  /** Whether to include data points in result (default: false for performance) */
-  includeDataPoints?: boolean;
-  /** Whether to enable the query (default: true) */
   enabled?: boolean;
 }
 
-export interface UseContinuousPerformanceResult {
-  /** Performance metrics */
-  metrics: PerformanceMetrics | null;
-  /** Data points for charting (if includeDataPoints=true) */
-  dataPoints: PerformanceDataPoint[];
-  /** Loading state */
+export interface VaultPerformanceInput {
+  /** Undefined while loading or when the vault is empty */
+  input: ContinuousPerformanceInput | undefined;
   isLoading: boolean;
-  /** Error state */
-  error: Error | null;
-  /** Current portfolio value */
-  currentValue: number;
-  /** Total cost basis */
-  totalCostBasis: number | null;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Helper to convert TimeRange to date range
-// ═══════════════════════════════════════════════════════════════
-
-function getDateRange(timeRange: TimeRange): {
-  startDate: Date;
-  endDate: Date;
-  interval: TimeInterval;
-} {
-  const endDate = new Date();
-  const startTimestamp = getTimeRangeStartTimestamp(timeRange);
-  const startDate = new Date(startTimestamp);
-  const interval = getDefaultIntervalForRange(timeRange);
-
-  return { startDate, endDate, interval };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Hook Implementation
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Hook for continuous (price-based) performance calculation
- *
- * Uses vault items from Convex and historical prices from the metals API.
- * Calculates: Value(t) = Σ(quantity_i(t) × price_i(t) × premium_i)
- *
- * @example
- * ```tsx
- * const { metrics, isLoading } = useContinuousPerformance({
- *   timeRange: "YTD",
- *   currency: "eur",
- * });
- *
- * if (isLoading) return <Spinner />;
- *
- * return (
- *   <div>
- *     <p>YTD: {metrics?.percentChange.toFixed(2)}%</p>
- *   </div>
- * );
- * ```
- */
-export function useContinuousPerformance(
-  options: UseContinuousPerformanceOptions,
-): UseContinuousPerformanceResult {
-  const {
-    timeRange,
-    currency = "eur",
-    includeDataPoints = false,
-    enabled = true,
-  } = options;
-
+export function useVaultPerformanceInput(
+  options: UseVaultPerformanceInputOptions,
+): VaultPerformanceInput {
+  const { timeRange, currency = "eur", enabled = true } = options;
   const { userId } = useAuth();
 
-  // Get date range for the time range
-  const { startDate, endDate, interval } = useMemo(
-    () => getDateRange(timeRange),
-    [timeRange],
-  );
+  // Fixed per range so query keys do not churn
+  const { startDate, endDate, interval } = useMemo(() => {
+    const now = Date.now();
+    return {
+      startDate: new Date(getTimeRangeStartTimestamp(timeRange, now) - PRICE_LOOKBACK_MS),
+      endDate: new Date(now),
+      interval: getDefaultIntervalForRange(timeRange),
+    };
+  }, [timeRange]);
 
-  // Fetch vault items from Convex
   const vaultItems = useQuery(
     api.vault.getUserVaultItems,
     enabled && userId ? {} : "skip",
   );
-
-  // Determine which metal types we need prices for
-  const metalTypes = useMemo(() => {
-    if (!vaultItems) return new Set<MetalsType>();
-    return new Set(
-      vaultItems.map(
-        (item: { metalType: string }) => item.metalType as MetalsType,
-      ),
-    );
-  }, [vaultItems]);
-
-  // Fetch historical prices for each metal type
-  const goldPrices = useMetalPricesRange(
-    "gold" as MetalType,
-    startDate,
-    endDate,
-    interval,
-    currency as MetalCurrency,
-    enabled && metalTypes.has("gold"),
+  const held = useMemo(
+    () => new Set((vaultItems ?? []).map((i) => i.metalType as MetalsType)),
+    [vaultItems],
   );
 
-  const silverPrices = useMetalPricesRange(
-    "silver" as MetalType,
-    startDate,
-    endDate,
-    interval,
-    currency as MetalCurrency,
-    enabled && metalTypes.has("silver"),
-  );
+  // One query per metal (fixed hook order); disabled for metals not held
+  const args = [startDate, endDate, interval, currency as MetalCurrency] as const;
+  const series: Record<MetalsType, ReturnType<typeof useMetalPricesRange>> = {
+    gold: useMetalPricesRange("gold" as MetalType, ...args, enabled && held.has("gold")),
+    silver: useMetalPricesRange("silver" as MetalType, ...args, enabled && held.has("silver")),
+    platinum: useMetalPricesRange("platinum" as MetalType, ...args, enabled && held.has("platinum")),
+    palladium: useMetalPricesRange("palladium" as MetalType, ...args, enabled && held.has("palladium")),
+  };
+  const live = useMetalsPrices();
 
-  const platinumPrices = useMetalPricesRange(
-    "platinum" as MetalType,
-    startDate,
-    endDate,
-    interval,
-    currency as MetalCurrency,
-    enabled && metalTypes.has("platinum"),
-  );
-
-  const palladiumPrices = useMetalPricesRange(
-    "palladium" as MetalType,
-    startDate,
-    endDate,
-    interval,
-    currency as MetalCurrency,
-    enabled && metalTypes.has("palladium"),
-  );
-
+  // A disabled (or signed-out) input is not loading: it is absent
   const isLoading =
-    vaultItems === undefined ||
-    (metalTypes.has("gold") && goldPrices.isLoading) ||
-    (metalTypes.has("silver") && silverPrices.isLoading) ||
-    (metalTypes.has("platinum") && platinumPrices.isLoading) ||
-    (metalTypes.has("palladium") && palladiumPrices.isLoading);
+    enabled &&
+    !!userId &&
+    (vaultItems === undefined ||
+      live.isLoading ||
+      METALS.some((m) => held.has(m) && series[m].isLoading));
 
-  // Transform vault items to HoldingData format
-  const holdings = useMemo<HoldingData[]>(() => {
-    if (!vaultItems) return [];
+  const goldData = series.gold.data;
+  const silverData = series.silver.data;
+  const platinumData = series.platinum.data;
+  const palladiumData = series.palladium.data;
 
-    return vaultItems.map((item) => ({
+  const input = useMemo<ContinuousPerformanceInput | undefined>(() => {
+    if (!vaultItems || vaultItems.length === 0) return undefined;
+
+    const holdings: HoldingData[] = vaultItems.map((item) => ({
       id: item._id,
       assetType: item.metalType,
       quantity: item.quantity,
       fineWeightGrams: item.fineWeightGrams,
-      sellPremium: item.sellPremium ?? 0, // decimal, as stored
+      sellPremium: resolvePremiums({ sell: [item.sellPremium] }).sellPremium,
+      // No date: held since before the range (never the record's creation)
       purchaseDate: item.purchaseDate
         ? new Date(item.purchaseDate).getTime()
-        : item._creationTime,
-      purchasePricePerUnit: item.purchasePricePerUnit,
+        : undefined,
+      purchasePricePerUnit: item.purchasePricePerUnit ?? undefined,
     }));
-  }, [vaultItems]);
 
-  // Transform price data to PriceData format. Prices stay per troy ounce,
-  // the unit the continuous strategy values metal holdings in.
-  const prices = useMemo<PriceData>(() => {
-    const result: PriceData = {};
-
-    // Helper to convert API date to timestamp
-    const toTimestamp = (date: Date | string | null): number => {
-      if (!date) return 0;
-      if (typeof date === "string") return new Date(date).getTime();
-      return date.getTime();
-    };
-
-    if (goldPrices.data) {
-      result.gold = goldPrices.data
-        .filter((p) => p.price !== null)
-        .map((p) => ({
-          timestamp: toTimestamp(p.date),
+    // Per-ounce closes; the client's gap-filled points are dropped so the
+    // strategy's own lookup decides how gaps are bridged. A metal whose
+    // fetch failed has no series, and the strategy flags the result partial.
+    const data = { gold: goldData, silver: silverData, platinum: platinumData, palladium: palladiumData };
+    const prices: PriceData = {};
+    const livePrices: Partial<Record<string, PricePoint>> = {};
+    const liveTs = live.data?.all?.timestamp ? Date.parse(live.data.all.timestamp) : null;
+    for (const metal of METALS) {
+      if (!held.has(metal)) continue;
+      const points = (data[metal] ?? []).filter(
+        (p) => p.price !== null && p.date !== null && !p.isInterpolated,
+      );
+      if (points.length > 0) {
+        prices[metal] = points.map((p) => ({
+          timestamp: new Date(p.date!).getTime(),
           price: p.price!,
         }));
-    }
-
-    if (silverPrices.data) {
-      result.silver = silverPrices.data
-        .filter((p) => p.price !== null)
-        .map((p) => ({
-          timestamp: toTimestamp(p.date),
-          price: p.price!,
-        }));
-    }
-
-    if (platinumPrices.data) {
-      result.platinum = platinumPrices.data
-        .filter((p) => p.price !== null)
-        .map((p) => ({
-          timestamp: toTimestamp(p.date),
-          price: p.price!,
-        }));
-    }
-
-    if (palladiumPrices.data) {
-      result.palladium = palladiumPrices.data
-        .filter((p) => p.price !== null)
-        .map((p) => ({
-          timestamp: toTimestamp(p.date),
-          price: p.price!,
-        }));
-    }
-
-    return result;
-  }, [
-    goldPrices.data,
-    silverPrices.data,
-    platinumPrices.data,
-    palladiumPrices.data,
-  ]);
-
-  // Calculate current value and cost basis from vault items
-  const { currentValue, totalCostBasis } = useMemo(() => {
-    if (!vaultItems || vaultItems.length === 0) {
-      return { currentValue: 0, totalCostBasis: null };
-    }
-
-    let cost = 0;
-
-    for (const item of vaultItems) {
-      // Calculate cost basis
-      if (item.purchasePricePerUnit) {
-        cost += item.purchasePricePerUnit * item.quantity;
+      }
+      const spot = getSpotPrice(live.data, metal, currency);
+      if (spot !== null && liveTs !== null) {
+        livePrices[metal] = { timestamp: liveTs, price: spot };
       }
     }
 
-    // Note: Current value calculation requires live prices which are
-    // fetched separately in useCommoditiesSummary. Here we just track cost.
-    // The actual current value comes from the performance calculation end value.
-    return {
-      currentValue: 0, // Will be populated from metrics.endValue
-      totalCostBasis: cost > 0 ? cost : null,
-    };
-  }, [vaultItems]);
+    return { holdings, prices, livePrices };
+  }, [vaultItems, held, goldData, silverData, platinumData, palladiumData, live.data, currency]);
 
-  // Calculate performance
-  const result = useMemo(() => {
-    if (holdings.length === 0 || Object.keys(prices).length === 0) {
-      return {
-        metrics: null,
-        dataPoints: [],
-      };
-    }
-
-    const strategy = getContinuousStrategy();
-    const input: ContinuousPerformanceInput = {
-      holdings,
-      prices,
-    };
-    const calcOptions: PerformanceCalculationOptions = {
-      timeRange,
-      includeDataPoints,
-    };
-
-    try {
-      const performanceResult = strategy.calculate(input, calcOptions);
-      return {
-        metrics: performanceResult.metrics,
-        dataPoints: performanceResult.dataPoints,
-      };
-    } catch (err) {
-      console.error("Continuous performance calculation error:", err);
-      return {
-        metrics: null,
-        dataPoints: [],
-      };
-    }
-  }, [holdings, prices, timeRange, includeDataPoints]);
-
-  return {
-    metrics: result.metrics,
-    dataPoints: result.dataPoints,
-    isLoading,
-    error: null,
-    currentValue,
-    totalCostBasis,
-  };
+  return { input, isLoading };
 }

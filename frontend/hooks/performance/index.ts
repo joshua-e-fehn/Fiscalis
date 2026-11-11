@@ -1,25 +1,27 @@
 /**
  * Performance Hooks
  *
- * React hooks for performance calculations across asset types.
- * Integrates with Convex for snapshots and tanstack-query for price data.
+ * One entry point (useCategoryPerformance) over one snapshot reader
+ * (useSnapshots) and the vault's price input; the rest adapt its output.
  */
 
-// Discrete (snapshot-based) performance
 export {
-  useDiscretePerformance,
-  type UseDiscretePerformanceOptions,
-  type UseDiscretePerformanceResult,
-} from "./useDiscretePerformance";
+  useSnapshots,
+  useCategoryPerformance,
+  toPeriodChange,
+  type UseSnapshotsResult,
+  type CategoryPerformanceResult,
+  type PeriodChange,
+  type UseCategoryPerformanceOptions,
+} from "./useCategoryPerformance";
 
-// Continuous (price-based) performance
 export {
-  useContinuousPerformance,
-  type UseContinuousPerformanceOptions,
-  type UseContinuousPerformanceResult,
+  useVaultPerformanceInput,
+  type UseVaultPerformanceInputOptions,
+  type VaultPerformanceInput,
 } from "./useContinuousPerformance";
 
-// Net worth and category YTD (snapshot-based)
+// YTD card adapters (net worth, one category)
 export {
   useCategoryYTD,
   useNetWorthYTD,
@@ -27,13 +29,13 @@ export {
   type NetWorthYTDResult,
 } from "./usePortfolioYTD";
 
-// Metals YTD (price-based)
+// Vault-only YTD for the metals pages
 export { useMetalsYTD, type MetalsYTDResult } from "./useMetalsYTD";
 
-// Portfolio chart data (combines discrete + continuous)
+// Portfolio chart data (adapts the engine's series)
 export {
   usePortfolioChartData,
-  type PortfolioDataPoint,
+  type PortfolioChartPoint,
   type UsePortfolioChartDataOptions,
   type UsePortfolioChartDataResult,
 } from "./usePortfolioChartData";

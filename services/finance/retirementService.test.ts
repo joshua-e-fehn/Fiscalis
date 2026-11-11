@@ -684,11 +684,47 @@ describe("primary residence mortgage", () => {
       })),
       "2026-01-15",
     );
-    // The projection continues after the 12 covered due dates; without the
-    // recorded payments it would restart at the first one.
+    // The projection continues after the 12 covered due dates.
     expect(withPayments.balanceSchedule[0].date).toBe("2026-02-15");
-    expect(paid.balanceSchedule[0].date).toBe("2025-02-15");
     expect(withPayments.balanceSchedule.at(-1)?.date).toBe("2050-01-15");
+    // Without recorded payments, today's balance already reflects the past
+    // instalments: the projection still starts at the next due date.
+    expect(paid.balanceSchedule[0].date).toBe("2026-01-15");
+    expect(paid.balanceSchedule.at(-1)?.date).toBe("2050-01-15");
+  });
+
+  it("does not count unrecorded past instalments against today's balance", () => {
+    // Valued today at €244k, started a year ago, no payments recorded.
+    const anchored = residenceMortgageFromLoan(
+      { ...loan, startDate: "2025-01-15", currentBalance: 244000 },
+      [],
+      "2026-01-20",
+    );
+    // Same debt, same remaining term, but starting fresh today.
+    const fresh = residenceMortgageFromLoan(
+      {
+        ...loan,
+        startDate: "2025-01-15",
+        currentBalance: 244000,
+        originalPrincipal: 244000,
+      },
+      Array.from({ length: 12 }, (_, i) => ({
+        paymentDate: `2025-${String(i + 2).padStart(2, "0")}-15`.replace("2025-13", "2026-01"),
+        amount: 1185.53,
+        principalPortion: 0,
+        interestPortion: 1185.53,
+        paymentType: "scheduled" as const,
+      })),
+      "2026-01-20",
+    );
+    expect(anchored.balanceSchedule[0].date).toBe("2026-02-15");
+    expect(anchored.balanceSchedule.every((row) => row.date >= "2026-01-20")).toBe(true);
+    expect(mortgageBalanceOn(anchored, "2031-01-15")).toBeCloseTo(
+      mortgageBalanceOn(fresh, "2031-01-15"),
+      2,
+    );
+    // Nothing projected yet on today's date: still today's balance.
+    expect(mortgageBalanceOn(anchored, "2026-01-20")).toBe(244000);
   });
 
   it("normalises the next payment to monthly", () => {

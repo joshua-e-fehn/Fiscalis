@@ -1164,6 +1164,43 @@ type ScheduleRowDraft = Omit<
 >;
 
 /**
+ * The payments still to come, amortised from today's outstanding balance.
+ *
+ * Unlike the projected tail of `buildLoanSchedule` (which, for the loan page,
+ * keeps unrecorded past due dates as overdue rows), every due date before
+ * `today` is treated as already reflected in `loan.currentBalance`, so the
+ * projection starts at the first due date on or after `today`. Use it when
+ * `currentBalance` is the up-to-date debt and past instalments must not be
+ * counted as future repayments (e.g. the balance left at a future date).
+ *
+ * @param today `YYYY-MM-DD`.
+ */
+export function projectOutstandingPayments(
+  loan: ScheduleLoan,
+  payments: SchedulePayment[],
+  today: string,
+): LoanScheduleRow[] {
+  if (isLoanPaidOff(loan)) return [];
+  const { coveredPeriods } = assignDueDates(loan, sortByPaymentDate(payments));
+  let elapsed = coveredPeriods;
+  while (elapsed < MAX_PROJECTED_PERIODS && getDueDate(loan, elapsed + 1) < today) {
+    elapsed++;
+  }
+  let cumulativeInterest = 0;
+  let cumulativePrincipal = 0;
+  return projectRemainingPayments(loan, elapsed, today).map((row, index) => {
+    cumulativeInterest = roundMoney(cumulativeInterest + row.interest);
+    cumulativePrincipal = roundMoney(cumulativePrincipal + row.principal);
+    return {
+      ...row,
+      period: index + 1,
+      cumulativeInterest,
+      cumulativePrincipal,
+    };
+  });
+}
+
+/**
  * Full payment schedule: every recorded payment (oldest first) followed by
  * the projected payments still due.
  *

@@ -49,8 +49,8 @@ import {
 } from "./financeService";
 import {
   addMonthsToISODate,
-  buildLoanSchedule,
   getPaymentsPerYear,
+  projectOutstandingPayments,
   type ScheduleLoan,
   type SchedulePayment,
 } from "./loanScheduleService";
@@ -219,8 +219,9 @@ export interface ResidenceMortgage {
   /** Next scheduled repayment, normalised to monthly. */
   monthlyPayment: number;
   /**
-   * Balance after each projected due date (ascending), from the loan's own
-   * schedule (loanScheduleService.buildLoanSchedule), so every loan type —
+   * Balance after each due date still to come (ascending), from the loan's
+   * own amortisation (loanScheduleService.projectOutstandingPayments), so
+   * every loan type —
    * annuity, constant principal, bullet, interest-only — amortises correctly.
    */
   balanceSchedule: Array<{ date: string; closingBalance: number }>;
@@ -507,18 +508,18 @@ export function retirementTimeline(
 const LIABILITY_LOAN_STATUSES: ReadonlySet<string> = new Set(["active"]);
 
 /**
- * A tracked loan as the residence-mortgage input: its schedule (recorded
- * payments + projection, the same one the loan page shows) reduced to the
- * projected balances, and the next repayment normalised to monthly.
+ * A tracked loan as the residence-mortgage input: the repayments still to
+ * come, amortised from today's balance (loanScheduleService
+ * projectOutstandingPayments — due dates before `today` count as reflected in
+ * `currentBalance`, never as future repayments), reduced to the projected
+ * balances, and the next repayment normalised to monthly.
  */
 export function residenceMortgageFromLoan(
   loan: ScheduleLoan,
   payments: SchedulePayment[],
   today: string,
 ): ResidenceMortgage {
-  const projected = buildLoanSchedule(loan, payments, today).filter(
-    (row) => row.status === "scheduled",
-  );
+  const projected = projectOutstandingPayments(loan, payments, today);
   const nextPayment = projected[0]?.payment ?? 0;
   return {
     balance: Math.max(0, loan.currentBalance),

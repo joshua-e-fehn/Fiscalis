@@ -9,11 +9,11 @@ import {
   PaymentType,
 } from "@/hooks/convex/loans";
 import {
-  balanceBeforePayment,
   buildLoanSchedule,
-  computeNextPaymentDate,
   isExtraPaymentType,
+  paymentSplitBasis,
   splitLoanPayment,
+  type LoanKpis,
   type LoanScheduleRow,
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
@@ -90,6 +90,8 @@ type LoanPayment = Doc<"loanPayments">;
 interface LoanPaymentsScheduleTabProps {
   loan: Loan;
   payments: LoanPayment[];
+  /** The page's KPIs (loanKpis), so every view shows the same numbers. */
+  kpis: LoanKpis;
 }
 
 // Helper functions
@@ -137,6 +139,7 @@ function groupByYear(
 export function LoanPaymentsScheduleTab({
   loan,
   payments,
+  kpis,
 }: LoanPaymentsScheduleTabProps) {
   const { user } = useUser();
   const { recordPayment } = useRecordPayment();
@@ -163,24 +166,17 @@ export function LoanPaymentsScheduleTab({
     () => buildLoanSchedule(loan, payments, todayLocalISO()),
     [loan, payments],
   );
-  const nextDueDate = useMemo(
-    () => computeNextPaymentDate(loan, payments),
-    [loan, payments],
-  );
+  const nextDueDate = kpis.nextPayment?.dueDate ?? null;
   const groupedSchedule = useMemo(
     () => groupByYear(fullSchedule),
     [fullSchedule],
   );
-  const nextScheduledPayment =
-    fullSchedule.find((r) => r.status === "scheduled")?.payment ??
-    loan.scheduledPayment;
+  const nextScheduledPayment = kpis.nextPayment?.amount ?? 0;
 
   // Interest is one period on the balance owed on the payment date (a
-  // back-dated payment isn't split on today's balance)
-  const splitBasis = () => ({
-    ...loan,
-    balance: balanceBeforePayment(loan, payments, paymentDate),
-  });
+  // back-dated payment isn't split on today's balance), less what partial
+  // payments already booked for that due date. Same basis as the server.
+  const splitBasis = () => paymentSplitBasis(loan, payments, paymentDate);
 
   // Auto-calculate principal/interest split
   const calculateSplit = () => {
@@ -308,20 +304,14 @@ export function LoanPaymentsScheduleTab({
     URL.revokeObjectURL(url);
   };
 
-  // Calculate totals
-  const paidRows = fullSchedule.filter(
-    (r) => r.status === "paid" || r.status === "extra",
-  );
-  const scheduledRows = fullSchedule.filter((r) => r.status === "scheduled");
-
-  const totalPrincipalPaid = paidRows.reduce((sum, r) => sum + r.principal, 0);
-  const totalInterestPaid = paidRows.reduce((sum, r) => sum + r.interest, 0);
-  const totalAmountPaid = paidRows.reduce((sum, r) => sum + r.payment, 0);
-
-  const totalScheduledPayments = scheduledRows.reduce(
-    (sum, r) => sum + r.payment,
-    0,
-  );
+  // Totals (the same KPIs as the page header and the Overview tab)
+  const {
+    totalPaid: totalAmountPaid,
+    principalRepaid: totalPrincipalPaid,
+    interestPaid: totalInterestPaid,
+    remainingPayments: totalScheduledPayments,
+    remainingPeriods,
+  } = kpis;
 
   return (
     <div className="space-y-6">
@@ -337,7 +327,7 @@ export function LoanPaymentsScheduleTab({
               {formatCurrency(totalAmountPaid, loan.currency)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {paidRows.length} payments
+              {payments.length} payments
             </p>
           </CardContent>
         </Card>
@@ -346,7 +336,7 @@ export function LoanPaymentsScheduleTab({
             <div className="flex items-center gap-2 mb-2">
               <TrendingDown className="h-4 w-4 text-green-500" />
               <span className="text-sm text-muted-foreground">
-                Principal Paid
+                Principal Repaid
               </span>
             </div>
             <p className="text-2xl font-bold text-green-600">
@@ -377,7 +367,7 @@ export function LoanPaymentsScheduleTab({
               {formatCurrency(totalScheduledPayments, loan.currency)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {scheduledRows.length} payments left
+              {remainingPeriods} payments left
             </p>
           </CardContent>
         </Card>

@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 
 import {
-  balanceBeforePayment,
   buildLoanSchedule,
   calculateLoanSchedule,
   computeNextPaymentDate,
@@ -10,10 +9,14 @@ import {
   LOAN_TYPES,
   monthsBetweenISODates,
   nextLoanPayment,
-  nextPaymentAmount,
+  paymentSplitBasis,
   projectLoan,
+  isLegacyFullTermAnnuityPayment,
+  isLegacyInterestOnlyThenPayment,
+  rederiveScheduledPayment,
   resolveGracePeriods,
   scheduledPaymentAfterEdit,
+  splitLoanPayment,
   type LoanInput,
   type LoanType,
   type ScheduleLoan,
@@ -152,6 +155,9 @@ describe("calculateLoanSchedule — loan type rules", () => {
       principalPayment: 1000,
       closingBalance: 0,
     });
+    expect(
+      projectLoan({ ...base, scheduledPayment: 50 }, []).finalBalloon,
+    ).toBe(1000);
   });
 
   it("anchors monthly due dates to a month-end start date", () => {
@@ -218,6 +224,47 @@ describe("calculateLoanSchedule — prepayments", () => {
     });
     expect(result.totalPrepayments).toBe(100);
     expect(result.totalPenalty).toBe(2);
+  });
+
+  it("treats a zero annual prepayment cap as no prepayments, an absent one as no cap", () => {
+    const prepayments = [{ date: "2026-06-01", amount: 100 }];
+    const none = calculateLoanSchedule({
+      ...calcInput,
+      prepayments,
+      extraPerPeriod: 50,
+      maxAnnualPrepaymentRate: 0,
+    });
+    expect(none.totalPrepayments).toBe(0);
+    expect(none.schedule.every((r) => r.prepaymentAmount === 0)).toBe(true);
+    expect(
+      calculateLoanSchedule({ ...calcInput, prepayments }).totalPrepayments,
+    ).toBe(100);
+  });
+
+  it("counts prepayment penalties in what is paid", () => {
+    const plain = calculateLoanSchedule({
+      ...calcInput,
+      prepayments: [{ date: "2026-06-01", amount: 100 }],
+    });
+    const result = calculateLoanSchedule({
+      ...calcInput,
+      prepayments: [{ date: "2026-06-01", amount: 100 }],
+      prepaymentPenaltyRate: 0.02,
+    });
+    expect(result.schedule[0].penaltyAmount).toBe(2);
+    expect(result.schedule[0].totalPayment).toBe(
+      plain.schedule[0].totalPayment + 2,
+    );
+    expect(result.totalPayment).toBe(plain.totalPayment + 2);
+
+    // A prepayment on the start date is charged with the first row
+    const upfront = calculateLoanSchedule({
+      ...calcInput,
+      prepayments: [{ date: calcInput.startDate, amount: 100 }],
+      prepaymentPenaltyRate: 0.02,
+    });
+    expect(upfront.schedule[0].penaltyAmount).toBe(2);
+    expect(upfront.totalPenalty).toBe(2);
   });
 
   it("adds a recurring extra to every period", () => {
@@ -326,17 +373,20 @@ describe("next payment & KPIs", () => {
   it("CONSTANT_PRINCIPAL's next payment declines (not the stored first payment)", () => {
     const loan = { ...loanOf("CONSTANT_PRINCIPAL"), currentBalance: 750 };
     expect(loan.scheduledPayment).toBe(350);
-    expect(nextPaymentAmount(loan, [paid("2027-01-01", 250, 100)])).toBe(325);
+    expect(
+      nextLoanPayment(loan, [paid("2027-01-01", 250, 100)], "")?.amount,
+    ).toBe(325);
   });
 
   it("INTEREST_ONLY_THEN's next payment is interest-only during grace", () => {
     const loan = loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 });
-    expect(nextPaymentAmount(loan, [])).toBe(100);
+    expect(nextLoanPayment(loan, [], "")?.amount).toBe(100);
     expect(
-      nextPaymentAmount(loan, [
-        paid("2027-01-01", 0, 100),
-        paid("2028-01-01", 0, 100),
-      ]),
+      nextLoanPayment(
+        loan,
+        [paid("2027-01-01", 0, 100), paid("2028-01-01", 0, 100)],
+        "",
+      )?.amount,
     ).toBe(576.19);
   });
 
@@ -386,7 +436,9 @@ describe("next payment & KPIs", () => {
       projectedPayoffDate: "2030-01-01",
       remainingMonths: 35,
       nextPayment: { dueDate: "2028-01-01", amount: 315.47, overdue: false },
+      regularPayment: 315.47,
       paymentBelowInterest: false,
+      finalBalloon: 0,
       historyInconsistent: false,
     });
     expect(kpis.progress).toBeCloseTo(21.547, 3);
@@ -395,9 +447,33 @@ describe("next payment & KPIs", () => {
     );
   });
 
+  it("never counts a final BULLET settlement as the regular payment", () => {
+    const loan = { ...loanOf("BULLET"), annualInterestRate: 0.04 };
+    const payments = [
+      paid("2027-01-01", 0, 40),
+      paid("2028-01-01", 0, 40),
+      paid("2029-01-01", 0, 40),
+    ];
+    const kpis = loanKpis(loan, payments, "2029-06-01");
+    expect(kpis.nextPayment?.amount).toBe(1040);
+    expect(kpis.regularPayment).toBe(40);
+  });
+
   it("surfaces an annuity payment that no longer covers the interest", () => {
     const loan = { ...base, annualInterestRate: 0.4 };
     expect(loanKpis(loan, [], "2026-01-01").paymentBelowInterest).toBe(true);
+  });
+
+  it("surfaces the final balloon of a payment that covers interest but can't amortise", () => {
+    // A typed post-grace payment too small to repay 1000 over 2 periods
+    const undersized = {
+      ...loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 }),
+      scheduledPayment: 320,
+    };
+    const kpis = loanKpis(undersized, [], "2026-01-01");
+    expect(kpis.paymentBelowInterest).toBe(false);
+    expect(kpis.finalBalloon).toBe(780);
+    expect(loanKpis(loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 }), [], "2026-01-01").finalBalloon).toBe(0);
   });
 });
 
@@ -441,7 +517,83 @@ describe("scheduledPaymentAfterEdit", () => {
   });
 });
 
-describe("balanceBeforePayment", () => {
+describe("rederiveScheduledPayment", () => {
+  it("turns a legacy INTEREST_ONLY_THEN full-term annuity into the post-grace payment", () => {
+    // Stored by the old dialog: an annuity over all 4 periods, ignoring grace
+    const legacy = {
+      ...loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 }),
+      scheduledPayment: 315.47,
+    };
+    expect(rederiveScheduledPayment(legacy, [])).toBe(576.19);
+  });
+
+  it("recognises only the old dialog's computed payment, not a typed one", () => {
+    const loan = loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 });
+    expect(
+      isLegacyFullTermAnnuityPayment({ ...loan, scheduledPayment: 315.47 }),
+    ).toBe(true);
+    expect(
+      isLegacyFullTermAnnuityPayment({ ...loan, scheduledPayment: 400 }),
+    ).toBe(false);
+    expect(isLegacyFullTermAnnuityPayment(loan)).toBe(false);
+    expect(isLegacyFullTermAnnuityPayment(base)).toBe(false);
+  });
+});
+
+describe("legacy INTEREST_ONLY_THEN payments", () => {
+  const loan = loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 });
+  // Old dialog: full-term annuity; old createLoan fallback: interest only
+  const legacyDialog = { ...loan, scheduledPayment: 315.47 };
+  const legacyFallback = { ...loan, scheduledPayment: 100 };
+
+  it("recognises both legacy payments, not the post-grace annuity", () => {
+    expect(loan.scheduledPayment).toBe(576.19);
+    expect(isLegacyInterestOnlyThenPayment(legacyDialog)).toBe(true);
+    expect(isLegacyInterestOnlyThenPayment(legacyFallback)).toBe(true);
+    expect(isLegacyInterestOnlyThenPayment(loan)).toBe(false);
+    expect(
+      isLegacyInterestOnlyThenPayment({ ...loan, scheduledPayment: 400 }),
+    ).toBe(false);
+    expect(
+      isLegacyInterestOnlyThenPayment({ ...base, scheduledPayment: 100 }),
+    ).toBe(false);
+  });
+
+  it("projects a legacy row as if it stored the post-grace annuity", () => {
+    const expected = projectLoan(loan, []);
+    expect(expected.finalBalloon).toBe(0);
+    for (const legacy of [legacyDialog, legacyFallback]) {
+      const projection = projectLoan(legacy, []);
+      expect(projection.rows.map((r) => r.payment)).toEqual(
+        expected.rows.map((r) => r.payment),
+      );
+      expect(projection.finalBalloon).toBe(0);
+      expect(loanKpis(legacy, [], "2026-01-01").regularPayment).toBe(100);
+    }
+  });
+
+  it("derives the annuity from the current balance once past the grace", () => {
+    const pastGrace = (scheduledPayment: number) => ({
+      ...loan,
+      scheduledPayment,
+      currentBalance: 500,
+    });
+    const interestOnly = (date: string): SchedulePayment => ({
+      paymentDate: date,
+      amount: 100,
+      principalPortion: 0,
+      interestPortion: 100,
+      paymentType: "scheduled",
+    });
+    const payments = [interestOnly("2027-01-01"), interestOnly("2028-01-01")];
+    // 500 at 10% over the 2 periods left
+    expect(
+      projectLoan(pastGrace(100), payments).rows.map((r) => r.payment),
+    ).toEqual([288.1, 288.09]);
+  });
+});
+
+describe("paymentSplitBasis", () => {
   it("is the walked balance at the payment date, for back-dated payments", () => {
     const loan = { ...base, currentBalance: 784.53 };
     const payments: SchedulePayment[] = [
@@ -453,8 +605,70 @@ describe("balanceBeforePayment", () => {
         paymentType: "scheduled",
       },
     ];
-    expect(balanceBeforePayment(loan, payments, "2026-12-01")).toBe(1000);
-    expect(balanceBeforePayment(loan, payments, "2027-01-01")).toBe(784.53);
+    expect(paymentSplitBasis(loan, payments, "2026-12-01").balance).toBe(1000);
+    expect(paymentSplitBasis(loan, payments, "2027-01-01")).toMatchObject({
+      balance: 784.53,
+      openPeriod: null,
+    });
+  });
+
+  it("charges a due date's interest once across partial payments", () => {
+    // 12,000 at 6% over 12 months: payment 1,032.80, first interest 60.00
+    const loan: ScheduleLoan = {
+      loanType: "ANNUITY",
+      paymentFrequency: "MONTHLY",
+      originalPrincipal: 12000,
+      currentBalance: 12000,
+      annualInterestRate: 0.06,
+      termMonths: 12,
+      scheduledPayment: 1032.8,
+      startDate: "2026-01-01",
+      status: "active",
+    };
+    const payments: SchedulePayment[] = [];
+    for (const amount of [500, 532.8]) {
+      const split = splitLoanPayment(
+        paymentSplitBasis(loan, payments, "2026-02-01"),
+        amount,
+        "partial",
+      );
+      payments.push({
+        paymentDate: "2026-02-01",
+        amount: split.amount,
+        principalPortion: split.principalPortion,
+        interestPortion: split.interestPortion,
+        paymentType: "partial",
+        createdAt: payments.length,
+      });
+      loan.currentBalance -= split.principalPortion;
+    }
+    expect(payments.map((p) => p.interestPortion)).toEqual([60, 0]);
+    expect(payments.reduce((s, p) => s + p.interestPortion, 0)).toBe(60);
+    expect(Math.round(loan.currentBalance * 100) / 100).toBe(11027.2);
+    // The due date is complete: the next payment charges a full period again
+    expect(paymentSplitBasis(loan, payments, "2026-03-01").openPeriod).toBe(
+      null,
+    );
+  });
+
+  it("charges only the interest left when a regular payment completes a partly paid due date", () => {
+    const loan = { ...base, currentBalance: 950 };
+    const payments: SchedulePayment[] = [
+      {
+        paymentDate: "2026-12-01",
+        amount: 110,
+        principalPortion: 50,
+        interestPortion: 60,
+        paymentType: "partial",
+      },
+    ];
+    expect(
+      splitLoanPayment(
+        paymentSplitBasis(loan, payments, "2027-01-01"),
+        205.47,
+        "scheduled",
+      ),
+    ).toMatchObject({ interestPortion: 40, principalPortion: 165.47 });
   });
 });
 

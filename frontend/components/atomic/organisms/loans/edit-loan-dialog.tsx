@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useUpdateLoan, LoanStatus } from "@/hooks/convex/loans";
+import { scheduledPaymentAfterEdit } from "@/../services/finance/loanScheduleService";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ type Loan = Doc<"loans">;
 
 interface EditLoanDialogProps {
   loan: Loan;
+  payments: Doc<"loanPayments">[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -41,6 +43,7 @@ const STATUSES: { value: LoanStatus; label: string }[] = [
 
 export function EditLoanDialog({
   loan,
+  payments,
   open,
   onOpenChange,
 }: EditLoanDialogProps) {
@@ -58,6 +61,9 @@ export function EditLoanDialog({
   const [scheduledPayment, setScheduledPayment] = useState(
     loan.scheduledPayment.toString(),
   );
+  // Until the user types a payment, a rate or balance edit re-derives it over
+  // the remaining periods (the same rule updateLoan applies)
+  const [paymentEdited, setPaymentEdited] = useState(false);
   const [status, setStatus] = useState<LoanStatus>(loan.status);
   const [lender, setLender] = useState(loan.lender ?? "");
   const [contractNumber, setContractNumber] = useState(
@@ -72,12 +78,27 @@ export function EditLoanDialog({
     setCurrentBalance(loan.currentBalance.toString());
     setAnnualInterestRate((loan.annualInterestRate * 100).toString());
     setScheduledPayment(loan.scheduledPayment.toString());
+    setPaymentEdited(false);
     setStatus(loan.status);
     setLender(loan.lender ?? "");
     setContractNumber(loan.contractNumber ?? "");
     setCollateral(loan.collateral ?? "");
     setNotes(loan.notes ?? "");
   }, [loan]);
+
+  const balanceValue = parseFloat(currentBalance);
+  const rateValue = parseFloat(annualInterestRate) / 100;
+  useEffect(() => {
+    if (paymentEdited) return;
+    setScheduledPayment(
+      scheduledPaymentAfterEdit(loan, payments, {
+        currentBalance: Number.isFinite(balanceValue) ? balanceValue : undefined,
+        annualInterestRate: Number.isFinite(rateValue) ? rateValue : undefined,
+      }).toString(),
+    );
+  }, [loan, payments, balanceValue, rateValue, paymentEdited]);
+  const paymentRederived =
+    !paymentEdited && parseFloat(scheduledPayment) !== loan.scheduledPayment;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,15 +150,15 @@ export function EditLoanDialog({
             <div>
               <Label htmlFor="edit-balance">Current Balance</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  $
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  {loan.currency}
                 </span>
                 <Input
                   id="edit-balance"
                   type="number"
                   step="0.01"
                   min="0"
-                  className="pl-7"
+                  className="pl-12"
                   value={currentBalance}
                   onChange={(e) => setCurrentBalance(e.target.value)}
                 />
@@ -166,19 +187,28 @@ export function EditLoanDialog({
             <div>
               <Label htmlFor="edit-payment">Scheduled Payment</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  $
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                  {loan.currency}
                 </span>
                 <Input
                   id="edit-payment"
                   type="number"
                   step="0.01"
                   min="0"
-                  className="pl-7"
+                  className="pl-12"
                   value={scheduledPayment}
-                  onChange={(e) => setScheduledPayment(e.target.value)}
+                  onChange={(e) => {
+                    setPaymentEdited(true);
+                    setScheduledPayment(e.target.value);
+                  }}
                 />
               </div>
+              {paymentRederived && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Recalculated over the remaining periods for the new rate or
+                  balance
+                </p>
+              )}
             </div>
 
             <div>

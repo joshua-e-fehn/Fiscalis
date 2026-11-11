@@ -40,6 +40,7 @@ import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dial
 import { LoanCard } from "@/components/atomic/molecules/loans/loan-card";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import { Id } from "@/convex/_generated/dataModel";
+import { todayLocalISO } from "@/lib/utils/date";
 
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
@@ -54,11 +55,23 @@ function formatCurrency(value: number, currency: string = "USD"): string {
   }).format(value);
 }
 
+// Totals are per currency (loans aren't converted): "€1,000 + $2,000"
+function formatTotals<T extends { currency: string }>(
+  totals: T[],
+  pick: (t: T) => number,
+): string {
+  // No loans: no currency to format in
+  if (totals.length === 0) return "—";
+  return totals.map((t) => formatCurrency(pick(t), t.currency)).join(" + ");
+}
+
+// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -66,16 +79,13 @@ function formatShortDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
 
 function getDaysUntil(dateString: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(dateString);
-  target.setHours(0, 0, 0, 0);
-  return Math.ceil(
-    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
+  return Math.round(
+    (Date.parse(dateString) - Date.parse(todayLocalISO())) / 86_400_000,
   );
 }
 
@@ -94,6 +104,15 @@ export default function LoansPage() {
   const upcomingPayments = useUpcomingPayments(30);
 
   const isLoading = loans === undefined || summary === undefined;
+  const totals = summary?.totals ?? [];
+  // One currency: balance-weighted; mixed currencies: the average per loan
+  const overallProgress =
+    totals.length === 1
+      ? totals[0].overallProgress
+      : loans && loans.length > 0
+        ? loans.reduce((sum, loan) => sum + loan.kpis.progress, 0) /
+          loans.length
+        : 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -108,7 +127,11 @@ export default function LoansPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
           title="Total Debt"
-          value={summary ? formatCurrency(summary.totalDebt) : undefined}
+          value={
+            summary
+              ? formatTotals(totals, (t) => t.totalDebt)
+              : undefined
+          }
           icon={<Wallet className="h-5 w-5" />}
           description={`${summary?.loansCount ?? 0} active loans`}
           isLoading={isLoading}
@@ -116,7 +139,9 @@ export default function LoansPage() {
         <SummaryCard
           title="Monthly Payments"
           value={
-            summary ? formatCurrency(summary.totalMonthlyPayments) : undefined
+            summary
+              ? formatTotals(totals, (t) => t.totalMonthlyPayments)
+              : undefined
           }
           icon={<Calendar className="h-5 w-5" />}
           description="Combined monthly total"
@@ -126,7 +151,10 @@ export default function LoansPage() {
           title="Next Payment"
           value={
             summary?.nextPayment
-              ? formatCurrency(summary.nextPayment.amount)
+              ? formatCurrency(
+                  summary.nextPayment.amount,
+                  summary.nextPayment.currency,
+                )
               : "No payments"
           }
           icon={<Clock className="h-5 w-5" />}
@@ -139,12 +167,16 @@ export default function LoansPage() {
         />
         <SummaryCard
           title="Payoff Progress"
-          value={summary ? `${summary.overallProgress.toFixed(1)}%` : undefined}
+          value={summary ? `${overallProgress.toFixed(1)}%` : undefined}
           icon={<TrendingDown className="h-5 w-5" />}
-          description="Overall debt paid off"
+          description={
+            totals.length > 1
+              ? "Average paid off per loan"
+              : "Overall debt paid off"
+          }
           isLoading={isLoading}
           showProgress
-          progress={summary?.overallProgress ?? 0}
+          progress={overallProgress}
         />
       </div>
 
@@ -159,13 +191,15 @@ export default function LoansPage() {
               </div>
               <Badge variant="secondary">{upcomingPayments.length} due</Badge>
             </div>
-            <CardDescription>Payments due in the next 30 days</CardDescription>
+            <CardDescription>
+              Payments due in the next 30 days, and overdue ones
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {upcomingPayments.slice(0, 5).map((payment) => {
                 const daysUntil = getDaysUntil(payment.paymentDate);
-                const isUrgent = daysUntil <= 3;
+                const isUrgent = payment.overdue || daysUntil <= 3;
                 const isDueSoon = daysUntil <= 7;
 
                 return (
@@ -190,7 +224,9 @@ export default function LoansPage() {
                         <p className="font-medium">{payment.loanName}</p>
                         <p className="text-sm text-muted-foreground">
                           {formatDate(payment.paymentDate)}
-                          {daysUntil === 0
+                          {payment.overdue
+                            ? ` (overdue by ${-daysUntil} day${daysUntil === -1 ? "" : "s"})`
+                            : daysUntil === 0
                             ? " (Today)"
                             : daysUntil === 1
                               ? " (Tomorrow)"

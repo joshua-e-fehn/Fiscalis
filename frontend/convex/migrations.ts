@@ -1,4 +1,9 @@
+import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
+import {
+  isLegacyInterestOnlyThenPayment,
+  rederiveScheduledPayment,
+} from "../../services/finance/loanScheduleService";
 import {
   classifyPlaidAccount,
   classifySnaptradePosition,
@@ -584,5 +589,92 @@ export const backfillVaultLedger = internalMutation({
       unreplayable,
       overCounted,
     };
+  },
+});
+
+/**
+ * Migration: loan scenarios stored their per-period extra as
+ * `extraMonthlyPayment` (it was never monthly). Copies it to `extraPerPeriod`
+ * where that is unset; the old field is kept and still read as a fallback.
+ * Idempotent. Dry run first:
+ *   npx convex run migrations:backfillLoanScenarioExtraPerPeriod '{"dryRun": true}'
+ */
+export const backfillLoanScenarioExtraPerPeriod = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const scenarios = await ctx.db.query("loanScenarios").collect();
+    const changed = [];
+    for (const scenario of scenarios) {
+      if (
+        scenario.extraPerPeriod !== undefined ||
+        scenario.extraMonthlyPayment === undefined
+      ) {
+        continue;
+      }
+      changed.push({
+        scenarioId: scenario._id,
+        extraPerPeriod: scenario.extraMonthlyPayment,
+      });
+      if (!args.dryRun) {
+        await ctx.db.patch(scenario._id, {
+          extraPerPeriod: scenario.extraMonthlyPayment,
+        });
+      }
+    }
+    return { scanned: scenarios.length, changed };
+  },
+});
+
+/**
+ * Migration: INTEREST_ONLY_THEN loans now store the post-grace annuity as
+ * `scheduledPayment` (the engine projects with it). The old add-loan dialog
+ * stored an annuity over the whole term, ignoring the grace periods, and the
+ * old createLoan fallback stored the interest-only payment; both leave a
+ * balloon at the end. Re-derives the payment from the current balance over
+ * the periods left after the grace periods. Only loans whose stored payment
+ * still equals one of those computed values are rewritten (until then the
+ * engine ignores them, see isLegacyInterestOnlyThenPayment); a payment the
+ * user typed in is returned in `skipped` for manual review.
+ * Idempotent.
+ * Dry run first:
+ *   npx convex run migrations:backfillInterestOnlyScheduledPayments '{"dryRun": true}'
+ */
+export const backfillInterestOnlyScheduledPayments = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const loans = await ctx.db.query("loans").collect();
+    const changed = [];
+    const skipped = [];
+    for (const loan of loans) {
+      if (
+        loan.loanType !== "INTEREST_ONLY_THEN" ||
+        loan.status === "paid_off" ||
+        loan.currentBalance <= 0
+      ) {
+        continue;
+      }
+      if (!isLegacyInterestOnlyThenPayment(loan)) {
+        skipped.push({
+          loanId: loan._id,
+          scheduledPayment: loan.scheduledPayment,
+        });
+        continue;
+      }
+      const payments = await ctx.db
+        .query("loanPayments")
+        .withIndex("by_loan", (q) => q.eq("loanId", loan._id))
+        .collect();
+      const scheduledPayment = rederiveScheduledPayment(loan, payments);
+      if (scheduledPayment === loan.scheduledPayment) continue;
+      changed.push({
+        loanId: loan._id,
+        from: loan.scheduledPayment,
+        to: scheduledPayment,
+      });
+      if (!args.dryRun) {
+        await ctx.db.patch(loan._id, { scheduledPayment, updatedAt: Date.now() });
+      }
+    }
+    return { scanned: loans.length, changed, skipped };
   },
 });

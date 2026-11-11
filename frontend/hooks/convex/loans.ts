@@ -1,7 +1,9 @@
 import { useQuery, useMutation } from "convex/react";
+import type { FunctionArgs } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useCallback } from "react";
+import { todayLocalISO } from "@/lib/utils/date";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -9,12 +11,6 @@ import { useCallback } from "react";
 
 // Declared once in the loan engine
 export type {
-  LoanType,
-  LoanPaymentFrequency as PaymentFrequency,
-  LoanStatus,
-  LoanPaymentType as PaymentType,
-} from "@/../services/finance/loanScheduleService";
-import type {
   LoanType,
   LoanPaymentFrequency as PaymentFrequency,
   LoanStatus,
@@ -36,7 +32,8 @@ export function useLoans() {
  * Get only active loans for the current user
  */
 export function useActiveLoans() {
-  return useQuery(api.loans.getActiveLoans);
+  // The local date, so overdue flags match the detail page
+  return useQuery(api.loans.getActiveLoans, { today: todayLocalISO() });
 }
 
 /**
@@ -64,7 +61,10 @@ export function useLoanPayments(loanId: Id<"loans"> | undefined) {
  * Get upcoming payments for all loans (default 30 days)
  */
 export function useUpcomingPayments(days?: number) {
-  return useQuery(api.loans.getUpcomingPayments, { days });
+  return useQuery(api.loans.getUpcomingPayments, {
+    days,
+    today: todayLocalISO(),
+  });
 }
 
 /**
@@ -78,7 +78,7 @@ export function useLoanScenarios(loanId: Id<"loans"> | undefined) {
  * Get summary statistics for all loans
  */
 export function useLoansSummary() {
-  return useQuery(api.loans.getLoansSummary);
+  return useQuery(api.loans.getLoansSummary, { today: todayLocalISO() });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -92,26 +92,7 @@ export function useCreateLoan() {
   const mutation = useMutation(api.loans.createLoan);
 
   const createLoan = useCallback(
-    async (args: {
-      name: string;
-      loanType: LoanType;
-      originalPrincipal: number;
-      currentBalance: number;
-      annualInterestRate: number;
-      currency: string;
-      termMonths: number;
-      paymentFrequency: PaymentFrequency;
-      scheduledPayment?: number;
-      startDate: string;
-      nextPaymentDate: string;
-      gracePeriods?: number;
-      maxAnnualPrepaymentRate?: number;
-      prepaymentPenaltyRate?: number;
-      lender?: string;
-      contractNumber?: string;
-      collateral?: string;
-      notes?: string;
-    }) => {
+    async (args: FunctionArgs<typeof api.loans.createLoan>) => {
       return await mutation(args);
     },
     [mutation],
@@ -127,20 +108,7 @@ export function useUpdateLoan() {
   const mutation = useMutation(api.loans.updateLoan);
 
   const updateLoan = useCallback(
-    async (args: {
-      loanId: Id<"loans">;
-      name?: string;
-      currentBalance?: number;
-      annualInterestRate?: number;
-      scheduledPayment?: number;
-      status?: LoanStatus;
-      lender?: string;
-      contractNumber?: string;
-      collateral?: string;
-      notes?: string;
-      maxAnnualPrepaymentRate?: number;
-      prepaymentPenaltyRate?: number;
-    }) => {
+    async (args: FunctionArgs<typeof api.loans.updateLoan>) => {
       await mutation(args);
     },
     [mutation],
@@ -172,17 +140,7 @@ export function useRecordPayment() {
   const mutation = useMutation(api.loans.recordPayment);
 
   const recordPayment = useCallback(
-    async (args: {
-      loanId: Id<"loans">;
-      paymentDate: string;
-      scheduledDate?: string;
-      amount: number;
-      principalPortion: number;
-      interestPortion: number;
-      feesPortion?: number;
-      paymentType: PaymentType;
-      notes?: string;
-    }) => {
+    async (args: FunctionArgs<typeof api.loans.recordPayment>) => {
       return await mutation(args);
     },
     [mutation],
@@ -198,15 +156,7 @@ export function useUpdatePayment() {
   const mutation = useMutation(api.loans.updatePayment);
 
   const updatePayment = useCallback(
-    async (args: {
-      paymentId: Id<"loanPayments">;
-      paymentDate?: string;
-      amount?: number;
-      principalPortion?: number;
-      interestPortion?: number;
-      paymentType?: PaymentType;
-      notes?: string;
-    }) => {
+    async (args: FunctionArgs<typeof api.loans.updatePayment>) => {
       await mutation(args);
     },
     [mutation],
@@ -238,17 +188,7 @@ export function useSaveScenario() {
   const mutation = useMutation(api.loans.saveScenario);
 
   const saveScenario = useCallback(
-    async (args: {
-      loanId: Id<"loans">;
-      name: string;
-      description?: string;
-      extraMonthlyPayment?: number;
-      oneTimePrepayments?: Array<{ date: string; amount: number }>;
-      newInterestRate?: number;
-      projectedEndDate?: string;
-      totalInterestSaved?: number;
-      monthsSaved?: number;
-    }) => {
+    async (args: FunctionArgs<typeof api.loans.saveScenario>) => {
       return await mutation(args);
     },
     [mutation],
@@ -264,17 +204,7 @@ export function useUpdateScenario() {
   const mutation = useMutation(api.loans.updateScenario);
 
   const updateScenario = useCallback(
-    async (args: {
-      scenarioId: Id<"loanScenarios">;
-      name?: string;
-      description?: string;
-      extraMonthlyPayment?: number;
-      oneTimePrepayments?: Array<{ date: string; amount: number }>;
-      newInterestRate?: number;
-      projectedEndDate?: string;
-      totalInterestSaved?: number;
-      monthsSaved?: number;
-    }) => {
+    async (args: FunctionArgs<typeof api.loans.updateScenario>) => {
       await mutation(args);
     },
     [mutation],
@@ -297,29 +227,4 @@ export function useDeleteScenario() {
   );
 
   return { deleteScenario, isLoading: false };
-}
-
-/**
- * Record historical payments (for loan import)
- */
-export function useRecordHistoricalPayments() {
-  const mutation = useMutation(api.loans.recordHistoricalPayments);
-
-  const recordHistoricalPayments = useCallback(
-    async (args: {
-      loanId: Id<"loans">;
-      payments: Array<{
-        paymentDate: string;
-        scheduledDate: string;
-        amount: number;
-        principalPortion: number;
-        interestPortion: number;
-      }>;
-    }) => {
-      return await mutation(args);
-    },
-    [mutation],
-  );
-
-  return { recordHistoricalPayments, isLoading: false };
 }

@@ -10,6 +10,8 @@ import {
   useDeleteLoan,
 } from "@/hooks/convex/loans";
 import { Id } from "@/convex/_generated/dataModel";
+import { loanKpis } from "@/../services/finance/loanScheduleService";
+import { todayLocalISO } from "@/lib/utils/date";
 import {
   Tabs,
   TabsContent,
@@ -53,6 +55,7 @@ import {
   Lightbulb,
   History,
   StickyNote,
+  AlertTriangle,
 } from "lucide-react";
 import {
   ChartContainer,
@@ -101,11 +104,13 @@ function formatCurrencyPrecise(
   }).format(value);
 }
 
+// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -180,37 +185,11 @@ export default function LoanDetailPage() {
 
   const isLoading = loanData === undefined;
 
-  // Calculate progress
-  const progress = useMemo(() => {
-    if (!loan) return 0;
-    return (
-      ((loan.originalPrincipal - loan.currentBalance) /
-        loan.originalPrincipal) *
-      100
-    );
-  }, [loan]);
-
-  // Calculate total paid
-  const totalPaid = useMemo(() => {
-    if (!loan) return 0;
-    return loan.originalPrincipal - loan.currentBalance;
-  }, [loan]);
-
-  // Calculate total interest paid
-  const totalInterestPaid = useMemo(() => {
-    return payments.reduce((sum, p) => sum + p.interestPortion, 0);
-  }, [payments]);
-
-  // Calculate remaining term in months
-  const remainingTermMonths = useMemo(() => {
-    if (!loan || loan.status === "paid_off") return 0;
-    const today = new Date();
-    const endDate = new Date(loan.expectedEndDate);
-    const months =
-      (endDate.getFullYear() - today.getFullYear()) * 12 +
-      (endDate.getMonth() - today.getMonth());
-    return Math.max(0, months);
-  }, [loan]);
+  // Every KPI on this page and its tabs comes from the same schedule
+  const kpis = useMemo(
+    () => (loan ? loanKpis(loan, payments, todayLocalISO()) : null),
+    [loan, payments],
+  );
 
   const handleDelete = async () => {
     await deleteLoan(loanId);
@@ -221,7 +200,7 @@ export default function LoanDetailPage() {
     return <LoadingSkeleton />;
   }
 
-  if (!loan) {
+  if (!loan || !kpis) {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
         <Card className="p-12 text-center">
@@ -357,11 +336,24 @@ export default function LoanDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">
-                  {getPaymentFrequencyLabel(loan.paymentFrequency)} Payment
+                  Next {getPaymentFrequencyLabel(loan.paymentFrequency)} Payment
                 </p>
                 <p className="text-xl font-bold">
-                  {formatCurrencyPrecise(loan.scheduledPayment, loan.currency)}
+                  {kpis.nextPayment
+                    ? formatCurrencyPrecise(
+                        kpis.nextPayment.amount,
+                        loan.currency,
+                      )
+                    : "—"}
                 </p>
+                {kpis.nextPayment && (
+                  <p
+                    className={`text-xs ${kpis.nextPayment.overdue ? "text-red-600" : "text-muted-foreground"}`}
+                  >
+                    {kpis.nextPayment.overdue ? "Overdue since " : "Due "}
+                    {formatDate(kpis.nextPayment.dueDate)}
+                  </p>
+                )}
               </div>
               <Calendar className="h-8 w-8 text-muted-foreground/50" />
             </div>
@@ -375,16 +367,62 @@ export default function LoanDetailPage() {
                   Time Remaining
                 </p>
                 <p className="text-xl font-bold">
-                  {remainingTermMonths > 0
-                    ? `${Math.floor(remainingTermMonths / 12)}y ${remainingTermMonths % 12}m`
+                  {kpis.nextPayment
+                    ? `${Math.floor(kpis.remainingMonths / 12)}y ${kpis.remainingMonths % 12}m`
                     : "Paid off"}
                 </p>
+                {kpis.projectedPayoffDate && kpis.nextPayment && (
+                  <p className="text-xs text-muted-foreground">
+                    Payoff {formatDate(kpis.projectedPayoffDate)}
+                  </p>
+                )}
               </div>
               <Clock className="h-8 w-8 text-muted-foreground/50" />
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {(kpis.paymentBelowInterest ||
+        kpis.finalBalloon > 0 ||
+        kpis.historyInconsistent) && (
+        <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
+          <CardContent className="pt-4 pb-4 space-y-1 text-sm text-amber-700">
+            {kpis.paymentBelowInterest && (
+              <p className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                The payment does not cover the interest: the balance stops
+                falling and is due in full at the end of the term. Edit the
+                loan to update the payment.
+              </p>
+            )}
+            {!kpis.paymentBelowInterest && kpis.finalBalloon > 0 && (
+              <p className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                The payment is too small to repay the loan within its term:
+                a final payment of{" "}
+                {formatCurrencyPrecise(kpis.finalBalloon, loan.currency)} is
+                left at the end. Edit the loan to update the payment.
+              </p>
+            )}
+            {kpis.paymentBelowInterest && kpis.finalBalloon > 0 && (
+              <p className="pl-6">
+                Final payment due:{" "}
+                {formatCurrencyPrecise(kpis.finalBalloon, loan.currency)}.
+              </p>
+            )}
+            {kpis.historyInconsistent && (
+              <p className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                The current balance plus the principal recorded as repaid is
+                more than the original principal, so the payment history
+                doesn&apos;t add up. Check the balance and the recorded
+                payments.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs */}
       <Tabs
@@ -412,17 +450,15 @@ export default function LoanDetailPage() {
         </TabsList>
 
         <TabsContent value="overview">
-          <LoanOverviewTab
-            loan={loan}
-            payments={payments}
-            progress={progress}
-            totalPaid={totalPaid}
-            totalInterestPaid={totalInterestPaid}
-          />
+          <LoanOverviewTab loan={loan} payments={payments} kpis={kpis} />
         </TabsContent>
 
         <TabsContent value="payments">
-          <LoanPaymentsScheduleTab loan={loan} payments={payments} />
+          <LoanPaymentsScheduleTab
+            loan={loan}
+            payments={payments}
+            kpis={kpis}
+          />
         </TabsContent>
 
         <TabsContent value="scenarios">
@@ -441,6 +477,7 @@ export default function LoanDetailPage() {
       {/* Edit Dialog */}
       <EditLoanDialog
         loan={loan}
+        payments={payments}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
       />

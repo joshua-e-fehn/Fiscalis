@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
   useCreateLoan,
-  useRecordHistoricalPayments,
   LoanType,
   PaymentFrequency,
 } from "@/hooks/convex/loans";
@@ -64,8 +63,6 @@ import {
   getDueDate,
   getPaymentsPerYear,
   initialScheduledPayment,
-  settleLoanBalance,
-  splitLoanPayment,
 } from "@/../services/finance/loanScheduleService";
 import { roundMoney } from "@/../services/finance/financeService";
 
@@ -284,7 +281,6 @@ interface PastPayment {
 export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   const { user } = useUser();
   const { createLoan } = useCreateLoan();
-  const { recordHistoricalPayments } = useRecordHistoricalPayments();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -472,62 +468,42 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     }
   }, [open]);
 
+  // Planned extra payments, saved as the loan's "Planned extra payments"
+  // scenario. A scenario holds one recurring extra (amount + start date), so
+  // the form allows a single recurring entry rather than merging several.
+  const hasRecurringExtra = extraPayments.some((ep) => ep.type === "recurring");
+  const plannedPrepayments = () => {
+    if (!allowPrepayment) return undefined;
+    const valid = extraPayments.filter((ep) => parseFloat(ep.amount) > 0);
+    const recurring = valid.find((ep) => ep.type === "recurring");
+    return {
+      extraPerPeriod: recurring ? parseFloat(recurring.amount) : 0,
+      extraPerPeriodFrom: recurring?.startDate || undefined,
+      oneTimePrepayments: valid
+        .filter((ep) => ep.type === "one_time" && ep.date)
+        .map((ep) => ({ date: ep.date!, amount: parseFloat(ep.amount) })),
+    };
+  };
+
   const handleSubmit = async () => {
     if (!user?.id) return;
 
     setIsSubmitting(true);
     try {
-      const principal = parseFloat(originalPrincipal);
-      const rate = parseFloat(annualInterestRate) / 100;
-
-      // Split each confirmed past payment (assumed paid on its due date)
-      let runningBalance = principal;
-      const historicalPayments = pastPayments
-        .filter((p) => p.paid && parseFloat(p.amount) > 0)
-        .map((payment) => {
-          const amount = parseFloat(payment.amount);
-          const split = splitLoanPayment(
-            {
-              balance: runningBalance,
-              annualInterestRate: rate,
-              paymentFrequency,
-            },
-            amount,
-            "scheduled",
-          );
-          runningBalance = settleLoanBalance(
-            runningBalance - split.principalPortion,
-          );
-          return {
-            paymentDate: payment.dueDate,
-            scheduledDate: payment.dueDate,
-            amount: split.amount,
-            principalPortion: split.principalPortion,
-            interestPortion: split.interestPortion,
-          };
-        });
-      // Blank "Current Balance" = what is left after the confirmed past payments
-      const balance = currentBalance
-        ? parseFloat(currentBalance)
-        : runningBalance;
-
-      const loanId = await createLoan({
+      // The server splits each confirmed past payment (assumed paid on its
+      // due date) and, with a blank "Current Balance", derives the balance
+      // left after them
+      await createLoan({
         name,
         loanType,
-        originalPrincipal: principal,
-        currentBalance: balance,
-        annualInterestRate: rate,
+        originalPrincipal: parseFloat(originalPrincipal),
+        currentBalance: currentBalance ? parseFloat(currentBalance) : undefined,
+        annualInterestRate: parseFloat(annualInterestRate) / 100,
         currency,
         termMonths,
         paymentFrequency,
         scheduledPayment: effectivePayment,
         startDate,
-        // First due date not covered by the recorded past payments (what the
-        // schedule derives), so the stored date matches it on any backend
-        nextPaymentDate: getDueDate(
-          { startDate, paymentFrequency },
-          historicalPayments.length + 1,
-        ),
         lender: lender || undefined,
         contractNumber: contractNumber || undefined,
         collateral: collateral || undefined,
@@ -541,15 +517,14 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
             ? parseFloat(prepaymentPenalty) / 100
             : undefined,
         notes: notes || undefined,
+        historicalPayments: pastPayments
+          .filter((p) => p.paid && parseFloat(p.amount) > 0)
+          .map((p) => ({
+            paymentDate: p.dueDate,
+            amount: parseFloat(p.amount),
+          })),
+        plannedPrepayments: plannedPrepayments(),
       });
-
-      // Record past payments if any were marked as paid
-      if (historicalPayments.length > 0) {
-        await recordHistoricalPayments({
-          loanId,
-          payments: historicalPayments,
-        });
-      }
 
       onOpenChange(false);
     } catch (error) {
@@ -609,6 +584,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   // ═══════════════════════════════════════════════════════════════
 
   const addExtraPayment = (type: "one_time" | "recurring") => {
+    if (type === "recurring" && hasRecurringExtra) return;
     setExtraPayments((prev) => [
       ...prev,
       {
@@ -1184,6 +1160,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => addExtraPayment("recurring")}
+                          disabled={hasRecurringExtra}
+                          title={
+                            hasRecurringExtra
+                              ? "One recurring extra per loan; edit its amount or start date"
+                              : undefined
+                          }
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           Recurring

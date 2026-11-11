@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Doc } from "@/convex/_generated/dataModel";
 import {
   buildLoanSchedule,
-  computeNextPaymentDate,
+  type LoanKpis,
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
 import {
@@ -50,9 +50,8 @@ type LoanPayment = Doc<"loanPayments">;
 interface LoanOverviewTabProps {
   loan: Loan;
   payments: LoanPayment[];
-  progress: number;
-  totalPaid: number;
-  totalInterestPaid: number;
+  /** The page's KPIs (loanKpis), so every view shows the same numbers. */
+  kpis: LoanKpis;
 }
 
 // Helper functions
@@ -127,19 +126,15 @@ const COLORS = [
 export function LoanOverviewTab({
   loan,
   payments,
-  progress,
-  totalPaid,
-  totalInterestPaid,
+  kpis,
 }: LoanOverviewTabProps) {
+  const { progress, principalRepaid, interestPaid } = kpis;
   // Same schedule as the Payments & Schedule tab, so both views agree
   const schedule = useMemo(
     () => buildLoanSchedule(loan, payments, todayLocalISO()),
     [loan, payments],
   );
-  const nextPaymentDate = useMemo(
-    () => computeNextPaymentDate(loan, payments),
-    [loan, payments],
-  );
+  const nextPaymentDate = kpis.nextPayment?.dueDate ?? null;
 
   // Calculate balance history from payments AND projected future balance
   const balanceHistory = useMemo(() => {
@@ -189,13 +184,12 @@ export function LoanOverviewTab({
 
   // Calculate payment breakdown for pie chart
   const paymentBreakdown = useMemo(() => {
-    const totalPrincipal = loan.originalPrincipal - loan.currentBalance;
     return [
-      { name: "Principal Paid", value: totalPrincipal },
+      { name: "Principal Paid", value: principalRepaid },
       { name: "Remaining", value: loan.currentBalance },
-      { name: "Interest Paid", value: totalInterestPaid },
+      { name: "Interest Paid", value: interestPaid },
     ];
-  }, [loan, totalInterestPaid]);
+  }, [loan, principalRepaid, interestPaid]);
 
   // Calculate monthly payment breakdown over time (including scheduled future payments)
   const paymentHistory = useMemo(() => {
@@ -272,8 +266,7 @@ export function LoanOverviewTab({
   }, [payments, schedule]);
 
   // Estimated total interest: interest paid so far plus projected interest
-  const estimatedTotalInterest =
-    schedule[schedule.length - 1]?.cumulativeInterest ?? 0;
+  const estimatedTotalInterest = kpis.totalInterest;
 
   return (
     <div className="space-y-6">
@@ -284,7 +277,7 @@ export function LoanOverviewTab({
           <CardHeader>
             <CardTitle className="text-lg">Payoff Progress</CardTitle>
             <CardDescription>
-              {formatCurrency(totalPaid, loan.currency)} paid of{" "}
+              {formatCurrency(principalRepaid, loan.currency)} repaid of{" "}
               {formatCurrency(loan.originalPrincipal, loan.currency)}
             </CardDescription>
           </CardHeader>
@@ -352,13 +345,13 @@ export function LoanOverviewTab({
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground">Principal Paid</p>
                 <p className="text-xl font-semibold text-green-600">
-                  {formatCurrency(totalPaid, loan.currency)}
+                  {formatCurrency(principalRepaid, loan.currency)}
                 </p>
               </div>
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground">Interest Paid</p>
                 <p className="text-xl font-semibold text-orange-600">
-                  {formatCurrency(totalInterestPaid, loan.currency)}
+                  {formatCurrency(interestPaid, loan.currency)}
                 </p>
               </div>
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">

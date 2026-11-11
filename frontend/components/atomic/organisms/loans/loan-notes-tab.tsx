@@ -199,7 +199,7 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
                 Max Annual Prepayment
               </span>
               <span className="font-medium">
-                {loan.maxAnnualPrepaymentRate
+                {loan.maxAnnualPrepaymentRate !== undefined
                   ? `${(loan.maxAnnualPrepaymentRate * 100).toFixed(1)}%`
                   : "No limit"}
               </span>

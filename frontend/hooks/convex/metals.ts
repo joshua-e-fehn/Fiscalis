@@ -6,19 +6,14 @@ import {
   MetalsPrices,
   MetalItemWithValuation,
   MetalsSummary,
-  MetalSummary,
   MetalsType,
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import {
-  calculateMarketValue,
-  calculateMeltValue,
-  calculatePremiumValue,
-  calculateBuyPrice,
-  calculateSellPrice,
-  calculatePriceChange,
-  gramsToTroyOunces,
-} from "@/convex/lib/priceCalculations";
+  resolvePremiums,
+  summarizeMetalItems,
+  valueMetalItem,
+} from "@/../services/finance/metals";
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -65,74 +60,32 @@ function enrichItemWithValuation(
   prices: MetalsPrices | undefined,
   currency: MetalsCurrency = "eur",
 ): MetalItemWithValuation {
-  // Get spot price for this metal from /api/metals/prices/all/latest
+  // Spot price per ounce from /api/metals/prices/all/latest, valued with
+  // the same staleness policy and formula as the server (services/finance/metals).
   const spotPrice = prices
     ? getSpotPrice(prices, item.metalType as MetalsType, currency)
     : null;
-
-  // Handle backward compatibility: use new premium fields or fall back to old premium
-  const buyPremium = item.buyPremium ?? (item as any).premium ?? 0.03;
-  const sellPremium = item.sellPremium ?? 0.0;
-
-  // Calculate buy price (what you'd pay to acquire this today)
-  const currentBuyPrice = spotPrice
-    ? calculateBuyPrice(spotPrice, item.fineWeightGrams, buyPremium, 1)
-    : 0;
-
-  // Calculate sell price (what you'd receive selling today)
-  const currentSellPrice = spotPrice
-    ? calculateSellPrice(spotPrice, item.fineWeightGrams, sellPremium, 1)
-    : 0;
-
-  // Market value uses sell price (liquidation value)
-  const marketValue = spotPrice
-    ? calculateSellPrice(
-        spotPrice,
-        item.fineWeightGrams,
-        sellPremium,
-        item.quantity,
-      )
-    : 0;
-
-  // Melt value is pure metal value at spot (no premium)
-  const meltValue = spotPrice
-    ? calculateMeltValue(spotPrice, item.fineWeightGrams, item.quantity)
-    : 0;
-
-  // Calculate premium values
-  const buyPremiumValue = spotPrice
-    ? calculatePremiumValue(
-        spotPrice,
-        item.fineWeightGrams,
-        buyPremium,
-        item.quantity,
-      )
-    : 0;
-
-  const sellPremiumValue = spotPrice
-    ? calculatePremiumValue(
-        spotPrice,
-        item.fineWeightGrams,
-        sellPremium,
-        item.quantity,
-      )
-    : 0;
-
-  // Calculate P/L if we have purchase info
-  // P/L is based on what you paid vs what you'd get selling (marketValue = sell price)
-  const totalCost = item.purchasePricePerUnit
-    ? item.purchasePricePerUnit * item.quantity
+  const spotTimestamp = prices?.all?.timestamp
+    ? Date.parse(prices.all.timestamp)
     : null;
 
-  const profitLoss =
-    totalCost !== null && marketValue > 0
-      ? calculatePriceChange(marketValue, totalCost).absolute
-      : null;
+  const { buyPremium, sellPremium } = resolvePremiums({
+    // `premium` is the legacy single-premium field on old documents
+    buy: [item.buyPremium, (item as { premium?: number }).premium],
+    sell: [item.sellPremium],
+  });
 
-  const profitLossPercent =
-    totalCost !== null && marketValue > 0
-      ? calculatePriceChange(marketValue, totalCost).percentage
-      : null;
+  const valuation = valueMetalItem(
+    {
+      fineWeightGrams: item.fineWeightGrams,
+      quantity: item.quantity,
+      buyPremium,
+      sellPremium,
+      purchasePricePerUnit: item.purchasePricePerUnit ?? undefined,
+    },
+    { pricePerOunce: spotPrice, sourceTimestamp: spotTimestamp },
+    Date.now(),
+  );
 
   return {
     _id: item._id,
@@ -163,68 +116,7 @@ function enrichItemWithValuation(
           imageUrl: item.catalogItem.imageUrl ?? undefined,
         }
       : undefined,
-    currentBuyPrice,
-    currentSellPrice,
-    marketValue,
-    meltValue,
-    buyPremiumValue,
-    sellPremiumValue,
-    totalCost,
-    profitLoss,
-    profitLossPercent,
-  };
-}
-
-/**
- * Calculate summary for a single metal type
- */
-function calculateMetalSummary(
-  items: MetalItemWithValuation[],
-  metalType: MetalsType,
-): MetalSummary {
-  const metalItems = items.filter((item) => item.metalType === metalType);
-
-  const totalFineWeightGrams = metalItems.reduce(
-    (sum, item) => sum + item.fineWeightGrams * item.quantity,
-    0,
-  );
-
-  const totalItems = metalItems.reduce((sum, item) => sum + item.quantity, 0);
-
-  const marketValue = metalItems.reduce(
-    (sum, item) => sum + item.marketValue,
-    0,
-  );
-
-  const meltValue = metalItems.reduce((sum, item) => sum + item.meltValue, 0);
-
-  // Only calculate cost/P&L if all items have purchase info
-  const itemsWithCost = metalItems.filter((item) => item.totalCost !== null);
-  const totalCost =
-    itemsWithCost.length === metalItems.length && metalItems.length > 0
-      ? itemsWithCost.reduce((sum, item) => sum + (item.totalCost ?? 0), 0)
-      : null;
-
-  const profitLoss =
-    totalCost !== null
-      ? calculatePriceChange(marketValue, totalCost).absolute
-      : null;
-
-  const profitLossPercent =
-    totalCost !== null
-      ? calculatePriceChange(marketValue, totalCost).percentage
-      : null;
-
-  return {
-    totalFineWeightGrams,
-    totalFineWeightOz: gramsToTroyOunces(totalFineWeightGrams),
-    totalItems,
-    itemCount: metalItems.length,
-    marketValue,
-    meltValue,
-    totalCost,
-    profitLoss,
-    profitLossPercent,
+    ...valuation,
   };
 }
 
@@ -277,80 +169,11 @@ export function useMetalsSummary(
   // Get all items with valuations
   const { items, isLoading, isError, pricesLoading } = useMetals(currency);
 
-  // Calculate summary if we have items
-  let summary: MetalsSummary | undefined;
-
-  if (items) {
-    const gold = calculateMetalSummary(items, "gold");
-    const silver = calculateMetalSummary(items, "silver");
-    const platinum = calculateMetalSummary(items, "platinum");
-    const palladium = calculateMetalSummary(items, "palladium");
-
-    const totalMarketValue =
-      gold.marketValue +
-      silver.marketValue +
-      platinum.marketValue +
-      palladium.marketValue;
-
-    const totalMeltValue =
-      gold.meltValue +
-      silver.meltValue +
-      platinum.meltValue +
-      palladium.meltValue;
-
-    // Calculate total cost only if all metals have complete cost data
-    const allCostsAvailable = [gold, silver, platinum, palladium].every(
-      (m) => m.totalCost !== null || m.itemCount === 0,
-    );
-
-    const totalCost = allCostsAvailable
-      ? (gold.totalCost ?? 0) +
-        (silver.totalCost ?? 0) +
-        (platinum.totalCost ?? 0) +
-        (palladium.totalCost ?? 0)
-      : null;
-
-    const totalProfitLoss =
-      totalCost !== null
-        ? calculatePriceChange(totalMarketValue, totalCost).absolute
-        : null;
-
-    const totalProfitLossPercent =
-      totalCost !== null
-        ? calculatePriceChange(totalMarketValue, totalCost).percentage
-        : null;
-
-    // Calculate allocation percentages
-    const allocation = {
-      gold:
-        totalMarketValue > 0 ? (gold.marketValue / totalMarketValue) * 100 : 0,
-      silver:
-        totalMarketValue > 0
-          ? (silver.marketValue / totalMarketValue) * 100
-          : 0,
-      platinum:
-        totalMarketValue > 0
-          ? (platinum.marketValue / totalMarketValue) * 100
-          : 0,
-      palladium:
-        totalMarketValue > 0
-          ? (palladium.marketValue / totalMarketValue) * 100
-          : 0,
-    };
-
-    summary = {
-      gold,
-      silver,
-      platinum,
-      palladium,
-      totalMarketValue,
-      totalMeltValue,
-      totalCost,
-      totalProfitLoss,
-      totalProfitLossPercent,
-      allocation,
-    };
-  }
+  // Per-metal and total summary; cost and P/L cover only items with a
+  // purchase price (see summarizeMetalItems).
+  const summary: MetalsSummary | undefined = items
+    ? summarizeMetalItems(items)
+    : undefined;
 
   return {
     summary,

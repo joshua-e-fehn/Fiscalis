@@ -1,125 +1,80 @@
 import { v } from "convex/values";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import type {
-  InvestmentCategory,
-  InvestmentSubcategory,
-} from "../lib/types/classification";
+import type { InvestmentCategory } from "../lib/types/classification";
+import {
+  buildCategorySummary,
+  positionToHolding,
+} from "../../services/portfolio/categorySummary";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Fetch Bitpanda holdings for a category and present them with the same
- * fields broker positions expose, so category queries can merge them into
- * their `positions` array without changing the consumer shape.
- * (Bitpanda holdings carry no cost-basis / P&L, so those read as undefined.)
+ * A position in a category, from any provider. `provider` discriminates the
+ * stored document: SnapTrade broker positions carry cost basis and P&L,
+ * Bitpanda holdings do not (those fields are always undefined for them).
  */
+export type CategoryPosition =
+  | (Doc<"brokerPositions"> & { provider: "snaptrade" })
+  | (Doc<"bitpandaHoldings"> & {
+      provider: "bitpanda";
+      totalCostBasis?: undefined;
+      unrealizedPL?: undefined;
+    });
+
+async function getBrokerPositionsForCategory(
+  ctx: QueryCtx,
+  userId: string,
+  category: InvestmentCategory,
+): Promise<CategoryPosition[]> {
+  const positions = await ctx.db
+    .query("brokerPositions")
+    .withIndex("by_category", (q) =>
+      q.eq("userId", userId).eq("investmentCategory", category),
+    )
+    .collect();
+  return positions.map((p) => ({ ...p, provider: "snaptrade" as const }));
+}
+
 async function getBitpandaPositionsForCategory(
   ctx: QueryCtx,
   userId: string,
   category: InvestmentCategory,
-): Promise<Doc<"brokerPositions">[]> {
+): Promise<CategoryPosition[]> {
   const holdings = await ctx.db
     .query("bitpandaHoldings")
     .withIndex("by_category", (q) =>
       q.eq("userId", userId).eq("investmentCategory", category),
     )
     .collect();
-  // Structurally compatible for the fields category consumers read
-  // (_id, symbol, name, investmentSubcategory, valueInBaseCurrency, marketValue).
-  return holdings as unknown as Doc<"brokerPositions">[];
+  return holdings.map((h) => ({ ...h, provider: "bitpanda" as const }));
 }
 
-// ═══════════════════════════════════════════════════════════════
-// CATEGORY-BASED QUERIES
-// ═══════════════════════════════════════════════════════════════
-
 /**
- * Get all holdings for a specific investment category
- * Combines Plaid accounts and broker positions
+ * All positions in a category across providers, with the category summary
+ * (value, cost-covered P&L and coverage, per subcategory too) computed by
+ * the shared buildCategorySummary.
  */
-export const getHoldingsByCategory = query({
-  args: {
-    category: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+async function getCategoryPositions(
+  ctx: QueryCtx,
+  category: InvestmentCategory,
+) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) return null;
+  const userId = identity.subject;
 
-    const userId = identity.subject;
-    const category = args.category as InvestmentCategory;
+  const positions = [
+    ...(await getBrokerPositionsForCategory(ctx, userId, category)),
+    ...(await getBitpandaPositionsForCategory(ctx, userId, category)),
+  ];
 
-    // Get Plaid accounts in this category
-    const plaidAccounts = await ctx.db
-      .query("plaidAccounts")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", category),
-      )
-      .collect();
-
-    // Get broker positions in this category
-    const brokerPositions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", category),
-      )
-      .collect();
-
-    return {
-      plaidAccounts,
-      brokerPositions,
-      totalPlaidAccounts: plaidAccounts.length,
-      totalBrokerPositions: brokerPositions.length,
-    };
-  },
-});
-
-/**
- * Get all holdings for a specific subcategory
- */
-export const getHoldingsBySubcategory = query({
-  args: {
-    category: v.string(),
-    subcategory: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-    const category = args.category as InvestmentCategory;
-    const subcategory = args.subcategory as InvestmentSubcategory;
-
-    // Get Plaid accounts in this subcategory
-    const plaidAccounts = await ctx.db
-      .query("plaidAccounts")
-      .withIndex("by_subcategory", (q) =>
-        q
-          .eq("userId", userId)
-          .eq("investmentCategory", category)
-          .eq("investmentSubcategory", subcategory),
-      )
-      .collect();
-
-    // Get broker positions in this subcategory
-    const brokerPositions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_subcategory", (q) =>
-        q
-          .eq("userId", userId)
-          .eq("investmentCategory", category)
-          .eq("investmentSubcategory", subcategory),
-      )
-      .collect();
-
-    return {
-      plaidAccounts,
-      brokerPositions,
-    };
-  },
-});
+  return {
+    positions,
+    summary: buildCategorySummary(positions.map(positionToHolding)),
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════
 // CASH & MONEY MARKETS
@@ -163,15 +118,8 @@ export const getCashHoldings = query({
     }));
 
     // Get all broker positions classified as cash, plus Bitpanda fiat cash
-    const brokerCashPositionsRaw = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "cash"),
-      )
-      .collect();
-
     const brokerCashPositions = [
-      ...brokerCashPositionsRaw,
+      ...(await getBrokerPositionsForCategory(ctx, userId, "cash")),
       ...(await getBitpandaPositionsForCategory(ctx, userId, "cash")),
     ];
 
@@ -393,69 +341,11 @@ export const getLiabilities = query({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Get all equity holdings
- * Includes: stocks, ETFs, mutual funds, options
+ * Get all equity holdings (stocks, ETFs, funds, options) across providers
  */
 export const getEquities = query({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const brokerEquities = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "equities"),
-      )
-      .collect();
-
-    const positions = [
-      ...brokerEquities,
-      ...(await getBitpandaPositionsForCategory(ctx, userId, "equities")),
-    ];
-
-    // Calculate totals
-    const totalValue = positions.reduce(
-      (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
-      0,
-    );
-
-    const totalCostBasis = positions.reduce(
-      (sum, pos) => sum + (pos.totalCostBasis ?? 0),
-      0,
-    );
-
-    const totalUnrealizedPL = positions.reduce(
-      (sum, pos) => sum + (pos.unrealizedPL ?? 0),
-      0,
-    );
-
-    // Group by subcategory
-    const bySubcategory: Record<string, { count: number; total: number }> = {};
-
-    for (const pos of positions) {
-      const sub = pos.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total +=
-        pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
-    }
-
-    return {
-      positions,
-      summary: {
-        totalValue,
-        totalCostBasis,
-        totalUnrealizedPL,
-        positionCount: positions.length,
-        bySubcategory,
-      },
-    };
-  },
+  handler: (ctx) => getCategoryPositions(ctx, "equities"),
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -463,50 +353,11 @@ export const getEquities = query({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Get all bond holdings
+ * Get all bond holdings across providers
  */
 export const getBonds = query({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const positions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "bonds"),
-      )
-      .collect();
-
-    const totalValue = positions.reduce(
-      (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
-      0,
-    );
-
-    // Group by subcategory
-    const bySubcategory: Record<string, { count: number; total: number }> = {};
-
-    for (const pos of positions) {
-      const sub = pos.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total +=
-        pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
-    }
-
-    return {
-      positions,
-      summary: {
-        totalValue,
-        positionCount: positions.length,
-        bySubcategory,
-      },
-    };
-  },
+  handler: (ctx) => getCategoryPositions(ctx, "bonds"),
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -514,311 +365,24 @@ export const getBonds = query({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Get all crypto holdings
+ * Get all crypto holdings across providers
  */
 export const getCrypto = query({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const brokerCrypto = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "crypto"),
-      )
-      .collect();
-
-    const positions = [
-      ...brokerCrypto,
-      ...(await getBitpandaPositionsForCategory(ctx, userId, "crypto")),
-    ];
-
-    const totalValue = positions.reduce(
-      (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
-      0,
-    );
-
-    // Group by subcategory
-    const bySubcategory: Record<string, { count: number; total: number }> = {};
-
-    for (const pos of positions) {
-      const sub = pos.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total +=
-        pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
-    }
-
-    return {
-      positions,
-      summary: {
-        totalValue,
-        positionCount: positions.length,
-        bySubcategory,
-      },
-    };
-  },
+  handler: (ctx) => getCategoryPositions(ctx, "crypto"),
 });
 
 // ═══════════════════════════════════════════════════════════════
-// REAL ESTATE (from broker positions - REITs)
+// REAL ESTATE
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Get all real estate holdings from broker positions
- * Primarily REITs - physical real estate is manual entry
+ * Get all real estate holdings across providers (primarily REITs; physical
+ * real estate is manual entry)
  */
 export const getRealEstate = query({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const positions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "real-estate"),
-      )
-      .collect();
-
-    const totalValue = positions.reduce(
-      (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
-      0,
-    );
-
-    // Group by subcategory
-    const bySubcategory: Record<string, { count: number; total: number }> = {};
-
-    for (const pos of positions) {
-      const sub = pos.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total +=
-        pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
-    }
-
-    return {
-      positions,
-      summary: {
-        totalValue,
-        positionCount: positions.length,
-        bySubcategory,
-      },
-    };
-  },
-});
-
-// ═══════════════════════════════════════════════════════════════
-// COMMODITIES (from broker positions - excluding precious metals vault)
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Get commodity holdings from broker positions
- * Note: Precious metals vault data is handled separately via the vault system
- */
-export const getCommodities = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const brokerCommodities = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "commodities"),
-      )
-      .collect();
-
-    const positions = [
-      ...brokerCommodities,
-      ...(await getBitpandaPositionsForCategory(ctx, userId, "commodities")),
-    ];
-
-    const totalValue = positions.reduce(
-      (sum, pos) => sum + (pos.valueInBaseCurrency ?? pos.marketValue ?? 0),
-      0,
-    );
-
-    // Group by subcategory
-    const bySubcategory: Record<string, { count: number; total: number }> = {};
-
-    for (const pos of positions) {
-      const sub = pos.investmentSubcategory ?? "unknown";
-      if (!bySubcategory[sub]) {
-        bySubcategory[sub] = { count: 0, total: 0 };
-      }
-      bySubcategory[sub].count++;
-      bySubcategory[sub].total +=
-        pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
-    }
-
-    return {
-      positions,
-      summary: {
-        totalValue,
-        positionCount: positions.length,
-        bySubcategory,
-      },
-    };
-  },
-});
-
-// ═══════════════════════════════════════════════════════════════
-// PORTFOLIO OVERVIEW
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Get portfolio summary by category
- * Returns total values and counts for each investment category
- */
-export const getPortfolioSummary = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    // Get all Plaid accounts
-    const plaidAccounts = await ctx.db
-      .query("plaidAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Get all broker positions
-    const brokerPositions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Build category summary
-    const categories: Record<string, { value: number; count: number }> = {};
-
-    // Add Plaid accounts to categories
-    for (const acc of plaidAccounts) {
-      const cat = acc.investmentCategory ?? "unclassified";
-      if (!categories[cat]) {
-        categories[cat] = { value: 0, count: 0 };
-      }
-      categories[cat].count++;
-      // For liabilities, store as negative for net worth calculation
-      const balance = acc.currentBalance ?? 0;
-      categories[cat].value +=
-        cat === "liabilities" ? -Math.abs(balance) : balance;
-    }
-
-    // Add broker positions to categories
-    for (const pos of brokerPositions) {
-      const cat = pos.investmentCategory ?? "unclassified";
-      if (!categories[cat]) {
-        categories[cat] = { value: 0, count: 0 };
-      }
-      categories[cat].count++;
-      const value = pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
-      categories[cat].value += cat === "liabilities" ? -Math.abs(value) : value;
-    }
-
-    // Add Bitpanda holdings to categories
-    const bitpandaHoldings = await ctx.db
-      .query("bitpandaHoldings")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    for (const h of bitpandaHoldings) {
-      const cat = h.investmentCategory ?? "unclassified";
-      if (!categories[cat]) {
-        categories[cat] = { value: 0, count: 0 };
-      }
-      categories[cat].count++;
-      const value = h.valueInBaseCurrency ?? h.marketValue ?? 0;
-      categories[cat].value += cat === "liabilities" ? -Math.abs(value) : value;
-    }
-
-    // Calculate totals
-    let totalAssets = 0;
-    let totalLiabilities = 0;
-
-    for (const [cat, data] of Object.entries(categories)) {
-      if (cat === "liabilities") {
-        totalLiabilities = Math.abs(data.value);
-      } else if (cat !== "unclassified") {
-        totalAssets += data.value;
-      }
-    }
-
-    const netWorth = totalAssets - totalLiabilities;
-
-    return {
-      categories,
-      summary: {
-        totalAssets,
-        totalLiabilities,
-        netWorth,
-        totalAccounts: plaidAccounts.length,
-        totalPositions: brokerPositions.length + bitpandaHoldings.length,
-      },
-    };
-  },
-});
-
-// ═══════════════════════════════════════════════════════════════
-// UNCLASSIFIED ITEMS
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Get items that haven't been classified yet
- * Useful for identifying data that needs manual review
- */
-export const getUnclassifiedItems = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    // Get unclassified Plaid accounts
-    const unclassifiedAccounts = await ctx.db
-      .query("plaidAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("investmentCategory"), undefined),
-          q.eq(q.field("investmentCategory"), null),
-        ),
-      )
-      .collect();
-
-    // Get unclassified broker positions
-    const unclassifiedPositions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("investmentCategory"), undefined),
-          q.eq(q.field("investmentCategory"), null),
-        ),
-      )
-      .collect();
-
-    return {
-      accounts: unclassifiedAccounts,
-      positions: unclassifiedPositions,
-      totalUnclassified:
-        unclassifiedAccounts.length + unclassifiedPositions.length,
-    };
-  },
+  handler: (ctx) => getCategoryPositions(ctx, "real-estate"),
 });
 
 // ═══════════════════════════════════════════════════════════════

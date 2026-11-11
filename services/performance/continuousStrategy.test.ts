@@ -15,10 +15,7 @@ import type {
   PerformanceCalculationOptions,
 } from "./strategies/types";
 import type { HoldingData, PriceData, PricePoint } from "./types";
-import {
-  TROY_OUNCE_GRAMS,
-  valueVaultItem,
-} from "@/convex/lib/priceCalculations";
+import { TROY_OUNCE_GRAMS, valueVaultItem } from "../finance/metals";
 
 // ═══════════════════════════════════════════════════════════════
 // Test Utilities
@@ -82,6 +79,13 @@ function createPriceHistory(
 /**
  * Create price data for multiple metals
  */
+/**
+ * Metal prices are quoted per troy ounce. The tests reason in €/g, so this
+ * converts a per-gram price to the per-ounce price the strategy expects.
+ */
+const perOz = (eurPerGram: number) => eurPerGram * TROY_OUNCE_GRAMS;
+
+/** Gold/silver price history from per-gram start/end prices. */
 function createPriceData(metals: {
   gold?: { startPrice: number; endPrice: number };
   silver?: { startPrice: number; endPrice: number };
@@ -91,15 +95,15 @@ function createPriceData(metals: {
   if (metals.gold) {
     priceData.gold = createPriceHistory(
       30,
-      metals.gold.startPrice,
-      metals.gold.endPrice,
+      perOz(metals.gold.startPrice),
+      perOz(metals.gold.endPrice),
     );
   }
   if (metals.silver) {
     priceData.silver = createPriceHistory(
       30,
-      metals.silver.startPrice,
-      metals.silver.endPrice,
+      perOz(metals.silver.startPrice),
+      perOz(metals.silver.endPrice),
     );
   }
 
@@ -282,7 +286,7 @@ describe("ContinuousPerformanceStrategy", () => {
 
       // Hourly price data for a month = high coverage
       const prices: PriceData = {
-        gold: createPriceHistory(30, 60, 66, 1), // hourly data
+        gold: createPriceHistory(30, perOz(60), perOz(66), 1), // hourly data
       };
 
       const input: ContinuousPerformanceInput = { holdings, prices };
@@ -402,7 +406,7 @@ describe("ContinuousPerformanceStrategy - Metal Value Calculation", () => {
 
     // Flat price (no change)
     const prices: PriceData = {
-      gold: createPriceHistory(30, 60, 60, 24),
+      gold: createPriceHistory(30, perOz(60), perOz(60), 24),
     };
 
     const input: ContinuousPerformanceInput = { holdings, prices };
@@ -424,7 +428,7 @@ describe("ContinuousPerformanceStrategy - Metal Value Calculation", () => {
     ];
 
     const prices: PriceData = {
-      gold: createPriceHistory(30, 60, 60, 24),
+      gold: createPriceHistory(30, perOz(60), perOz(60), 24),
     };
 
     const input: ContinuousPerformanceInput = { holdings, prices };
@@ -446,7 +450,7 @@ describe("ContinuousPerformanceStrategy - Metal Value Calculation", () => {
     ];
 
     const prices: PriceData = {
-      gold: createPriceHistory(30, 60, 60, 24),
+      gold: createPriceHistory(30, perOz(60), perOz(60), 24),
     };
 
     const input: ContinuousPerformanceInput = { holdings, prices };
@@ -481,7 +485,7 @@ describe("ContinuousPerformanceStrategy - Edge Cases", () => {
 
     // Only gold prices, no platinum
     const prices: PriceData = {
-      gold: createPriceHistory(30, 60, 66, 24),
+      gold: createPriceHistory(30, perOz(60), perOz(66), 24),
     };
 
     const input: ContinuousPerformanceInput = { holdings, prices };
@@ -586,8 +590,9 @@ describe("ContinuousPerformanceStrategy - agrees with valueVaultItem", () => {
         sellPremium: item.sellPremium,
       }),
     ];
-    const perGram = eurPerOunce / TROY_OUNCE_GRAMS;
-    const prices: PriceData = { gold: createPriceHistory(30, perGram, perGram, 24) };
+    const prices: PriceData = {
+      gold: createPriceHistory(30, eurPerOunce, eurPerOunce, 24),
+    };
 
     const result = calculateContinuousPerformance(
       { holdings, prices },
@@ -596,7 +601,7 @@ describe("ContinuousPerformanceStrategy - agrees with valueVaultItem", () => {
 
     const vault = valueVaultItem(
       item,
-      { metalType: "gold", eurPerOunce, sourceTimestamp: now },
+      { eurPerOunce, sourceTimestamp: now },
       now,
     );
 

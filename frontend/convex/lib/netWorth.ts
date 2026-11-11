@@ -1,5 +1,11 @@
 import { QueryCtx } from "../_generated/server";
-import { valueVaultItem } from "./priceCalculations";
+import { valueVaultItem } from "../../../services/finance/metals";
+import {
+  positionCostBasis,
+  positionValue,
+  summarizeHoldings,
+  type HoldingValuation,
+} from "../../../services/portfolio/categorySummary";
 
 /**
  * Server-side net worth for one user, computed from the stored documents.
@@ -13,14 +19,12 @@ import { valueVaultItem } from "./priceCalculations";
  * convex/metalPrices.ts) using the dashboard's formula; an item falls back to
  * purchase price when its metal has no spot price fresher than
  * SPOT_PRICE_MAX_AGE_MS.
+ *
+ * A category's costBasis sums only the holdings that have one, converted to
+ * the base currency (services/portfolio/categorySummary.ts); holdings
+ * without a cost basis add value only.
  */
 export async function computeNetWorth(ctx: QueryCtx, userId: string) {
-  // Calculate total assets from all sources
-  let totalAssets = 0;
-  let totalLiabilities = 0;
-  let totalCostBasis = 0;
-  let hasCostBasis = false;
-
   const categoryBreakdown: Array<{
     category: string;
     value: number;
@@ -61,43 +65,37 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     brokerPositions.map((p) => p.accountId),
   );
 
-  let equitiesValue = 0;
-  let equitiesCost = 0;
-  let bondsValue = 0;
-  let bondsCost = 0;
-  let cryptoValue = 0;
-  let cryptoCost = 0;
+  // Holdings of the cost-bearing categories, from every provider
+  const equities: HoldingValuation[] = [];
+  const bonds: HoldingValuation[] = [];
+  const crypto: HoldingValuation[] = [];
+  const commodities: HoldingValuation[] = [];
   let brokerCashValue = 0;
   let brokerLiabilitiesValue = 0;
 
   // Process broker positions
   for (const pos of brokerPositions) {
-    const value = pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
-    const cost = pos.totalCostBasis ?? 0;
+    const holding = {
+      value: positionValue(pos),
+      costBasis: positionCostBasis(pos),
+    };
 
     switch (pos.investmentCategory) {
-      case "equities":
-        equitiesValue += value;
-        equitiesCost += cost;
-        break;
       case "bonds":
-        bondsValue += value;
-        bondsCost += cost;
+        bonds.push(holding);
         break;
       case "crypto":
-        cryptoValue += value;
-        cryptoCost += cost;
+        crypto.push(holding);
         break;
       case "cash":
-        brokerCashValue += value;
+        brokerCashValue += holding.value;
         break;
       case "liabilities":
-        brokerLiabilitiesValue += Math.abs(value);
+        brokerLiabilitiesValue += Math.abs(holding.value);
         break;
       default:
-        // Unclassified goes to equities by default
-        equitiesValue += value;
-        equitiesCost += cost;
+        // Equities, and unclassified positions by default
+        equities.push(holding);
     }
   }
 
@@ -131,17 +129,13 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
   );
   const now = Date.now();
 
-  let commoditiesValue = 0;
-  let commoditiesCost = 0;
-
   for (const item of vaultItems) {
     const { value, cost } = valueVaultItem(
       item,
       spotByMetal.get(item.metalType),
       now,
     );
-    commoditiesCost += cost;
-    commoditiesValue += value;
+    commodities.push({ value, costBasis: cost });
   }
 
   // 4. Bitpanda holdings (mixed: crypto, metals, commodities, stocks, fiat)
@@ -150,36 +144,30 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
 
+  // Bitpanda reports no cost basis: these count toward value only.
   let bitpandaCashValue = 0;
-  let bitpandaEquitiesValue = 0;
-  let bitpandaBondsValue = 0;
-  let bitpandaCryptoValue = 0;
-  let bitpandaCommoditiesValue = 0;
   let bitpandaLiabilitiesValue = 0;
 
   for (const h of bitpandaHoldings) {
-    const value = h.valueInBaseCurrency ?? h.marketValue ?? 0;
+    const holding = { value: positionValue(h), costBasis: null };
     switch (h.investmentCategory) {
       case "cash":
-        bitpandaCashValue += value;
+        bitpandaCashValue += holding.value;
         break;
       case "equities":
-        bitpandaEquitiesValue += value;
+        equities.push(holding);
         break;
       case "bonds":
-        bitpandaBondsValue += value;
-        break;
-      case "crypto":
-        bitpandaCryptoValue += value;
+        bonds.push(holding);
         break;
       case "commodities":
-        bitpandaCommoditiesValue += value;
+        commodities.push(holding);
         break;
       case "liabilities":
-        bitpandaLiabilitiesValue += Math.abs(value);
+        bitpandaLiabilitiesValue += Math.abs(holding.value);
         break;
       default:
-        bitpandaCryptoValue += value;
+        crypto.push(holding);
     }
   }
 
@@ -202,68 +190,44 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     });
   }
 
-  const totalEquitiesValue = equitiesValue + bitpandaEquitiesValue;
-  if (totalEquitiesValue > 0) {
-    categoryBreakdown.push({
-      category: "equities",
-      value: totalEquitiesValue,
-      costBasis: equitiesCost > 0 ? equitiesCost : undefined,
-    });
-    if (equitiesCost > 0) hasCostBasis = true;
-  }
+  const investments = [
+    { category: "equities", holdings: equities },
+    { category: "bonds", holdings: bonds },
+    { category: "crypto", holdings: crypto },
+    { category: "commodities", holdings: commodities },
+  ].map(({ category, holdings }) => ({
+    category,
+    ...summarizeHoldings(holdings),
+  }));
 
-  const totalBondsValue = bondsValue + bitpandaBondsValue;
-  if (totalBondsValue > 0) {
-    categoryBreakdown.push({
-      category: "bonds",
-      value: totalBondsValue,
-      costBasis: bondsCost > 0 ? bondsCost : undefined,
-    });
-    if (bondsCost > 0) hasCostBasis = true;
-  }
-
-  // Combine broker crypto (SnapTrade) + Bitpanda crypto
-  const totalCryptoValue = cryptoValue + bitpandaCryptoValue;
-  if (totalCryptoValue > 0) {
-    categoryBreakdown.push({
-      category: "crypto",
-      value: totalCryptoValue,
-      costBasis: cryptoCost > 0 ? cryptoCost : undefined,
-    });
-    if (cryptoCost > 0) hasCostBasis = true;
-  }
-
-  const totalCommoditiesValue = commoditiesValue + bitpandaCommoditiesValue;
-  if (totalCommoditiesValue > 0) {
-    categoryBreakdown.push({
-      category: "commodities",
-      value: totalCommoditiesValue,
-      costBasis: commoditiesCost > 0 ? commoditiesCost : undefined,
-    });
-    if (commoditiesCost > 0) hasCostBasis = true;
+  for (const c of investments) {
+    if (c.value > 0) {
+      categoryBreakdown.push({
+        category: c.category,
+        value: c.value,
+        costBasis: c.costBasis ?? undefined,
+      });
+    }
   }
 
   // Calculate totals
-  totalAssets =
+  const costBearing = investments.filter((c) => c.costBasis !== null);
+  const totalCostBasis =
+    costBearing.length > 0
+      ? costBearing.reduce((sum, c) => sum + (c.costBasis ?? 0), 0)
+      : undefined;
+
+  const totalAssets =
     cashValue +
     brokerCashValue +
     bitpandaCashValue +
-    equitiesValue +
-    bitpandaEquitiesValue +
-    bondsValue +
-    bitpandaBondsValue +
-    cryptoValue +
-    bitpandaCryptoValue +
-    commoditiesValue +
-    bitpandaCommoditiesValue;
+    investments.reduce((sum, c) => sum + c.value, 0);
 
-  totalLiabilities =
+  const totalLiabilities =
     liabilitiesValue +
     brokerLiabilitiesValue +
     bitpandaLiabilitiesValue +
     loansValue;
-
-  totalCostBasis = equitiesCost + bondsCost + cryptoCost + commoditiesCost;
 
   const netWorth = totalAssets - totalLiabilities;
 
@@ -271,7 +235,7 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     totalAssets,
     totalLiabilities,
     netWorth,
-    totalCostBasis: hasCostBasis ? totalCostBasis : undefined,
+    totalCostBasis,
     categoryBreakdown,
   };
 }

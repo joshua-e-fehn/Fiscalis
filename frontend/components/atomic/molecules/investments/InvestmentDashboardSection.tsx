@@ -12,7 +12,7 @@
  * - Row 3: Largest Holdings (optional, only shown when there are holdings)
  */
 
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
   Card,
@@ -521,19 +521,26 @@ export function InvestmentDashboardSection({
     enabled: needsContinuousYTD && !isLoading,
   });
 
-  // P/L calculation using first snapshot as cost basis when no explicit cost basis
+  // One P/L resolution (holdings cost basis, else first snapshot) shared by
+  // the KPI card and the chart's cost line
+  const holdingsPL = useMemo(
+    () =>
+      summary
+        ? {
+            costBasis: summary.totalCost,
+            profitLoss: summary.profitLoss,
+            profitLossPercent: summary.profitLossPercent,
+          }
+        : null,
+    [summary],
+  );
   const plData = useCategoryProfitLoss({
     category,
     currentValue: summary?.totalValue ?? 0,
-    explicitCostBasis: summary?.totalCost,
+    holdings: holdingsPL,
     enabled: !isLoading && (summary?.totalValue ?? 0) > 0,
   });
-
-  // Computed values
-  const profitLoss = summary?.profitLoss ?? plData.profitLoss;
-  const profitLossPercent =
-    summary?.profitLossPercent ?? plData.profitLossPercent;
-  const costBasis = plData.costBasis ?? summary?.totalCost ?? null;
+  const { profitLoss, profitLossPercent, costBasis } = plData;
 
   // Select appropriate YTD values
   const ytdProfitLoss = needsContinuousYTD

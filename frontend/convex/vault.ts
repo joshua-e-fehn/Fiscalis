@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
+import { resolvePremiums } from "../../services/finance/metals";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES - Metal Catalog
@@ -279,14 +280,16 @@ export const addVaultItemFromCatalog = mutation({
     }
 
     const now = Date.now();
-    // Handle backward compatibility: use new premium fields or fall back to old defaultPremium
-    const buyPremium =
-      args.buyPremium ??
-      catalogItem.defaultBuyPremium ??
-      (catalogItem as any).defaultPremium ??
-      0.03;
-    const sellPremium =
-      args.sellPremium ?? catalogItem.defaultSellPremium ?? 0.0;
+    // Explicit premium, then the catalog default, then the legacy single
+    // `defaultPremium` field on old catalog documents, then the shared default.
+    const { buyPremium, sellPremium } = resolvePremiums({
+      buy: [
+        args.buyPremium,
+        catalogItem.defaultBuyPremium,
+        (catalogItem as { defaultPremium?: number }).defaultPremium,
+      ],
+      sell: [args.sellPremium, catalogItem.defaultSellPremium],
+    });
 
     const vaultItemId = await ctx.db.insert("vaultItems", {
       userId,

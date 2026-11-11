@@ -1,36 +1,28 @@
 /**
  * Category Profit/Loss Hook
  *
- * Calculates P/L for a category using either:
- * 1. Explicit cost basis from portfolio snapshots (if available)
- * 2. First non-zero snapshot value as inferred cost basis
- *
- * This provides unified P/L calculation across all investment categories,
- * even when providers do not provide cost basis data.
+ * The P/L a category page shows, resolved once by
+ * `resolveCategoryProfitLoss` (services/portfolio/categorySummary.ts) so the
+ * KPI card and the chart's cost line always agree:
+ * 1. the holdings' own cost basis (coverage-based, from the category summary);
+ * 2. otherwise the category's first non-zero snapshot value as an inferred
+ *    cost basis, for providers that report no cost basis at all.
  */
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-
-import type { SnapshotData } from "@/lib/performance";
+import {
+  resolveCategoryProfitLoss,
+  type ResolvedProfitLoss,
+} from "@/../services/portfolio/categorySummary";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
 // ═══════════════════════════════════════════════════════════════
 
-export interface CategoryProfitLossResult {
-  /** Current value of the category */
-  currentValue: number;
-  /** Cost basis (explicit or inferred from first snapshot) */
-  costBasis: number | null;
-  /** Absolute profit/loss */
-  profitLoss: number | null;
-  /** Percentage profit/loss */
-  profitLossPercent: number | null;
-  /** Whether cost basis was inferred from first snapshot */
-  isCostBasisInferred: boolean;
-  /** Loading state */
+export interface CategoryProfitLossResult extends ResolvedProfitLoss {
+  /** Loading state (snapshots, only needed without a holdings cost basis) */
   isLoading: boolean;
 }
 
@@ -39,8 +31,12 @@ export interface UseCategoryProfitLossOptions {
   category: string;
   /** Current value of the category (from live data) */
   currentValue: number;
-  /** Explicit cost basis if available (from provider) */
-  explicitCostBasis?: number | null;
+  /** Cost basis and P/L of the holdings, from the category summary */
+  holdings: {
+    costBasis: number | null;
+    profitLoss: number | null;
+    profitLossPercent: number | null;
+  } | null;
   /** Whether to enable the query */
   enabled?: boolean;
 }
@@ -50,109 +46,53 @@ export interface UseCategoryProfitLossOptions {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Calculate P/L for a category
- *
- * When explicit cost basis is not available (e.g., crypto holdings),
- * uses the first non-zero snapshot value for this category as the cost basis.
+ * Resolve a category's P/L (see the module comment for the precedence).
  *
  * @example
  * ```tsx
- * const { profitLoss, profitLossPercent } = useCategoryProfitLoss({
- *   category: "crypto",
- *   currentValue: 161.61,
- * });
+ * const { profitLoss, profitLossPercent, costBasis, source } =
+ *   useCategoryProfitLoss({
+ *     category: "crypto",
+ *     currentValue: summary.totalValue,
+ *     holdings: { costBasis: summary.totalCost, profitLoss: summary.profitLoss,
+ *                 profitLossPercent: summary.profitLossPercent },
+ *   });
  * ```
  */
 export function useCategoryProfitLoss(
   options: UseCategoryProfitLossOptions,
 ): CategoryProfitLossResult {
-  const {
-    category,
-    currentValue,
-    explicitCostBasis = null,
-    enabled = true,
-  } = options;
+  const { category, currentValue, holdings, enabled = true } = options;
 
-  // Fetch portfolio snapshots
+  // Snapshots are only needed when the holdings carry no cost basis
+  const needsSnapshots =
+    enabled && (holdings?.costBasis == null || holdings.profitLoss == null);
+
   const rawSnapshots = useQuery(
     api.portfolioSnapshots.getSnapshots,
-    enabled ? { limit: 730 } : "skip",
+    needsSnapshots ? { limit: 730 } : "skip",
   );
 
-  const isLoading = rawSnapshots === undefined;
-
-  const result = useMemo<Omit<CategoryProfitLossResult, "isLoading">>(() => {
-    // If we have explicit cost basis, use it
-    if (explicitCostBasis !== null && explicitCostBasis > 0) {
-      const profitLoss = currentValue - explicitCostBasis;
-      const profitLossPercent = (profitLoss / explicitCostBasis) * 100;
-
-      return {
-        currentValue,
-        costBasis: explicitCostBasis,
-        profitLoss,
-        profitLossPercent,
-        isCostBasisInferred: false,
-      };
+  const firstSnapshotValue = useMemo(() => {
+    if (!rawSnapshots) return null;
+    const sorted = [...rawSnapshots].sort((a, b) => a.timestamp - b.timestamp);
+    for (const snapshot of sorted) {
+      const value = snapshot.categoryBreakdown?.find(
+        (c) => c.category === category,
+      )?.value;
+      if (value !== undefined && value > 0) return value;
     }
+    return null;
+  }, [category, rawSnapshots]);
 
-    // No explicit cost basis - try to infer from first snapshot
-    if (!rawSnapshots || rawSnapshots.length === 0) {
-      return {
-        currentValue,
-        costBasis: null,
-        profitLoss: null,
-        profitLossPercent: null,
-        isCostBasisInferred: false,
-      };
-    }
-
-    // Find the first non-zero snapshot for this category
-    // Sort snapshots by timestamp ascending
-    const sortedSnapshots = [...rawSnapshots].sort(
-      (a, b) => a.timestamp - b.timestamp,
-    );
-
-    let firstNonZeroValue: number | null = null;
-
-    for (const snapshot of sortedSnapshots) {
-      if (snapshot.categoryBreakdown) {
-        const categoryData = snapshot.categoryBreakdown.find(
-          (c) => c.category === category,
-        );
-        if (categoryData && categoryData.value > 0) {
-          firstNonZeroValue = categoryData.value;
-          break;
-        }
-      }
-    }
-
-    // If we found a first non-zero value, use it as cost basis
-    if (firstNonZeroValue !== null && currentValue > 0) {
-      const profitLoss = currentValue - firstNonZeroValue;
-      const profitLossPercent = (profitLoss / firstNonZeroValue) * 100;
-
-      return {
-        currentValue,
-        costBasis: firstNonZeroValue,
-        profitLoss,
-        profitLossPercent,
-        isCostBasisInferred: true,
-      };
-    }
-
-    // No historical data found
-    return {
-      currentValue,
-      costBasis: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      isCostBasisInferred: false,
-    };
-  }, [category, currentValue, explicitCostBasis, rawSnapshots]);
+  const resolved = useMemo(
+    () =>
+      resolveCategoryProfitLoss({ currentValue, holdings, firstSnapshotValue }),
+    [currentValue, holdings, firstSnapshotValue],
+  );
 
   return {
-    ...result,
-    isLoading,
+    ...resolved,
+    isLoading: needsSnapshots && rawSnapshots === undefined,
   };
 }

@@ -4,9 +4,11 @@ import {
   aggregateNetWorth,
   buildSnapshotBreakdown,
   isFlowAdjustedCategory,
+  liabilityCountsLabel,
   categoryFlowFromHoldings,
   holdingNetFlow,
   snapshotCategoryFlow,
+  snapshotPartial,
   withoutSnapshotHoldings,
   HOLDING_CATEGORIES,
   placeHolding,
@@ -202,6 +204,20 @@ describe("buildSnapshotBreakdown", () => {
   it("sums cost totals over the categories that have a cost basis", () => {
     expect(b.totalCostBasis).toBe(920 + 1_150 + 320);
     expect(b.totalCoveredValue).toBe(1_012 + 1_400 + 300);
+  });
+
+  it("keeps a worthless category that has a cost, drops an empty one", () => {
+    const hs = [
+      holding({ source: "brokerPosition", category: "equities", valueBase: 0, costBase: 8_000 }),
+      holding({ source: "bitpanda", category: "crypto", valueBase: 0 }),
+      holding({ source: "bank", category: "cash", valueBase: 100 }),
+    ];
+    const r = buildSnapshotBreakdown(aggregateNetWorth(hs), hs);
+    expect(r.categoryBreakdown.map((c) => c.category)).toEqual(["cash", "equities"]);
+    const equities = r.categoryBreakdown.find((c) => c.category === "equities")!;
+    expect(equities).toMatchObject({ value: 0, costBasis: 8_000, coveredValue: 0 });
+    expect(equities.value - snapshotCostLine(equities)!).toBe(-8_000);
+    expect(r.totalCostBasis).toBe(8_000);
   });
 
   it("leaves the cost totals undefined when nothing has a cost basis", () => {
@@ -417,5 +433,37 @@ describe("loanMonthlyPaymentInBase", () => {
     expect(
       loanMonthlyPaymentInBase({ ...loan, status: "paid_off", paymentFrequency: "MONTHLY" }, rates),
     ).toBe(0);
+  });
+});
+
+describe("snapshotPartial", () => {
+  it("keeps a partial row partial on a manual or single-provider write", () => {
+    expect(snapshotPartial(true, undefined)).toBe(true);
+  });
+
+  it("lets a full sync set or clear the flag", () => {
+    expect(snapshotPartial(true, false)).toBeUndefined();
+    expect(snapshotPartial(undefined, true)).toBe(true);
+    expect(snapshotPartial(false, true)).toBe(true);
+  });
+
+  it("leaves a complete or new row unflagged on a manual write", () => {
+    expect(snapshotPartial(undefined, undefined)).toBeUndefined();
+    expect(snapshotPartial(false, undefined)).toBeUndefined();
+  });
+});
+
+describe("liabilityCountsLabel", () => {
+  it("shows loans when there are no liability accounts", () => {
+    expect(liabilityCountsLabel(0, 2)).toBe("2 loans");
+  });
+
+  it("joins accounts and loans, each pluralised", () => {
+    expect(liabilityCountsLabel(1, 1)).toBe("1 account · 1 loan");
+    expect(liabilityCountsLabel(3, 0)).toBe("3 accounts");
+  });
+
+  it("is null when there is nothing to count", () => {
+    expect(liabilityCountsLabel(0, 0)).toBeNull();
   });
 });

@@ -240,6 +240,24 @@ export function aggregateNetWorth(
   };
 }
 
+/**
+ * The liabilities card's count line, e.g. "2 accounts · 1 loan"; each part
+ * shows only when its count is positive, null when both are zero.
+ */
+export function liabilityCountsLabel(
+  accountsCount: number,
+  loansCount: number,
+): string | null {
+  const parts: string[] = [];
+  if (accountsCount > 0) {
+    parts.push(`${accountsCount} account${accountsCount !== 1 ? "s" : ""}`);
+  }
+  if (loansCount > 0) {
+    parts.push(`${loansCount} loan${loansCount !== 1 ? "s" : ""}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Snapshot breakdown
 // ═══════════════════════════════════════════════════════════════
@@ -353,8 +371,8 @@ function snapshotHoldings(
 }
 
 /**
- * The snapshot's category breakdown (asset categories with a value) and
- * cost totals. Every category with a cost basis also records the value that
+ * The snapshot's category breakdown (asset categories with a value or a
+ * cost basis) and cost totals. Every category with a cost basis also records the value that
  * cost covers, so a reader compares cost only with that value
  * (snapshotCostLine), and its value per source, so the vault metals
  * (continuous valuation) can be told apart from provider metals. Sources of
@@ -385,7 +403,9 @@ export function buildSnapshotBreakdown(
       totalCostBasis = (totalCostBasis ?? 0) + c.costBasis;
       totalCoveredValue = (totalCoveredValue ?? 0) + c.coveredValue;
     }
-    if (c.value === 0) continue;
+    // An empty category is left out, but one whose holdings became
+    // worthless keeps its cost: the snapshot records that loss
+    if (c.value === 0 && !(c.costBasis !== null && c.costBasis > 0)) continue;
     const held = holdingsByCategory.get(category);
     const sources = (Object.keys(c.bySource) as HoldingSource[]).map(
       (source): SnapshotSourceEntry => {
@@ -424,6 +444,23 @@ export function buildSnapshotBreakdown(
   }
 
   return { categoryBreakdown, totalCostBasis, totalCoveredValue };
+}
+
+/**
+ * The `partial` flag of today's snapshot row after an upsert.
+ *
+ * Only a full sync of every provider knows whether the day's provider data
+ * is complete, so it passes `requested` (true when a provider failed) and
+ * that verdict replaces the row's. Any other write (a vault or loan change,
+ * a single provider's sync) passes undefined and keeps the row's flag: a
+ * provider that failed earlier today still holds its last successful sync's
+ * values until a full sync refreshes it.
+ */
+export function snapshotPartial(
+  existing: boolean | undefined,
+  requested: boolean | undefined,
+): true | undefined {
+  return (requested ?? existing) ? true : undefined;
 }
 
 /** A breakdown without the holdings kept for the next day's flows. */

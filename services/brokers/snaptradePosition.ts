@@ -446,11 +446,18 @@ export interface StoredSnaptradeCash {
  *   cash is a margin debit (classified as a liability at write time).
  * - residual: with a broker total but no cash figure, total minus the
  *   positions (never below zero), so the account still adds up to its
- *   total.
+ *   total. When a position has no rate the residual is unknown, and the
+ *   stored cash is kept, converted into the total's currency.
  * - stored: with neither, the stored cash is kept in its own currency,
  *   which then becomes the balance currency.
  *
  * The balance is the broker total, or, without one, positions plus cash.
+ *
+ * Throws, so the caller's transaction rolls back and the account's stored
+ * holdings stay as they were, when reported cash (or a cash equivalent)
+ * has no rate into the balance currency - a partial sum would understate
+ * cash or erase a margin debit - or when stored cash that must be kept
+ * cannot be converted.
  */
 export function snaptradeAccountFields(
   mapped: MappedSnaptradeHoldings,
@@ -472,6 +479,9 @@ export function snaptradeAccountFields(
     let sum = 0;
     let complete = true;
     for (const { amount, currency } of amounts) {
+      // Zero needs no rate: SnapTrade lists a balance for every enabled
+      // currency, and a 0 in an unpriced one must not fail the sync
+      if (amount === 0) continue;
       const converted = convertBetween(amount, currency, balanceCurrency, rates);
       if (converted === undefined) complete = false;
       else sum += converted;
@@ -483,24 +493,50 @@ export function snaptradeAccountFields(
     mapped.positions.map((p) => ({ amount: p.marketValue, currency: p.currency })),
   );
 
+  /** The stored cash in balanceCurrency; throws when it cannot be kept */
+  const keptCash = (): number | undefined => {
+    if (stored?.cash === undefined) return undefined;
+    if (stored.cash === 0) return 0;
+    const converted = convertBetween(
+      stored.cash,
+      stored.currency,
+      balanceCurrency,
+      rates,
+    );
+    if (converted === undefined) {
+      throw new Error(
+        `Cannot keep the stored broker cash: no exchange rate from ${stored.currency} to ${balanceCurrency}`,
+      );
+    }
+    return converted;
+  };
+
   let cash: number | undefined;
   let cashSource: SnaptradeCashSource | undefined;
-  let cashComplete = true;
   if (mapped.cashBalances !== undefined) {
     const reported = sumIn(mapped.cashBalances);
     const equivalents = sumIn(mapped.cashEquivalents);
+    // A partial sum could turn a margin debit into zero cash: reject the
+    // update, so the stored holdings stay as they were and the sync
+    // reports the account as failed
+    if (!reported.complete || !equivalents.complete) {
+      throw new Error(
+        `Cannot update broker cash: an exchange rate into ${balanceCurrency} is unavailable`,
+      );
+    }
     cash =
       reported.sum > 0
         ? Math.max(0, reported.sum - equivalents.sum)
         : reported.sum;
     cashSource = "reported";
-    cashComplete = reported.complete && equivalents.complete;
   } else if (mapped.total !== undefined) {
-    // A position without a rate would inflate the residual: keep the
-    // stored cash rather than guess
     if (positions.complete) {
       cash = Math.max(0, mapped.total.amount - positions.sum);
       cashSource = "residual";
+    } else {
+      // A position without a rate would inflate the residual: keep the
+      // stored cash (and its cashSource) rather than guess
+      cash = keptCash();
     }
   } else if (keepStored) {
     cash = stored?.cash;
@@ -514,7 +550,7 @@ export function snaptradeAccountFields(
     balanceIsMixed = false;
   } else {
     balance = positions.sum + (cash ?? 0);
-    balanceIsMixed = !positions.complete || !cashComplete;
+    balanceIsMixed = !positions.complete;
   }
 
   return {

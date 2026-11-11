@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   costLine,
   coveredValueOf,
+  partialCoveragePercent,
   snapshotCostLine,
   summarizeUnrealizedProfitLoss,
   sumCostCoveredValue,
@@ -110,7 +111,22 @@ describe("summarizeUnrealizedProfitLoss with partially covered categories", () =
     expect(r.coverage).toBeCloseTo(2_300 / 16_300, 10);
   });
 
-  it("drops a category whose cost-bearing holdings have no value", () => {
+  it("counts the whole cost of worthless holdings as a loss", () => {
+    // Equities: broker holdings worth 0 (cost 8k) + 20k Bitpanda without cost
+    const r = summarizeUnrealizedProfitLoss([
+      category([
+        { value: 0, costBasis: 8_000 },
+        { value: 20_000, costBasis: null },
+      ]),
+      { value: 1_000, costBasis: 800, profitLoss: 200 },
+    ]);
+    expect(r.costBasis).toBe(8_800);
+    expect(r.coveredValue).toBe(1_000);
+    expect(r.profitLoss).toBe(-7_800);
+    expect(r.coverage).toBeCloseTo(1_000 / 21_000, 10);
+  });
+
+  it("drops a category whose cost-bearing holdings have no value or cost", () => {
     const r = summarizeUnrealizedProfitLoss([
       { value: 20_000, costBasis: 0, profitLoss: 0 },
       { value: 1_000, costBasis: 800, profitLoss: 200 },
@@ -183,5 +199,20 @@ describe("sumCostCoveredValue", () => {
         { value: 40, costBasis: 5 },
       ]),
     ).toBe(50);
+  });
+});
+
+describe("partialCoveragePercent", () => {
+  it("is the rounded covered share when the P/L covers part of the value", () => {
+    // 1,200 covered of 6,200
+    expect(partialCoveragePercent(1_200 / 6_200)).toBe(19);
+    expect(partialCoveragePercent(0)).toBe(0);
+  });
+
+  it("is null for (nearly) full or unknown coverage", () => {
+    expect(partialCoveragePercent(1)).toBeNull();
+    expect(partialCoveragePercent(0.996)).toBeNull();
+    expect(partialCoveragePercent(null)).toBeNull();
+    expect(partialCoveragePercent(undefined)).toBeNull();
   });
 });

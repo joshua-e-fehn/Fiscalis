@@ -466,7 +466,10 @@ export function bankAccountBaseFields(
  * Base-currency fields of a broker account's total balance and cash, in
  * `balanceCurrency` when the provider reported one, else `currency`.
  * `balanceIsMixed`: the balance is a sum over holdings in several
- * currencies (no provider total), so it gets no base value.
+ * currencies (no provider total), so it gets no base value. It is the
+ * option when given (a sync deciding it anew), else the flag stored on the
+ * account, so re-stamping a stored row (the backfill, read-time stamping)
+ * keeps that provenance.
  */
 export function brokerAccountBaseFields(
   account: {
@@ -474,6 +477,7 @@ export function brokerAccountBaseFields(
     cash?: number;
     currency: string;
     balanceCurrency?: string;
+    balanceIsMixed?: boolean;
   },
   rates: FxRates,
   options: { balanceIsMixed?: boolean } = {},
@@ -482,8 +486,9 @@ export function brokerAccountBaseFields(
     account.balanceCurrency ?? account.currency,
     rates,
   );
+  const balanceIsMixed = options.balanceIsMixed ?? account.balanceIsMixed;
   return {
-    balanceInBaseCurrency: options.balanceIsMixed
+    balanceInBaseCurrency: balanceIsMixed
       ? undefined
       : times(account.balance, rate),
     cashValueInBaseCurrency: times(account.cash, rate),
@@ -533,6 +538,7 @@ export function brokerAccountWithBaseFields<
     cash?: number;
     currency: string;
     balanceCurrency?: string;
+    balanceIsMixed?: boolean;
   },
 >(account: T, rates: FxRates): T {
   return account.exchangeRateSource !== undefined

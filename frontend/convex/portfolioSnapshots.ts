@@ -19,7 +19,10 @@ import {
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { computeNetWorth } from "./lib/netWorth";
-import { withoutSnapshotHoldings } from "../../services/portfolio/aggregate";
+import {
+  snapshotPartial,
+  withoutSnapshotHoldings,
+} from "../../services/portfolio/aggregate";
 import { getUserId } from "./lib/auth";
 
 /** Delay before a snapshot requested by a manual change is taken. */
@@ -49,8 +52,10 @@ export const takeSnapshot = internalMutation({
   args: {
     userId: v.string(),
     source: v.string(), // "plaid", "snaptrade", "bitpanda", "vault", "loan", "scheduled-daily", ...
-    // A provider sync before this snapshot failed: that provider's holdings
-    // are the ones stored by its last successful sync
+    // Set by a full sync only: true when a provider sync before this
+    // snapshot failed, so that provider's holdings are the ones stored by its
+    // last successful sync. Other writes omit it and keep the row's flag
+    // (aggregate.ts snapshotPartial).
     partial: v.optional(v.boolean()),
     // Debounced request (scheduleSnapshot): skip when today's row was
     // written at or after this time
@@ -113,7 +118,7 @@ export const takeSnapshot = internalMutation({
       totalCoveredValue,
       categoryBreakdown,
       source,
-      partial: partial || undefined,
+      partial: snapshotPartial(existing?.partial, partial),
       asOf: asOf ?? undefined,
     };
 

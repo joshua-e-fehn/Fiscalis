@@ -64,9 +64,14 @@ export function summarizeUnrealizedProfitLoss(
       costBasis: c.costBasis,
       covered: coveredValueOf(c.costBasis, c.profitLoss),
     }))
+    // A category counts when its cost-bearing holdings have a value or a
+    // cost: holdings that became worthless are a loss of their whole cost,
+    // only a category with neither (nothing held) is left out
     .filter(
       (c): c is { costBasis: number; covered: number } =>
-        c.costBasis !== null && c.covered !== null && c.covered > 0,
+        c.costBasis !== null &&
+        c.covered !== null &&
+        (c.covered > 0 || c.costBasis > 0),
     );
 
   if (costBearing.length === 0) {
@@ -90,6 +95,23 @@ export function summarizeUnrealizedProfitLoss(
     profitLossPercent: costBasis > 0 ? (profitLoss / costBasis) * 100 : null,
     coverage: totalValue > 0 ? coveredValue / totalValue : null,
   };
+}
+
+/** Coverage from which a P/L is treated as covering the whole value. */
+const FULL_COVERAGE = 0.995;
+
+/**
+ * The covered share of the value as a whole percent, when a P/L covers
+ * only part of it (holdings without a cost basis are left out); null when it
+ * covers (nearly) all of it or the coverage is unknown. Labels say this next
+ * to a partial P/L so it is never read as the P/L of the whole value.
+ */
+export function partialCoveragePercent(
+  coverage: number | null | undefined,
+): number | null {
+  return coverage != null && coverage < FULL_COVERAGE
+    ? Math.round(coverage * 100)
+    : null;
 }
 
 /**

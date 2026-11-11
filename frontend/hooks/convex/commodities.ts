@@ -139,6 +139,7 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
       totalCost,
       profitLoss,
       profitLossPercent,
+      profitLossCoverage: metalsPriced ? (metalsSummary?.coverage ?? null) : null,
       ytdProfitLoss,
       ytdProfitLossPercent,
       valueAtYearStart,

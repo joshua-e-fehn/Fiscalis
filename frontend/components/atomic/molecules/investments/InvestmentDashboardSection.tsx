@@ -44,6 +44,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { MetalsCurrency } from "@/lib/types/metals-extended";
+import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
 
 /** A short date for "since …" notes on the KPI cards */
 function formatSince(timestamp: number): string {
@@ -239,6 +240,31 @@ interface ProfitLossCardProps {
   note?: string | null;
 }
 
+/**
+ * A return in percent, signed and coloured by its own sign: a time-weighted
+ * return can fall while the money P/L rises (a loss, then a deposit that
+ * grows), so it never takes the amount's sign.
+ */
+function SignedPercent({ percent }: { percent: number }) {
+  const formatted = new Intl.NumberFormat("de-CH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Math.abs(percent));
+  // A loss that rounds to 0.00 shows as +0.00, not -0.00
+  const isGain = percent >= 0 || formatted === "0.00";
+  return (
+    <span
+      className={cn(
+        "text-xl font-semibold",
+        isGain ? "text-profit" : "text-loss",
+      )}
+    >
+      ({isGain ? "+" : "-"}
+      {formatted}%)
+    </span>
+  );
+}
+
 function ProfitLossCard({
   profitLoss,
   profitLossPercent,
@@ -262,13 +288,6 @@ function ProfitLossCard({
       }).format(Math.abs(profitLoss!))
     : null;
 
-  const formattedPercent =
-    hasData && profitLossPercent !== null
-      ? new Intl.NumberFormat("de-CH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(Math.abs(profitLossPercent))
-      : null;
 
   return (
     <Card className="h-full">
@@ -300,16 +319,8 @@ function ProfitLossCard({
                 {currencySymbols[currency]}
                 {formattedValue}
               </span>
-              {formattedPercent !== null && (
-                <span
-                  className={cn(
-                    "text-xl font-semibold",
-                    isProfit ? "text-profit" : "text-loss",
-                  )}
-                >
-                  ({isProfit ? "+" : "-"}
-                  {formattedPercent}%)
-                </span>
+              {profitLossPercent !== null && (
+                <SignedPercent percent={profitLossPercent} />
               )}
             </div>
             {note && (
@@ -365,13 +376,6 @@ function YTDPerformanceCard({
       }).format(Math.abs(ytdProfitLoss!))
     : null;
 
-  const formattedPercent =
-    hasData && ytdProfitLossPercent !== null
-      ? new Intl.NumberFormat("de-CH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(Math.abs(ytdProfitLossPercent))
-      : null;
 
   const currentYear = new Date().getFullYear();
 
@@ -405,16 +409,8 @@ function YTDPerformanceCard({
                 {currencySymbols[currency]}
                 {formattedValue}
               </span>
-              {formattedPercent !== null && (
-                <span
-                  className={cn(
-                    "text-xl font-semibold",
-                    isProfit ? "text-profit" : "text-loss",
-                  )}
-                >
-                  ({isProfit ? "+" : "-"}
-                  {formattedPercent}%)
-                </span>
+              {ytdProfitLossPercent !== null && (
+                <SignedPercent percent={ytdProfitLossPercent} />
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -595,12 +591,19 @@ export function InvestmentDashboardSection({
       : sinceTrackingProfit
         ? "Profit / Loss since tracking started"
         : "Change since tracking started";
+  // A cost-basis P/L covers only the holdings that have a cost basis
+  const coveredPercent =
+    plData.source === "cost-basis"
+      ? partialCoveragePercent(summary?.profitLossCoverage)
+      : null;
   const plNote =
     plData.since !== null
       ? `Since ${formatSince(plData.since)}${
           sinceTrackingProfit ? ", net of purchases and deposits" : ""
         }`
-      : null;
+      : coveredPercent !== null
+        ? `On ${coveredPercent}% of the value: holdings without a cost basis are left out`
+        : null;
 
   // YTD values for custom cards
   const ytd = needsContinuousYTD ? continuousYTD : discreteYTD;

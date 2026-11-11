@@ -388,4 +388,23 @@ describe("brokerAccountBaseFields options", () => {
     expect(f.balanceInBaseCurrency).toBeUndefined();
     expect(f.cashValueInBaseCurrency).toBeCloseTo(1_000, 9);
   });
+
+  it("keeps the stored mixed flag when re-stamping a stored account", () => {
+    const stored = {
+      balance: 5_000,
+      cash: 1_170,
+      currency: "USD",
+      balanceIsMixed: true,
+    };
+    // The backfill and read-time stamping pass no option
+    expect(brokerAccountBaseFields(stored, rates).balanceInBaseCurrency).toBeUndefined();
+    expect(
+      brokerAccountWithBaseFields(stored, rates).balanceInBaseCurrency,
+    ).toBeUndefined();
+    // A sync deciding anew overrides it
+    expect(
+      brokerAccountBaseFields(stored, rates, { balanceIsMixed: false })
+        .balanceInBaseCurrency,
+    ).toBeCloseTo(5_000 / 1.17, 6);
+  });
 });

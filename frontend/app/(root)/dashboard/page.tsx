@@ -24,6 +24,7 @@ import {
 import { RetirementTeaserCard } from "@/components/atomic/molecules/retirement";
 import { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency } from "@/lib/utils/currency";
+import { liabilityCountsLabel } from "@/../services/portfolio/aggregate";
 import {
   TrendingUp,
   TrendingDown,
@@ -37,6 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useNetWorthYTD, usePortfolioChartData } from "@/hooks/performance";
+import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
 
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
@@ -218,10 +220,9 @@ function NetWorthCard({
 }: NetWorthCardProps) {
   const isProfit = (profitLoss ?? 0) >= 0;
   // Only call out coverage when part of the assets has no cost basis.
+  const coveredPercent = partialCoveragePercent(profitLossCoverage);
   const coverageLabel =
-    profitLossCoverage !== null && profitLossCoverage < 0.995
-      ? ` on ${Math.round(profitLossCoverage * 100)}% of assets`
-      : "";
+    coveredPercent !== null ? ` on ${coveredPercent}% of assets` : "";
 
   return (
     <Card>
@@ -499,6 +500,7 @@ function LiabilitiesCard({
 }: LiabilitiesCardProps) {
   const { totalBalance, monthlyPayment, loansCount, accountsCount } =
     liabilities;
+  const countsLabel = liabilityCountsLabel(accountsCount, loansCount);
   return (
     <Link href="/liabilities">
       <Card className="hover:shadow-md hover:border-primary/50 transition-all cursor-pointer border-loss/20 bg-loss/5 h-full">
@@ -519,11 +521,9 @@ function LiabilitiesCard({
               <div className="text-xl font-semibold text-loss">
                 {formatCurrency(totalBalance, currency)}
               </div>
-              {accountsCount > 0 && (
+              {countsLabel && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {accountsCount} account{accountsCount !== 1 ? "s" : ""}
-                  {loansCount > 0 &&
-                    ` · ${loansCount} loan${loansCount !== 1 ? "s" : ""}`}
+                  {countsLabel}
                 </p>
               )}
               {monthlyPayment > 0 && (

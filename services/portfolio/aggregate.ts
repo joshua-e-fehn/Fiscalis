@@ -136,6 +136,10 @@ export function placeHolding(h: NormalizedHolding): {
 export interface CategoryAggregate extends CategorySummaryData {
   /** Value per source, e.g. vault vs Bitpanda metals in commodities */
   bySource: Partial<Record<HoldingSource, number>>;
+  /** Cost basis and the value it covers per source (sources with a cost basis) */
+  costBySource: Partial<
+    Record<HoldingSource, { costBasis: number; coveredValue: number }>
+  >;
 }
 
 export interface NetWorthAggregate {
@@ -185,10 +189,17 @@ export function aggregateNetWorth(
       })),
     );
     const bySource: Partial<Record<HoldingSource, number>> = {};
+    const costBySource: CategoryAggregate["costBySource"] = {};
     for (const { h, at } of inCategory) {
       bySource[h.source] = (bySource[h.source] ?? 0) + at.value;
+      if (!isLiability && h.costBase !== null) {
+        const c = costBySource[h.source] ?? { costBasis: 0, coveredValue: 0 };
+        c.costBasis += h.costBase;
+        c.coveredValue += at.value;
+        costBySource[h.source] = c;
+      }
     }
-    byCategory[category] = { ...summary, bySource };
+    byCategory[category] = { ...summary, bySource, costBySource };
   }
 
   const totalAssets = ASSET_CATEGORIES.reduce(
@@ -232,6 +243,20 @@ export function aggregateNetWorth(
 // Snapshot breakdown
 // ═══════════════════════════════════════════════════════════════
 
+/** One source's share of a snapshot category entry. */
+export interface SnapshotSourceEntry {
+  source: string;
+  value: number;
+  /** Cost of the source's holdings that have one; absent when none has */
+  costBasis?: number;
+  /**
+   * Value of the holdings costBasis covers (0 without a cost basis).
+   * Written on every source since flows exist; its absence marks a row
+   * written before per-source costs were stored.
+   */
+  coveredValue?: number;
+}
+
 /** One entry of a snapshot's categoryBreakdown (schema: portfolioSnapshots). */
 export interface SnapshotCategoryEntry {
   category: string;
@@ -240,18 +265,33 @@ export interface SnapshotCategoryEntry {
   costBasis?: number;
   /** Value of the holdings costBasis covers; set with costBasis */
   coveredValue?: number;
-  /** Value per source (e.g. vault vs Bitpanda metals) */
-  sources?: Array<{ source: HoldingSource; value: number }>;
+  /** Value (and cost) per source, e.g. vault vs Bitpanda metals */
+  sources?: SnapshotSourceEntry[];
+  /**
+   * External flow into the category since the previous day's snapshot
+   * (snapshotCategoryFlow); absent on the first snapshot and on rows
+   * written before flows existed
+   */
+  netFlow?: number;
+  /** Part of netFlow is assumed (holdings without a cost basis) */
+  netFlowEstimated?: boolean;
 }
 
 /**
  * The snapshot's category breakdown (asset categories with a value) and
  * cost totals. Every category with a cost basis also records the value that
  * cost covers, so a reader compares cost only with that value
- * (snapshotCostLine), and its value per source, so the vault metals
- * (continuous valuation) can be told apart from provider metals.
+ * (snapshotCostLine), and its value and cost per source, so the vault
+ * metals (continuous valuation) can be told apart from provider metals.
+ *
+ * With the previous day's breakdown (`previous`; an empty array when that
+ * snapshot held nothing), each entry also records its net external flow
+ * since then (snapshotCategoryFlow).
  */
-export function buildSnapshotBreakdown(aggregate: NetWorthAggregate): {
+export function buildSnapshotBreakdown(
+  aggregate: NetWorthAggregate,
+  previous?: readonly SnapshotCategoryEntry[],
+): {
   categoryBreakdown: SnapshotCategoryEntry[];
   totalCostBasis: number | undefined;
   totalCoveredValue: number | undefined;
@@ -268,17 +308,175 @@ export function buildSnapshotBreakdown(aggregate: NetWorthAggregate): {
     }
     if (c.value === 0) continue;
     const sources = (Object.keys(c.bySource) as HoldingSource[]).map(
-      (source) => ({ source, value: c.bySource[source] ?? 0 }),
+      (source): SnapshotSourceEntry => {
+        const cost = c.costBySource[source];
+        return {
+          source,
+          value: c.bySource[source] ?? 0,
+          ...(cost ? { costBasis: cost.costBasis } : {}),
+          coveredValue: cost?.coveredValue ?? 0,
+        };
+      },
     );
-    categoryBreakdown.push({
+    const entry: SnapshotCategoryEntry = {
       category,
       value: c.value,
       ...(c.costBasis !== null
         ? { costBasis: c.costBasis, coveredValue: c.coveredValue }
         : {}),
       sources,
-    });
+    };
+    if (previous) {
+      const flow = snapshotCategoryFlow(
+        previous.find((p) => p.category === category),
+        entry,
+      );
+      entry.netFlow = flow.amount;
+      if (flow.estimated) entry.netFlowEstimated = true;
+    }
+    categoryBreakdown.push(entry);
   }
 
   return { categoryBreakdown, totalCostBasis, totalCoveredValue };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// External flows between snapshots
+// ═══════════════════════════════════════════════════════════════
+// Investment categories report performance net of money moved in and out
+// (D2): P/L = change in value − net flows. Provider data carries no cash
+// ledger, so the flow between two snapshots is derived from what they
+// store; the snapshot writer and the performance engine call the same
+// functions, so a stored netFlow and a recomputed one agree.
+
+/**
+ * Categories whose performance is flow-adjusted (D2). Net worth, cash and
+ * liabilities report a plain change in value: saving legitimately raises
+ * them.
+ */
+export const FLOW_ADJUSTED_CATEGORIES: readonly HoldingCategory[] = [
+  "equities",
+  "bonds",
+  "crypto",
+  "commodities",
+  "real-estate",
+  "collectibles",
+];
+
+export function isFlowAdjustedCategory(category: string): boolean {
+  return (FLOW_ADJUSTED_CATEGORIES as readonly string[]).includes(category);
+}
+
+/** An external flow and whether it is assumed rather than derived. */
+export interface NetFlow {
+  /** Money put in (> 0) or taken out (< 0), in the base currency */
+  amount: number;
+  /** Assumed 0 for holdings without a cost basis at one of the two ends */
+  estimated: boolean;
+}
+
+/** The fields of a snapshot entry (category or source) a flow is read from. */
+export interface FlowEntry {
+  value: number;
+  costBasis?: number | null;
+  coveredValue?: number | null;
+}
+
+/**
+ * Net external flow into one group of holdings (a source, or a whole
+ * category) between two snapshots:
+ *
+ * - it appears (no value before): its value now came in, a purchase or a
+ *   newly connected account, never a gain;
+ * - it disappears: its last value went out, a sale or a disconnection;
+ * - a cost basis at both ends: a rise in cost is a purchase at that cost;
+ *   a fall is a sale, its proceeds estimated at the previous market/cost
+ *   ratio of the covered holdings; value without a cost basis inside the
+ *   group counts as a flow, so only cost-covered holdings make P/L (the
+ *   coverage policy of categorySummary.ts);
+ * - otherwise (no cost basis at one end) the flow is assumed 0, so the
+ *   change counts as performance, and flagged estimated.
+ */
+export function snapshotNetFlow(
+  prev: FlowEntry | undefined,
+  cur: FlowEntry | undefined,
+): NetFlow {
+  const before = prev?.value ?? 0;
+  const after = cur?.value ?? 0;
+  if (before === 0) return { amount: after, estimated: false };
+  if (after === 0) return { amount: -before, estimated: false };
+
+  const prevCost = prev?.costBasis ?? null;
+  const curCost = cur?.costBasis ?? null;
+  if (prevCost === null || curCost === null) {
+    return { amount: 0, estimated: true };
+  }
+
+  const prevCovered = coveredOf(prev!);
+  const costChange = curCost - prevCost;
+  const covered =
+    costChange < 0 && prevCost > 0
+      ? costChange * (prevCovered / prevCost)
+      : costChange;
+  const uncoveredChange =
+    after - coveredOf(cur!) - (before - prevCovered);
+  return { amount: covered + uncoveredChange, estimated: false };
+}
+
+/** Value a cost basis covers; rows without coveredValue fall back to value. */
+function coveredOf(e: FlowEntry): number {
+  if (e.costBasis == null) return 0;
+  return Math.min(e.coveredValue ?? e.value, e.value);
+}
+
+/** Whether an entry stores cost per source (written since flows exist). */
+function hasSourceCosts(e: SnapshotCategoryEntry | undefined): boolean {
+  return (
+    e === undefined ||
+    (e.sources !== undefined &&
+      e.sources.every((s) => s.coveredValue !== undefined))
+  );
+}
+
+/**
+ * Net external flow into a category between two snapshots, leaving out
+ * the `exclude`d sources (valued by another strategy). Rows that store cost
+ * per source are compared source by source; older rows category-wide, and
+ * an excluded source is then split off by value alone (estimated).
+ */
+export function snapshotCategoryFlow(
+  prev: SnapshotCategoryEntry | undefined,
+  cur: SnapshotCategoryEntry | undefined,
+  exclude: ReadonlySet<string> = new Set(),
+): NetFlow {
+  if (hasSourceCosts(prev) && hasSourceCosts(cur)) {
+    const names = new Set(
+      [...(prev?.sources ?? []), ...(cur?.sources ?? [])].map((s) => s.source),
+    );
+    let amount = 0;
+    let estimated = false;
+    for (const name of names) {
+      if (exclude.has(name)) continue;
+      const flow = snapshotNetFlow(
+        prev?.sources?.find((s) => s.source === name),
+        cur?.sources?.find((s) => s.source === name),
+      );
+      amount += flow.amount;
+      estimated ||= flow.estimated;
+    }
+    return { amount, estimated };
+  }
+
+  const total = snapshotNetFlow(prev, cur);
+  const excluded = [...exclude];
+  if (excluded.length === 0) return total;
+  let amount = total.amount;
+  for (const name of excluded) {
+    const valueOf = (e: SnapshotCategoryEntry | undefined) => {
+      const s = e?.sources?.find((x) => x.source === name);
+      return s ? { value: s.value } : undefined;
+    };
+    amount -= snapshotNetFlow(valueOf(prev), valueOf(cur)).amount;
+  }
+  return { amount, estimated: true };
 }

@@ -777,8 +777,24 @@ export default defineSchema({
 					// HoldingSource), e.g. vault vs bitpanda metals in
 					// commodities; absent on old snapshots
 					sources: v.optional(
-						v.array(v.object({ source: v.string(), value: v.number() })),
+						v.array(
+							v.object({
+								source: v.string(),
+								value: v.number(),
+								// Cost of the source's holdings that have one
+								costBasis: v.optional(v.number()),
+								// Value that cost covers (0 without one); absent
+								// on rows written before flows existed
+								coveredValue: v.optional(v.number()),
+							}),
+						),
 					),
+					// External flow into the category since the previous
+					// day's snapshot (aggregate.ts snapshotCategoryFlow);
+					// absent on older rows, which readers recompute
+					netFlow: v.optional(v.number()),
+					// Part of netFlow is assumed (holdings without cost basis)
+					netFlowEstimated: v.optional(v.boolean()),
 				}),
 			),
 		),

@@ -13,6 +13,8 @@ import {
 } from "../../finance/financeService";
 
 import type {
+  CashFlow,
+  FlowCoverage,
   PerformanceDataPoint,
   PerformanceMetrics,
   PerformanceResult,
@@ -183,6 +185,104 @@ export function changePercent(
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Flow-adjusted period return
+// ═══════════════════════════════════════════════════════════════
+
+export interface PeriodReturn {
+  /** End value − start value */
+  valueChange: number;
+  /** Sum of the flows after the start, up to the end */
+  netFlows: number;
+  /** valueChange − netFlows */
+  profitLoss: number;
+  /**
+   * Modified Dietz: profitLoss / (start + Σ wᵢ·Fᵢ) × 100, each flow weighted
+   * by the share of the period it was invested. Null when nothing was
+   * invested (the denominator is not positive).
+   */
+  modifiedDietzPercent: number | null;
+  /**
+   * Time-weighted return: Modified Dietz within each span between two
+   * consecutive points, chained. Flows inside a span are weighted as above;
+   * a span with nothing invested contributes 0. Null when no span had
+   * capital.
+   */
+  timeWeightedPercent: number | null;
+}
+
+/**
+ * The return of a series over its span, net of external flows (D2): a
+ * deposit or purchase raises the value but is not performance.
+ *
+ * @param points ascending; the first is the start, the last the end, and
+ *   every point is a sub-period boundary for the time-weighted return (pass
+ *   only observed points between start and end)
+ * @param flows any order; only those after the start and at or before the
+ *   end count (a flow at a point's timestamp is in that point's value)
+ */
+export function computePeriodReturn(
+  points: readonly SeriesPoint[],
+  flows: readonly CashFlow[],
+): PeriodReturn | null {
+  if (points.length === 0) return null;
+  const start = points[0];
+  const end = points[points.length - 1];
+  const inSpan = (a: number, b: number) =>
+    flows.filter((f) => f.timestamp > a && f.timestamp <= b);
+
+  const spanFlows = inSpan(start.timestamp, end.timestamp);
+  const netFlows = spanFlows.reduce((sum, f) => sum + f.amount, 0);
+  const valueChange = end.value - start.value;
+  const profitLoss = valueChange - netFlows;
+
+  return {
+    valueChange,
+    netFlows,
+    profitLoss,
+    modifiedDietzPercent: modifiedDietz(start, end, spanFlows),
+    timeWeightedPercent: timeWeighted(points, inSpan),
+  };
+}
+
+/** Modified Dietz return of one span in %, null without invested capital. */
+function modifiedDietz(
+  start: SeriesPoint,
+  end: SeriesPoint,
+  flows: readonly CashFlow[],
+): number | null {
+  const length = end.timestamp - start.timestamp;
+  const weighted = flows.reduce(
+    (sum, f) =>
+      sum +
+      f.amount * (length > 0 ? (end.timestamp - f.timestamp) / length : 0),
+    0,
+  );
+  const invested = start.value + weighted;
+  if (!(invested > 0)) return null;
+  const net = flows.reduce((sum, f) => sum + f.amount, 0);
+  return ((end.value - start.value - net) / invested) * 100;
+}
+
+function timeWeighted(
+  points: readonly SeriesPoint[],
+  inSpan: (a: number, b: number) => CashFlow[],
+): number | null {
+  let growth = 1;
+  let spansWithCapital = 0;
+  for (let i = 1; i < points.length; i++) {
+    const r = modifiedDietz(
+      points[i - 1],
+      points[i],
+      inSpan(points[i - 1].timestamp, points[i].timestamp),
+    );
+    if (r === null) continue;
+    growth *= 1 + r / 100;
+    spansWithCapital++;
+  }
+  return spansWithCapital > 0 ? (growth - 1) * 100 : null;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Abstract Base Strategy
 // ═══════════════════════════════════════════════════════════════
 
@@ -219,21 +319,26 @@ export abstract class BasePerformanceStrategy<
     context: CalculationContext,
     includeDataPoints = false,
   ): PerformanceResult {
-    const generationResult = this.generateDataPointsInternal(input, context);
+    return this.toResult(this.generate(input, context), context, includeDataPoints);
+  }
 
-    const metrics = this.calculateMetrics(
-      generationResult.dataPoints,
-      context,
-      generationResult.dataQuality,
-      generationResult.partial ?? false,
-    );
+  /** The series, flows and quality on a context, before metrics. */
+  generate(input: TInput, context: CalculationContext): DataPointGenerationResult {
+    return this.generateDataPointsInternal(input, context);
+  }
 
+  /** The result (metrics and, by default, points) of a generation. */
+  toResult(
+    generation: DataPointGenerationResult,
+    context: CalculationContext,
+    includeDataPoints = true,
+  ): PerformanceResult {
     return {
-      metrics,
-      dataPoints: includeDataPoints ? generationResult.dataPoints : [],
+      metrics: this.calculateMetrics(generation.dataPoints, context, generation),
+      dataPoints: includeDataPoints ? generation.dataPoints : [],
       valueType: this.strategyType,
-      ...(generationResult.actualSnapshotTimestamps && {
-        actualSnapshotTimestamps: generationResult.actualSnapshotTimestamps,
+      ...(generation.actualSnapshotTimestamps && {
+        actualSnapshotTimestamps: generation.actualSnapshotTimestamps,
       }),
     };
   }
@@ -266,7 +371,8 @@ export abstract class BasePerformanceStrategy<
    * once (`endTimestamp ?? Date.now()`) and the range start derives from it.
    */
   createContext(options: PerformanceCalculationOptions): CalculationContext {
-    const { timeRange, interval, endTimestamp, maxInterpolationGap } = options;
+    const { timeRange, interval, endTimestamp, maxInterpolationGap, baseline } =
+      options;
 
     const end = endTimestamp ?? Date.now();
     const start = getTimeRangeStartTimestamp(timeRange, end);
@@ -282,6 +388,7 @@ export abstract class BasePerformanceStrategy<
         interval: actualInterval,
       }).length,
       maxInterpolationGap,
+      baseline,
     };
   }
 
@@ -292,14 +399,21 @@ export abstract class BasePerformanceStrategy<
   /**
    * Metrics from a series on the context's grid. The baseline is the value
    * at the range start (the first grid point); a series that starts later
-   * has insufficient history, and its start and changes are null.
+   * has insufficient history, and its start and changes are null unless the
+   * context measures from the first point. Flow-adjusted figures come from
+   * computePeriodReturn over the generation's flows, with the observed
+   * points as the time-weighted sub-period boundaries.
    */
   protected calculateMetrics(
     dataPoints: PerformanceDataPoint[],
     context: CalculationContext,
-    dataQuality: DataQuality,
-    partial = false,
+    generation: Pick<
+      DataPointGenerationResult,
+      "dataQuality" | "partial" | "flows" | "flowCoverage" | "estimatedFlowTimestamps"
+    >,
   ): PerformanceMetrics {
+    const { dataQuality } = generation;
+    const partial = generation.partial ?? false;
     if (dataPoints.length === 0) {
       return this.createEmptyMetrics(context, dataQuality, partial);
     }
@@ -309,9 +423,12 @@ export abstract class BasePerformanceStrategy<
     );
 
     const first = sortedPoints[0];
+    const last = sortedPoints[sortedPoints.length - 1];
     const insufficientHistory = first.timestamp > context.startTimestamp;
-    const startValue = insufficientHistory ? null : first.value;
-    const endValue = sortedPoints[sortedPoints.length - 1].value;
+    const hasBaseline =
+      !insufficientHistory || context.baseline === "firstPoint";
+    const startValue = hasBaseline ? first.value : null;
+    const endValue = last.value;
 
     let highValue = -Infinity;
     let lowValue = Infinity;
@@ -322,11 +439,38 @@ export abstract class BasePerformanceStrategy<
       if (p.source === "interpolated") interpolatedCount++;
     }
 
+    let flowCoverage: FlowCoverage = generation.flowCoverage ?? "none";
+    if (
+      flowCoverage === "complete" &&
+      (generation.estimatedFlowTimestamps ?? []).some(
+        (t) => t > first.timestamp && t <= last.timestamp,
+      )
+    ) {
+      flowCoverage = "estimated";
+    }
+    const periodReturn =
+      startValue !== null && flowCoverage !== "none"
+        ? computePeriodReturn(
+            sortedPoints.filter(
+              (p, i) =>
+                i === 0 ||
+                i === sortedPoints.length - 1 ||
+                p.source !== "interpolated",
+            ),
+            generation.flows ?? [],
+          )
+        : null;
+
     return {
       startValue,
       endValue,
       absoluteChange: startValue === null ? null : endValue - startValue,
       percentChange: changePercent(startValue, endValue),
+      netFlows: periodReturn?.netFlows ?? null,
+      profitLoss: periodReturn?.profitLoss ?? null,
+      modifiedDietzPercent: periodReturn?.modifiedDietzPercent ?? null,
+      timeWeightedPercent: periodReturn?.timeWeightedPercent ?? null,
+      flowCoverage,
       highValue,
       lowValue,
       dataQuality,
@@ -355,6 +499,11 @@ export abstract class BasePerformanceStrategy<
       endValue: 0,
       absoluteChange: null,
       percentChange: null,
+      netFlows: null,
+      profitLoss: null,
+      modifiedDietzPercent: null,
+      timeWeightedPercent: null,
+      flowCoverage: "none",
       highValue: 0,
       lowValue: 0,
       dataQuality,

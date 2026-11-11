@@ -57,6 +57,8 @@ function createSnapshot(
     totalLiabilities: 0,
     netWorth: totalAssets,
     totalCostBasis: options?.totalCostBasis,
+    // Split by source (no vault in it), so the hybrid adds the vault
+    categoryBreakdown: [{ category: "cash", value: totalAssets }],
   };
 }
 

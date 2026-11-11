@@ -194,7 +194,7 @@ describe("discrete strategy", () => {
     expect(r.metrics.endValue).toBe(2000);
   });
 
-  it("leaves out excluded sources, legacy entries counting to their category", () => {
+  it("keeps a legacy entry that cannot be split by source whole, flagged", () => {
     const legacy: SnapshotData = {
       ...snapshot(NOW - DAY, 100, 0),
       categoryBreakdown: [
@@ -213,7 +213,10 @@ describe("discrete strategy", () => {
       { timeRange: "Week", includeDataPoints: true },
     );
     expect(r.dataPoints.at(-1)!.value).toBe(7);
-    expect(r.dataPoints.find((p) => p.timestamp === NOW - DAY)!.value).toBe(0);
+    expect(r.dataPoints.at(-1)!.includesContinuous).toBeUndefined();
+    const old = r.dataPoints.find((p) => p.timestamp === NOW - DAY)!;
+    expect(old.value).toBe(50);
+    expect(old.includesContinuous).toBe(true);
   });
 
   it("treats a legacy row without a breakdown as unknown for a category", () => {
@@ -319,6 +322,78 @@ describe("hybrid strategy", () => {
     const values = r.dataPoints.map((p) => p.value);
     expect(r.metrics.highValue).toBe(Math.max(...values));
     expect(r.metrics.lowValue).toBe(Math.min(...values));
+  });
+
+  describe("legacy snapshots of an unchanged portfolio", () => {
+    // cash 10000, vault gold V, Bitpanda gold 500, at a flat gold price
+    const flat = {
+      gold: [
+        { timestamp: Date.UTC(2025, 11, 30), price: 2000 },
+        { timestamp: NOW - DAY, price: 2000 },
+      ],
+    };
+    const V = calculateSellPrice(2000, 31.1034768, -0.02, 2);
+    const DEC31 = Date.UTC(2025, 11, 31);
+    const today = snapshot(NOW, 10_000, V, 500);
+    const ytd = (baseline: SnapshotData) =>
+      calculateHybridPerformance(
+        {
+          discrete: { snapshots: [baseline, today], metric: { kind: "netWorth" } },
+          continuous: { holdings: [gold()], prices: flat },
+          continuousSources: VAULT,
+        },
+        { timeRange: "YTD" },
+      ).metrics;
+
+    it("a commodities entry without per-source values changes nothing", () => {
+      const legacy: SnapshotData = {
+        ...snapshot(DEC31, 10_000, V, 500),
+        categoryBreakdown: [
+          { category: "cash", value: 10_000 },
+          { category: "commodities", value: V + 500 },
+        ],
+      };
+      const m = ytd(legacy);
+      expect(m.startValue).toBeCloseTo(10_500 + V, 6);
+      expect(m.endValue).toBeCloseTo(10_500 + V, 6);
+      expect(m.absoluteChange).toBeCloseTo(0, 6);
+    });
+
+    it("a row without a breakdown changes nothing", () => {
+      const legacy: SnapshotData = {
+        ...snapshot(DEC31, 10_000, V, 500),
+        categoryBreakdown: undefined,
+      };
+      const m = ytd(legacy);
+      expect(m.startValue).toBeCloseTo(10_500 + V, 6);
+      expect(m.absoluteChange).toBeCloseTo(0, 6);
+    });
+  });
+
+  it("returns no net worth from the vault alone when there are no snapshots", () => {
+    const r = calculateHybridPerformance(
+      {
+        discrete: { snapshots: [], metric: { kind: "netWorth" } },
+        continuous: { holdings: [gold()], prices },
+        continuousSources: VAULT,
+      },
+      { timeRange: "Week" },
+    );
+    expect(r.metrics.startValue).toBeNull();
+    expect(r.metrics.firstPointTimestamp).toBeNull();
+    expect(r.metrics.dataPointCount).toBe(0);
+  });
+
+  it("falls back to the vault alone for its own category without snapshots", () => {
+    const r = calculateHybridPerformance(
+      {
+        discrete: { snapshots: [], metric: { kind: "category", category: "commodities" } },
+        continuous: { holdings: [gold()], prices },
+        continuousSources: VAULT,
+      },
+      { timeRange: "Week" },
+    );
+    expect(r.metrics.endValue).toBe(r.breakdown.continuous!.metrics.endValue);
   });
 
   it("does not splice the vault alone onto the points before the first snapshot", () => {

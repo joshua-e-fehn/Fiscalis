@@ -20,6 +20,7 @@ import type {
 import {
   BasePerformanceStrategy,
   assessDataQuality,
+  lastIndexAtOrBefore,
   sortByTimestamp,
   valueAt,
 } from "./base";
@@ -39,6 +40,12 @@ interface SnapshotValue {
   timestamp: number;
   value: number;
   costBasis: number | null;
+  /**
+   * The value still holds the excluded (continuously valued) sources,
+   * because the snapshot cannot be split by source: a legacy entry without
+   * per-source values, or a row without a category breakdown.
+   */
+  includesContinuous: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -46,14 +53,15 @@ interface SnapshotValue {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Value of the excluded sources in one breakdown entry. An entry written
- * before per-source values existed counts wholly to a source stored under
- * its category (old commodities entries are taken as vault).
+ * Value of the excluded sources in one breakdown entry, or null when the
+ * entry holds one of them but cannot be split (an entry written before
+ * per-source values existed: old commodities entries were vault plus
+ * Bitpanda and broker metals together).
  */
 function excludedValue(
   entry: SnapshotCategoryBreakdown,
   exclude: ContinuousSource[],
-): number {
+): number | null {
   let total = 0;
   for (const ex of exclude) {
     if (entry.sources) {
@@ -61,17 +69,41 @@ function excludedValue(
         .filter((s) => s.source === ex.source)
         .reduce((sum, s) => sum + s.value, 0);
     } else if (entry.category === ex.category) {
-      total += entry.value;
+      return null;
     }
   }
   return total;
 }
 
 /**
+ * Value of the excluded sources across the entries in scope, or null when
+ * the snapshot cannot be split: then its full value is kept, flagged as
+ * already including them.
+ */
+function excludedTotal(
+  breakdown: SnapshotCategoryBreakdown[] | undefined,
+  metric: SnapshotMetric,
+  exclude: ContinuousSource[],
+): number | null {
+  if (exclude.length === 0) return 0;
+  if (!breakdown) return null;
+  let total = 0;
+  for (const e of breakdown) {
+    if (metric.kind === "category" && e.category !== metric.category) continue;
+    const v = excludedValue(e, exclude);
+    if (v === null) return null;
+    total += v;
+  }
+  return total;
+}
+
+/**
  * A snapshot's value and cost line for a metric, or null when the snapshot
- * does not record it (a legacy row without a category breakdown). The cost
- * line is the stored one for the whole metric: it already covers the
- * excluded sources, so the hybrid strategy uses it as is.
+ * does not record it (a category on a legacy row without a breakdown). The
+ * cost line is the stored one for the whole metric: it already covers the
+ * excluded sources, so the hybrid strategy uses it as is. A row that cannot
+ * be split by source keeps its full value with `includesContinuous` set;
+ * it already holds the excluded sources at that day's prices.
  */
 export function snapshotMetricValue(
   s: SnapshotData,
@@ -79,25 +111,30 @@ export function snapshotMetricValue(
   exclude: ContinuousSource[] = [],
 ): SnapshotValue | null {
   const breakdown = s.categoryBreakdown;
-  const excluded =
-    exclude.length === 0
-      ? 0
-      : (breakdown ?? [])
-          .filter((e) => metric.kind !== "category" || e.category === metric.category)
-          .reduce((sum, e) => sum + excludedValue(e, exclude), 0);
 
   if (metric.kind === "category" && metric.category === "liabilities") {
     // Debt is stored as the snapshot's total, not as a breakdown entry
-    return { timestamp: s.timestamp, value: s.totalLiabilities, costBasis: null };
+    return {
+      timestamp: s.timestamp,
+      value: s.totalLiabilities,
+      costBasis: null,
+      includesContinuous: false,
+    };
   }
+  if (metric.kind === "category" && !breakdown) return null;
+
+  const excludedOrNull = excludedTotal(breakdown, metric, exclude);
+  const includesContinuous = excludedOrNull === null;
+  const excluded = excludedOrNull ?? 0;
+
   if (metric.kind === "category") {
-    if (!breakdown) return null;
-    const entry = breakdown.find((c) => c.category === metric.category);
+    const entry = breakdown!.find((c) => c.category === metric.category);
     // A breakdown without the category means it was empty then
     return {
       timestamp: s.timestamp,
       value: (entry?.value ?? 0) - excluded,
       costBasis: entry ? snapshotCostLine(entry) : null,
+      includesContinuous,
     };
   }
 
@@ -111,6 +148,7 @@ export function snapshotMetricValue(
       timestamp: s.timestamp,
       value: s.totalAssets - excluded,
       costBasis: assetsCostLine,
+      includesContinuous,
     };
   }
   // Net worth: the same P/L against the cost line less the debt
@@ -119,6 +157,7 @@ export function snapshotMetricValue(
     value: s.netWorth - excluded,
     costBasis:
       assetsCostLine === null ? null : assetsCostLine - s.totalLiabilities,
+    includesContinuous,
   };
 }
 
@@ -158,14 +197,25 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     for (const ts of this.generateTimestampSeries(context)) {
       const found = valueAt(values, ts, lookup);
       if (!found) continue;
-      const costBasis = found.point.costBasis;
-      if (found.kind === "observed") {
-        observed++;
-        dataPoints.push(this.createSnapshotPoint(ts, found.value, costBasis));
-      } else {
-        interpolated++;
-        dataPoints.push(this.createInterpolatedPoint(ts, found.value, costBasis));
-      }
+      const { costBasis, includesContinuous } = found.point;
+      // Never interpolate between a row that holds the excluded sources and
+      // one that does not: the two values measure different scopes.
+      const next = values[lastIndexAtOrBefore(values, ts) + 1];
+      const value =
+        found.kind === "interpolated" &&
+        next !== undefined &&
+        next.includesContinuous !== includesContinuous
+          ? found.point.value
+          : found.value;
+      const point =
+        found.kind === "observed"
+          ? this.createSnapshotPoint(ts, value, costBasis)
+          : this.createInterpolatedPoint(ts, value, costBasis);
+      if (found.kind === "observed") observed++;
+      else interpolated++;
+      dataPoints.push(
+        includesContinuous ? { ...point, includesContinuous: true } : point,
+      );
     }
 
     return {

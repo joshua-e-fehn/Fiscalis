@@ -58,8 +58,10 @@ export interface DiscretePerformanceInput {
   metric: SnapshotMetric;
   /**
    * Holding sources left out of the values because another strategy values
-   * them (set by the hybrid strategy). A snapshot entry without per-source
-   * values counts wholly to the source stored under its category.
+   * them (set by the hybrid strategy). A snapshot that cannot be split by
+   * source (an entry of an excluded source's category without per-source
+   * values, or no breakdown at all) keeps its full value and its points are
+   * flagged `includesContinuous`.
    */
   excludeSources?: ContinuousSource[];
 }

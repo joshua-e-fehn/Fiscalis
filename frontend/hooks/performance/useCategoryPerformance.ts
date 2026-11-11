@@ -138,7 +138,9 @@ export function useCategoryPerformance(
     const metric = JSON.parse(measureKey) as SnapshotMetric;
     return getHybridStrategy().calculate(
       {
-        discrete: snapshots.length > 0 ? { snapshots, metric } : undefined,
+        // Always given, even empty: the hybrid strategy then decides whether
+        // the vault alone covers the measure (it does not for net worth)
+        discrete: { snapshots, metric },
         continuous: needsVault ? vault.input : undefined,
         continuousSources,
       },

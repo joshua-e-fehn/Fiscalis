@@ -133,6 +133,12 @@ export interface PerformanceDataPoint {
   source: DataSource;
   /** Confidence in this data point (0-1) */
   confidence: number;
+  /**
+   * Discrete points only: the snapshot could not be split by source, so the
+   * value already holds the continuously valued sources (a legacy row). The
+   * hybrid strategy adds no continuous value at such a point.
+   */
+  includesContinuous?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════

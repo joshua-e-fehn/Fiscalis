@@ -126,11 +126,21 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
       ? this.continuousStrategy.calculateInContext(input.continuous, context, true)
       : undefined;
 
-    // A part with no points at all (no snapshots yet) has no history to
-    // add; it is left out rather than blanking the other part.
-    const parts = [discrete, continuous].filter(
-      (r): r is PerformanceResult => r !== undefined && r.dataPoints.length > 0,
-    );
+    // A discrete part with no points (no snapshots yet) is left out only
+    // when the continuous sources cover the measure's whole scope (their own
+    // category); otherwise the vault alone would pass for net worth.
+    const discreteEmpty = discrete !== undefined && discrete.dataPoints.length === 0;
+    const metric = input.discrete?.metric;
+    const continuousCoversScope =
+      metric?.kind === "category" &&
+      input.continuousSources.length > 0 &&
+      input.continuousSources.every((c) => c.category === metric.category);
+    const parts =
+      discreteEmpty && !continuousCoversScope
+        ? []
+        : [discrete, continuous].filter(
+            (r): r is PerformanceResult => r !== undefined && r.dataPoints.length > 0,
+          );
     const dataPoints = mergeOnGrid(
       parts.map((r) => r.dataPoints),
       parts[0] !== undefined && parts[0] === discrete,
@@ -155,6 +165,8 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
  * Sum the parts at each grid timestamp where all of them have a point. The
  * cost line is the first part's when it is the discrete one (the snapshot's
  * cost line already covers the continuously valued holdings), else the sum.
+ * A discrete point flagged `includesContinuous` (a legacy snapshot that
+ * already holds the continuous sources) is taken alone.
  */
 function mergeOnGrid(
   parts: PerformanceDataPoint[][],
@@ -165,6 +177,11 @@ function mergeOnGrid(
   const maps = parts.map((points) => new Map(points.map((p) => [p.timestamp, p])));
   const merged: PerformanceDataPoint[] = [];
   for (const point of parts[0]) {
+    if (firstIsDiscrete && point.includesContinuous) {
+      const { includesContinuous: _flag, ...alone } = point;
+      merged.push(alone);
+      continue;
+    }
     const atTs = maps.map((m) => m.get(point.timestamp));
     if (atTs.some((p) => p === undefined)) continue;
     const present = atTs as PerformanceDataPoint[];

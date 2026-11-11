@@ -41,6 +41,8 @@ export interface UseDiscretePerformanceResult {
   metrics: PerformanceMetrics | null;
   /** Data points for charting (if includeDataPoints=true) */
   dataPoints: PerformanceDataPoint[];
+  /** Timestamps of the real snapshots behind the series, ascending */
+  actualSnapshotTimestamps: number[];
   /** Loading state */
   isLoading: boolean;
   /** Error state */
@@ -118,6 +120,7 @@ export function useDiscretePerformance(
       return {
         metrics: null,
         dataPoints: [],
+        actualSnapshotTimestamps: [],
       };
     }
 
@@ -136,12 +139,15 @@ export function useDiscretePerformance(
       return {
         metrics: performanceResult.metrics,
         dataPoints: performanceResult.dataPoints,
+        actualSnapshotTimestamps:
+          performanceResult.actualSnapshotTimestamps ?? [],
       };
     } catch (err) {
       console.error("Discrete performance calculation error:", err);
       return {
         metrics: null,
         dataPoints: [],
+        actualSnapshotTimestamps: [],
       };
     }
   }, [snapshots, timeRange, categoryFilter, includeDataPoints]);
@@ -149,6 +155,7 @@ export function useDiscretePerformance(
   return {
     metrics: result.metrics,
     dataPoints: result.dataPoints,
+    actualSnapshotTimestamps: result.actualSnapshotTimestamps,
     isLoading,
     error: null,
     snapshots,

@@ -155,4 +155,9 @@ export interface DataPointGenerationResult {
   actualDataPoints: number;
   interpolatedDataPoints: number;
   dataQuality: DataQuality;
+  /**
+   * Timestamps of the real snapshots (not grid points) the series was built
+   * from, ascending. Discrete strategy only.
+   */
+  actualSnapshotTimestamps?: number[];
 }

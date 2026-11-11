@@ -538,10 +538,9 @@ export default function DashboardPage() {
   const { summary, isLoading } = usePortfolioOverview(currency);
   const netWorthYTD = useNetWorthYTD();
 
-  // Get portfolio chart data combining discrete snapshots and continuous price data
+  // Portfolio chart: snapshot totals only, nothing before tracking started
   const portfolioChart = usePortfolioChartData({
     timeRange: "Year", // Default to 1 year view
-    currency: "eur",
     enabled: !isLoading,
   });
 

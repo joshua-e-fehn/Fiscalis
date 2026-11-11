@@ -72,6 +72,9 @@ export abstract class BasePerformanceStrategy<
       dataPoints: options.includeDataPoints ? generationResult.dataPoints : [],
       valueType:
         this.strategyType === "hybrid" ? "discrete" : this.strategyType,
+      ...(generationResult.actualSnapshotTimestamps && {
+        actualSnapshotTimestamps: generationResult.actualSnapshotTimestamps,
+      }),
     };
   }
 

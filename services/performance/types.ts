@@ -172,6 +172,13 @@ export interface PerformanceResult {
   metrics: PerformanceMetrics;
   dataPoints: PerformanceDataPoint[];
   valueType: ValueType;
+  /**
+   * Discrete strategy only: timestamps of the real snapshots at or before the
+   * range end, ascending (including ones before the range start). Consumers
+   * use this instead of inferring "real" points from `source`, e.g. to find
+   * when tracking started.
+   */
+  actualSnapshotTimestamps?: number[];
 }
 
 // ═══════════════════════════════════════════════════════════════

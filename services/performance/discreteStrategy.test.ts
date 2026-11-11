@@ -585,3 +585,80 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
     expect(result.metrics.endValue).toBe(5000);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// Snapshots not aligned to the grid (perf-calc-02 / PF-01)
+// ═══════════════════════════════════════════════════════════════
+
+describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
+  const MS_PER_HOUR = 3_600_000;
+  // A fixed "now" mid-day, with daily snapshots stamped at 06:00 UTC, the
+  // way the cron writes them. No grid point (now - 30d + k days) lands on
+  // a snapshot to the millisecond.
+  const END = Date.parse("2026-11-11T15:37:12.345Z");
+  const day0 = Date.parse("2026-10-01T06:00:00.000Z");
+
+  function dailySnapshots(days: number): SnapshotData[] {
+    return Array.from({ length: days }, (_, i) => {
+      const timestamp = day0 + i * MS_PER_DAY;
+      return {
+        timestamp,
+        date: new Date(timestamp).toISOString().split("T")[0],
+        totalAssets: 1000 + i * 10,
+        totalLiabilities: 0,
+        netWorth: 1000 + i * 10,
+        totalCostBasis: 800,
+      };
+    });
+  }
+
+  const options: PerformanceCalculationOptions = {
+    timeRange: "Month",
+    endTimestamp: END,
+    includeDataPoints: true,
+  };
+
+  it("marks grid points with a snapshot within half an interval as 'snapshot'", () => {
+    const snapshots = dailySnapshots(42); // through 2026-11-11 06:00
+    const result = calculateDiscretePerformance({ snapshots }, options);
+
+    const snapshotPoints = result.dataPoints.filter(
+      (p) => p.source === "snapshot",
+    );
+    expect(snapshotPoints.length).toBeGreaterThan(0);
+    expect(snapshotPoints.length).toBe(result.dataPoints.length);
+    expect(result.metrics.interpolatedPointCount).toBe(0);
+    // The last point carries the latest real snapshot value.
+    expect(result.metrics.endValue).toBe(1000 + 41 * 10);
+  });
+
+  it("interpolates grid points with no snapshot nearby", () => {
+    // Only two snapshots 20 days apart: points in the middle are interpolated.
+    const snapshots = [dailySnapshots(42)[10], dailySnapshots(42)[30]];
+    const result = calculateDiscretePerformance({ snapshots }, options);
+
+    const snapshotPoints = result.dataPoints.filter(
+      (p) => p.source === "snapshot",
+    );
+    expect(snapshotPoints.length).toBeLessThanOrEqual(2);
+    expect(result.metrics.interpolatedPointCount).toBeGreaterThan(10);
+  });
+
+  it("reports the real snapshot timestamps, ascending, up to the range end", () => {
+    const snapshots = dailySnapshots(42).reverse();
+    const future = { ...snapshots[0], timestamp: END + MS_PER_HOUR };
+    const result = calculateDiscretePerformance(
+      { snapshots: [future, ...snapshots] },
+      options,
+    );
+
+    expect(result.actualSnapshotTimestamps).toEqual(
+      dailySnapshots(42).map((s) => s.timestamp),
+    );
+  });
+
+  it("reports no snapshot timestamps for empty input", () => {
+    const result = calculateDiscretePerformance({ snapshots: [] }, options);
+    expect(result.actualSnapshotTimestamps).toEqual([]);
+  });
+});

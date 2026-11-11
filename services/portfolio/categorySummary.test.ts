@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 
 import { fxRatesFromDaily } from "../finance/currency";
 import {
+  averageCostPerUnit,
   bankAccountValue,
+  bitpandaCostBasis,
   brokerAccountCash,
   brokerAccountMarginDebt,
   buildCategorySummary,
@@ -227,6 +229,69 @@ describe("groupSmallSlices", () => {
     });
     expect(r.shown).toEqual([]);
     expect(r.total).toBe(0);
+  });
+});
+
+describe("averageCostPerUnit", () => {
+  const eur = (amount: number, currency: string) =>
+    currency === "EUR" ? amount : currency === "USD" ? amount * 0.9 : null;
+  const trade = (
+    type: string,
+    quantity: number,
+    amount: number,
+    date: string,
+    extra: { symbol?: string; currency?: string } = {},
+  ) => ({
+    type,
+    symbol: extra.symbol ?? "btc",
+    quantity,
+    amount,
+    currency: extra.currency ?? "EUR",
+    transactionDate: date,
+  });
+
+  it("averages buys and keeps the average through a sale", () => {
+    const avg = averageCostPerUnit(
+      [
+        trade("buy", 2, 20_000, "2026-03-01"),
+        trade("sell", 1, 15_000, "2026-05-01"),
+        trade("buy", 1, 40_000, "2026-02-01"),
+        trade("reward", 0.5, 0, "2026-04-01"),
+      ],
+      eur,
+    );
+    // Feb 1 @ 40k, Mar 1 2 @ 10k → 60k / 3; the sale keeps 20k per unit
+    expect(avg.get("BTC")).toBeCloseTo(20_000);
+  });
+
+  it("converts each buy to EUR and gives up on a currency without a rate", () => {
+    expect(
+      averageCostPerUnit([trade("buy", 1, 1_000, "2026-01-01", { currency: "USD" })], eur).get("BTC"),
+    ).toBeCloseTo(900);
+    expect(
+      averageCostPerUnit(
+        [
+          trade("buy", 1, 1_000, "2026-01-01"),
+          trade("buy", 1, 1_000, "2026-01-02", { currency: "XYZ" }),
+        ],
+        eur,
+      ).has("BTC"),
+    ).toBe(false);
+  });
+
+  it("has no average once everything bought is sold", () => {
+    const avg = averageCostPerUnit(
+      [trade("buy", 1, 100, "2026-01-01"), trade("sell", 1, 150, "2026-01-02")],
+      eur,
+    );
+    expect(avg.has("BTC")).toBe(false);
+  });
+
+  it("costs a holding at the average times the quantity held, never fiat", () => {
+    const avg = new Map([["BTC", 20_000]]);
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "btc", quantity: 1.5 }, avg)).toBe(30_000);
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "ETH", quantity: 1 }, avg)).toBeUndefined();
+    expect(bitpandaCostBasis({ assetType: "fiat", symbol: "BTC", quantity: 1 }, avg)).toBeUndefined();
   });
 });
 

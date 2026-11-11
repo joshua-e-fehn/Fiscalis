@@ -5,10 +5,13 @@ import {
   bankAccountWithBaseFields,
   brokerAccountWithBaseFields,
   positionWithBaseFields,
+  toBase,
 } from "../../../services/finance/currency";
 import { valueVaultItem } from "../../../services/finance/metals";
 import {
+  averageCostPerUnit,
   bankAccountValue,
+  bitpandaCostBasis,
   brokerAccountCash,
   brokerAccountMarginDebt,
   loanBalanceInBase,
@@ -46,22 +49,26 @@ import {
  *   (positionOwed), a broker account's margin debit, a loan's balance.
  * - Vault items are valued at live spot (metalSpotPrices) with the shared
  *   metals valuation, falling back to cost when no fresh spot price exists.
+ * - A Bitpanda holding's cost basis is the average cost of its symbol from
+ *   the synced trades times the quantity held (categorySummary.ts
+ *   averageCostPerUnit); Bitpanda reports none itself.
  * - Loans count when active or defaulted (D1).
  */
 
 type BankAccountDoc = Doc<"plaidAccounts">;
 type BrokerPositionDoc = Doc<"brokerPositions">;
 type BrokerAccountDoc = Doc<"brokerAccounts">;
+/** A Bitpanda holding with its cost basis derived from the synced trades */
+type BitpandaHoldingDoc = Doc<"bitpandaHoldings"> & {
+  costBasisInBaseCurrency?: number;
+};
 
 /** A holding together with the stored document it was read from. */
 export type LoadedHolding =
   | (NormalizedHolding & { source: "bank"; doc: BankAccountDoc })
   | (NormalizedHolding & { source: "brokerPosition"; doc: BrokerPositionDoc })
   | (NormalizedHolding & { source: "brokerAccount"; doc: BrokerAccountDoc })
-  | (NormalizedHolding & {
-      source: "bitpanda";
-      doc: Doc<"bitpandaHoldings">;
-    })
+  | (NormalizedHolding & { source: "bitpanda"; doc: BitpandaHoldingDoc })
   | (NormalizedHolding & { source: "vault"; doc: Doc<"vaultItems"> })
   | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> });
 
@@ -148,9 +155,26 @@ export async function loadHoldings(
     .query("bitpandaHoldings")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
-  for (const doc of bitpandaHoldings) {
-    const category = toHoldingCategory(doc.investmentCategory);
-    const value = positionValue(doc);
+  const averageCost =
+    bitpandaHoldings.length > 0
+      ? averageCostPerUnit(
+          await ctx.db
+            .query("bitpandaTransactions")
+            .withIndex("by_user", (q) => q.eq("userId", userId))
+            .collect(),
+          (amount, currency) => {
+            const converted = toBase(amount, currency, rates);
+            return converted.ok ? converted.value : null;
+          },
+        )
+      : new Map<string, number>();
+  for (const raw of bitpandaHoldings) {
+    const category = toHoldingCategory(raw.investmentCategory);
+    const value = positionValue(raw);
+    const cost =
+      category === "liabilities" ? undefined : bitpandaCostBasis(raw, averageCost);
+    const doc: BitpandaHoldingDoc =
+      cost === undefined ? raw : { ...raw, costBasisInBaseCurrency: cost };
     holdings.push({
       id: doc._id,
       provider: "bitpanda",
@@ -159,8 +183,7 @@ export async function loadHoldings(
       subcategory: doc.investmentSubcategory ?? "unknown",
       name: doc.symbol ?? doc.name ?? "Unknown",
       valueBase: category === "liabilities" ? positionOwed(value) : value,
-      // Bitpanda reports no cost basis
-      costBase: null,
+      costBase: cost ?? null,
       pricedAt: doc.lastSyncAt ?? doc.createdAt,
       doc,
     });

@@ -120,6 +120,80 @@ export function positionToHolding(p: PositionLike): CategoryHolding {
   };
 }
 
+/** A synced provider trade (Bitpanda), its amount in its own currency. */
+export interface ProviderTrade {
+  /** buy | sell | deposit | withdrawal | transfer | reward | other */
+  type: string;
+  symbol: string;
+  quantity: number;
+  /** Fiat amount paid (buy) or received (sell) */
+  amount: number;
+  currency: string;
+  /** ISO 8601 */
+  transactionDate: string;
+}
+
+/**
+ * Average cost per unit in EUR by symbol (upper-case), from buy and sell
+ * trades replayed in date order: a buy adds its quantity and EUR amount, a
+ * sell removes its quantity at the running average (so the average does
+ * not change). Deposits, rewards and transfers carry no price and are left
+ * out. A symbol is missing when nothing bought is still held or a buy's
+ * currency has no rate.
+ *
+ * A holding's cost basis is this average times the quantity held
+ * (bitpandaCostBasis), so a reward or transfer-in held next to bought units
+ * is costed at the average buy price.
+ */
+export function averageCostPerUnit(
+  trades: readonly ProviderTrade[],
+  toEur: (amount: number, currency: string) => number | null,
+): Map<string, number> {
+  const books = new Map<string, { quantity: number; cost: number; unknown: boolean }>();
+  const ordered = [...trades].sort((a, b) =>
+    a.transactionDate.localeCompare(b.transactionDate),
+  );
+  for (const t of ordered) {
+    if (t.type !== "buy" && t.type !== "sell") continue;
+    const quantity = Math.abs(t.quantity);
+    if (!(quantity > 0)) continue;
+    const symbol = t.symbol.toUpperCase();
+    const book = books.get(symbol) ?? { quantity: 0, cost: 0, unknown: false };
+    books.set(symbol, book);
+    if (t.type === "buy") {
+      const eur = toEur(Math.abs(t.amount), t.currency);
+      if (eur === null) book.unknown = true;
+      else book.cost += eur;
+      book.quantity += quantity;
+    } else if (book.quantity > 0) {
+      const sold = Math.min(quantity, book.quantity);
+      book.cost -= (book.cost / book.quantity) * sold;
+      book.quantity -= sold;
+    }
+  }
+  const average = new Map<string, number>();
+  for (const [symbol, book] of books) {
+    if (!book.unknown && book.quantity > 1e-12 && book.cost > 0) {
+      average.set(symbol, book.cost / book.quantity);
+    }
+  }
+  return average;
+}
+
+/**
+ * Cost basis in EUR of a Bitpanda holding: the average cost of its symbol
+ * times the quantity held; undefined for fiat wallets (cash) and symbols
+ * without an average (averageCostPerUnit).
+ */
+export function bitpandaCostBasis(
+  holding: { assetType: string; symbol: string; quantity: number },
+  averageCost: ReadonlyMap<string, number>,
+): number | undefined {
+  if (holding.assetType === "fiat") return undefined;
+  const unit = averageCost.get(holding.symbol.toUpperCase());
+  return unit === undefined ? undefined : unit * holding.quantity;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Accounts and loans
 // ═══════════════════════════════════════════════════════════════

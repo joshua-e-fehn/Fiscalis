@@ -9,15 +9,18 @@ import { useMemo } from "react";
 
 import type { TimeRange } from "@/lib/performance";
 
-import { useCategoryPerformance } from "./useCategoryPerformance";
+import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance";
 
 export interface PortfolioChartPoint {
   date: string;
   timestamp: number;
   value: number;
   /**
-   * Cost line; where the engine has none the point's own value, which keeps
-   * the axis bounds honest (0 squashed the chart)
+   * Axis-bounds helper only: the engine's cost line, or the point's own value
+   * where it has none. CategoryPerformanceChart draws no per-point cost line
+   * (its dashed line is `totalCost`, null when unknown), so this fallback is
+   * never shown as a P/L. Making it null needs PortfolioDataPoint.cost to be
+   * nullable, which is deferred to the chart follow-up.
    */
   cost: number;
 }
@@ -33,8 +36,10 @@ export interface UsePortfolioChartDataResult {
   currentValue: number;
   /** Cost line at the range end, null when unknown */
   totalCost: number | null;
-  /** First real snapshot, if any */
+  /** First known point when there is no value at the range start; null otherwise */
   trackingSince: number | null;
+  /** Some held assets had no price series and are missing from the values */
+  partial: boolean;
   isLoading: boolean;
 }
 
@@ -44,7 +49,7 @@ export function usePortfolioChartData(
   options: UsePortfolioChartDataOptions,
 ): UsePortfolioChartDataResult {
   const { timeRange, enabled = true } = options;
-  const { dataPoints, metrics, actualSnapshotTimestamps, isLoading } =
+  const { dataPoints, metrics, isLoading } =
     useCategoryPerformance(TOTAL_ASSETS, timeRange, {
       includeDataPoints: true,
       enabled,
@@ -61,8 +66,9 @@ export function usePortfolioChartData(
       })),
       currentValue: metrics?.endValue ?? 0,
       totalCost: last?.costBasis ?? null,
-      trackingSince: actualSnapshotTimestamps[0] ?? null,
+      trackingSince: toPeriodChange(metrics).trackingSince,
+      partial: metrics?.partial ?? false,
       isLoading,
     };
-  }, [dataPoints, metrics, actualSnapshotTimestamps, isLoading]);
+  }, [dataPoints, metrics, isLoading]);
 }

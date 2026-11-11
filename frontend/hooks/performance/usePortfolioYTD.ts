@@ -12,6 +12,8 @@ export interface PortfolioYTDResult {
   ytdProfitLoss: number | null;
   ytdProfitLossPercent: number | null;
   valueAtYearStart: number | null;
+  /** Some held assets had no price series and are missing from the values */
+  partial: boolean;
   isLoading: boolean;
 }
 
@@ -22,6 +24,8 @@ export interface NetWorthYTDResult {
   currentValue: number | null;
   /** First known point when there is no value at 1 Jan; null otherwise */
   trackingSince: number | null;
+  /** Some held assets had no price series and are missing from the values */
+  partial: boolean;
   isLoading: boolean;
 }
 
@@ -46,6 +50,7 @@ export function useNetWorthYTD(options?: {
       valueAtYearStart: ytd.valueAtStart,
       currentValue: metrics?.endValue ?? null,
       trackingSince: ytd.trackingSince,
+      partial: ytd.partial,
       isLoading,
     };
   }, [metrics, isLoading]);
@@ -69,6 +74,7 @@ export function useCategoryYTD(
       ytdProfitLoss: ytd.change,
       ytdProfitLossPercent: ytd.changePercent,
       valueAtYearStart: ytd.valueAtStart,
+      partial: ytd.partial,
       isLoading,
     };
   }, [metrics, isLoading]);

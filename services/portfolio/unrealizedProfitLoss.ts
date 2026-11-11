@@ -4,7 +4,8 @@
  * Cash, most crypto and collectibles carry no cost basis. Subtracting a
  * partial cost basis from total assets counts those holdings as pure profit,
  * so P/L is computed only over cost-bearing categories (their value and cost
- * together), and `coverage` reports which share of assets that is.
+ * together), and `coverage` reports which share of assets that is. Within a
+ * category only the holdings that carry a cost basis count (`coveredValue`).
  */
 
 export interface CategoryValuation {
@@ -12,6 +13,29 @@ export interface CategoryValuation {
   value: number;
   /** Cost basis of the category, null when unknown */
   costBasis: number | null;
+  /**
+   * Value of the holdings that the cost basis covers. Set it when only some
+   * holdings in the category carry a cost basis (e.g. Bitpanda stocks next to
+   * broker stocks); defaults to `value` when the cost basis covers everything.
+   */
+  coveredValue?: number;
+}
+
+/** A single holding's value and cost basis (null/undefined when unknown) */
+export interface HoldingValuation {
+  value: number;
+  costBasis: number | null | undefined;
+}
+
+/**
+ * Sum of value over the holdings that carry a cost basis, so a category's
+ * partial cost basis is compared with the value it actually covers.
+ */
+export function sumCostCoveredValue(holdings: HoldingValuation[]): number {
+  return holdings.reduce(
+    (sum, h) => (h.costBasis != null ? sum + h.value : sum),
+    0,
+  );
 }
 
 export interface UnrealizedProfitLoss {
@@ -31,10 +55,15 @@ export function summarizeUnrealizedProfitLoss(
   categories: CategoryValuation[],
 ): UnrealizedProfitLoss {
   const totalValue = categories.reduce((sum, c) => sum + c.value, 0);
-  const costBearing = categories.filter(
-    (c): c is { value: number; costBasis: number } =>
-      c.costBasis !== null && c.value > 0,
-  );
+  const costBearing = categories
+    .map((c) => ({
+      costBasis: c.costBasis,
+      covered: Math.min(c.coveredValue ?? c.value, c.value),
+    }))
+    .filter(
+      (c): c is { costBasis: number; covered: number } =>
+        c.costBasis !== null && c.covered > 0,
+    );
 
   if (costBearing.length === 0) {
     return {
@@ -47,7 +76,7 @@ export function summarizeUnrealizedProfitLoss(
   }
 
   const costBasis = costBearing.reduce((sum, c) => sum + c.costBasis, 0);
-  const coveredValue = costBearing.reduce((sum, c) => sum + c.value, 0);
+  const coveredValue = costBearing.reduce((sum, c) => sum + c.covered, 0);
   const profitLoss = coveredValue - costBasis;
 
   return {

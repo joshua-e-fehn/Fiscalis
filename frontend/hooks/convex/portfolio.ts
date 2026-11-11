@@ -23,7 +23,10 @@ import { useRealEstateSummary } from "./realEstate";
 import { useCashSummary } from "./cash";
 import { useCollectiblesSummary } from "./collectibles";
 import { useLiabilitiesSummary } from "./liabilities";
-import { summarizeUnrealizedProfitLoss } from "@/../services/portfolio/unrealizedProfitLoss";
+import {
+  summarizeUnrealizedProfitLoss,
+  sumCostCoveredValue,
+} from "@/../services/portfolio/unrealizedProfitLoss";
 import {
   Briefcase,
   Coins,
@@ -47,6 +50,8 @@ export interface AssetCategoryData {
   color: string;
   totalValue: number;
   costBasis: number | null;
+  /** Value of the holdings costBasis covers, when only some carry one */
+  costCoveredValue?: number;
   profitLoss: number | null;
   profitLossPercent: number | null;
   holdingsCount: number;
@@ -123,6 +128,37 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
   const { summary: liabilitiesSummary, isLoading: liabilitiesLoading } =
     useLiabilitiesSummary();
 
+  // Equities, bonds and real estate mix positions with and without a cost
+  // basis (e.g. Bitpanda stocks next to broker stocks). Their partial cost
+  // basis is compared only with the value it covers. These are the same
+  // queries the category hooks subscribe to, so the client shares them.
+  const equitiesData = useQuery(api.categories.getEquities);
+  const bondsData = useQuery(api.categories.getBonds);
+  const realEstateData = useQuery(api.categories.getRealEstate);
+  const costCoveredValues = useMemo(() => {
+    const covered = (
+      positions:
+        | {
+            valueInBaseCurrency?: number;
+            marketValue?: number;
+            totalCostBasis?: number;
+          }[]
+        | undefined,
+    ): number | undefined =>
+      positions &&
+      sumCostCoveredValue(
+        positions.map((p) => ({
+          value: p.valueInBaseCurrency ?? p.marketValue ?? 0,
+          costBasis: p.totalCostBasis,
+        })),
+      );
+    return {
+      equities: covered(equitiesData?.positions),
+      bonds: covered(bondsData?.positions),
+      realEstate: covered(realEstateData?.positions),
+    };
+  }, [equitiesData, bondsData, realEstateData]);
+
   // Fetch portfolio snapshots for historical performance
   const portfolioSnapshots = useQuery(api.portfolioSnapshots.getSnapshots, {
     limit: 365,
@@ -155,6 +191,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors.equities,
       totalValue: equitiesSummary?.totalValue ?? 0,
       costBasis: equitiesSummary?.totalCost ?? null,
+      costCoveredValue: costCoveredValues.equities,
       profitLoss: equitiesSummary?.profitLoss ?? null,
       profitLossPercent: equitiesSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -195,6 +232,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors.bonds,
       totalValue: bondsSummary?.totalValue ?? 0,
       costBasis: bondsSummary?.totalCost ?? null,
+      costCoveredValue: costCoveredValues.bonds,
       profitLoss: bondsSummary?.profitLoss ?? null,
       profitLossPercent: bondsSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -215,6 +253,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors["real-estate"],
       totalValue: realEstateSummary?.totalValue ?? 0,
       costBasis: realEstateSummary?.totalCost ?? null,
+      costCoveredValue: costCoveredValues.realEstate,
       profitLoss: realEstateSummary?.profitLoss ?? null,
       profitLossPercent: realEstateSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -298,6 +337,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       assetCategories.map((cat) => ({
         value: cat.totalValue,
         costBasis: cat.costBasis,
+        coveredValue: cat.costCoveredValue,
       })),
     );
     const totalCostBasis = unrealized.costBasis;
@@ -398,6 +438,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     collectiblesSummary,
     liabilitiesSummary,
     portfolioSnapshots,
+    costCoveredValues,
   ]);
 
   return { summary, isLoading };

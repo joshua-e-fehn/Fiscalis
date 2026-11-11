@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-import { summarizeUnrealizedProfitLoss } from "./unrealizedProfitLoss";
+import {
+  summarizeUnrealizedProfitLoss,
+  sumCostCoveredValue,
+} from "./unrealizedProfitLoss";
 
 describe("summarizeUnrealizedProfitLoss", () => {
   it("computes P/L over cost-bearing categories only (NW-2 scenario)", () => {
@@ -54,5 +57,49 @@ describe("summarizeUnrealizedProfitLoss", () => {
         .profitLossPercent,
     ).toBeNull();
     expect(summarizeUnrealizedProfitLoss([]).coverage).toBeNull();
+  });
+});
+
+describe("summarizeUnrealizedProfitLoss with partially covered categories", () => {
+  it("compares a partial cost basis only with the value it covers", () => {
+    // Equities: EUR 100k broker (cost 80k) + EUR 20k Bitpanda stocks (no cost)
+    const equities = [
+      { value: 100_000, costBasis: 80_000 },
+      { value: 20_000, costBasis: null },
+    ];
+    const r = summarizeUnrealizedProfitLoss([
+      {
+        value: 120_000,
+        costBasis: 80_000,
+        coveredValue: sumCostCoveredValue(equities),
+      },
+    ]);
+    expect(r.costBasis).toBe(80_000);
+    expect(r.coveredValue).toBe(100_000);
+    expect(r.profitLoss).toBe(20_000);
+    expect(r.profitLossPercent).toBe(25);
+    expect(r.coverage).toBeCloseTo(100_000 / 120_000, 10);
+  });
+
+  it("drops a category whose cost-bearing holdings have no value", () => {
+    const r = summarizeUnrealizedProfitLoss([
+      { value: 20_000, costBasis: 0, coveredValue: 0 },
+      { value: 1_000, costBasis: 800 },
+    ]);
+    expect(r.profitLoss).toBe(200);
+    expect(r.coverage).toBeCloseTo(1_000 / 21_000, 10);
+  });
+});
+
+describe("sumCostCoveredValue", () => {
+  it("sums only holdings with a cost basis (zero counts, null/undefined do not)", () => {
+    expect(
+      sumCostCoveredValue([
+        { value: 10, costBasis: 0 },
+        { value: 20, costBasis: null },
+        { value: 30, costBasis: undefined },
+        { value: 40, costBasis: 5 },
+      ]),
+    ).toBe(50);
   });
 });

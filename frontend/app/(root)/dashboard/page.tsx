@@ -127,6 +127,8 @@ function HeroKPICard({
 interface YTDNetWorthCardProps {
   ytdChange: number | null;
   ytdChangePercent: number | null;
+  /** First snapshot time when there is no snapshot at or before Jan 1 */
+  trackingSince: number | null;
   currency: InvestmentCurrency;
   isLoading?: boolean;
 }
@@ -134,6 +136,7 @@ interface YTDNetWorthCardProps {
 function YTDNetWorthCard({
   ytdChange,
   ytdChangePercent,
+  trackingSince,
   currency,
   isLoading = false,
 }: YTDNetWorthCardProps) {
@@ -176,7 +179,7 @@ function YTDNetWorthCard({
             </div>
             {ytdChangePercent !== null && (
               <p className="text-xs text-muted-foreground mt-1">
-                {formatPercent(ytdChangePercent)} since Jan 1
+                {formatPercent(ytdChangePercent)} change since Jan 1
               </p>
             )}
           </>
@@ -185,7 +188,13 @@ function YTDNetWorthCard({
             <div className="text-2xl font-bold flex items-center gap-1">
               <Minus className="h-4 w-4" />
             </div>
-            <p className="text-xs mt-1">No data for this year</p>
+            <p className="text-xs mt-1">
+              {trackingSince !== null
+                ? `Not enough history (tracking since ${new Date(
+                    trackingSince,
+                  ).toLocaleDateString("de-DE")})`
+                : "No data for this year"}
+            </p>
           </div>
         )}
       </CardContent>
@@ -599,6 +608,7 @@ export default function DashboardPage() {
         <YTDNetWorthCard
           ytdChange={netWorthYTD.ytdChange}
           ytdChangePercent={netWorthYTD.ytdChangePercent}
+          trackingSince={netWorthYTD.trackingSince}
           currency={currency}
           isLoading={netWorthYTD.isLoading}
         />

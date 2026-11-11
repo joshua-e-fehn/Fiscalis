@@ -240,6 +240,24 @@ export function aggregateNetWorth(
   };
 }
 
+/**
+ * The liabilities card's count line, e.g. "2 accounts · 1 loan"; each part
+ * shows only when its count is positive, null when both are zero.
+ */
+export function liabilityCountsLabel(
+  accountsCount: number,
+  loansCount: number,
+): string | null {
+  const parts: string[] = [];
+  if (accountsCount > 0) {
+    parts.push(`${accountsCount} account${accountsCount !== 1 ? "s" : ""}`);
+  }
+  if (loansCount > 0) {
+    parts.push(`${loansCount} loan${loansCount !== 1 ? "s" : ""}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Snapshot breakdown
 // ═══════════════════════════════════════════════════════════════

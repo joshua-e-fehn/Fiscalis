@@ -354,6 +354,14 @@ export interface HoldingData {
    * cost. Null: unknown cost. Undefined: purchasePricePerUnit.
    */
   costPerUnit?: number | null;
+  /**
+   * This holding's signed change to its item's cost pool, when it is a
+   * ledger lot: known EUR cost plus units of unknown cost, which the cost
+   * line takes at their value. Overrides costPerUnit on the cost line, so
+   * a sale from a pool mixing known and unknown costs removes its share of
+   * each and a sold-out item leaves no cost behind.
+   */
+  costLine?: { knownCost: number; unknownQuantity: number };
 }
 
 /**

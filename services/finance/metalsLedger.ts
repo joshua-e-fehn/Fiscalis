@@ -65,6 +65,20 @@ export interface LedgerLot {
   flowPricePerUnit: number | null;
   /** EUR cost per unit added to (or removed from) the cost basis; null unknown */
   costPerUnit: number | null;
+  /**
+   * The lot's change to the item's cost pool, split into the known EUR cost
+   * and the units whose cost is unknown. A sale removes its share of both
+   * parts, so a sold-out item leaves nothing on the cost line.
+   */
+  costLine: LotCostLine;
+}
+
+/** A lot's signed change to the cost pool (see LedgerLot.costLine). */
+export interface LotCostLine {
+  /** EUR of known cost added (+) or removed (−) */
+  knownCost: number;
+  /** Units of unknown cost added (+) or removed (−) */
+  unknownQuantity: number;
 }
 
 export interface ItemLedger {
@@ -193,6 +207,9 @@ export function replayLedger(
   let realizedProfitLoss = 0;
   let realizedComplete = true;
   let soldCost = 0;
+  /** The cost pool split for the cost line: known EUR and unknown-cost units */
+  let knownCost = 0;
+  let unknownQuantity = 0;
   const lots: LedgerLot[] = [];
 
   for (const tx of sortLedger(txs)) {
@@ -205,11 +222,17 @@ export function replayLedger(
         ? cost + tx.quantity * unitAmount
         : null;
       quantity += tx.quantity;
+      const costLine: LotCostLine = unitAmount !== null
+        ? { knownCost: tx.quantity * unitAmount, unknownQuantity: 0 }
+        : { knownCost: 0, unknownQuantity: tx.quantity };
+      knownCost += costLine.knownCost;
+      unknownQuantity += costLine.unknownQuantity;
       lots.push({
         timestamp,
         quantity: tx.quantity,
         flowPricePerUnit: tx.transactionType === "buy" ? unitAmount : null,
         costPerUnit: unitAmount,
+        costLine,
       });
       continue;
     }
@@ -228,7 +251,15 @@ export function replayLedger(
         realizedComplete = false;
       }
     }
+    // The units leave both parts of the pool in proportion
+    const share = quantity > 0 ? Math.min(tx.quantity / quantity, 1) : 0;
+    const costLine: LotCostLine = {
+      knownCost: 0 - knownCost * share,
+      unknownQuantity: 0 - unknownQuantity * share,
+    };
     quantity -= tx.quantity;
+    knownCost += costLine.knownCost;
+    unknownQuantity += costLine.unknownQuantity;
     cost = cost !== null && averageCost !== null
       ? cost - tx.quantity * averageCost
       : null;
@@ -236,12 +267,15 @@ export function replayLedger(
       // Sold out: the next buy starts a new, known cost pool
       quantity = 0;
       cost = 0;
+      knownCost = 0;
+      unknownQuantity = 0;
     }
     lots.push({
       timestamp,
       quantity: -tx.quantity,
       flowPricePerUnit: tx.transactionType === "sell" ? unitAmount : null,
       costPerUnit: averageCost,
+      costLine,
     });
   }
 
@@ -400,7 +434,7 @@ export function sumSaleProfitLoss(sales: readonly SaleProfitLoss[]): SaleProfitL
  * An item's lots as continuous-strategy holdings: the quantity held at t is
  * the sum of the lots dated at or before t, each purchase or sale is a flow
  * at its EUR price (gifts at their value that day), and the cost line moves
- * by each lot's cost.
+ * by each lot's share of the cost pool (unknown-cost units at their value).
  */
 export function ledgerHoldings(
   item: {
@@ -421,5 +455,6 @@ export function ledgerHoldings(
     purchasePricePerUnit: lot.flowPricePerUnit ?? undefined,
     purchaseCurrency: "EUR",
     costPerUnit: lot.costPerUnit,
+    costLine: lot.costLine,
   }));
 }

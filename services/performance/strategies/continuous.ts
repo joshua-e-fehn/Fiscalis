@@ -190,7 +190,9 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
   /**
    * Value of the holdings held at `timestamp`, or null when a held asset has
    * no price at or before it yet. Holding nothing yet is a known 0. The cost is
-   * the cost line: the lots' cost plus the value of lots without one.
+   * the cost line: the lots' cost plus the value of lots without one (for
+   * ledger lots, the known cost of their pool share plus the value of its
+   * unknown-cost units).
    */
   private valueAtTimestamp(
     holdings: HoldingData[],
@@ -219,6 +221,16 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
         value = this.calculateItemValue(holding, price.value);
       }
       totalValue += value;
+      if (holding.costLine) {
+        // Unknown-cost units at their value; value is linear in quantity
+        const { knownCost, unknownQuantity } = holding.costLine;
+        costLine += knownCost;
+        if (holding.quantity !== 0) {
+          costLine += value * (unknownQuantity / holding.quantity);
+        }
+        if (Math.abs(holding.quantity - unknownQuantity) > 1e-9) hasCost = true;
+        continue;
+      }
       const unitCost = unitCostOf(holding);
       if (unitCost !== null) {
         hasCost = true;

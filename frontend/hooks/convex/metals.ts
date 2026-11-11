@@ -131,11 +131,9 @@ function enrichItemWithValuation(
       : undefined,
     ...valuation,
     averageCost,
-    realizedProfitLoss: ledger
-      ? ledger.realizedComplete
-        ? ledger.realizedProfitLoss
-        : null
-      : 0,
+    // An unreplayable ledger's sales have an unknown realized P/L
+    realizedProfitLoss:
+      ledger?.realizedComplete === true ? ledger.realizedProfitLoss : null,
     soldCost: ledger?.soldCost ?? 0,
   };
 }

@@ -56,6 +56,16 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
   const summary = useMemo<CategorySummary | null>(() => {
     if (!userId) return null;
 
+    // Without a fresh spot price items are valued at cost, so their P/L
+    // is unknown rather than 0 (as MetalsPage shows it)
+    const metalsPriced = metalsSummary?.pricedAtSpot !== false;
+    const metalsProfitLoss = metalsPriced
+      ? (metalsSummary?.unrealizedProfitLoss ?? null)
+      : null;
+    const metalsProfitLossPercent = metalsPriced
+      ? (metalsSummary?.unrealizedProfitLossPercent ?? null)
+      : null;
+
     // Build subcategories array from centralized config
     const subcategories: SubcategoryData[] = [];
 
@@ -87,8 +97,8 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
           ...makeSubcategoryBase(slug, meta),
           totalValue: metalsSummary?.totalMarketValue ?? 0,
           costBasis: metalsSummary?.totalCost ?? null,
-          profitLoss: metalsSummary?.unrealizedProfitLoss ?? null,
-          profitLossPercent: metalsSummary?.unrealizedProfitLossPercent ?? null,
+          profitLoss: metalsProfitLoss,
+          profitLossPercent: metalsProfitLossPercent,
           topHoldings: metalsTopHoldings,
           holdingsCount: metalsItems?.length ?? 0,
           implemented: true,
@@ -106,9 +116,8 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
     // just the items with a cost (summarizeMetalItems), so the P/L is taken
     // from the summary rather than recomputed against the full value.
     const totalCost = metalsSummary?.totalCost ?? null;
-    const profitLoss = metalsSummary?.unrealizedProfitLoss ?? null;
-    const profitLossPercent =
-      metalsSummary?.unrealizedProfitLossPercent ?? null;
+    const profitLoss = metalsProfitLoss;
+    const profitLossPercent = metalsProfitLossPercent;
 
     // The chart's cost line: the lots' cost, or the value where unknown
     const historyDataPoints: PortfolioDataPoint[] = history.dataPoints.map(

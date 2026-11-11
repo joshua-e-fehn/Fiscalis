@@ -436,7 +436,8 @@ export function summarizeMetalItems(
     totalMarketValue: total.value,
     totalMeltValue: items.reduce((sum, i) => sum + i.meltValue, 0),
     totalCost: total.costBasis,
-    unrealizedProfitLoss: total.profitLoss,
+    unrealizedProfitLoss: unrealized,
+    // Null without a cost (summarizeHoldings): a 0 on nothing held has no %
     unrealizedProfitLossPercent: total.profitLossPercent,
     realizedProfitLoss: realized,
     totalProfitLoss,

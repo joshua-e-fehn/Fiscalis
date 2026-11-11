@@ -294,6 +294,46 @@ describe("snaptradeAccountFields", () => {
     expect(fields.cash).toBeCloseTo(225, 9);
   });
 
+  it("skips a zero balance in a currency without a rate", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          balances: [
+            { cash: 0, currency: { code: "ZZZ" } },
+            { cash: 100, currency: { code: "USD" } },
+          ],
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(fields.cash).toBe(100);
+    expect(fields.cashSource).toBe("reported");
+  });
+
+  it("keeps a stored zero cash without needing a rate", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          account: { balance: { total: { amount: 500, currency: "USD" } } },
+          positions: [
+            {
+              symbol: { symbol: { symbol: "X", currency: { code: "ZZZ" } } },
+              units: 1,
+              price: 10,
+            },
+          ],
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+      { cash: 0, currency: "ZZZ" },
+    );
+    expect(fields.cash).toBe(0);
+  });
+
   it("takes cash-equivalent positions out of cash once", () => {
     const fields = snaptradeAccountFields(
       mapSnaptradeHoldings(

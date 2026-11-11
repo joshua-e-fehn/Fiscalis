@@ -479,6 +479,9 @@ export function snaptradeAccountFields(
     let sum = 0;
     let complete = true;
     for (const { amount, currency } of amounts) {
+      // Zero needs no rate: SnapTrade lists a balance for every enabled
+      // currency, and a 0 in an unpriced one must not fail the sync
+      if (amount === 0) continue;
       const converted = convertBetween(amount, currency, balanceCurrency, rates);
       if (converted === undefined) complete = false;
       else sum += converted;
@@ -493,6 +496,7 @@ export function snaptradeAccountFields(
   /** The stored cash in balanceCurrency; throws when it cannot be kept */
   const keptCash = (): number | undefined => {
     if (stored?.cash === undefined) return undefined;
+    if (stored.cash === 0) return 0;
     const converted = convertBetween(
       stored.cash,
       stored.currency,

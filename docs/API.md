@@ -136,7 +136,8 @@ Each entry of `categories`:
   or loan) is money owed to you. It appears under `cash` with the subcategory
   `credit-balance`, never as negative debt.
 - **Unclassified.** A holding without a known category still counts in
-  `totalAssets`; it appears under `unclassified` with the subcategory `unknown`.
+  `totalAssets`; it appears under `unclassified` with its stored subcategory,
+  or `unknown` when none is stored.
 - **Empty parts.** A subcategory or source worth nothing is left out. An empty
   category has `value: 0` and two empty arrays.
 - **Sources** say where a holding comes from: `bank` (bank accounts and cards),
@@ -158,7 +159,7 @@ no stored subcategory appears as `unknown`.
 | `commodities`  | `metals`, `energy`, `industrial`, `agricultural`, `rare-earth`, `gemstones` |
 | `real-estate`  | `residential`, `commercial`, `reits`, `crowdfunding`, `land` |
 | `collectibles` | `art`, `watches`, `wine`, `cars`, `jewelry`, `trading-cards`, `memorabilia`, `nfts`, `other` |
-| `unclassified` | `unknown` |
+| `unclassified` | typically `unknown`; otherwise whatever subcategory is stored |
 | `liabilities`  | `mortgages`, `loans`, `credit-cards`, `margin-loans` |
 
 `dataAsOf`, `categories` and any later additions are additive: clients should

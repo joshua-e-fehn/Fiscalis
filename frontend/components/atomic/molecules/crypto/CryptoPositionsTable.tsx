@@ -64,8 +64,9 @@ export function CryptoPositionsTable({
   showFilters = true,
   maxRows,
 }: CryptoPositionsTableProps) {
-  const positions = useCryptoPositions();
-  const isLoading = positions.length === 0;
+  const loadedPositions = useCryptoPositions();
+  const isLoading = loadedPositions === undefined;
+  const positions = useMemo(() => loadedPositions ?? [], [loadedPositions]);
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("value");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -164,7 +165,7 @@ export function CryptoPositionsTable({
         {isLoading ? (
           <div className="text-center py-8 space-y-2">
             <Coins className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No positions found</p>
+            <p className="text-sm text-muted-foreground">Loading positions…</p>
           </div>
         ) : filteredPositions.length === 0 ? (
           <div className="text-center py-8 space-y-2">

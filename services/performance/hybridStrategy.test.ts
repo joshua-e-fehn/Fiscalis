@@ -78,7 +78,7 @@ function createMetalHolding(
   metalType: string,
   fineWeightGrams: number,
   quantity: number = 1,
-  sellPremium: number = 5,
+  sellPremium: number = 0.05, // decimal, as stored
 ): HoldingData {
   return {
     id,
@@ -163,7 +163,7 @@ describe("HybridPerformanceStrategy", () => {
 
   describe("calculate with continuous only", () => {
     it("should work with only continuous input", () => {
-      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 5)];
+      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 0.05)];
       const prices: PriceData = {
         gold: createPriceHistory(30, 60, 66), // +10%
       };
@@ -190,7 +190,7 @@ describe("HybridPerformanceStrategy", () => {
       const snapshots = createLinearGrowthSnapshots(10, 50000, 55000, 30);
 
       // Continuous: Gold worth ~63,000 -> ~69,300 (+10%)
-      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 5)];
+      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 0.05)];
       const prices: PriceData = {
         gold: createPriceHistory(30, 60, 66),
       };
@@ -230,7 +230,7 @@ describe("HybridPerformanceStrategy", () => {
       const snapshots = createLinearGrowthSnapshots(10, 50000, 60000, 30);
 
       // Continuous: Gold flat (0%)
-      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 5)];
+      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 0.05)];
       const prices: PriceData = {
         gold: createPriceHistory(30, 60, 60), // No change
       };
@@ -264,7 +264,7 @@ describe("HybridPerformanceStrategy", () => {
       const snapshots = createLinearGrowthSnapshots(10, 50000, 45000, 30);
 
       // Continuous: Gold up +20%
-      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 5)];
+      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 0.05)];
       const prices: PriceData = {
         gold: createPriceHistory(30, 60, 72), // +20%
       };
@@ -293,7 +293,7 @@ describe("HybridPerformanceStrategy", () => {
     it("should merge data points at the same timestamp", () => {
       // Create inputs that generate points at similar timestamps
       const snapshots = createLinearGrowthSnapshots(5, 10000, 11000, 30);
-      const holdings = [createMetalHolding("gold-1", "gold", 100, 1, 5)];
+      const holdings = [createMetalHolding("gold-1", "gold", 100, 1, 0.05)];
       const prices: PriceData = {
         gold: createPriceHistory(30, 60, 66),
       };
@@ -341,7 +341,7 @@ describe("HybridPerformanceStrategy", () => {
       const snapshots = createLinearGrowthSnapshots(30, 10000, 11000, 30);
 
       // Sparse prices (low quality)
-      const holdings = [createMetalHolding("gold-1", "gold", 100, 1, 5)];
+      const holdings = [createMetalHolding("gold-1", "gold", 100, 1, 0.05)];
       const prices: PriceData = {
         gold: [
           { timestamp: Date.now() - 30 * MS_PER_DAY, price: 60 },
@@ -365,7 +365,7 @@ describe("HybridPerformanceStrategy", () => {
   describe("breakdown", () => {
     it("should provide accurate breakdown for each component", () => {
       const snapshots = createLinearGrowthSnapshots(10, 50000, 55000, 30);
-      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 5)];
+      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 0.05)];
       const prices: PriceData = {
         gold: createPriceHistory(30, 60, 66),
       };
@@ -462,7 +462,7 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
   });
 
   it("should handle continuous with no price data", () => {
-    const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 5)];
+    const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 0.05)];
     const input: HybridPerformanceInput = {
       continuous: { holdings, prices: {} },
     };
@@ -483,8 +483,8 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
 
     // Large continuous holdings
     const holdings = [
-      createMetalHolding("gold-1", "gold", 10000, 10, 5),
-      createMetalHolding("silver-1", "silver", 100000, 1, 10),
+      createMetalHolding("gold-1", "gold", 10000, 10, 0.05),
+      createMetalHolding("silver-1", "silver", 100000, 1, 0.1),
     ];
     const prices: PriceData = {
       gold: createPriceHistory(30, 60, 66),
@@ -541,7 +541,7 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
     const snapshots = createLinearGrowthSnapshots(5, 10000, 10500, 15);
 
     // Prices for full 30 days
-    const holdings = [createMetalHolding("gold-1", "gold", 100, 1, 5)];
+    const holdings = [createMetalHolding("gold-1", "gold", 100, 1, 0.05)];
     const prices: PriceData = {
       gold: createPriceHistory(30, 60, 66),
     };

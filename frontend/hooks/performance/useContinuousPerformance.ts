@@ -29,11 +29,10 @@ import {
 } from "@/../services/finance/financeService";
 
 import { useMetalPricesRange } from "@/hooks/metals";
+import { TROY_OUNCE_GRAMS } from "@/convex/lib/priceCalculations";
 import type { MetalCurrency, MetalType } from "@/lib/types/metals";
 import type { MetalsCurrency, MetalsType } from "@/lib/types/metals-extended";
 
-// Troy ounce to grams conversion factor
-const TROY_OUNCE_TO_GRAMS = 31.1035;
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -195,7 +194,7 @@ export function useContinuousPerformance(
       assetType: item.metalType,
       quantity: item.quantity,
       fineWeightGrams: item.fineWeightGrams,
-      sellPremium: item.sellPremium ?? 0,
+      sellPremium: item.sellPremium ?? 0, // decimal, as stored
       purchaseDate: item.purchaseDate
         ? new Date(item.purchaseDate).getTime()
         : item._creationTime,
@@ -217,7 +216,7 @@ export function useContinuousPerformance(
 
     // Helper to convert price per ounce to price per gram
     const toPerGram = (pricePerOunce: number): number => {
-      return pricePerOunce / TROY_OUNCE_TO_GRAMS;
+      return pricePerOunce / TROY_OUNCE_GRAMS;
     };
 
     if (goldPrices.data) {

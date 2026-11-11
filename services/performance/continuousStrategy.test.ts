@@ -15,6 +15,10 @@ import type {
   PerformanceCalculationOptions,
 } from "./strategies/types";
 import type { HoldingData, PriceData, PricePoint } from "./types";
+import {
+  TROY_OUNCE_GRAMS,
+  valueVaultItem,
+} from "@/convex/lib/priceCalculations";
 
 // ═══════════════════════════════════════════════════════════════
 // Test Utilities
@@ -44,7 +48,7 @@ function createMetalHolding(
     assetType: metalType,
     quantity,
     fineWeightGrams,
-    sellPremium: options?.sellPremium ?? 5, // 5% default premium
+    sellPremium: options?.sellPremium ?? 0.05, // decimal, as stored: 0.05 = 5%
     purchaseDate,
     purchasePricePerUnit: options?.purchasePricePerUnit,
   };
@@ -135,7 +139,7 @@ describe("ContinuousPerformanceStrategy", () => {
     it("should calculate gold portfolio performance correctly", () => {
       // 1 gold bar: 1000g fine gold, 5% sell premium
       const holdings = [
-        createMetalHolding("gold-1", "gold", 1000, 1, { sellPremium: 5 }),
+        createMetalHolding("gold-1", "gold", 1000, 1, { sellPremium: 0.05 }),
       ];
 
       // Gold price: €60/g -> €66/g (10% increase)
@@ -162,8 +166,8 @@ describe("ContinuousPerformanceStrategy", () => {
 
     it("should calculate mixed metal portfolio correctly", () => {
       const holdings = [
-        createMetalHolding("gold-1", "gold", 500, 1, { sellPremium: 5 }),
-        createMetalHolding("silver-1", "silver", 10000, 1, { sellPremium: 10 }),
+        createMetalHolding("gold-1", "gold", 500, 1, { sellPremium: 0.05 }),
+        createMetalHolding("silver-1", "silver", 10000, 1, { sellPremium: 0.1 }),
       ];
 
       const prices = createPriceData({
@@ -185,8 +189,8 @@ describe("ContinuousPerformanceStrategy", () => {
 
     it("should handle multiple holdings of the same metal", () => {
       const holdings = [
-        createMetalHolding("gold-1", "gold", 500, 2, { sellPremium: 5 }),
-        createMetalHolding("gold-2", "gold", 1000, 1, { sellPremium: 3 }),
+        createMetalHolding("gold-1", "gold", 500, 2, { sellPremium: 0.05 }),
+        createMetalHolding("gold-2", "gold", 1000, 1, { sellPremium: 0.03 }),
       ];
 
       const prices = createPriceData({
@@ -207,7 +211,7 @@ describe("ContinuousPerformanceStrategy", () => {
 
     it("should handle negative performance (price decrease)", () => {
       const holdings = [
-        createMetalHolding("gold-1", "gold", 1000, 1, { sellPremium: 5 }),
+        createMetalHolding("gold-1", "gold", 1000, 1, { sellPremium: 0.05 }),
       ];
 
       // Gold price drops 10%
@@ -360,7 +364,7 @@ describe("ContinuousPerformanceStrategy", () => {
   describe("calculateContinuousPerformance convenience function", () => {
     it("should work correctly", () => {
       const holdings = [
-        createMetalHolding("gold-1", "gold", 1000, 1, { sellPremium: 5 }),
+        createMetalHolding("gold-1", "gold", 1000, 1, { sellPremium: 0.05 }),
       ];
       const prices = createPriceData({
         gold: { startPrice: 60, endPrice: 66 },
@@ -393,7 +397,7 @@ describe("ContinuousPerformanceStrategy - Metal Value Calculation", () => {
   it("should apply sell premium correctly", () => {
     // 100g gold at €60/g with 10% premium
     const holdings = [
-      createMetalHolding("gold-1", "gold", 100, 1, { sellPremium: 10 }),
+      createMetalHolding("gold-1", "gold", 100, 1, { sellPremium: 0.1 }),
     ];
 
     // Flat price (no change)
@@ -438,7 +442,7 @@ describe("ContinuousPerformanceStrategy - Metal Value Calculation", () => {
   it("should handle quantity > 1", () => {
     // 5 gold coins, each 31.1g (1 oz)
     const holdings = [
-      createMetalHolding("gold-1", "gold", 31.1, 5, { sellPremium: 5 }),
+      createMetalHolding("gold-1", "gold", 31.1, 5, { sellPremium: 0.05 }),
     ];
 
     const prices: PriceData = {
@@ -560,5 +564,43 @@ describe("ContinuousPerformanceStrategy - Edge Cases", () => {
     // Should interpolate between the two points
     expect(result.metrics.dataPointCount).toBeGreaterThan(2);
     expect(result.metrics.interpolatedPointCount).toBeGreaterThan(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Agreement with the canonical vault valuation (perf-calc-04 / M-C1 / PF-03)
+// ═══════════════════════════════════════════════════════════════
+
+describe("ContinuousPerformanceStrategy - agrees with valueVaultItem", () => {
+  it("values a holding exactly like the vault / net-worth valuation", () => {
+    const eurPerOunce = 3000;
+    const item = {
+      fineWeightGrams: TROY_OUNCE_GRAMS, // 1 oz fine
+      quantity: 2,
+      sellPremium: -0.03, // decimal, as stored on vault items
+    };
+    const now = Date.now();
+
+    const holdings = [
+      createMetalHolding("gold-1", "gold", item.fineWeightGrams, item.quantity, {
+        sellPremium: item.sellPremium,
+      }),
+    ];
+    const perGram = eurPerOunce / TROY_OUNCE_GRAMS;
+    const prices: PriceData = { gold: createPriceHistory(30, perGram, perGram, 24) };
+
+    const result = calculateContinuousPerformance(
+      { holdings, prices },
+      { timeRange: "Month", includeDataPoints: true },
+    );
+
+    const vault = valueVaultItem(
+      item,
+      { metalType: "gold", eurPerOunce, sourceTimestamp: now },
+      now,
+    );
+
+    expect(vault.value).toBeCloseTo(3000 * 0.97 * 2, 6);
+    expect(result.metrics.endValue).toBeCloseTo(vault.value, 6);
   });
 });

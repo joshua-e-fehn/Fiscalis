@@ -253,7 +253,7 @@ export interface HoldingData {
   quantity: number;
   /** For metals: fine weight in grams */
   fineWeightGrams?: number;
-  /** For metals: sell premium percentage */
+  /** For metals: sell premium as a decimal (-0.02 = 2% below spot), as stored on vault items */
   sellPremium?: number;
   /** Timestamp when acquired */
   purchaseDate: number;

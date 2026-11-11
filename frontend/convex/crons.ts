@@ -39,4 +39,15 @@ crons.interval(
   internal.actions.bitpanda.scheduledSyncAllAction,
 );
 
+// ═══════════════════════════════════════════════════════════════
+// Metal Spot Prices
+// Every 15 minutes: mirror latest spot prices so server-side net worth
+// (snapshots + public API) values vault items at market
+// ═══════════════════════════════════════════════════════════════
+crons.interval(
+  "refresh-metal-spot-prices",
+  { minutes: 15 },
+  internal.metalPrices.refreshSpotPrices,
+);
+
 export default crons;

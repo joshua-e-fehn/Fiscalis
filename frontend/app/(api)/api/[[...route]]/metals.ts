@@ -789,6 +789,11 @@ const app = new Hono()
         timestamp: p.timestamp.toISOString(),
       };
 
+      // Public route: let the CDN absorb repeated unauthenticated reads.
+      c.header(
+        "Cache-Control",
+        "public, s-maxage=60, stale-while-revalidate=300",
+      );
       return c.json(allPrices, 200);
     } catch (error) {
       console.error("Error fetching all metal prices:", error);

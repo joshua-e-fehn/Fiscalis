@@ -738,6 +738,25 @@ export default defineSchema({
 		.index("by_user_timestamp", ["userId", "timestamp"]),
 
 	// ═══════════════════════════════════════════════════════════════
+	// METAL SPOT PRICES
+	// ═══════════════════════════════════════════════════════════════
+	// Latest EUR spot price per troy ounce, one row per metal, mirrored from
+	// the SQL price store by convex/metalPrices.ts so server-side net worth
+	// (lib/netWorth.ts) can value vault items at market like the dashboard.
+
+	metalSpotPrices: defineTable({
+		metalType: v.union(
+			v.literal("gold"),
+			v.literal("silver"),
+			v.literal("platinum"),
+			v.literal("palladium"),
+		),
+		eurPerOunce: v.number(),
+		sourceTimestamp: v.number(), // When the price was observed upstream
+		fetchedAt: v.number(),
+	}).index("by_metal", ["metalType"]),
+
+	// ═══════════════════════════════════════════════════════════════
 	// API KEYS
 	// ═══════════════════════════════════════════════════════════════
 	// User-scoped keys for the public REST API (convex/http.ts).

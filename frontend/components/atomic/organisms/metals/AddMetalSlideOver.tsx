@@ -1,6 +1,13 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { customItemPremiums } from "@/convex/lib/metalPremiums";
+
+/** Parse a percent field ("2.5" → 0.025); empty/invalid → fallback (decimal). */
+function percentOrDefault(value: string, fallback: number): number {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n / 100 : fallback;
+}
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -72,8 +79,11 @@ export function AddMetalSlideOver({
   >("coin");
   const [customPurity, setCustomPurity] = useState("999");
   const [customWeight, setCustomWeight] = useState("");
-  const [customBuyPremium, setCustomBuyPremium] = useState("3"); // Default 3% buy premium
-  const [customSellPremium, setCustomSellPremium] = useState("-2"); // Default -2% sell premium
+  // Premium fields stay empty until the user types; empty = calibrated default
+  // for the chosen metal/category (convex/lib/metalPremiums.ts).
+  const [customBuyPremium, setCustomBuyPremium] = useState("");
+  const [customSellPremium, setCustomSellPremium] = useState("");
+  const customDefaults = customItemPremiums(customMetal, customCategory);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -138,8 +148,8 @@ export function AddMetalSlideOver({
     setCustomCategory("coin");
     setCustomPurity("999");
     setCustomWeight("");
-    setCustomBuyPremium("3");
-    setCustomSellPremium("-2");
+    setCustomBuyPremium("");
+    setCustomSellPremium("");
     setSearchQuery("");
   };
 
@@ -167,8 +177,8 @@ export function AddMetalSlideOver({
           purity: parseFloat(customPurity) || 999,
           weightGrams: parseFloat(customWeight) || 0,
           quantity: parseInt(quantity) || 1,
-          buyPremium: (parseFloat(customBuyPremium) || 3) / 100, // Convert % to decimal
-          sellPremium: (parseFloat(customSellPremium) || -2) / 100, // Convert % to decimal
+          buyPremium: percentOrDefault(customBuyPremium, customDefaults.buy),
+          sellPremium: percentOrDefault(customSellPremium, customDefaults.sell),
           purchasePricePerUnit: purchasePrice
             ? parseFloat(purchasePrice)
             : undefined,
@@ -304,10 +314,10 @@ export function AddMetalSlideOver({
                     (selectedItem.defaultBuyPremium ??
                       (selectedItem as any).defaultPremium ??
                       0.03) * 100
-                  ).toFixed(0)}
+                  ).toFixed(1)}
                   % / Sell{" "}
                   {(selectedItem.defaultSellPremium ?? 0) >= 0 ? "+" : ""}
-                  {((selectedItem.defaultSellPremium ?? 0) * 100).toFixed(0)}%
+                  {((selectedItem.defaultSellPremium ?? 0) * 100).toFixed(1)}%
                 </div>
               </div>
             )}
@@ -399,12 +409,12 @@ export function AddMetalSlideOver({
                     id="customBuyPremium"
                     type="number"
                     step="0.1"
-                    placeholder="3"
+                    placeholder={(customDefaults.buy * 100).toFixed(1)}
                     value={customBuyPremium}
                     onChange={(e) => setCustomBuyPremium(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Above spot when buying
+                    Above spot when buying. Empty = calibrated default
                   </p>
                 </div>
                 <div>
@@ -413,12 +423,12 @@ export function AddMetalSlideOver({
                     id="customSellPremium"
                     type="number"
                     step="0.1"
-                    placeholder="-2"
+                    placeholder={(customDefaults.sell * 100).toFixed(1)}
                     value={customSellPremium}
                     onChange={(e) => setCustomSellPremium(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Negative = below spot
+                    What a dealer pays you. Negative = below spot
                   </p>
                 </div>
               </div>

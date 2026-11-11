@@ -14,9 +14,7 @@ import { useQuery } from "convex/react";
 import { useAuth } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { useDiscretePerformance } from "./useDiscretePerformance";
-import { useContinuousPerformance } from "./useContinuousPerformance";
 import { getTimeRangeStartTimestamp } from "@/../services/finance/financeService";
-import type { MetalsCurrency } from "@/lib/types/metals-extended";
 
 // ═══════════════════════════════════════════════════════════════
 // Types (matching old PortfolioSummary interface)
@@ -97,128 +95,96 @@ export interface NetWorthYTDResult {
   ytdChangePercent: number | null;
   valueAtYearStart: number | null;
   currentValue: number | null;
+  /**
+   * First snapshot timestamp when there is no snapshot at or before Jan 1
+   * (YTD cannot be computed yet); null otherwise.
+   */
+  trackingSince: number | null;
   isLoading: boolean;
 }
 
 /**
- * Calculate YTD change in net worth (assets - liabilities)
+ * Calculate YTD change in net worth (assets - liabilities) from snapshots.
  *
- * Unlike usePortfolioYTD which tracks total assets performance,
- * this hook tracks the change in net worth including liabilities.
- *
- * For continuous data assets (like precious metals), if no snapshot exists
- * from before the year start, the hook calculates the value using historical
- * prices and the holdings that existed at that time.
+ * This is a plain change in value, not a return: savings and newly connected
+ * accounts raise it. It needs a snapshot at or before Jan 1 (UTC). Without
+ * one it returns null figures and `trackingSince` (the first snapshot), so
+ * the UI can say "not enough history" instead of showing a substitute such
+ * as a metals-only change under a net-worth label.
  *
  * @example
  * ```tsx
  * const { ytdChange, ytdChangePercent, isLoading } = useNetWorthYTD();
- *
- * // Display: "Net worth increased by €5,000 (+8.5%) this year"
  * ```
  */
 export function useNetWorthYTD(options?: {
   enabled?: boolean;
-  currency?: MetalsCurrency;
 }): NetWorthYTDResult {
-  const { enabled = true, currency = "eur" } = options ?? {};
+  const { enabled = true } = options ?? {};
 
-  // Fetch portfolio snapshots from Convex
+  // Jan 1 UTC of the current year: stable across renders, so the query
+  // subscription does not churn. The query adds the baseline snapshot at or
+  // before it, then every snapshot after it.
+  const ytdStart = getTimeRangeStartTimestamp("YTD");
   const rawSnapshots = useQuery(
     api.portfolioSnapshots.getSnapshots,
-    enabled ? { limit: 400 } : "skip", // ~1+ year of daily snapshots
+    enabled ? { since: ytdStart, limit: 400 } : "skip",
   );
 
-  // Fetch continuous performance data for metals (YTD)
-  // This gives us the value at year start for continuous assets
-  const continuousYTD = useContinuousPerformance({
-    timeRange: "YTD",
-    currency,
-    enabled,
-  });
+  const isLoading = rawSnapshots === undefined;
 
-  const snapshotsLoading = rawSnapshots === undefined;
-  const isLoading = snapshotsLoading || continuousYTD.isLoading;
-
-  const result = useMemo<NetWorthYTDResult>(() => {
-    // Get YTD start timestamp
-    const ytdStart = getTimeRangeStartTimestamp("YTD");
-
-    // Sort snapshots by timestamp
+  return useMemo<NetWorthYTDResult>(() => {
     const sorted = rawSnapshots
       ? [...rawSnapshots].sort((a, b) => a.timestamp - b.timestamp)
       : [];
 
-    // Find the snapshot closest to (but not after) the start of year
-    let snapshotValueAtYearStart: number | null = null;
+    // Last snapshot at or before the start of the year
+    let valueAtYearStart: number | null = null;
     for (const snap of sorted) {
-      if (snap.timestamp <= ytdStart) {
-        snapshotValueAtYearStart = snap.netWorth;
-      } else {
-        break;
-      }
+      if (snap.timestamp > ytdStart) break;
+      valueAtYearStart = snap.netWorth;
     }
 
-    // Get the most recent snapshot for current value (for discrete assets)
-    const latestSnapshot = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+    const latest = sorted.length > 0 ? sorted[sorted.length - 1] : null;
+    const currentValue = latest?.netWorth ?? null;
 
-    // CASE 1: We have a snapshot from before year start
-    // This is the ideal case - use snapshot data which includes everything
-    if (snapshotValueAtYearStart !== null) {
-      const currentValue = latestSnapshot?.netWorth ?? null;
-
-      if (currentValue !== null) {
-        const ytdChange = currentValue - snapshotValueAtYearStart;
-        const ytdChangePercent =
-          snapshotValueAtYearStart !== 0
-            ? (ytdChange / Math.abs(snapshotValueAtYearStart)) * 100
-            : null;
-
-        return {
-          ytdChange,
-          ytdChangePercent,
-          valueAtYearStart: snapshotValueAtYearStart,
-          currentValue,
-          isLoading,
-        };
-      }
+    // Only the baseline exists (no snapshot yet this year): nothing to
+    // compare, so say "No data for this year" rather than a 0.00% change.
+    if (latest !== null && latest.timestamp <= ytdStart) {
+      return {
+        ytdChange: null,
+        ytdChangePercent: null,
+        valueAtYearStart: null,
+        currentValue,
+        trackingSince: null,
+        isLoading,
+      };
     }
 
-    // CASE 2: No snapshot from before year start, but we have continuous data (metals)
-    // Calculate YTD for metals only - comparing start and end values from continuous data
-    // This ensures we're comparing apples to apples (metals to metals)
-    if (continuousYTD.metrics && continuousYTD.metrics.startValue !== null) {
-      const valueAtYearStart = continuousYTD.metrics.startValue;
-      const currentValue = continuousYTD.metrics.endValue;
-
-      if (currentValue !== null && currentValue > 0) {
-        const ytdChange = currentValue - valueAtYearStart;
-        const ytdChangePercent =
-          valueAtYearStart !== 0
-            ? (ytdChange / Math.abs(valueAtYearStart)) * 100
-            : null;
-
-        return {
-          ytdChange,
-          ytdChangePercent,
-          valueAtYearStart,
-          currentValue,
-          isLoading,
-        };
-      }
+    if (valueAtYearStart === null || currentValue === null) {
+      return {
+        ytdChange: null,
+        ytdChangePercent: null,
+        valueAtYearStart: null,
+        currentValue,
+        trackingSince: sorted.length > 0 ? sorted[0].timestamp : null,
+        isLoading,
+      };
     }
 
-    // CASE 3: No data available for YTD calculation
+    const ytdChange = currentValue - valueAtYearStart;
     return {
-      ytdChange: null,
-      ytdChangePercent: null,
-      valueAtYearStart: null,
-      currentValue: latestSnapshot?.netWorth ?? null,
+      ytdChange,
+      ytdChangePercent:
+        valueAtYearStart !== 0
+          ? (ytdChange / Math.abs(valueAtYearStart)) * 100
+          : null,
+      valueAtYearStart,
+      currentValue,
+      trackingSince: null,
       isLoading,
     };
-  }, [rawSnapshots, continuousYTD.metrics, isLoading]);
-
-  return result;
+  }, [rawSnapshots, ytdStart, isLoading]);
 }
 
 /**

@@ -585,3 +585,147 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
     expect(result.metrics.endValue).toBe(5000);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// Snapshots not aligned to the grid (perf-calc-02 / PF-01)
+// ═══════════════════════════════════════════════════════════════
+
+describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
+  const MS_PER_HOUR = 3_600_000;
+  // A fixed "now" mid-day, with daily snapshots stamped at 06:00 UTC, the
+  // way the cron writes them. No grid point (now - 30d + k days) lands on
+  // a snapshot to the millisecond.
+  const END = Date.parse("2026-11-11T15:37:12.345Z");
+  const day0 = Date.parse("2026-10-01T06:00:00.000Z");
+
+  function dailySnapshots(days: number): SnapshotData[] {
+    return Array.from({ length: days }, (_, i) => {
+      const timestamp = day0 + i * MS_PER_DAY;
+      return {
+        timestamp,
+        date: new Date(timestamp).toISOString().split("T")[0],
+        totalAssets: 1000 + i * 10,
+        totalLiabilities: 0,
+        netWorth: 1000 + i * 10,
+        totalCostBasis: 800,
+      };
+    });
+  }
+
+  const options: PerformanceCalculationOptions = {
+    timeRange: "Month",
+    endTimestamp: END,
+    includeDataPoints: true,
+  };
+
+  it("marks grid points with a snapshot within half an interval as 'snapshot'", () => {
+    const snapshots = dailySnapshots(42); // through 2026-11-11 06:00
+    const result = calculateDiscretePerformance({ snapshots }, options);
+
+    const snapshotPoints = result.dataPoints.filter(
+      (p) => p.source === "snapshot",
+    );
+    expect(snapshotPoints.length).toBeGreaterThan(0);
+    expect(snapshotPoints.length).toBe(result.dataPoints.length);
+    expect(result.metrics.interpolatedPointCount).toBe(0);
+    // The last point carries the latest real snapshot value.
+    expect(result.metrics.endValue).toBe(1000 + 41 * 10);
+  });
+
+  it("interpolates grid points with no snapshot nearby", () => {
+    // Only two snapshots 20 days apart: points in the middle are interpolated.
+    const snapshots = [dailySnapshots(42)[10], dailySnapshots(42)[30]];
+    const result = calculateDiscretePerformance({ snapshots }, options);
+
+    const snapshotPoints = result.dataPoints.filter(
+      (p) => p.source === "snapshot",
+    );
+    expect(snapshotPoints.length).toBeLessThanOrEqual(2);
+    expect(result.metrics.interpolatedPointCount).toBeGreaterThan(10);
+  });
+
+  it("reports the real snapshot timestamps, ascending, up to the range end", () => {
+    const snapshots = dailySnapshots(42).reverse();
+    const future = { ...snapshots[0], timestamp: END + MS_PER_HOUR };
+    const result = calculateDiscretePerformance(
+      { snapshots: [future, ...snapshots] },
+      options,
+    );
+
+    expect(result.actualSnapshotTimestamps).toEqual(
+      dailySnapshots(42).map((s) => s.timestamp),
+    );
+  });
+
+  it("anchors the range start to endTimestamp", () => {
+    const result = calculateDiscretePerformance(
+      { snapshots: dailySnapshots(42) },
+      options,
+    );
+    expect(result.metrics.startTimestamp).toBe(END - 30 * MS_PER_DAY);
+    expect(result.metrics.endTimestamp).toBe(END);
+  });
+
+  it("reports no snapshot timestamps for empty input", () => {
+    const result = calculateDiscretePerformance({ snapshots: [] }, options);
+    expect(result.actualSnapshotTimestamps).toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// No look-ahead when matching snapshots to the grid
+// ═══════════════════════════════════════════════════════════════
+
+describe("DiscretePerformanceStrategy - no look-ahead", () => {
+  const END = Date.parse("2026-11-11T15:37:12.345Z");
+  const options: PerformanceCalculationOptions = {
+    timeRange: "Month",
+    endTimestamp: END,
+    includeDataPoints: true,
+  };
+
+  // Daily snapshots at 20:00 UTC: for a 15:37 grid point the next snapshot
+  // (4.4h later) is nearer than the previous one (19.6h earlier).
+  const first = Date.parse("2026-10-01T20:00:00.000Z");
+  const snapshots: SnapshotData[] = Array.from({ length: 41 }, (_, i) => {
+    const timestamp = first + i * MS_PER_DAY; // last: 2026-11-10 20:00
+    return {
+      timestamp,
+      date: new Date(timestamp).toISOString().split("T")[0],
+      totalAssets: 1000 + i * 10,
+      totalLiabilities: 0,
+      netWorth: 1000 + i * 10,
+      totalCostBasis: 800,
+    };
+  });
+
+  it("uses the latest snapshot at or before each grid point, not a nearer later one", () => {
+    const result = calculateDiscretePerformance({ snapshots }, options);
+    const points = result.dataPoints;
+    expect(points.every((p) => p.source === "snapshot")).toBe(true);
+
+    const last = points[points.length - 1];
+    const previous = points[points.length - 2];
+    expect(last.timestamp).toBe(END);
+    expect(last.value).toBe(1000 + 40 * 10); // 2026-11-10 20:00
+    expect(previous.value).toBe(1000 + 39 * 10); // 2026-11-09 20:00, not 11-10
+  });
+
+  it("falls back to the following snapshot only where no earlier one exists", () => {
+    // History starts 2h after the first grid point.
+    const start = END - 30 * MS_PER_DAY;
+    const later = [
+      { ...snapshots[0], timestamp: start + 2 * 3_600_000, totalAssets: 500 },
+      { ...snapshots[1], timestamp: start + 26 * 3_600_000, totalAssets: 600 },
+    ];
+    const result = calculateDiscretePerformance(
+      { snapshots: later },
+      options,
+    );
+    expect(result.dataPoints[0].source).toBe("snapshot");
+    expect(result.dataPoints[0].value).toBe(500);
+    // The second grid point has an earlier snapshot (22h before): it uses it
+    // rather than the one 2h later.
+    expect(result.dataPoints[1].value).toBe(500);
+  });
+});

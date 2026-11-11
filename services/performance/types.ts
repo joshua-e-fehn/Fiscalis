@@ -172,6 +172,13 @@ export interface PerformanceResult {
   metrics: PerformanceMetrics;
   dataPoints: PerformanceDataPoint[];
   valueType: ValueType;
+  /**
+   * Discrete strategy only: timestamps of the real snapshots at or before the
+   * range end, ascending (including ones before the range start). Consumers
+   * use this instead of inferring "real" points from `source`, e.g. to find
+   * when tracking started.
+   */
+  actualSnapshotTimestamps?: number[];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -246,7 +253,7 @@ export interface HoldingData {
   quantity: number;
   /** For metals: fine weight in grams */
   fineWeightGrams?: number;
-  /** For metals: sell premium percentage */
+  /** For metals: sell premium as a decimal (-0.02 = 2% below spot), as stored on vault items */
   sellPremium?: number;
   /** Timestamp when acquired */
   purchaseDate: number;

@@ -127,6 +127,8 @@ function HeroKPICard({
 interface YTDNetWorthCardProps {
   ytdChange: number | null;
   ytdChangePercent: number | null;
+  /** First snapshot time when there is no snapshot at or before Jan 1 */
+  trackingSince: number | null;
   currency: InvestmentCurrency;
   isLoading?: boolean;
 }
@@ -134,6 +136,7 @@ interface YTDNetWorthCardProps {
 function YTDNetWorthCard({
   ytdChange,
   ytdChangePercent,
+  trackingSince,
   currency,
   isLoading = false,
 }: YTDNetWorthCardProps) {
@@ -176,7 +179,7 @@ function YTDNetWorthCard({
             </div>
             {ytdChangePercent !== null && (
               <p className="text-xs text-muted-foreground mt-1">
-                {formatPercent(ytdChangePercent)} since Jan 1
+                {formatPercent(ytdChangePercent)} change since Jan 1
               </p>
             )}
           </>
@@ -185,7 +188,13 @@ function YTDNetWorthCard({
             <div className="text-2xl font-bold flex items-center gap-1">
               <Minus className="h-4 w-4" />
             </div>
-            <p className="text-xs mt-1">No data for this year</p>
+            <p className="text-xs mt-1">
+              {trackingSince !== null
+                ? `Not enough history (tracking since ${new Date(
+                    trackingSince,
+                  ).toLocaleDateString("de-DE")})`
+                : "No data for this year"}
+            </p>
           </div>
         )}
       </CardContent>
@@ -201,6 +210,8 @@ interface NetWorthCardProps {
   netWorth: number;
   profitLoss: number | null;
   profitLossPercent: number | null;
+  /** Share of assets (0..1) the unrealised P/L is computed over */
+  profitLossCoverage: number | null;
   currency: InvestmentCurrency;
   isLoading?: boolean;
 }
@@ -209,10 +220,16 @@ function NetWorthCard({
   netWorth,
   profitLoss,
   profitLossPercent,
+  profitLossCoverage,
   currency,
   isLoading = false,
 }: NetWorthCardProps) {
   const isProfit = (profitLoss ?? 0) >= 0;
+  // Only call out coverage when part of the assets has no cost basis.
+  const coverageLabel =
+    profitLossCoverage !== null && profitLossCoverage < 0.995
+      ? ` on ${Math.round(profitLossCoverage * 100)}% of assets`
+      : "";
 
   return (
     <Card>
@@ -247,6 +264,7 @@ function NetWorthCard({
                 </span>
                 <span className="text-muted-foreground">
                   ({formatPercent(profitLossPercent)}) unrealized
+                  {coverageLabel}
                 </span>
               </div>
             )}
@@ -538,10 +556,9 @@ export default function DashboardPage() {
   const { summary, isLoading } = usePortfolioOverview(currency);
   const netWorthYTD = useNetWorthYTD();
 
-  // Get portfolio chart data combining discrete snapshots and continuous price data
+  // Portfolio chart: snapshot totals only, nothing before tracking started
   const portfolioChart = usePortfolioChartData({
     timeRange: "Year", // Default to 1 year view
-    currency: "eur",
     enabled: !isLoading,
   });
 
@@ -561,6 +578,7 @@ export default function DashboardPage() {
             netWorth={summary?.netWorth ?? 0}
             profitLoss={summary?.unrealizedProfitLoss ?? null}
             profitLossPercent={summary?.unrealizedProfitLossPercent ?? null}
+            profitLossCoverage={summary?.unrealizedProfitLossCoverage ?? null}
             currency={currency}
             isLoading={isLoading}
           />
@@ -590,6 +608,7 @@ export default function DashboardPage() {
         <YTDNetWorthCard
           ytdChange={netWorthYTD.ytdChange}
           ytdChangePercent={netWorthYTD.ytdChangePercent}
+          trackingSince={netWorthYTD.trackingSince}
           currency={currency}
           isLoading={netWorthYTD.isLoading}
         />

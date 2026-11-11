@@ -108,10 +108,13 @@ export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
 
 /**
  * Get the start timestamp for a given time range
+ * @param now - Reference time the range ends at (default: Date.now())
  * @returns Unix timestamp in milliseconds
  */
-export function getTimeRangeStartTimestamp(timeRange: TimeRange): number {
-  const now = Date.now();
+export function getTimeRangeStartTimestamp(
+  timeRange: TimeRange,
+  now: number = Date.now(),
+): number {
 
   switch (timeRange) {
     case "Hour":
@@ -133,7 +136,7 @@ export function getTimeRangeStartTimestamp(timeRange: TimeRange): number {
     case "5Year":
       return now - MS_PER_5_YEARS;
     case "YTD": {
-      const currentYear = new Date().getUTCFullYear();
+      const currentYear = new Date(now).getUTCFullYear();
       return new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0)).getTime();
     }
     case "ALL":

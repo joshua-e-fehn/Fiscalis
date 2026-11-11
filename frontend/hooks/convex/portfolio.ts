@@ -24,6 +24,10 @@ import { useCashSummary } from "./cash";
 import { useCollectiblesSummary } from "./collectibles";
 import { useLiabilitiesSummary } from "./liabilities";
 import {
+  summarizeUnrealizedProfitLoss,
+  sumCostCoveredValue,
+} from "@/../services/portfolio/unrealizedProfitLoss";
+import {
   Briefcase,
   Coins,
   Receipt,
@@ -46,6 +50,8 @@ export interface AssetCategoryData {
   color: string;
   totalValue: number;
   costBasis: number | null;
+  /** Value of the holdings costBasis covers, when only some carry one */
+  costCoveredValue?: number;
   profitLoss: number | null;
   profitLossPercent: number | null;
   holdingsCount: number;
@@ -72,10 +78,12 @@ export interface PortfolioSummary {
   totalLiabilities: number;
   netWorth: number;
 
-  // Overall performance
+  // Overall performance, over cost-bearing categories only
   totalCostBasis: number | null;
   unrealizedProfitLoss: number | null;
   unrealizedProfitLossPercent: number | null;
+  /** Share of total assets (0..1) that the unrealised P/L covers */
+  unrealizedProfitLossCoverage: number | null;
 
   // YTD performance
   ytdProfitLoss: number | null;
@@ -120,6 +128,37 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
   const { summary: liabilitiesSummary, isLoading: liabilitiesLoading } =
     useLiabilitiesSummary();
 
+  // Equities, bonds and real estate mix positions with and without a cost
+  // basis (e.g. Bitpanda stocks next to broker stocks). Their partial cost
+  // basis is compared only with the value it covers. These are the same
+  // queries the category hooks subscribe to, so the client shares them.
+  const equitiesData = useQuery(api.categories.getEquities);
+  const bondsData = useQuery(api.categories.getBonds);
+  const realEstateData = useQuery(api.categories.getRealEstate);
+  const costCoveredValues = useMemo(() => {
+    const covered = (
+      positions:
+        | {
+            valueInBaseCurrency?: number;
+            marketValue?: number;
+            totalCostBasis?: number;
+          }[]
+        | undefined,
+    ): number | undefined =>
+      positions &&
+      sumCostCoveredValue(
+        positions.map((p) => ({
+          value: p.valueInBaseCurrency ?? p.marketValue ?? 0,
+          costBasis: p.totalCostBasis,
+        })),
+      );
+    return {
+      equities: covered(equitiesData?.positions),
+      bonds: covered(bondsData?.positions),
+      realEstate: covered(realEstateData?.positions),
+    };
+  }, [equitiesData, bondsData, realEstateData]);
+
   // Fetch portfolio snapshots for historical performance
   const portfolioSnapshots = useQuery(api.portfolioSnapshots.getSnapshots, {
     limit: 365,
@@ -152,6 +191,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors.equities,
       totalValue: equitiesSummary?.totalValue ?? 0,
       costBasis: equitiesSummary?.totalCost ?? null,
+      costCoveredValue: costCoveredValues.equities,
       profitLoss: equitiesSummary?.profitLoss ?? null,
       profitLossPercent: equitiesSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -192,6 +232,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors.bonds,
       totalValue: bondsSummary?.totalValue ?? 0,
       costBasis: bondsSummary?.totalCost ?? null,
+      costCoveredValue: costCoveredValues.bonds,
       profitLoss: bondsSummary?.profitLoss ?? null,
       profitLossPercent: bondsSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -212,6 +253,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       color: categoryPrimaryColors["real-estate"],
       totalValue: realEstateSummary?.totalValue ?? 0,
       costBasis: realEstateSummary?.totalCost ?? null,
+      costCoveredValue: costCoveredValues.realEstate,
       profitLoss: realEstateSummary?.profitLoss ?? null,
       profitLossPercent: realEstateSummary?.profitLossPercent ?? null,
       holdingsCount:
@@ -289,24 +331,19 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       0,
     );
 
-    // Calculate total cost basis (only if all have cost basis, otherwise null)
-    const categoriesWithCost = assetCategories.filter(
-      (cat) => cat.costBasis !== null && cat.totalValue > 0,
+    // Unrealised P/L over cost-bearing categories only (value and cost of
+    // the same holdings); cash and other cost-less assets are not profit.
+    const unrealized = summarizeUnrealizedProfitLoss(
+      assetCategories.map((cat) => ({
+        value: cat.totalValue,
+        costBasis: cat.costBasis,
+        coveredValue: cat.costCoveredValue,
+      })),
     );
-    const totalCostBasis =
-      categoriesWithCost.length > 0
-        ? categoriesWithCost.reduce((sum, cat) => sum + (cat.costBasis ?? 0), 0)
-        : null;
-
-    // Calculate unrealized P/L
-    const unrealizedProfitLoss =
-      totalCostBasis !== null ? totalAssets - totalCostBasis : null;
-    const unrealizedProfitLossPercent =
-      unrealizedProfitLoss !== null &&
-      totalCostBasis !== null &&
-      totalCostBasis > 0
-        ? (unrealizedProfitLoss / totalCostBasis) * 100
-        : null;
+    const totalCostBasis = unrealized.costBasis;
+    const unrealizedProfitLoss = unrealized.profitLoss;
+    const unrealizedProfitLossPercent = unrealized.profitLossPercent;
+    const unrealizedProfitLossCoverage = unrealized.coverage;
 
     // Liabilities summary from classified Plaid accounts + broker positions
     const totalLiabilities = liabilitiesSummary?.totalValue ?? 0;
@@ -383,6 +420,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       totalCostBasis,
       unrealizedProfitLoss,
       unrealizedProfitLossPercent,
+      unrealizedProfitLossCoverage,
       ytdProfitLoss,
       ytdProfitLossPercent,
       assetCategories,
@@ -400,6 +438,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
     collectiblesSummary,
     liabilitiesSummary,
     portfolioSnapshots,
+    costCoveredValues,
   ]);
 
   return { summary, isLoading };

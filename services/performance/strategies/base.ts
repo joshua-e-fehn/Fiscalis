@@ -72,6 +72,9 @@ export abstract class BasePerformanceStrategy<
       dataPoints: options.includeDataPoints ? generationResult.dataPoints : [],
       valueType:
         this.strategyType === "hybrid" ? "discrete" : this.strategyType,
+      ...(generationResult.actualSnapshotTimestamps && {
+        actualSnapshotTimestamps: generationResult.actualSnapshotTimestamps,
+      }),
     };
   }
 
@@ -115,7 +118,9 @@ export abstract class BasePerformanceStrategy<
     const { timeRange, interval, endTimestamp } = options;
 
     const end = endTimestamp ?? Date.now();
-    const start = getTimeRangeStartTimestamp(timeRange);
+    // Anchor the range to `end`, so callers (and the hybrid strategy's
+    // sub-strategies) that share an end timestamp share the same grid.
+    const start = getTimeRangeStartTimestamp(timeRange, end);
     const actualInterval = interval ?? getDefaultIntervalForRange(timeRange);
     const intervalMs = getTimeIntervalInMilliseconds(actualInterval);
 

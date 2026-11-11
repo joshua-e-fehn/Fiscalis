@@ -300,19 +300,21 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
   /**
    * Calculate precious metal value with sell premium
    *
-   * Formula:
+   * Formula (same as calculateSellPrice / valueVaultItem in
+   * frontend/convex/lib/priceCalculations.ts, per gram instead of per oz):
    * - Spot value = spotPrice (per gram) × fineWeightGrams × quantity
-   * - Sell value = spotValue × (1 + sellPremium/100)
+   * - Sell value = spotValue × (1 + sellPremium)
+   *
+   * `sellPremium` is a decimal, as stored on vault items (-0.02 = 2% below spot).
    */
   private calculateMetalValue(
     spotPricePerGram: number,
     fineWeightGrams: number,
-    sellPremiumPercent: number,
+    sellPremium: number,
     quantity: number,
   ): number {
     const spotValue = spotPricePerGram * fineWeightGrams * quantity;
-    const sellValue = spotValue * (1 + sellPremiumPercent / 100);
-    return sellValue;
+    return spotValue * (1 + sellPremium);
   }
 }
 

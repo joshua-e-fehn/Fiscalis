@@ -8,6 +8,7 @@
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { getTimeRangeStartTimestamp } from "@/../services/finance/financeService";
 
 import type {
   TimeRange,
@@ -41,6 +42,8 @@ export interface UseDiscretePerformanceResult {
   metrics: PerformanceMetrics | null;
   /** Data points for charting (if includeDataPoints=true) */
   dataPoints: PerformanceDataPoint[];
+  /** Timestamps of the real snapshots behind the series, ascending */
+  actualSnapshotTimestamps: number[];
   /** Loading state */
   isLoading: boolean;
   /** Error state */
@@ -85,10 +88,24 @@ export function useDiscretePerformance(
     enabled = true,
   } = options;
 
-  // Fetch portfolio snapshots from Convex
+  // Range start, fixed per range so the query subscription does not churn.
+  // The query adds the baseline snapshot at or before it, so the range start
+  // value never depends on how many snapshots fit under the limit. "ALL"
+  // fetches without a start.
+  const since = useMemo(
+    () =>
+      timeRange === "ALL" ? undefined : getTimeRangeStartTimestamp(timeRange),
+    [timeRange],
+  );
+
+  // Fetch portfolio snapshots from Convex (limit is only a guard)
   const rawSnapshots = useQuery(
     api.portfolioSnapshots.getSnapshots,
-    enabled ? { limit: 730 } : "skip", // ~2 years of daily snapshots
+    enabled
+      ? since === undefined
+        ? { limit: 730 }
+        : { since, limit: 730 }
+      : "skip",
   );
 
   const isLoading = rawSnapshots === undefined;
@@ -118,6 +135,7 @@ export function useDiscretePerformance(
       return {
         metrics: null,
         dataPoints: [],
+        actualSnapshotTimestamps: [],
       };
     }
 
@@ -136,12 +154,15 @@ export function useDiscretePerformance(
       return {
         metrics: performanceResult.metrics,
         dataPoints: performanceResult.dataPoints,
+        actualSnapshotTimestamps:
+          performanceResult.actualSnapshotTimestamps ?? [],
       };
     } catch (err) {
       console.error("Discrete performance calculation error:", err);
       return {
         metrics: null,
         dataPoints: [],
+        actualSnapshotTimestamps: [],
       };
     }
   }, [snapshots, timeRange, categoryFilter, includeDataPoints]);
@@ -149,6 +170,7 @@ export function useDiscretePerformance(
   return {
     metrics: result.metrics,
     dataPoints: result.dataPoints,
+    actualSnapshotTimestamps: result.actualSnapshotTimestamps,
     isLoading,
     error: null,
     snapshots,

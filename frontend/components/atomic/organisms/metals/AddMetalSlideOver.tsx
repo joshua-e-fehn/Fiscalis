@@ -39,6 +39,7 @@ import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { MetalBadge, MetalIcon } from "@/components/atomic/atoms/metals";
 import { MetalsType, MetalsCurrency } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
+import { todayLocalISO } from "@/lib/utils/date";
 import { Search, Loader2, Package, Plus } from "lucide-react";
 
 interface AddMetalSlideOverProps {
@@ -495,7 +496,7 @@ export function AddMetalSlideOver({
               id="purchaseDate"
               type="date"
               required
-              max={new Date().toISOString().split("T")[0]}
+              max={todayLocalISO()}
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
             />

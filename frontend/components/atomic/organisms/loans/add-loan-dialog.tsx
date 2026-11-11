@@ -59,12 +59,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/utils/date";
-import { calculateAnnuityPayment } from "@/../services/finance/financeService";
 import {
+  calculateLoanSchedule,
   getDueDate,
+  getPaymentsPerYear,
+  initialScheduledPayment,
   settleLoanBalance,
   splitLoanPayment,
 } from "@/../services/finance/loanScheduleService";
+import { roundMoney } from "@/../services/finance/financeService";
 
 interface AddLoanDialogProps {
   open: boolean;
@@ -176,30 +179,6 @@ function getFrequencyInfo(frequency: PaymentFrequency): PaymentFrequencyOption {
     PAYMENT_FREQUENCIES.find((f) => f.value === frequency) ||
     PAYMENT_FREQUENCIES[0]
   );
-}
-
-function calculatePayment(
-  principal: number,
-  annualRate: number,
-  termPeriods: number,
-  periodsPerYear: number,
-  loanType: LoanType,
-): number {
-  if (principal <= 0 || termPeriods <= 0) return 0;
-
-  const periodicRate = annualRate / periodsPerYear;
-
-  if (loanType === "BULLET") {
-    return principal * periodicRate;
-  }
-
-  if (loanType === "CONSTANT_PRINCIPAL") {
-    const principalPayment = principal / termPeriods;
-    const interestPayment = principal * periodicRate;
-    return principalPayment + interestPayment;
-  }
-
-  return calculateAnnuityPayment(principal, periodicRate, termPeriods);
 }
 
 // Due dates up to and including today, and the first one after it
@@ -361,27 +340,38 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     return Math.round(periods * (12 / frequencyInfo.periodsPerYear));
   }, [termPeriods, frequencyInfo]);
 
-  const calculatedPayment = useMemo(() => {
-    // Always use original principal - the payment was set at loan origination
-    // Current balance is just tracking progress, not recalculating payments
-    const principal = parseFloat(originalPrincipal) || 0;
-    const rate = parseFloat(annualInterestRate) / 100 || 0;
-    const periods = parseInt(termPeriods) || 0;
-
-    return calculatePayment(
-      principal,
-      rate,
-      periods,
-      frequencyInfo.periodsPerYear,
+  const loanTerms = useMemo(
+    () => ({
       loanType,
-    );
-  }, [
-    originalPrincipal,
-    annualInterestRate,
-    termPeriods,
-    frequencyInfo,
-    loanType,
-  ]);
+      // The payment is set at origination from the original principal;
+      // the current balance only tracks progress
+      originalPrincipal: parseFloat(originalPrincipal) || 0,
+      annualInterestRate: parseFloat(annualInterestRate) / 100 || 0,
+      termMonths,
+      paymentFrequency,
+      gracePeriods: gracePeriods ? parseInt(gracePeriods) : undefined,
+    }),
+    [
+      loanType,
+      originalPrincipal,
+      annualInterestRate,
+      termMonths,
+      paymentFrequency,
+      gracePeriods,
+    ],
+  );
+
+  // Same rule as createLoan: for INTEREST_ONLY_THEN the post-grace payment
+  const calculatedPayment = useMemo(
+    () => (termMonths > 0 ? initialScheduledPayment(loanTerms) : 0),
+    [loanTerms, termMonths],
+  );
+
+  // INTEREST_ONLY_THEN: what is paid during the grace periods
+  const interestOnlyPayment = roundMoney(
+    (loanTerms.originalPrincipal * loanTerms.annualInterestRate) /
+      getPaymentsPerYear(paymentFrequency),
+  );
 
   const missedPaymentsInfo = useMemo(() => {
     return calculateMissedPayments(startDate, paymentFrequency);
@@ -397,27 +387,46 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     return missedPaymentsInfo.nextDueDate;
   }, [startDate, missedPaymentsInfo]);
 
-  // Generate past payment slots based on missed payments
+  // Pre-fill each past due date with the amount the schedule expected then
+  // (interest only during grace, declining for CONSTANT_PRINCIPAL, …)
   useEffect(() => {
     if (!startDate || missedPaymentsInfo.count === 0) {
       setPastPayments([]);
       return;
     }
 
-    // Calculate due dates for each missed payment
-    const payments: PastPayment[] = [];
+    const { schedule } = calculateLoanSchedule({
+      loanType,
+      principal: loanTerms.originalPrincipal,
+      annualInterestRate: loanTerms.annualInterestRate,
+      termPeriods: Math.round((termMonths * frequencyInfo.periodsPerYear) / 12),
+      paymentFrequency,
+      startDate,
+      gracePeriods: loanTerms.gracePeriods,
+      fixedPayment: effectivePayment || undefined,
+    });
 
+    const payments: PastPayment[] = [];
     for (let i = 0; i < missedPaymentsInfo.count; i++) {
       payments.push({
         id: `past-${i}`,
         dueDate: getDueDate({ startDate, paymentFrequency }, i + 1),
-        amount: effectivePayment.toFixed(2),
+        amount: (schedule[i]?.scheduledPayment ?? 0).toFixed(2),
         paid: true, // Default to paid
       });
     }
 
     setPastPayments(payments);
-  }, [startDate, missedPaymentsInfo.count, paymentFrequency, effectivePayment]);
+  }, [
+    startDate,
+    missedPaymentsInfo.count,
+    paymentFrequency,
+    effectivePayment,
+    loanType,
+    loanTerms,
+    termMonths,
+    frequencyInfo,
+  ]);
 
   // Check if all past payments are confirmed
   const pastPaymentsConfirmed = useMemo(() => {
@@ -479,7 +488,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
           const amount = parseFloat(payment.amount);
           const split = splitLoanPayment(
             {
-              currentBalance: runningBalance,
+              balance: runningBalance,
               annualInterestRate: rate,
               paymentFrequency,
             },
@@ -492,8 +501,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
           return {
             paymentDate: payment.dueDate,
             scheduledDate: payment.dueDate,
-            amount,
-            ...split,
+            amount: split.amount,
+            principalPortion: split.principalPortion,
+            interestPortion: split.interestPortion,
           };
         });
       // Blank "Current Balance" = what is left after the confirmed past payments
@@ -557,7 +567,11 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   const isStep2Valid =
     parseFloat(originalPrincipal) > 0 &&
     parseFloat(annualInterestRate) >= 0 &&
-    parseInt(termPeriods) > 0;
+    parseInt(termPeriods) > 0 &&
+    // INTEREST_ONLY_THEN needs its interest-only periods, within the term
+    (loanType !== "INTEREST_ONLY_THEN" ||
+      (parseInt(gracePeriods) >= 1 &&
+        parseInt(gracePeriods) < parseInt(termPeriods)));
   const isStep3Valid =
     startDate && (missedPaymentsInfo.count === 0 || pastPaymentsConfirmed);
   const isStep4Valid = true;
@@ -883,7 +897,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
               {loanType === "INTEREST_ONLY_THEN" && (
                 <div>
-                  <Label htmlFor="gracePeriods">Interest-Only Periods</Label>
+                  <Label htmlFor="gracePeriods">Interest-Only Periods *</Label>
                   <Input
                     id="gracePeriods"
                     type="number"
@@ -930,6 +944,13 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           per{" "}
                           {frequencyInfo.label.toLowerCase().replace("ly", "")}
                         </p>
+                        {loanType === "INTEREST_ONLY_THEN" && (
+                          <p className="text-xs text-muted-foreground">
+                            after {formatCurrency(interestOnlyPayment, currency)}{" "}
+                            interest-only for the first {gracePeriods || 0}{" "}
+                            {frequencyInfo.termLabel}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Switch

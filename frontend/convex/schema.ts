@@ -1,5 +1,22 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import {
+	LOAN_PAYMENT_FREQUENCIES,
+	LOAN_PAYMENT_TYPES,
+	LOAN_STATUSES,
+	LOAN_TYPES,
+	PREPAYMENT_EFFECTS,
+} from "../../services/finance/loanScheduleService";
+
+// Loan enums are declared once in the loan engine; these validators derive
+// from the same const arrays
+const oneOf = <T extends string>(values: readonly T[]) =>
+	v.union(...values.map((value) => v.literal(value)));
+export const loanTypeValidator = oneOf(LOAN_TYPES);
+export const loanPaymentFrequencyValidator = oneOf(LOAN_PAYMENT_FREQUENCIES);
+export const loanStatusValidator = oneOf(LOAN_STATUSES);
+export const loanPaymentTypeValidator = oneOf(LOAN_PAYMENT_TYPES);
+export const prepaymentEffectValidator = oneOf(PREPAYMENT_EFFECTS);
 
 export default defineSchema({
 	// ═══════════════════════════════════════════════════════════════
@@ -268,12 +285,7 @@ export default defineSchema({
 
 		// Basic Loan Information
 		name: v.string(), // User-friendly name (e.g., "Home Mortgage", "Car Loan")
-		loanType: v.union(
-			v.literal("ANNUITY"),
-			v.literal("CONSTANT_PRINCIPAL"),
-			v.literal("BULLET"),
-			v.literal("INTEREST_ONLY_THEN"),
-		),
+		loanType: loanTypeValidator,
 
 		// Financial Details
 		originalPrincipal: v.number(), // Original loan amount
@@ -283,13 +295,8 @@ export default defineSchema({
 
 		// Term & Schedule
 		termMonths: v.number(), // Original loan term in months
-		paymentFrequency: v.union(
-			v.literal("MONTHLY"),
-			v.literal("QUARTERLY"),
-			v.literal("SEMI_ANNUAL"),
-			v.literal("ANNUAL"),
-		),
-		scheduledPayment: v.number(), // Regular payment amount
+		paymentFrequency: loanPaymentFrequencyValidator,
+		scheduledPayment: v.number(), // Regular payment amount (INTEREST_ONLY_THEN: the post-grace payment)
 
 		// Dates
 		startDate: v.string(), // Loan start date (ISO)
@@ -310,12 +317,7 @@ export default defineSchema({
 		collateral: v.optional(v.string()), // What secures the loan
 
 		// Status
-		status: v.union(
-			v.literal("active"),
-			v.literal("paid_off"),
-			v.literal("defaulted"),
-			v.literal("refinanced"),
-		),
+		status: loanStatusValidator,
 
 		// Notes
 		notes: v.optional(v.string()), // Contract-specific comments/notes
@@ -341,15 +343,10 @@ export default defineSchema({
 		interestPortion: v.number(), // Amount applied to interest
 		feesPortion: v.optional(v.number()), // Any fees included
 
-		// Payment Type
-		paymentType: v.union(
-			v.literal("scheduled"), // Regular scheduled payment
-			v.literal("additional_principal"), // Extra principal added to scheduled payment
-			v.literal("prepayment"), // One-time unscheduled prepayment
-			v.literal("final"), // Final payoff payment
-			v.literal("partial"), // Partial payment (less than scheduled)
-			v.literal("late"), // Late payment
-		),
+		// Payment Type: scheduled (regular), additional_principal (extra
+		// principal added to a payment), prepayment (one-time unscheduled),
+		// final (payoff), partial (less than scheduled), late
+		paymentType: loanPaymentTypeValidator,
 
 		// Balance Tracking
 		balanceAfterPayment: v.number(), // Remaining balance after this payment

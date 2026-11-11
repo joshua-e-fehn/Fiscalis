@@ -75,19 +75,24 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import {
+  addMonthsToISODate,
   calculateLoanSchedule,
-  LoanPaymentInterval,
-  LoanSummary,
-  AmortizationRow,
-  Prepayment,
-  LoanType,
-} from "@/../services/finance/financeService";
+  getPaymentsPerYear,
+  type AmortizationRow,
+  type DatedPrepayment,
+  type LoanPaymentFrequency,
+  type LoanSummary,
+  type LoanType,
+} from "@/../services/finance/loanScheduleService";
+import { todayLocalISO } from "@/lib/utils/date";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type ExtendedPaymentInterval = LoanPaymentInterval | "week" | "biweekly";
+// Weekly / bi-weekly schedules aren't offered: the loan engine works in
+// calendar months, like the loans users actually track
+type PaymentInterval = LoanPaymentFrequency;
 
 interface OneTimeExtraPayment {
   id: string;
@@ -124,60 +129,42 @@ function formatCurrencyPrecise(value: number): string {
   }).format(value);
 }
 
-function getPeriodsPerYear(interval: ExtendedPaymentInterval): number {
-  switch (interval) {
-    case "week":
-      return 52;
-    case "biweekly":
-      return 26;
-    case "month":
-      return 12;
-    case "quarter":
-      return 4;
-    case "year":
-      return 1;
-  }
+const PAYMENT_INTERVALS: Record<
+  PaymentInterval,
+  { label: string; payment: string; period: string }
+> = {
+  MONTHLY: { label: "Monthly", payment: "Monthly Payment", period: "month" },
+  QUARTERLY: {
+    label: "Quarterly",
+    payment: "Quarterly Payment",
+    period: "quarter",
+  },
+  SEMI_ANNUAL: {
+    label: "Semi-annual",
+    payment: "Semi-annual Payment",
+    period: "half-year",
+  },
+  ANNUAL: { label: "Yearly", payment: "Yearly Payment", period: "year" },
+};
+
+function getIntervalLabel(interval: PaymentInterval): string {
+  return PAYMENT_INTERVALS[interval].label;
 }
 
-function getIntervalLabel(interval: ExtendedPaymentInterval): string {
-  switch (interval) {
-    case "week":
-      return "Weekly";
-    case "biweekly":
-      return "Bi-weekly";
-    case "month":
-      return "Monthly";
-    case "quarter":
-      return "Quarterly";
-    case "year":
-      return "Yearly";
-  }
+function getPaymentLabel(interval: PaymentInterval): string {
+  return PAYMENT_INTERVALS[interval].payment;
 }
 
-function getPaymentLabel(interval: ExtendedPaymentInterval): string {
-  switch (interval) {
-    case "week":
-      return "Weekly Payment";
-    case "biweekly":
-      return "Bi-weekly Payment";
-    case "month":
-      return "Monthly Payment";
-    case "quarter":
-      return "Quarterly Payment";
-    case "year":
-      return "Yearly Payment";
-  }
-}
-
-// Convert extended interval to supported LoanPaymentInterval
-function toServiceInterval(
-  interval: ExtendedPaymentInterval,
-): LoanPaymentInterval {
-  // For weekly/biweekly, we'll use monthly and adjust the periods
-  if (interval === "week" || interval === "biweekly") {
-    return "month";
-  }
-  return interval;
+function PaymentIntervalOptions() {
+  return (
+    <>
+      {(Object.keys(PAYMENT_INTERVALS) as PaymentInterval[]).map((value) => (
+        <SelectItem key={value} value={value}>
+          {PAYMENT_INTERVALS[value].label}
+        </SelectItem>
+      ))}
+    </>
+  );
 }
 
 function generateId(): string {
@@ -528,7 +515,7 @@ function ExtraPaymentsSection({
   setConfig: (config: ExtraPaymentConfig) => void;
   termYears: number;
   principal: number;
-  paymentInterval: ExtendedPaymentInterval;
+  paymentInterval: PaymentInterval;
 }) {
   const addOneTimePayment = () => {
     setConfig({
@@ -608,8 +595,7 @@ function ExtraPaymentsSection({
                 />
               </div>
               <span className="text-sm text-muted-foreground whitespace-nowrap">
-                per{" "}
-                {paymentInterval === "biweekly" ? "bi-week" : paymentInterval}
+                per {PAYMENT_INTERVALS[paymentInterval].period}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -733,7 +719,7 @@ function ResultsSummary({
   result: LoanSummary;
   resultWithoutExtra?: LoanSummary;
   principal: number;
-  paymentInterval: ExtendedPaymentInterval;
+  paymentInterval: PaymentInterval;
   additionalStats?: { label: string; value: string; color?: string }[];
 }) {
   const hasExtraPayments =
@@ -836,9 +822,9 @@ function PaymentBreakdownChart({
   paymentInterval,
 }: {
   schedule: AmortizationRow[];
-  paymentInterval: ExtendedPaymentInterval;
+  paymentInterval: PaymentInterval;
 }) {
-  const periodsPerYear = getPeriodsPerYear(paymentInterval);
+  const periodsPerYear = getPaymentsPerYear(paymentInterval);
 
   const yearlyData = useMemo(() => {
     const years: {
@@ -987,10 +973,10 @@ function LoanTypeChartsCard({
 }: {
   title: string;
   schedule: AmortizationRow[];
-  paymentInterval: ExtendedPaymentInterval;
+  paymentInterval: PaymentInterval;
   color: "blue" | "green" | "amber" | "red";
 }) {
-  const periodsPerYear = getPeriodsPerYear(paymentInterval);
+  const periodsPerYear = getPaymentsPerYear(paymentInterval);
 
   const yearlyData = useMemo(() => {
     const years: {
@@ -1229,51 +1215,22 @@ function buildPrepayments(
   config: ExtraPaymentConfig,
   principal: number,
   termYears: number,
-  paymentInterval: ExtendedPaymentInterval,
-  startDate: Date,
-): Prepayment[] {
-  if (!config.enabled) return [];
+  startDate: string,
+): { prepayments: DatedPrepayment[]; extraPerPeriod: number } {
+  if (!config.enabled) return { prepayments: [], extraPerPeriod: 0 };
 
-  const payments: Prepayment[] = [];
-  const periodsPerYear = getPeriodsPerYear(paymentInterval);
-  const totalPeriods = termYears * periodsPerYear;
-
-  // Add recurring payments
-  if (config.recurringAmount > 0) {
-    for (let i = 1; i <= totalPeriods; i++) {
-      const paymentDate = new Date(startDate);
-      if (paymentInterval === "week") {
-        paymentDate.setDate(paymentDate.getDate() + i * 7);
-      } else if (paymentInterval === "biweekly") {
-        paymentDate.setDate(paymentDate.getDate() + i * 14);
-      } else if (paymentInterval === "month") {
-        paymentDate.setMonth(paymentDate.getMonth() + i);
-      } else if (paymentInterval === "quarter") {
-        paymentDate.setMonth(paymentDate.getMonth() + i * 3);
-      } else {
-        paymentDate.setFullYear(paymentDate.getFullYear() + i);
-      }
-      payments.push({ date: paymentDate, amount: config.recurringAmount });
-    }
-  }
-
-  // Add one-time payments (at the end of the specified year)
-  config.oneTimePayments.forEach((payment) => {
-    if (payment.amount > 0 && payment.year <= termYears) {
-      const paymentDate = new Date(startDate);
-      paymentDate.setFullYear(paymentDate.getFullYear() + payment.year);
-
-      // For percentage-based, we estimate based on initial principal
-      // (actual will be calculated during amortization)
-      const amount = payment.isPercentage
+  // One-time payments at the end of the specified year
+  const prepayments = config.oneTimePayments
+    .filter((payment) => payment.amount > 0 && payment.year <= termYears)
+    .map((payment) => ({
+      date: addMonthsToISODate(startDate, payment.year * 12),
+      // Percentages are of the initial principal
+      amount: payment.isPercentage
         ? (principal * payment.amount) / 100
-        : payment.amount;
+        : payment.amount,
+    }));
 
-      payments.push({ date: paymentDate, amount });
-    }
-  });
-
-  return payments;
+  return { prepayments, extraPerPeriod: Math.max(0, config.recurringAmount) };
 }
 
 // ============================================================================
@@ -1307,14 +1264,14 @@ function GenericLoanCalculator({
     principal: number;
     interestRate: number;
     gracePeriodYears: number;
-    paymentInterval: ExtendedPaymentInterval;
+    paymentInterval: PaymentInterval;
   }) => React.ReactNode;
   renderWarnings?: (props: {
     result: LoanSummary;
     principal: number;
     interestRate: number;
     gracePeriodYears: number;
-    paymentInterval: ExtendedPaymentInterval;
+    paymentInterval: PaymentInterval;
     termYears: number;
   }) => React.ReactNode;
 }) {
@@ -1322,7 +1279,7 @@ function GenericLoanCalculator({
   const [interestRate, setInterestRate] = useState(6.5);
   const [termYears, setTermYears] = useState(defaultTermYears);
   const [paymentInterval, setPaymentInterval] =
-    useState<ExtendedPaymentInterval>("month");
+    useState<PaymentInterval>("MONTHLY");
   const [gracePeriodYears, setGracePeriodYears] = useState(5);
   const [extraPaymentConfig, setExtraPaymentConfig] =
     useState<ExtraPaymentConfig>({
@@ -1335,30 +1292,19 @@ function GenericLoanCalculator({
     useState<LoanSummary | null>(null);
 
   function calculate() {
-    const periodsPerYear = getPeriodsPerYear(paymentInterval);
-    const termPeriods = termYears * periodsPerYear;
-    const serviceInterval = toServiceInterval(paymentInterval);
-    const startDate = new Date();
-
-    // For weekly/biweekly, we adjust the calculation approach
-    // by converting to equivalent monthly periods
-    let adjustedTermPeriods = termPeriods;
-    let adjustedGracePeriods = gracePeriodYears * periodsPerYear;
-
-    if (paymentInterval === "week" || paymentInterval === "biweekly") {
-      // Convert to monthly equivalent for the service
-      adjustedTermPeriods = termYears * 12;
-      adjustedGracePeriods = gracePeriodYears * 12;
-    }
+    const periodsPerYear = getPaymentsPerYear(paymentInterval);
+    const startDate = todayLocalISO();
 
     const baseInput = {
       loanType,
       principal,
       annualInterestRate: interestRate / 100,
-      termPeriods: adjustedTermPeriods,
-      paymentInterval: serviceInterval,
+      termPeriods: termYears * periodsPerYear,
+      paymentFrequency: paymentInterval,
       startDate,
-      ...(showGracePeriod && { gracePeriods: adjustedGracePeriods }),
+      ...(showGracePeriod && {
+        gracePeriods: gracePeriodYears * periodsPerYear,
+      }),
     };
 
     // Calculate without extra payments
@@ -1366,17 +1312,9 @@ function GenericLoanCalculator({
     setResultWithoutExtra(withoutExtra);
 
     // Calculate with extra payments
-    const prepayments = buildPrepayments(
-      extraPaymentConfig,
-      principal,
-      termYears,
-      paymentInterval,
-      startDate,
-    );
-
     const withExtra = calculateLoanSchedule({
       ...baseInput,
-      prepayments: prepayments.length > 0 ? prepayments : undefined,
+      ...buildPrepayments(extraPaymentConfig, principal, termYears, startDate),
     });
     setResult(withExtra);
   }
@@ -1439,7 +1377,7 @@ function GenericLoanCalculator({
               <Select
                 value={paymentInterval}
                 onValueChange={(v) =>
-                  setPaymentInterval(v as ExtendedPaymentInterval)
+                  setPaymentInterval(v as PaymentInterval)
                 }
               >
                 <SelectTrigger>
@@ -1447,11 +1385,7 @@ function GenericLoanCalculator({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="week">Weekly</SelectItem>
-                  <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                  <SelectItem value="month">Monthly</SelectItem>
-                  <SelectItem value="quarter">Quarterly</SelectItem>
-                  <SelectItem value="year">Yearly</SelectItem>
+                  <PaymentIntervalOptions />
                 </SelectContent>
               </Select>
             </div>
@@ -1603,7 +1537,7 @@ function InterestOnlyCalculator() {
         gracePeriodYears,
         paymentInterval,
       }) => {
-        const periodsPerYear = getPeriodsPerYear(paymentInterval);
+        const periodsPerYear = getPaymentsPerYear(paymentInterval);
         const interestOnlyPayment =
           (principal * (interestRate / 100)) / periodsPerYear;
         const afterGraceIndex = gracePeriodYears * periodsPerYear;
@@ -1670,7 +1604,7 @@ function LoanTypeComparison() {
   const [interestRate, setInterestRate] = useState(6.5);
   const [termYears, setTermYears] = useState(30);
   const [paymentInterval, setPaymentInterval] =
-    useState<ExtendedPaymentInterval>("month");
+    useState<PaymentInterval>("MONTHLY");
   const [results, setResults] = useState<{
     annuity: LoanSummary;
     constantPrincipal: LoanSummary;
@@ -1679,24 +1613,16 @@ function LoanTypeComparison() {
   } | null>(null);
 
   function calculateAll() {
-    const periodsPerYear = getPeriodsPerYear(paymentInterval);
-    const serviceInterval = toServiceInterval(paymentInterval);
-
-    let termPeriods = termYears * periodsPerYear;
-    let gracePeriods = 5 * periodsPerYear;
-
-    if (paymentInterval === "week" || paymentInterval === "biweekly") {
-      termPeriods = termYears * 12;
-      gracePeriods = 5 * 12;
-    }
+    const periodsPerYear = getPaymentsPerYear(paymentInterval);
 
     const baseInput = {
       principal,
       annualInterestRate: interestRate / 100,
-      termPeriods,
-      paymentInterval: serviceInterval,
-      startDate: new Date(),
+      termPeriods: termYears * periodsPerYear,
+      paymentFrequency: paymentInterval,
+      startDate: todayLocalISO(),
     };
+    const gracePeriods = 5 * periodsPerYear;
 
     setResults({
       annuity: calculateLoanSchedule({ ...baseInput, loanType: "ANNUITY" }),
@@ -1783,18 +1709,14 @@ function LoanTypeComparison() {
             <Select
               value={paymentInterval}
               onValueChange={(v) =>
-                setPaymentInterval(v as ExtendedPaymentInterval)
+                setPaymentInterval(v as PaymentInterval)
               }
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="week">Weekly</SelectItem>
-                <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                <SelectItem value="month">Monthly</SelectItem>
-                <SelectItem value="quarter">Quarterly</SelectItem>
-                <SelectItem value="year">Yearly</SelectItem>
+                <PaymentIntervalOptions />
               </SelectContent>
             </Select>
           </div>

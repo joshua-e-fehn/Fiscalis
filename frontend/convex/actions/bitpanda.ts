@@ -21,6 +21,7 @@ import {
   classifyBitpandaPosition,
   getClassificationFields,
 } from "../lib/classification/engine";
+import { scheduledSyncEnabled } from "../lib/scheduledSync";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -366,6 +367,12 @@ export const syncTransactionsInternal = internalAction({
 export const scheduledSyncAllAction = internalAction({
   args: {},
   handler: async (ctx): Promise<{ count: number }> => {
+    if (!scheduledSyncEnabled()) {
+      console.log(
+        "[BITPANDA SCHEDULED SYNC] Skipped: SCHEDULED_SYNC_ENABLED is not true on this deployment",
+      );
+      return { count: 0 };
+    }
     const connections: Array<{ connectionId: string; userId: string }> =
       await ctx.runMutation(internal.bitpanda.scheduledSyncAll);
 

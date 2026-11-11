@@ -8,6 +8,7 @@ import {
   getDueDate,
   initialScheduledPayment,
   loanKpis,
+  projectOutstandingPayments,
   settleLoanBalance,
   splitLoanPayment,
   type ScheduleLoan,
@@ -647,5 +648,46 @@ describe("initialScheduledPayment", () => {
     expect(
       initialScheduledPayment({ ...terms, loanType: "INTEREST_ONLY_THEN" }),
     ).toBe(1142.59);
+  });
+});
+
+describe("projectOutstandingPayments", () => {
+  it("matches the scheduled tail when every past due date is recorded", () => {
+    const tail = buildLoanSchedule(realLoan, realPayments, "2026-11-11").filter(
+      (row) => row.status === "scheduled",
+    );
+    const projected = projectOutstandingPayments(
+      realLoan,
+      realPayments,
+      "2026-11-11",
+    );
+    expect(projected.map((r) => [r.date, r.closingBalance])).toEqual(
+      tail.map((r) => [r.date, r.closingBalance]),
+    );
+    expect(projected[0].period).toBe(1);
+  });
+
+  it("starts at the next due date when past instalments are unrecorded", () => {
+    // Two annual due dates (2025-11-01, 2026-11-01) passed, none recorded;
+    // currentBalance is today's debt, so neither may repay it again.
+    const projected = projectOutstandingPayments(realLoan, [], "2026-11-11");
+    expect(projected[0].date).toBe("2027-11-01");
+    expect(projected[0].openingBalance).toBe(7975);
+    expect(projected.every((r) => !r.overdue)).toBe(true);
+    expect(projected.at(-1)?.date).toBe("2034-11-01");
+    expect(projected.at(-1)?.closingBalance).toBe(0);
+  });
+
+  it("settles a balance left past the term on the next due date", () => {
+    const projected = projectOutstandingPayments(realLoan, [], "2036-03-01");
+    expect(projected).toHaveLength(1);
+    expect(projected[0].date).toBe("2036-11-01");
+    expect(projected[0].closingBalance).toBe(0);
+  });
+
+  it("is empty once the loan is paid off", () => {
+    expect(
+      projectOutstandingPayments({ ...realLoan, status: "paid_off" }, [], "2026-11-11"),
+    ).toEqual([]);
   });
 });

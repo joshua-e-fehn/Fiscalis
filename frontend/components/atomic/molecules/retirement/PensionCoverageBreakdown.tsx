@@ -6,7 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import type { RetirementResults } from "@/lib/types/retirement";
+import { formatYears, type RetirementResults } from "@/lib/types/retirement";
 import { formatCurrency } from "@/lib/utils/currency";
 
 interface Props {
@@ -44,7 +44,7 @@ export function PensionCoverageBreakdown({ results, className }: Props) {
 					<span className="font-medium text-foreground">
 						{formatCurrency(expense, "eur")}/mo
 					</span>{" "}
-					in {results.yearsToRetirement} years after inflation.
+					in {formatYears(results.yearsToRetirement)} after inflation.
 					{results.pensionTodayMonthly > 0 && (
 						<>
 							{" "}
@@ -52,7 +52,10 @@ export function PensionCoverageBreakdown({ results, className }: Props) {
 							<span className="font-medium text-foreground">
 								{formatCurrency(results.pensionTodayMonthly, "eur")}/mo
 							</span>{" "}
-							in today&apos;s money grow the same way, to{" "}
+							in today&apos;s money
+							{results.pensionDeductionsMonthly > 0 &&
+								` (after ${formatCurrency(results.pensionDeductionsMonthly, "eur")}/mo tax & health insurance)`}{" "}
+							come to{" "}
 							<span className="font-medium text-foreground">
 								{formatCurrency(results.pensionFutureMonthly, "eur")}/mo
 							</span>

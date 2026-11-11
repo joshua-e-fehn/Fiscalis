@@ -1164,6 +1164,59 @@ type ScheduleRowDraft = Omit<
 >;
 
 /**
+ * The payments still to come, amortised from today's outstanding balance.
+ *
+ * Unlike the projected tail of `buildLoanSchedule` (which, for the loan page,
+ * keeps unrecorded past due dates as overdue rows), every due date before
+ * `today` is treated as already reflected in `loan.currentBalance`, so the
+ * projection starts at the first due date on or after `today`. Use it when
+ * `currentBalance` is the up-to-date debt and past instalments must not be
+ * counted as future repayments (e.g. the balance left at a future date).
+ *
+ * @param today `YYYY-MM-DD`.
+ */
+export function projectOutstandingPayments(
+  loan: ScheduleLoan,
+  payments: SchedulePayment[],
+  today: string,
+): LoanScheduleRow[] {
+  if (isLoanPaidOff(loan)) return [];
+  const { coveredPeriods } = walkRecordedPayments(loan, payments);
+  let elapsed = coveredPeriods;
+  while (elapsed < MAX_PROJECTED_PERIODS && getDueDate(loan, elapsed + 1) < today) {
+    elapsed++;
+  }
+  const projection = amortize({
+    terms: loan,
+    annualInterestRate: loan.annualInterestRate,
+    fromPeriod: elapsed + 1,
+    openingBalance: loan.currentBalance,
+    annuityPayment: agreedAnnuityPayment(loan),
+    today,
+  });
+  let cumulativeInterest = 0;
+  let cumulativePrincipal = 0;
+  return projection.rows.map((row, index) => {
+    cumulativeInterest = roundMoney(cumulativeInterest + row.interest);
+    cumulativePrincipal = roundMoney(cumulativePrincipal + row.principal);
+    return {
+      date: row.dueDate,
+      dueDate: row.dueDate,
+      openingBalance: row.openingBalance,
+      payment: row.payment,
+      principal: row.principal,
+      interest: row.interest,
+      closingBalance: row.closingBalance,
+      status: "scheduled" as const,
+      overdue: row.overdue,
+      period: index + 1,
+      cumulativeInterest,
+      cumulativePrincipal,
+    };
+  });
+}
+
+/**
  * Full payment schedule: every recorded payment (oldest first) followed by
  * the projected payments still due.
  *

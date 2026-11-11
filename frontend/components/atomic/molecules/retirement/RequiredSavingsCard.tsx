@@ -67,6 +67,11 @@ export function RequiredSavingsCard({ results, className }: Props) {
 								accent="muted"
 							/>
 						</div>
+						<p className="text-xs text-muted-foreground">
+							{results.contributionsIndexed
+								? `First month's amount, rising with inflation — to ${monthly(results.optimistic.finalMonthlyContribution)} (expected) by retirement.`
+								: "A flat amount in nominal euros each month until retirement; inflation makes the later payments worth less."}
+						</p>
 						{results.hasNetDebt && (
 							<p className="text-xs text-muted-foreground">
 								These amounts start from €0 and don&apos;t include paying down
@@ -75,6 +80,17 @@ export function RequiredSavingsCard({ results, className }: Props) {
 						)}
 					</div>
 				)}
+				{results.residenceMortgage &&
+					results.residenceMortgage.monthlyPayment > 0 && (
+						<p className="mt-3 text-xs text-muted-foreground">
+							On top of this, your home mortgage repayments of{" "}
+							{formatCurrency(results.residenceMortgage.monthlyPayment, "eur")}
+							/mo continue from your income
+							{results.residenceMortgage.balanceAtRetirement > 0
+								? `; the ${formatCurrency(results.residenceMortgage.balanceAtRetirement, "eur")} still owed at retirement is part of your target.`
+								: " until the loan is repaid."}
+						</p>
+					)}
 			</CardContent>
 		</Card>
 	);

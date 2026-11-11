@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/shadcn/collapsible";
 import {
 	DEFAULT_WITHDRAWAL_RATE,
+	formatYears,
 	type RetirementAssumptions,
 	type RetirementResults,
 } from "@/lib/types/retirement";
@@ -100,8 +101,8 @@ export function FourPercentRuleExplainer({
 							retirement, we don&apos;t add inflation twice. Before retirement
 							we grow your expenses and pensions by{" "}
 							{inflation ? `${inflation} a year` : "the inflation rate"} and
-							grow your investments at the expected return — keeping
-							everything consistent.
+							grow each part of your portfolio at its own expected return —
+							keeping everything consistent.
 						</p>
 						{results && Number.isFinite(results.targetPortfolio) && (
 							<div className="rounded-lg border border-border bg-muted/30 p-3 text-foreground">
@@ -113,7 +114,7 @@ export function FourPercentRuleExplainer({
 											compact: true,
 										})}
 									</span>
-									. Adjusted for {results.yearsToRetirement} years of
+									. Adjusted for {formatYears(results.yearsToRetirement)} of
 									{inflation ? ` ${inflation}` : ""} inflation, the realistic
 									target is{" "}
 									<span className="font-medium">
@@ -121,8 +122,17 @@ export function FourPercentRuleExplainer({
 											compact: true,
 										})}
 									</span>
-									. Both use the same basis, so the difference is inflation
-									alone.
+									. The difference is inflation
+									{results.hasFixedPensions
+										? ", which your fixed-euro pensions don't keep up with"
+										: ""}
+									{results.residenceMortgage?.balanceAtRetirement
+										? ", plus the mortgage still owed when you retire"
+										: ""}
+									.
+									{results.withdrawalTaxRate > 0
+										? ` Both include ${formatRate(results.withdrawalTaxRate)} tax on withdrawals.`
+										: " Both are pre-tax: tax on withdrawals is not included."}
 								</p>
 							</div>
 						)}

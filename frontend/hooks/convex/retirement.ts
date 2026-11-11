@@ -2,11 +2,14 @@ import { useMutation, useQuery } from "convex/react";
 import { useMemo } from "react";
 import {
 	computeRetirementResults,
+	type RetirementFundingBase,
 	type RetirementInputs,
 	type RetirementResults,
+	residenceMortgageFromLoan,
 } from "@/../services/finance/retirementService";
 import { api } from "@/convex/_generated/api";
-import { getAgeFromBirthDate } from "@/lib/utils/date";
+import { getAgeFromBirthDate, todayLocalISO } from "@/lib/utils/date";
+import { useLoanPayments, useLoans } from "./loans";
 import { useUserSettings } from "./onboarding";
 import { usePortfolioOverview } from "./portfolio";
 
@@ -60,10 +63,16 @@ export function planToInputs(
 	return {
 		currentAge: currentAgeForPlan(plan, profileBirthDate),
 		retirementAge: plan.retirementAge,
+		birthDate: profileBirthDate ?? plan.birthDate,
 		monthlyExpensesToday: plan.monthlyExpensesToday,
 		ownsPrimaryResidence: plan.ownsPrimaryResidence,
+		primaryResidenceLoanId: plan.primaryResidenceLoanId,
 		fundableRealEstateEquity: plan.fundableRealEstateEquity ?? 0,
+		fundingTreatments: plan.fundingTreatments,
 		pensionSources: plan.pensionSources,
+		pensionDeductionRate: plan.pensionDeductionRate,
+		withdrawalTaxRate: plan.withdrawalTaxRate,
+		indexContributions: plan.indexContributions,
 		inflationRate: plan.inflationRate,
 		withdrawalRate: plan.withdrawalRate,
 		optimisticReturn: plan.optimisticReturn,
@@ -71,37 +80,48 @@ export function planToInputs(
 	};
 }
 
-/** The planner's funding basis: the same figures as the dashboard's net worth. */
-export interface RetirementNetWorth {
-	/** Dashboard net worth: totalAssets − totalLiabilities (EUR). */
-	netWorth: number;
-	totalAssets: number;
-	/**
-	 * Every loan tracked in Fiscalis (linked and manual), incl. a mortgage on the
-	 * primary residence: it stays subtracted although the home itself is
-	 * excluded, so the planner matches the dashboard.
-	 */
-	totalLiabilities: number;
+/** Loans that count as liabilities (D1): active or defaulted. */
+export function useRetirementMortgageCandidates() {
+	const loans = useLoans();
+	return useMemo(
+		() =>
+			loans?.filter((l) => l.status === "active" || l.status === "defaulted"),
+		[loans],
+	);
 }
 
 /**
- * Net worth used as the retirement funding basis: the dashboard's overview,
- * which is the server-side net worth (portfolio.getOverview, the same
- * aggregator as the snapshots), so the planner, the dashboard and the
- * history always agree: liabilities in EUR, loans by the D1 status rule.
- * Returns `undefined` while loading.
+ * The funding base for a plan: the dashboard's per-category assets and
+ * liabilities (usePortfolioOverview, so both always agree, incl. vault metals
+ * and manual loans), plus the linked primary-residence mortgage projected by
+ * its own schedule (recorded payments + loan type). Whether that mortgage is
+ * part of the liabilities is decided by residenceMortgageFromLoan, so a loan
+ * the liabilities don't count never removes other debts. Returns `undefined`
+ * while loading.
  */
-export function useRetirementNetWorth(): RetirementNetWorth | undefined {
+export function useRetirementFundingBase(
+	primaryResidenceLoanId: string | undefined,
+): RetirementFundingBase | undefined {
 	const { summary, isLoading } = usePortfolioOverview();
+	const loans = useRetirementMortgageCandidates();
+	const loan = primaryResidenceLoanId
+		? loans?.find((l) => l._id === primaryResidenceLoanId)
+		: undefined;
+	const payments = useLoanPayments(loan?._id);
 
 	return useMemo(() => {
-		if (isLoading || !summary) return undefined;
+		if (isLoading || !summary || loans === undefined) return undefined;
+		if (loan && payments === undefined) return undefined;
 		return {
-			netWorth: summary.netWorth,
-			totalAssets: summary.totalAssets,
+			assetsByCategory: Object.fromEntries(
+				summary.assetCategories.map((c) => [c.id, c.totalValue]),
+			),
 			totalLiabilities: summary.totalLiabilities,
+			primaryResidenceMortgage: loan
+				? residenceMortgageFromLoan(loan, payments ?? [], todayLocalISO())
+				: null,
 		};
-	}, [isLoading, summary]);
+	}, [isLoading, summary, loans, loan, payments]);
 }
 
 /**
@@ -114,31 +134,35 @@ export function useRetirementNetWorth(): RetirementNetWorth | undefined {
 export function useRetirementResults(): RetirementResults | null | undefined {
 	const plan = useRetirementPlan();
 	const settings = useUserSettings();
-	const netWorth = useRetirementNetWorth();
+	const fundingBase = useRetirementFundingBase(plan?.primaryResidenceLoanId);
 
 	return useMemo(() => {
-		if (plan === undefined || settings === undefined || netWorth === undefined)
+		if (
+			plan === undefined ||
+			settings === undefined ||
+			fundingBase === undefined
+		)
 			return undefined;
 		if (!plan) return null;
 		return computeRetirementResults(
 			planToInputs(plan, settings?.birthDate),
-			netWorth.netWorth,
+			fundingBase,
 		);
-	}, [plan, settings, netWorth]);
+	}, [plan, settings, fundingBase]);
 }
 
 /**
  * Client-only preview for the wizard: compute results from in-progress form
- * inputs without a round-trip, using the live net worth.
+ * inputs without a round-trip, using the live funding base.
  */
 export function useRetirementPreview(
 	inputs: RetirementInputs | null,
 ): RetirementResults | null | undefined {
-	const netWorth = useRetirementNetWorth();
+	const fundingBase = useRetirementFundingBase(inputs?.primaryResidenceLoanId);
 
 	return useMemo(() => {
-		if (netWorth === undefined) return undefined;
+		if (fundingBase === undefined) return undefined;
 		if (!inputs) return null;
-		return computeRetirementResults(inputs, netWorth.netWorth);
-	}, [inputs, netWorth]);
+		return computeRetirementResults(inputs, fundingBase);
+	}, [inputs, fundingBase]);
 }

@@ -7,7 +7,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import type { RetirementResults } from "@/lib/types/retirement";
+import { formatYears, type RetirementResults } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRate } from "@/lib/utils/currency";
 
@@ -17,8 +17,10 @@ interface Props {
 }
 
 export function RetirementProgressCard({ results, className }: Props) {
-	// progressPct is never negative but may exceed 1 (ahead of the target).
+	// Headline progress is the conservative scenario's (the one isOnTrack also
+	// requires). Never negative but may exceed 1 (ahead of the target).
 	const rawPct = results.progressPct;
+	const expectedPctLabel = (results.optimistic.progressPct * 100).toFixed(0);
 	const barPct = Math.max(0, Math.min(1, rawPct));
 	const pctLabel = (rawPct * 100).toFixed(0);
 	const hasTarget = Number.isFinite(results.targetPortfolio);
@@ -44,7 +46,7 @@ export function RetirementProgressCard({ results, className }: Props) {
 					<div className="text-right">
 						<p className="text-sm text-muted-foreground">In</p>
 						<p className="text-xl font-semibold">
-							{results.yearsToRetirement} yrs
+							{formatYears(results.yearsToRetirement)}
 						</p>
 					</div>
 				</div>
@@ -52,7 +54,9 @@ export function RetirementProgressCard({ results, className }: Props) {
 				{/* Progress bar */}
 				<div className="space-y-2">
 					<div className="flex items-center justify-between text-sm">
-						<span className="text-muted-foreground">Progress today</span>
+						<span className="text-muted-foreground">
+							Progress today (conservative)
+						</span>
 						<span className="font-medium">{pctLabel}%</span>
 					</div>
 					<div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
@@ -66,18 +70,20 @@ export function RetirementProgressCard({ results, className }: Props) {
 					</div>
 					{hasTarget && !results.pensionsCoverAll && !results.hasNetDebt && (
 						<p className="text-xs text-muted-foreground">
-							If you invest your current{" "}
+							Your current{" "}
 							<span className="font-medium text-foreground">
 								{formatCurrency(results.investableNow, "eur")}
 							</span>{" "}
-							at the expected {formatRate(results.optimistic.annualReturn)} per
-							year, it grows to{" "}
+							grows to{" "}
 							<span className="font-medium text-foreground">
-								{formatCurrency(results.optimistic.projectedFromCurrent, "eur")}
+								{formatCurrency(results.conservative.projectedFromCurrent, "eur")}
 							</span>{" "}
-							by retirement — that&apos;s{" "}
+							by retirement at a cautious{" "}
+							{formatRate(results.conservative.baseReturn)} per year — that&apos;s{" "}
 							<span className="font-medium text-foreground">{pctLabel}%</span>{" "}
-							of the target shown above (before adding any monthly savings).
+							of the target shown above (before adding any monthly savings). At
+							the expected {formatRate(results.optimistic.baseReturn)} it would
+							be {expectedPctLabel}%.
 						</p>
 					)}
 				</div>

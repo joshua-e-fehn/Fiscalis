@@ -83,25 +83,50 @@ export const takeSnapshot = internalMutation({
 });
 
 /**
- * Get portfolio snapshots for historical performance chart
+ * Get portfolio snapshots for historical performance charts, oldest first.
+ *
+ * Returns the NEWEST `limit` snapshots (the limit is a guard, not a window):
+ * reading the index ascending and taking N would return the oldest N and
+ * freeze "current" values once a user passes the limit.
+ *
+ * With `since`, only snapshots after that timestamp are returned, plus one
+ * baseline snapshot at or before it (when one exists), so callers can read
+ * the value at the range start.
  */
 export const getSnapshots = query({
   args: {
     limit: v.optional(v.number()), // Max number of snapshots to return
+    since: v.optional(v.number()), // Range start (ms); a baseline at/before it is included
   },
-  handler: async (ctx, { limit = 365 }) => {
+  handler: async (ctx, { limit = 365, since }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
     const userId = identity.subject;
 
-    const snapshots = await ctx.db
+    const newestFirst = await ctx.db
       .query("portfolioSnapshots")
-      .withIndex("by_user_timestamp", (q) => q.eq("userId", userId))
-      .order("asc")
+      .withIndex("by_user_timestamp", (q) =>
+        since === undefined
+          ? q.eq("userId", userId)
+          : q.eq("userId", userId).gt("timestamp", since),
+      )
+      .order("desc")
       .take(limit);
 
-    return snapshots;
+    const snapshots = newestFirst.reverse();
+
+    if (since === undefined) return snapshots;
+
+    const baseline = await ctx.db
+      .query("portfolioSnapshots")
+      .withIndex("by_user_timestamp", (q) =>
+        q.eq("userId", userId).lte("timestamp", since),
+      )
+      .order("desc")
+      .first();
+
+    return baseline ? [baseline, ...snapshots] : snapshots;
   },
 });
 

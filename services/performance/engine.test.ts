@@ -107,6 +107,16 @@ describe("series lookup", () => {
     expect(valueAt(s, -2, opts)).toBeNull();
   });
 
+  it("never looks a price ahead without interpolation", () => {
+    // A price shortly after t is not a value at t (a YTD baseline needs one
+    // at or before 1 Jan)
+    expect(valueAt(s, -1, { ...opts, interpolate: false })).toBeNull();
+    expect(valueAt(s, 0, { ...opts, interpolate: false })).toMatchObject({
+      value: 10,
+      kind: "observed",
+    });
+  });
+
   it("has one quality rule and one percent rule", () => {
     expect(assessDataQuality(9, 10)).toBe("high");
     expect(assessDataQuality(7, 10)).toBe("medium");

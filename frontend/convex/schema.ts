@@ -763,6 +763,23 @@ export default defineSchema({
 	}).index("by_metal", ["metalType"]),
 
 	// ═══════════════════════════════════════════════════════════════
+	// FX RATES
+	// ═══════════════════════════════════════════════════════════════
+	// Daily EUR-base exchange rates, one row per (date, currency), mirrored
+	// from the SQL currency_exchange_rates store by convex/fxRates.ts. The
+	// single rate source for base-currency conversion
+	// (services/finance/currency.ts).
+
+	fxRates: defineTable({
+		date: v.string(), // UTC day, YYYY-MM-DD
+		currency: v.string(), // ISO 4217 code, e.g. "USD"
+		unitsPerEur: v.number(), // Units of the currency per 1 EUR
+		fetchedAt: v.number(),
+	})
+		.index("by_currency_date", ["currency", "date"])
+		.index("by_date", ["date"]),
+
+	// ═══════════════════════════════════════════════════════════════
 	// API KEYS
 	// ═══════════════════════════════════════════════════════════════
 	// User-scoped keys for the public REST API (convex/http.ts).

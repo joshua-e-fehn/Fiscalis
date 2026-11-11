@@ -42,6 +42,9 @@ const isPublicRoute = createRouteMatcher([
   // Latest public metal spot prices (market data, no user data). Pulled by the
   // Convex cron in convex/metalPrices.ts to value vault items server-side.
   "/api/metals/prices/all/latest",
+  // Daily EUR-base FX rates (market data, no user data). Mirrored by the
+  // Convex cron in convex/fxRates.ts for base-currency conversion.
+  "/api/fx/rates/daily",
 ]);
 
 export default clerkMiddleware(

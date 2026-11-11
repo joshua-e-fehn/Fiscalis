@@ -353,8 +353,8 @@ function snapshotHoldings(
 }
 
 /**
- * The snapshot's category breakdown (asset categories with a value) and
- * cost totals. Every category with a cost basis also records the value that
+ * The snapshot's category breakdown (asset categories with a value or a
+ * cost basis) and cost totals. Every category with a cost basis also records the value that
  * cost covers, so a reader compares cost only with that value
  * (snapshotCostLine), and its value per source, so the vault metals
  * (continuous valuation) can be told apart from provider metals. Sources of
@@ -385,7 +385,9 @@ export function buildSnapshotBreakdown(
       totalCostBasis = (totalCostBasis ?? 0) + c.costBasis;
       totalCoveredValue = (totalCoveredValue ?? 0) + c.coveredValue;
     }
-    if (c.value === 0) continue;
+    // An empty category is left out, but one whose holdings became
+    // worthless keeps its cost: the snapshot records that loss
+    if (c.value === 0 && !(c.costBasis !== null && c.costBasis > 0)) continue;
     const held = holdingsByCategory.get(category);
     const sources = (Object.keys(c.bySource) as HoldingSource[]).map(
       (source): SnapshotSourceEntry => {

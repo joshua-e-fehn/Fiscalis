@@ -204,6 +204,20 @@ describe("buildSnapshotBreakdown", () => {
     expect(b.totalCoveredValue).toBe(1_012 + 1_400 + 300);
   });
 
+  it("keeps a worthless category that has a cost, drops an empty one", () => {
+    const hs = [
+      holding({ source: "brokerPosition", category: "equities", valueBase: 0, costBase: 8_000 }),
+      holding({ source: "bitpanda", category: "crypto", valueBase: 0 }),
+      holding({ source: "bank", category: "cash", valueBase: 100 }),
+    ];
+    const r = buildSnapshotBreakdown(aggregateNetWorth(hs), hs);
+    expect(r.categoryBreakdown.map((c) => c.category)).toEqual(["cash", "equities"]);
+    const equities = r.categoryBreakdown.find((c) => c.category === "equities")!;
+    expect(equities).toMatchObject({ value: 0, costBasis: 8_000, coveredValue: 0 });
+    expect(equities.value - snapshotCostLine(equities)!).toBe(-8_000);
+    expect(r.totalCostBasis).toBe(8_000);
+  });
+
   it("leaves the cost totals undefined when nothing has a cost basis", () => {
     expect(buildSnapshotBreakdown(aggregateNetWorth([]), [])).toEqual({
       categoryBreakdown: [],

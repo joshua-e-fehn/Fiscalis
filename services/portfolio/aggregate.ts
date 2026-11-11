@@ -29,6 +29,7 @@ import {
   summarizeUnrealizedProfitLoss,
   type UnrealizedProfitLoss,
 } from "./unrealizedProfitLoss";
+import { roundMoney } from "../finance/financeService";
 
 // ═══════════════════════════════════════════════════════════════
 // Holdings
@@ -488,6 +489,54 @@ export function buildSnapshotBreakdown(
   }
 
   return { categoryBreakdown, totalCostBasis, totalCoveredValue };
+}
+
+/** One category of GET /api/v1/net-worth's `categories` */
+export interface NetWorthApiCategory {
+  category: HoldingCategory;
+  /** Rounded to cents; for liabilities, the amount owed (positive) */
+  value: number;
+  subcategories: { subcategory: string; value: number }[];
+  sources: { source: HoldingSource; value: number }[];
+}
+
+/** Largest value first, ties by name, so the output order is deterministic */
+function byValueThenName<T extends { value: number }>(
+  name: (entry: T) => string,
+): (a: T, b: T) => number {
+  return (a, b) =>
+    b.value - a.value || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0);
+}
+
+/**
+ * The public API's category breakdown: every category in HOLDING_CATEGORIES
+ * order, including empty ones, each with its value per subcategory and per
+ * source. Values are rounded to cents, so the parts can differ from their
+ * rounded total by a cent. A subcategory or source worth nothing is left
+ * out. Unlike the snapshot breakdown it includes liabilities (as the amount
+ * owed) and carries no cost basis or holdings.
+ */
+export function netWorthApiBreakdown(
+  aggregate: Pick<NetWorthAggregate, "byCategory">,
+): NetWorthApiCategory[] {
+  return HOLDING_CATEGORIES.map((category) => {
+    const { value, bySubcategory, bySource } = aggregate.byCategory[category];
+    return {
+      category,
+      value: roundMoney(value),
+      subcategories: Object.entries(bySubcategory)
+        .map(([subcategory, s]) => ({
+          subcategory,
+          value: roundMoney(s.value),
+        }))
+        .filter((s) => s.value !== 0)
+        .sort(byValueThenName((s) => s.subcategory)),
+      sources: (Object.entries(bySource) as [HoldingSource, number][])
+        .map(([source, v]) => ({ source, value: roundMoney(v) }))
+        .filter((s) => s.value !== 0)
+        .sort(byValueThenName((s) => s.source)),
+    };
+  });
 }
 
 /**

@@ -5,6 +5,7 @@ import {
   buildSnapshotBreakdown,
   isFlowAdjustedCategory,
   liabilityCountsLabel,
+  netWorthApiBreakdown,
   categoryFlowFromHoldings,
   holdingNetFlow,
   snapshotCategoryFlow,
@@ -246,6 +247,111 @@ describe("buildSnapshotBreakdown", () => {
       totalCostBasis: undefined,
       totalCoveredValue: undefined,
     });
+  });
+});
+
+describe("netWorthApiBreakdown", () => {
+  const a = aggregateNetWorth(holdings);
+  const breakdown = netWorthApiBreakdown(a);
+  const of = (category: string) => breakdown.find((c) => c.category === category)!;
+
+  it("lists all nine categories in display order, including empty ones", () => {
+    expect(breakdown.map((c) => c.category)).toEqual([...HOLDING_CATEGORIES]);
+    expect(of("bonds")).toEqual({ category: "bonds", value: 0, subcategories: [], sources: [] });
+    expect(of("collectibles")).toEqual({ category: "collectibles", value: 0, subcategories: [], sources: [] });
+  });
+
+  it("has asset categories that sum to total assets", () => {
+    const assets = breakdown
+      .filter((c) => c.category !== "liabilities")
+      .reduce((sum, c) => sum + c.value, 0);
+    expect(assets).toBe(a.totalAssets);
+  });
+
+  it("reports liabilities as the amount owed, equal to total liabilities", () => {
+    expect(of("liabilities")).toEqual({
+      category: "liabilities",
+      value: a.totalLiabilities,
+      subcategories: [
+        { subcategory: "loans", value: 10_000 },
+        { subcategory: "credit-cards", value: 500 },
+        { subcategory: "margin-loans", value: 70 },
+      ],
+      sources: [
+        { source: "loan", value: 10_000 },
+        { source: "bank", value: 500 },
+        { source: "brokerAccount", value: 70 },
+      ],
+    });
+  });
+
+  it("shows a credit balance under cash, not under liabilities", () => {
+    expect(of("cash").value).toBe(2_140);
+    expect(of("cash").subcategories).toEqual([
+      { subcategory: "checking-accounts", value: 2_000 },
+      { subcategory: "broker-cash", value: 100 },
+      { subcategory: "credit-balance", value: 40 },
+    ]);
+    expect(of("cash").sources).toEqual([
+      { source: "bank", value: 2_040 },
+      { source: "brokerAccount", value: 100 },
+    ]);
+    expect(of("liabilities").subcategories.map((s) => s.subcategory)).not.toContain("credit-balance");
+  });
+
+  it("keeps vault, Bitpanda and broker metals apart in sources", () => {
+    expect(of("commodities")).toEqual({
+      category: "commodities",
+      value: 7_200,
+      subcategories: [{ subcategory: "metals", value: 7_200 }],
+      sources: [
+        { source: "vault", value: 6_200 },
+        { source: "bitpanda", value: 800 },
+        { source: "brokerPosition", value: 200 },
+      ],
+    });
+  });
+
+  it("rounds every value to cents", () => {
+    const rounded = netWorthApiBreakdown(
+      aggregateNetWorth([
+        holding({ source: "bank", category: "cash", subcategory: "savings-accounts", valueBase: 10.004 }),
+        holding({ source: "bitpanda", category: "cash", subcategory: "forex", valueBase: 0.1 + 0.2 }),
+        holding({ source: "loan", category: "liabilities", subcategory: "loans", valueBase: 99.995 }),
+      ]),
+    );
+    expect(rounded.find((c) => c.category === "cash")).toEqual({
+      category: "cash",
+      value: 10.3,
+      subcategories: [
+        { subcategory: "savings-accounts", value: 10 },
+        { subcategory: "forex", value: 0.3 },
+      ],
+      sources: [
+        { source: "bank", value: 10 },
+        { source: "bitpanda", value: 0.3 },
+      ],
+    });
+    expect(rounded.find((c) => c.category === "liabilities")!.value).toBe(100);
+  });
+
+  it("orders equal values by name and leaves out what is worth nothing", () => {
+    const cash = netWorthApiBreakdown(
+      aggregateNetWorth([
+        holding({ source: "brokerAccount", category: "cash", subcategory: "money-market", valueBase: 50 }),
+        holding({ source: "bank", category: "cash", subcategory: "checking-accounts", valueBase: 50 }),
+        holding({ source: "bitpanda", category: "cash", subcategory: "forex", valueBase: 0 }),
+        holding({ source: "vault", category: "cash", subcategory: "cds", valueBase: 0.004 }),
+      ]),
+    ).find((c) => c.category === "cash")!;
+    expect(cash.subcategories).toEqual([
+      { subcategory: "checking-accounts", value: 50 },
+      { subcategory: "money-market", value: 50 },
+    ]);
+    expect(cash.sources).toEqual([
+      { source: "bank", value: 50 },
+      { source: "brokerAccount", value: 50 },
+    ]);
   });
 });
 

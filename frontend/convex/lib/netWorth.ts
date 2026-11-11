@@ -271,6 +271,7 @@ export async function loadHoldings(
  * Server-side net worth for one user: the aggregate of loadHoldings plus
  * the snapshot's category breakdown and cost totals. With the previous
  * snapshot's breakdown, each entry also records its net flow since then.
+ * `asOf` is the data's freshness (the oldest pricedAt), not the call time.
  */
 export async function computeNetWorth(
   ctx: QueryCtx,
@@ -290,5 +291,7 @@ export async function computeNetWorth(
     totalCoveredValue,
     categoryBreakdown,
     asOf: aggregate.asOf,
+    // Every category with its subcategories and sources, for the public API
+    byCategory: aggregate.byCategory,
   };
 }

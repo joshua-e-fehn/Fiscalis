@@ -4,6 +4,7 @@ import { fxRatesFromDaily } from "../finance/currency";
 import {
   bankAccountValue,
   brokerAccountCash,
+  brokerAccountMarginDebt,
   buildCategorySummary,
   groupSmallSlices,
   holdingProfitLoss,
@@ -108,18 +109,36 @@ describe("accounts and loans", () => {
     expect(bankAccountValue({})).toBe(0);
   });
 
-  it("counts broker cash, or the whole balance of an account without positions", () => {
+  it("counts explicit broker cash only, never the account balance", () => {
     const usd = {
       cash: 1_170,
       balance: 11_700,
       cashValueInBaseCurrency: 1_000,
       balanceInBaseCurrency: 10_000,
+      cashInvestmentCategory: "cash",
     };
-    expect(brokerAccountCash(usd, true)).toBe(1_000);
-    expect(brokerAccountCash({ ...usd, cash: 0 }, false)).toBe(10_000);
-    expect(brokerAccountCash({ ...usd, cash: 0 }, true)).toBe(0);
+    expect(brokerAccountCash(usd)).toBe(1_000);
+    expect(brokerAccountMarginDebt(usd)).toBe(0);
+    // A zero cash balance is zero, whatever the account is worth
+    expect(
+      brokerAccountCash({ ...usd, cash: 0, cashValueInBaseCurrency: 0 }),
+    ).toBe(0);
     // Native amounts without a base value are never counted as EUR
-    expect(brokerAccountCash({ cash: 500 }, true)).toBe(0);
+    expect(brokerAccountCash({ cash: 500 })).toBe(0);
+  });
+
+  it("reads negative cash as a margin debit, not as zero cash", () => {
+    const margin = {
+      cash: -2_340,
+      cashValueInBaseCurrency: -2_000,
+      cashInvestmentCategory: "liabilities",
+    };
+    expect(brokerAccountCash(margin)).toBe(0);
+    expect(brokerAccountMarginDebt(margin)).toBe(2_000);
+    // Rows synced before the category was written: classified by sign
+    expect(
+      brokerAccountMarginDebt({ cash: -10, cashValueInBaseCurrency: -9 }),
+    ).toBe(9);
   });
 
   it("converts outstanding loans by their currency (D1 statuses)", () => {

@@ -94,6 +94,12 @@ export const ETHEREUM_SYMBOLS = [
   "wstETH", // Wrapped stETH
 ] as const;
 
+/**
+ * Provider asset types that mean "this is a crypto asset": SnapTrade's
+ * normalized "cryptocurrency" and Bitpanda's "crypto" wallet class.
+ */
+export const CRYPTO_ASSET_TYPES = ["cryptocurrency", "crypto"] as const;
+
 // ═══════════════════════════════════════════════════════════════
 // CLASSIFICATION RULES
 // ═══════════════════════════════════════════════════════════════
@@ -493,6 +499,22 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
     },
   },
 
+  // Precious metals (SnapTrade security type "pm", e.g. gold ETCs)
+  {
+    id: "snaptrade_precious_metal",
+    name: "SnapTrade Precious Metals",
+    priority: 60,
+    matcher: {
+      type: "asset_type",
+      provider: "snaptrade",
+      values: ["precious_metal", "PRECIOUS_METAL"],
+    },
+    result: {
+      category: "commodities",
+      subcategory: "metals",
+    },
+  },
+
   // Cryptocurrency positions (in broker accounts)
   {
     id: "snaptrade_crypto",
@@ -506,6 +528,56 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
     result: {
       category: "crypto",
       subcategory: "altcoins", // Default, will be refined by symbol
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════
+  // CRYPTO SYMBOL RULES (SnapTrade and Bitpanda)
+  // Refine crypto holdings by ticker. Guarded by asset type: an exchange
+  // ticker such as BTC (Grayscale Bitcoin Mini Trust ETF) or DAI is a
+  // security, not a coin, unless the provider says the asset is crypto.
+  // ═══════════════════════════════════════════════════════════════
+
+  {
+    id: "symbol_bitcoin",
+    name: "Bitcoin (by symbol)",
+    priority: 80,
+    matcher: {
+      type: "symbol_exact",
+      values: [...BITCOIN_SYMBOLS],
+      assetTypes: [...CRYPTO_ASSET_TYPES],
+    },
+    result: {
+      category: "crypto",
+      subcategory: "bitcoin",
+    },
+  },
+  {
+    id: "symbol_ethereum",
+    name: "Ethereum (by symbol)",
+    priority: 80,
+    matcher: {
+      type: "symbol_exact",
+      values: [...ETHEREUM_SYMBOLS],
+      assetTypes: [...CRYPTO_ASSET_TYPES],
+    },
+    result: {
+      category: "crypto",
+      subcategory: "ethereum",
+    },
+  },
+  {
+    id: "symbol_stablecoin",
+    name: "Stablecoin (by symbol)",
+    priority: 80,
+    matcher: {
+      type: "symbol_exact",
+      values: [...STABLECOIN_SYMBOLS],
+      assetTypes: [...CRYPTO_ASSET_TYPES],
+    },
+    result: {
+      category: "crypto",
+      subcategory: "stablecoins",
     },
   },
 

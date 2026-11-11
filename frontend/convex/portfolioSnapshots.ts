@@ -23,8 +23,11 @@ export const takeSnapshot = internalMutation({
   args: {
     userId: v.string(),
     source: v.string(), // "plaid", "snaptrade", "manual", "vault", "scheduled"
+    // A provider sync before this snapshot failed: that provider's holdings
+    // are the ones stored by its last successful sync
+    partial: v.optional(v.boolean()),
   },
-  handler: async (ctx, { userId, source }) => {
+  handler: async (ctx, { userId, source, partial }) => {
     const now = Date.now();
     const today = new Date(now).toISOString().split("T")[0];
 
@@ -63,6 +66,7 @@ export const takeSnapshot = internalMutation({
           totalCoveredValue,
           categoryBreakdown,
           source,
+          partial: partial || undefined,
         });
         return { totalAssets, totalLiabilities, netWorth };
       }
@@ -80,6 +84,7 @@ export const takeSnapshot = internalMutation({
       totalCoveredValue,
       categoryBreakdown,
       source,
+      ...(partial ? { partial: true } : {}),
     });
 
     return { totalAssets, totalLiabilities, netWorth };

@@ -43,6 +43,7 @@ export interface SyncAllResult {
  *
  * This action handles partial failures gracefully:
  * - If some providers fail, the snapshot will use the latest available data
+ *   and is tagged `partial`
  * - Returns detailed status for each provider
  */
 export const syncAllProviders = action({
@@ -121,7 +122,7 @@ export const syncAllProviders = action({
       // Handle union type - check if the detailed fields exist
       if ("connectionsProcessed" in snaptradeResult) {
         result.snaptrade = {
-          success: true,
+          success: snaptradeResult.success,
           connectionsProcessed: snaptradeResult.connectionsProcessed,
           accountsProcessed: snaptradeResult.accountsProcessed,
           positionsProcessed: snaptradeResult.positionsProcessed,
@@ -167,13 +168,19 @@ export const syncAllProviders = action({
 
     // 4. Take portfolio snapshot
     // The snapshot will use the latest available data in the database,
-    // including data from providers that successfully synced
+    // including data from providers that successfully synced; it is tagged
+    // partial when any provider failed
     try {
       const snapshotResult = await ctx.runMutation(
         internal.portfolioSnapshots.takeSnapshot,
         {
           userId,
           source: "sync-all",
+          partial: !(
+            result.plaid.success &&
+            result.snaptrade.success &&
+            result.bitpanda.success
+          ),
         },
       );
       result.snapshot = {
@@ -315,6 +322,8 @@ export const syncAllForUserInternal = internalAction({
       await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
         userId,
         source: "scheduled-daily",
+        // Keeps the daily series; tagged when a provider failed
+        partial: !(plaidSuccess && snaptradeSuccess && bitpandaSuccess),
       });
       snapshotSuccess = true;
       console.log(`[SCHEDULED SYNC] Snapshot created for ${userId}`);

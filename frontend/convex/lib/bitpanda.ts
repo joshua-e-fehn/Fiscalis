@@ -510,7 +510,7 @@ export function normalizeTransactions(input: {
   fiatTransactions: any[];
   commodityTransactions: any[];
 }): BitpandaTransaction[] {
-  const out: BitpandaTransaction[] = [];
+  const out: NormalizedRecord[] = [];
 
   // Symbol → asset class derived from the type-specific endpoints. Used to
   // classify /trades records (which aren't inherently typed) so a transaction
@@ -534,7 +534,11 @@ export function normalizeTransactions(input: {
     return "unknown";
   };
 
-  const pushRecord = (record: any, fallbackPrefix: string, assetType: string) => {
+  const pushRecord = (
+    record: any,
+    fallbackPrefix: string,
+    assetType: string,
+  ) => {
     const attrs = record?.attributes ?? record;
     const id = (record?.id ?? attrs?.id ?? `${fallbackPrefix}-${out.length}`)
       .toString();
@@ -555,7 +559,7 @@ export function normalizeTransactions(input: {
         ? toNumber(attrs?.fee ?? attrs?.fees)
         : undefined;
 
-    out.push({
+    const tx: BitpandaTransaction = {
       bitpandaTransactionId: id,
       type: normalizeTransactionType(attrs?.type ?? attrs?.transaction_type),
       symbol,
@@ -568,33 +572,109 @@ export function normalizeTransactions(input: {
         .toUpperCase(),
       fees,
       transactionDate: readTransactionDate(attrs),
-    });
+    };
+    out.push(
+      assetType === "trade"
+        ? { tx, fromTrades: true }
+        : { tx, fromTrades: false, tradeRef: readTradeRef(record) },
+    );
   };
 
-  // Order matters: trades first so a buy/sell from /trades wins over the
-  // duplicate the same event produces in /wallets/transactions.
   for (const r of input.trades) pushRecord(r, "trade", "trade");
   for (const r of input.cryptoTransactions) pushRecord(r, "crypto", "crypto");
   for (const r of input.fiatTransactions) pushRecord(r, "fiat", "fiat");
   for (const r of input.commodityTransactions)
     pushRecord(r, "commodity", "commodity");
 
-  // A single buy/sell is reported by multiple Bitpanda endpoints (e.g.
-  // /trades and /wallets/transactions) with different IDs. Collapse those by
-  // a signature of the event so we don't store the same transaction twice.
-  const seen = new Set<string>();
-  return out.filter((tx) => {
-    const key = [
+  return dedupeAcrossEndpoints(out);
+}
+
+/** A normalized record and the endpoint it came from. */
+export interface NormalizedRecord {
+  tx: BitpandaTransaction;
+  /** From /trades (else from a /wallets/.../transactions endpoint) */
+  fromTrades: boolean;
+  /** The /trades id a wallet transaction belongs to, when it says */
+  tradeRef?: string;
+}
+
+/** The trade id a wallet transaction references, if any. */
+function readTradeRef(record: any): string | undefined {
+  const attrs = record?.attributes ?? record;
+  const ref =
+    attrs?.trade?.id ??
+    attrs?.trade_id ??
+    attrs?.related_trade_id ??
+    record?.relationships?.trade?.data?.id;
+  return ref !== undefined && ref !== null && ref !== ""
+    ? String(ref)
+    : undefined;
+}
+
+/**
+ * A buy/sell appears once in /trades and again, under another id, in a
+ * wallet's transaction list. Drop only that cross-endpoint copy: a wallet
+ * transaction that references a /trades record of the same asset, or,
+ * when it carries no reference, one that matches a not-yet-matched trade
+ * on type, asset, quantity, amount and day (each trade absorbs at most one
+ * copy). Records are never collapsed within one endpoint, so two identical
+ * savings-plan buys on the same day both stay.
+ */
+export function dedupeAcrossEndpoints(
+  records: NormalizedRecord[],
+): BitpandaTransaction[] {
+  const signature = (tx: BitpandaTransaction) =>
+    [
       tx.type,
       tx.symbol.toUpperCase(),
       tx.quantity.toFixed(8),
       tx.amount.toFixed(2),
       tx.transactionDate.slice(0, 10),
     ].join("|");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const tradeKey = (id: string, symbol: string) =>
+    `${id}|${symbol.toUpperCase()}`;
+
+  // Trades not yet matched by a wallet copy, by id and by signature
+  const unmatchedById = new Map<string, BitpandaTransaction>();
+  const unmatchedBySignature = new Map<string, BitpandaTransaction[]>();
+  for (const { tx, fromTrades } of records) {
+    if (!fromTrades) continue;
+    unmatchedById.set(tradeKey(tx.bitpandaTransactionId, tx.symbol), tx);
+    const list = unmatchedBySignature.get(signature(tx)) ?? [];
+    list.push(tx);
+    unmatchedBySignature.set(signature(tx), list);
+  }
+  const consume = (trade: BitpandaTransaction) => {
+    unmatchedById.delete(tradeKey(trade.bitpandaTransactionId, trade.symbol));
+    const list = unmatchedBySignature.get(signature(trade));
+    const index = list?.indexOf(trade) ?? -1;
+    if (list && index >= 0) list.splice(index, 1);
+  };
+
+  const dropped = new Set<NormalizedRecord>();
+  // Referenced copies first, so an unreferenced one never takes their trade
+  for (const record of records) {
+    if (record.fromTrades || !record.tradeRef) continue;
+    const trade = unmatchedById.get(
+      tradeKey(record.tradeRef, record.tx.symbol),
+    );
+    if (trade) {
+      consume(trade);
+      dropped.add(record);
+    }
+  }
+  for (const record of records) {
+    if (record.fromTrades || record.tradeRef) continue;
+    const trade = unmatchedBySignature.get(signature(record.tx))?.[0];
+    if (trade) {
+      consume(trade);
+      dropped.add(record);
+    }
+  }
+
+  return records
+    .filter((record) => !dropped.has(record))
+    .map((record) => record.tx);
 }
 
 /* eslint-enable @typescript-eslint/no-explicit-any */

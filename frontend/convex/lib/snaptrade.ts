@@ -45,33 +45,6 @@ export function getEncryptionKey(): string {
 }
 
 /**
- * Normalize asset type from SnapTrade to our schema
- */
-export function normalizeAssetType(
-  snaptradeType: string | undefined | null,
-): string {
-  if (!snaptradeType) return "other";
-
-  const typeMap: Record<string, string> = {
-    equity: "equity",
-    stock: "equity",
-    etf: "etf",
-    mutual_fund: "mutual_fund",
-    bond: "bond",
-    option: "option",
-    cryptocurrency: "cryptocurrency",
-    crypto: "cryptocurrency",
-    forex: "forex",
-    fx: "forex",
-    future: "futures",
-    futures: "futures",
-  };
-
-  const normalized = snaptradeType.toLowerCase().replace(/[^a-z_]/g, "_");
-  return typeMap[normalized] || "other";
-}
-
-/**
  * Normalize account type from SnapTrade to our schema
  */
 export function normalizeAccountType(

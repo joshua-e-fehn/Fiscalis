@@ -146,6 +146,9 @@ export default defineSchema({
 		// Cash classification fields (for uninvested cash tracking)
 		cashInvestmentCategory: v.optional(v.string()), // "cash" or "liabilities" (if margin)
 		cashInvestmentSubcategory: v.optional(v.string()), // "broker-cash" or "margin-loans"
+		// "reported" broker cash, or "residual" = total minus positions
+		// (services/brokers/snaptradePosition.ts snaptradeAccountFields)
+		cashSource: v.optional(v.union(v.literal("reported"), v.literal("residual"))),
 		// Base-currency fields, stamped at sync time
 		// (services/finance/currency.ts brokerAccountBaseFields)
 		balanceCurrency: v.optional(v.string()), // Currency of balance/cash when the API reports one; else `currency`
@@ -175,7 +178,7 @@ export default defineSchema({
 		symbol: v.string(), // Ticker symbol
 		symbolId: v.optional(v.string()), // SnapTrade's universal symbol ID
 		name: v.optional(v.string()), // Security name
-		assetType: v.string(), // "equity", "etf", "option", "bond", "mutual_fund", "cryptocurrency", "forex", "other"
+		assetType: v.string(), // "equity", "etf", "option", "bond", "mutual_fund", "cryptocurrency", "forex", "futures", "precious_metal", "other" (services/brokers/snaptradePosition.ts)
 		quantity: v.number(), // Number of shares/units
 		averageCostBasis: v.optional(v.number()), // Average cost per share
 		totalCostBasis: v.optional(v.number()), // Total cost basis
@@ -776,6 +779,9 @@ export default defineSchema({
 
 		// Sync source that triggered this snapshot
 		source: v.string(), // "plaid", "snaptrade", "manual", "vault", "scheduled"
+		// true when a provider sync before the snapshot failed, so that
+		// provider's holdings are from its last successful sync
+		partial: v.optional(v.boolean()),
 	})
 		.index("by_user", ["userId"])
 		.index("by_user_date", ["userId", "date"])

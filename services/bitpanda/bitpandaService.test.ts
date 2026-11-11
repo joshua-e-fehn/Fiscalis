@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { normalizeHoldings } from "../../frontend/convex/lib/bitpanda";
+import {
+  normalizeHoldings,
+  normalizeTransactions,
+} from "../../frontend/convex/lib/bitpanda";
 import { getBitpandaHoldingIdentityKeys } from "../../frontend/convex/lib/bitpandaIdentity";
 import { classifyBitpandaPosition } from "../../frontend/convex/lib/classification/engine";
 
@@ -120,5 +123,80 @@ describe("Bitpanda fiat earn metadata", () => {
       "fiat:USD",
       "stock:BCPUSD",
     ]);
+  });
+});
+
+describe("normalizeTransactions dedup", () => {
+  const trade = (id: string, extra = {}) => ({
+    id,
+    type: "trade",
+    attributes: {
+      type: "buy",
+      cryptocoin_symbol: "BTC",
+      amount_cryptocoin: "0.001",
+      amount_fiat: "50.00",
+      fiat_symbol: "EUR",
+      time: { date_iso8601: "2026-11-02T09:00:00+01:00" },
+      ...extra,
+    },
+  });
+  const walletTx = (id: string, extra = {}) => ({
+    id,
+    type: "wallet_transaction",
+    attributes: {
+      type: "buy",
+      cryptocoin_symbol: "BTC",
+      amount: "0.001",
+      amount_eur: "50.00",
+      time: { date_iso8601: "2026-11-02T09:00:05+01:00" },
+      ...extra,
+    },
+  });
+  const run = (trades: unknown[], crypto: unknown[]) =>
+    normalizeTransactions({
+      trades,
+      cryptoTransactions: crypto,
+      fiatTransactions: [],
+      commodityTransactions: [],
+    });
+
+  it("keeps two identical savings-plan buys on the same day", () => {
+    const out = run([trade("t1"), trade("t2")], []);
+    expect(out.map((t) => t.bitpandaTransactionId)).toEqual(["t1", "t2"]);
+  });
+
+  it("drops the wallet copy that references a trade", () => {
+    const out = run(
+      [trade("t1"), trade("t2")],
+      [walletTx("w1", { trade: { type: "trade", id: "t2" } })],
+    );
+    expect(out.map((t) => t.bitpandaTransactionId)).toEqual(["t1", "t2"]);
+  });
+
+  it("matches an unreferenced wallet copy to at most one trade", () => {
+    const out = run([trade("t1")], [walletTx("w1"), walletTx("w2")]);
+    expect(out.map((t) => t.bitpandaTransactionId)).toEqual(["t1", "w2"]);
+  });
+
+  it("never collapses records within one endpoint", () => {
+    const out = run([], [walletTx("w1"), walletTx("w2")]);
+    expect(out).toHaveLength(2);
+  });
+});
+
+describe("Bitpanda classification by symbol", () => {
+  it("refines crypto wallets by ticker", () => {
+    expect(
+      classifyBitpandaPosition({ assetType: "crypto", symbol: "BTC", name: null }),
+    ).toMatchObject({ category: "crypto", subcategory: "bitcoin" });
+    expect(
+      classifyBitpandaPosition({ assetType: "crypto", symbol: "USDT", name: null }),
+    ).toMatchObject({ category: "crypto", subcategory: "stablecoins" });
+  });
+
+  it("leaves a stock with a crypto-like ticker a stock", () => {
+    expect(
+      classifyBitpandaPosition({ assetType: "stock", symbol: "DAI", name: null }),
+    ).toMatchObject({ category: "equities" });
   });
 });

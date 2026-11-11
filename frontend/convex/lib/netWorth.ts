@@ -9,6 +9,7 @@ import { valueVaultItem } from "../../../services/finance/metals";
 import {
   bankAccountValue,
   brokerAccountCash,
+  brokerAccountMarginDebt,
   loanBalanceInBase,
 } from "../../../services/portfolio/categorySummary";
 import {
@@ -77,18 +78,13 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
       .collect()
   ).map((pos) => positionWithBaseFields(pos, rates));
 
-  // Build set of accounts that have positions
-  const accountsWithPositions = new Set(
-    brokerPositions.map((p) => p.accountId),
-  );
-
-  // Broker account cash (uninvested)
+  // Broker account cash: uninvested cash is an asset, a negative balance
+  // (margin debit) a liability
   let brokerCashValue = 0;
+  let marginDebtValue = 0;
   for (const acc of brokerAccounts) {
-    brokerCashValue += brokerAccountCash(
-      acc,
-      accountsWithPositions.has(acc._id),
-    );
+    brokerCashValue += brokerAccountCash(acc);
+    marginDebtValue += brokerAccountMarginDebt(acc);
   }
 
   // 3. Vault items (commodities), valued at live spot like the dashboard,
@@ -149,7 +145,7 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     cashValue + brokerCashValue + providers.cash + investmentsValue;
 
   const totalLiabilities =
-    liabilitiesValue + providers.liabilities + loansValue;
+    liabilitiesValue + marginDebtValue + providers.liabilities + loansValue;
 
   const netWorth = totalAssets - totalLiabilities;
 

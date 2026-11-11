@@ -127,24 +127,42 @@ export function bankAccountValue(account: {
   return account.valueInBaseCurrency ?? 0;
 }
 
+/** The stored cash fields of a broker account the readers use. */
+export interface BrokerAccountCashLike {
+  cash?: number;
+  cashValueInBaseCurrency?: number;
+  /** Written at sync: "liabilities" for a margin debit, else "cash" */
+  cashInvestmentCategory?: string;
+}
+
+/** Whether an account's cash is a margin debit (a liability). */
+function isMarginDebit(account: BrokerAccountCashLike): boolean {
+  return (
+    (account.cashInvestmentCategory ??
+      ((account.cash ?? 0) < 0 ? "liabilities" : "cash")) === "liabilities"
+  );
+}
+
 /**
- * Uninvested cash of a broker account in EUR: its cash balance, or, for an
- * account without positions, its whole balance (the holdings are cash).
+ * Uninvested cash of a broker account in EUR, from the explicit cash the
+ * sync stored (services/brokers/snaptradePosition.ts). 0 for a margin
+ * debit (see brokerAccountMarginDebt) and for cash without a base value.
+ * The account's total balance is never read as cash.
  */
-export function brokerAccountCash(
-  account: {
-    cash?: number;
-    balance?: number;
-    cashValueInBaseCurrency?: number;
-    balanceInBaseCurrency?: number;
-  },
-  hasPositions: boolean,
+export function brokerAccountCash(account: BrokerAccountCashLike): number {
+  if (isMarginDebit(account)) return 0;
+  return Math.max(0, account.cashValueInBaseCurrency ?? 0);
+}
+
+/**
+ * Margin debit of a broker account in EUR, as a positive amount owed:
+ * negative account cash, stored as a liabilities/margin-loans balance.
+ */
+export function brokerAccountMarginDebt(
+  account: BrokerAccountCashLike,
 ): number {
-  if ((account.cash ?? 0) > 0) return account.cashValueInBaseCurrency ?? 0;
-  if (!hasPositions && (account.balance ?? 0) > 0) {
-    return account.balanceInBaseCurrency ?? 0;
-  }
-  return 0;
+  if (!isMarginDebit(account)) return 0;
+  return Math.abs(account.cashValueInBaseCurrency ?? 0);
 }
 
 /**

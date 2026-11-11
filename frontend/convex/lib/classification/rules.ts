@@ -493,6 +493,22 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
     },
   },
 
+  // Precious metals (SnapTrade security type "pm", e.g. gold ETCs)
+  {
+    id: "snaptrade_precious_metal",
+    name: "SnapTrade Precious Metals",
+    priority: 60,
+    matcher: {
+      type: "asset_type",
+      provider: "snaptrade",
+      values: ["precious_metal", "PRECIOUS_METAL"],
+    },
+    result: {
+      category: "commodities",
+      subcategory: "metals",
+    },
+  },
+
   // Cryptocurrency positions (in broker accounts)
   {
     id: "snaptrade_crypto",

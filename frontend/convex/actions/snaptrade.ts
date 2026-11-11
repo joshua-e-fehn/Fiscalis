@@ -7,13 +7,13 @@ import { encrypt, decrypt } from "../lib/encryption";
 import {
   getSnaptradeClient,
   getEncryptionKey,
-  normalizeAssetType,
   normalizeAccountType,
   parseSnapTradeError,
   formatErrorForUser,
   requiresReauthentication,
 } from "../lib/snaptrade";
 import { Id } from "../_generated/dataModel";
+import { readSnaptradeSymbolFields } from "../../../services/brokers/snaptradePosition";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -685,8 +685,9 @@ export const syncPositions = action({
 
       // Upsert each position
       for (const position of holdings.positions || []) {
-        const symbol = position.symbol?.symbol;
-        if (!symbol) continue;
+        // Ticker, type and currency live on the UniversalSymbol (position.symbol.symbol)
+        const symbolFields = readSnaptradeSymbolFields(position);
+        if (!symbolFields) continue;
 
         const quantity = position.units || 0;
         const currentPrice = position.price || 0;
@@ -710,19 +711,12 @@ export const syncPositions = action({
         await ctx.runMutation(internal.brokers.upsertPosition, {
           userId,
           accountId: args.accountId,
-          symbol: String(symbol),
-          symbolId: position.symbol?.id,
-          name: position.symbol?.description,
-          assetType: normalizeAssetType(position.symbol?.type?.code),
+          ...symbolFields,
           quantity,
           averageCostBasis: averageCostBasis ?? undefined,
           totalCostBasis,
           currentPrice,
           marketValue,
-          currency: position.symbol?.currency?.code || "USD",
-          isin: position.symbol?.isin,
-          cusip: position.symbol?.cusip,
-          figi: position.symbol?.figi_code,
           unrealizedPL,
           unrealizedPLPercent,
         });
@@ -1007,8 +1001,9 @@ export const syncAll = action({
             let totalMarketValue = 0;
 
             for (const position of holdings.positions || []) {
-              const symbol = position.symbol?.symbol;
-              if (!symbol) continue;
+              // Ticker, type and currency live on the UniversalSymbol (position.symbol.symbol)
+              const symbolFields = readSnaptradeSymbolFields(position);
+              if (!symbolFields) continue;
 
               const quantity = position.units || 0;
               const currentPrice = position.price || 0;
@@ -1031,19 +1026,12 @@ export const syncAll = action({
               await ctx.runMutation(internal.brokers.upsertPosition, {
                 userId,
                 accountId: account._id,
-                symbol: String(symbol),
-                symbolId: position.symbol?.id,
-                name: position.symbol?.description,
-                assetType: normalizeAssetType(position.symbol?.type?.code),
+                ...symbolFields,
                 quantity,
                 averageCostBasis: averageCostBasis ?? undefined,
                 totalCostBasis,
                 currentPrice,
                 marketValue,
-                currency: position.symbol?.currency?.code || "USD",
-                isin: position.symbol?.isin,
-                cusip: position.symbol?.cusip,
-                figi: position.symbol?.figi_code,
                 unrealizedPL,
                 unrealizedPLPercent,
               });
@@ -1347,8 +1335,9 @@ export const syncAllForUserInternal = internalAction({
               let totalMarketValue = 0;
 
               for (const position of holdings.positions || []) {
-                const symbol = position.symbol?.symbol;
-                if (!symbol) continue;
+                // Ticker, type and currency live on the UniversalSymbol (position.symbol.symbol)
+                const symbolFields = readSnaptradeSymbolFields(position);
+                if (!symbolFields) continue;
 
                 const quantity = position.units || 0;
                 const currentPrice = position.price || 0;
@@ -1363,19 +1352,12 @@ export const syncAllForUserInternal = internalAction({
                 await ctx.runMutation(internal.brokers.upsertPosition, {
                   userId,
                   accountId: account._id,
-                  symbol: String(symbol),
-                  symbolId: position.symbol?.id,
-                  name: position.symbol?.description,
-                  assetType: normalizeAssetType(position.symbol?.type?.code),
+                  ...symbolFields,
                   quantity,
                   averageCostBasis: averageCostBasis ?? undefined,
                   totalCostBasis,
                   currentPrice,
                   marketValue,
-                  currency: position.symbol?.currency?.code || "USD",
-                  isin: position.symbol?.isin,
-                  cusip: position.symbol?.cusip,
-                  figi: position.symbol?.figi_code,
                 });
 
                 results.positionsProcessed++;

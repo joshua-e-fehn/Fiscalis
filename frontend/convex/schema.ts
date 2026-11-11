@@ -175,7 +175,7 @@ export default defineSchema({
 		symbol: v.string(), // Ticker symbol
 		symbolId: v.optional(v.string()), // SnapTrade's universal symbol ID
 		name: v.optional(v.string()), // Security name
-		assetType: v.string(), // "equity", "etf", "option", "bond", "mutual_fund", "cryptocurrency", "forex", "other"
+		assetType: v.string(), // "equity", "etf", "option", "bond", "mutual_fund", "cryptocurrency", "forex", "futures", "precious_metal", "other" (services/brokers/snaptradePosition.ts)
 		quantity: v.number(), // Number of shares/units
 		averageCostBasis: v.optional(v.number()), // Average cost per share
 		totalCostBasis: v.optional(v.number()), // Total cost basis

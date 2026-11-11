@@ -55,7 +55,8 @@ export const getOverview = query({
       }),
       liabilities: {
         totalBalance: aggregate.totalLiabilities,
-        accountsCount: aggregate.byCategory.liabilities.count,
+        // Non-loan liabilities; loans are counted in loansCount
+        accountsCount: aggregate.liabilityAccountsCount,
         loansCount: aggregate.loansCount,
         monthlyPayment: aggregate.monthlyLoanPayment,
       },
@@ -86,7 +87,7 @@ export interface UnifiedPosition {
   name: string;
   quantity: number;
   currentPrice?: number;
-  /** Native amount, signed: a liability is negative */
+  /** Native amount, signed like valueInBaseCurrency */
   marketValue: number;
   currency: string;
   /** Value in EUR, signed: a liability is negative */
@@ -165,7 +166,15 @@ export const getUnifiedPositions = query({
         unrealizedPL: pl?.profitLoss ?? undefined,
         unrealizedPLPercent: pl?.profitLossPercent ?? undefined,
       };
-      const sign = isLiability ? -1 : 1;
+      // The native amount takes the sign of the EUR value: an overridden
+      // positive liability position shows negative, a credit balance (a
+      // card's -40, an overpaid loan) shows positive like its cash value
+      const signed = (native: number) =>
+        valueInBaseCurrency < 0
+          ? -Math.abs(native)
+          : valueInBaseCurrency > 0
+            ? Math.abs(native)
+            : native;
 
       switch (h.source) {
         case "bank": {
@@ -175,7 +184,7 @@ export const getUnifiedPositions = query({
             id: a.accountId,
             symbol: a.type.toUpperCase(),
             quantity: 1,
-            marketValue: sign * (a.currentBalance ?? 0),
+            marketValue: signed(a.currentBalance ?? 0),
             currency: a.currency,
             lastSyncAt: a.lastSynced,
             metadata: {
@@ -198,7 +207,7 @@ export const getUnifiedPositions = query({
             name: p.name || p.symbol,
             quantity: p.quantity,
             currentPrice: p.currentPrice,
-            marketValue: p.marketValue ?? 0,
+            marketValue: signed(p.marketValue ?? 0),
             currency: p.currency,
             lastSyncAt: p.lastSyncAt || p.createdAt,
             metadata: {
@@ -237,7 +246,7 @@ export const getUnifiedPositions = query({
             name: b.name || b.symbol,
             quantity: b.quantity,
             currentPrice: b.currentPrice,
-            marketValue: b.marketValue ?? 0,
+            marketValue: signed(b.marketValue ?? 0),
             currency: b.currency,
             lastSyncAt: b.lastSyncAt ?? b.createdAt,
             metadata: { assetType: b.assetType },
@@ -280,7 +289,7 @@ export const getUnifiedPositions = query({
             id: loan._id,
             symbol: "LOAN",
             quantity: 1,
-            marketValue: sign * loan.currentBalance,
+            marketValue: signed(loan.currentBalance),
             currency: loan.currency,
             lastSyncAt: loan.updatedAt,
             metadata: {

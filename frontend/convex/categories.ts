@@ -6,6 +6,7 @@ import { getUserId } from "./lib/auth";
 import { loadHoldings, type LoadedHolding } from "./lib/netWorth";
 import {
   aggregateNetWorth,
+  CREDIT_BALANCE_SUBCATEGORY,
   placeHolding,
   type CategoryAggregate,
   type HoldingSource,
@@ -91,7 +92,10 @@ function sourceTotal(
 /**
  * All positions in a category across providers, with the category summary
  * (value, cost-covered P&L and coverage, per subcategory too) from the
- * shared aggregator.
+ * shared aggregator. The summary also counts account-level holdings that
+ * have no position row (a Plaid investment account classified into the
+ * category); accountLevelValue is their total, so the rows sum to
+ * summary.value − accountLevelValue.
  */
 async function getCategoryPositions(
   ctx: QueryCtx,
@@ -99,9 +103,11 @@ async function getCategoryPositions(
 ) {
   const loaded = await loadAggregate(ctx);
   if (!loaded) return null;
+  const summary = loaded.aggregate.byCategory[category];
   return {
     positions: toCategoryPositions(inCategory(loaded.holdings, category)),
-    summary: loaded.aggregate.byCategory[category],
+    summary,
+    accountLevelValue: sourceTotal(summary, ["bank"]),
   };
 }
 
@@ -151,7 +157,20 @@ export const getCashHoldings = query({
         : [],
     );
 
-    const bankTotal = sourceTotal(summary, ["bank"]);
+    // Totals per source that reconcile with the rows: a credit balance (a
+    // card or an overpaid loan, money owed to the user) is its own total
+    let bankTotal = 0;
+    let brokerCashTotal = 0;
+    let bitpandaTotal = 0;
+    let creditBalanceTotal = 0;
+    for (const h of cash) {
+      const { subcategory, value } = placeHolding(h);
+      if (subcategory === CREDIT_BALANCE_SUBCATEGORY) creditBalanceTotal += value;
+      else if (h.source === "bank") bankTotal += value;
+      else if (h.source === "brokerAccount" || h.source === "brokerPosition")
+        brokerCashTotal += value;
+      else if (h.source === "bitpanda") bitpandaTotal += value;
+    }
 
     return {
       bankAccounts,
@@ -160,7 +179,9 @@ export const getCashHoldings = query({
       summary: {
         totalValue: summary.value,
         bankTotal,
-        brokerCashTotal: summary.value - bankTotal,
+        brokerCashTotal,
+        bitpandaTotal,
+        creditBalanceTotal,
         accountCount: summary.count,
         bySubcategory: subcategoryTotals(summary),
       },
@@ -211,7 +232,8 @@ export const getLiabilities = query({
       rows,
       summary: {
         totalLiabilities: summary.value,
-        accountCount: summary.count,
+        // Non-loan liabilities; loans are counted in loansCount
+        accountCount: aggregate.liabilityAccountsCount,
         loansCount: aggregate.loansCount,
         monthlyPayment: aggregate.monthlyLoanPayment,
         bySubcategory: subcategoryTotals(summary),

@@ -20,6 +20,7 @@ import {
 import {
   aggregateNetWorth,
   buildSnapshotBreakdown,
+  positionOwed,
   toHoldingCategory,
   type NormalizedHolding,
 } from "../../../services/portfolio/aggregate";
@@ -40,8 +41,8 @@ import {
  * - The category is the stored investmentCategory, which already reflects
  *   user overrides; a missing one is "unclassified".
  * - A liability's value is the amount owed (positive = owed): a Plaid
- *   credit/loan balance as reported, a provider position's negative value
- *   negated, a broker account's margin debit, a loan's balance.
+ *   credit/loan balance as reported, a provider position's absolute value
+ *   (positionOwed), a broker account's margin debit, a loan's balance.
  * - Vault items are valued at live spot (metalSpotPrices) with the shared
  *   metals valuation, falling back to cost when no fresh spot price exists.
  * - Loans count when active or defaulted (D1).
@@ -62,12 +63,6 @@ export type LoadedHolding =
     })
   | (NormalizedHolding & { source: "vault"; doc: Doc<"vaultItems"> })
   | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> });
-
-/** Amount owed for a provider position classified as a liability. */
-function positionOwed(value: number): number {
-  // A debt is stored as a negative position value (e.g. negative cash)
-  return -value;
-}
 
 export async function loadHoldings(
   ctx: QueryCtx,
@@ -184,7 +179,7 @@ export async function loadHoldings(
     );
     for (const doc of vaultItems) {
       const spot = spotByMetal.get(doc.metalType);
-      const { value, cost, pricedAtSpot } = valueVaultItem(doc, spot, now);
+      const { value, cost } = valueVaultItem(doc, spot, now);
       holdings.push({
         id: doc._id,
         provider: "manual",
@@ -194,8 +189,10 @@ export async function loadHoldings(
         name: doc.customName ?? doc.metalType,
         valueBase: value,
         costBase: cost,
-        // Valued at cost without a fresh spot price: no market timestamp
-        pricedAt: pricedAtSpot && spot ? spot.sourceTimestamp : null,
+        // The spot row's timestamp even when it is stale and the item fell
+        // back to cost, so a stale price pulls asOf back; null only without
+        // any spot row
+        pricedAt: spot ? spot.sourceTimestamp : null,
         doc,
       });
     }

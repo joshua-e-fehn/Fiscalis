@@ -5,6 +5,7 @@ import {
   buildSnapshotBreakdown,
   HOLDING_CATEGORIES,
   placeHolding,
+  positionOwed,
   toHoldingCategory,
   type NormalizedHolding,
 } from "./aggregate";
@@ -79,6 +80,23 @@ describe("placeHolding", () => {
   });
 });
 
+describe("positionOwed", () => {
+  it("counts a liability position as debt whatever its sign", () => {
+    // Negative cash, and a positive position overridden to liabilities
+    expect(positionOwed(-300)).toBe(300);
+    expect(positionOwed(10_000)).toBe(10_000);
+    const overridden = holding({
+      source: "brokerPosition",
+      category: "liabilities",
+      valueBase: positionOwed(10_000),
+    });
+    expect(placeHolding(overridden)).toMatchObject({ category: "liabilities", value: 10_000 });
+    const a = aggregateNetWorth([overridden]);
+    expect(a.totalLiabilities).toBe(10_000);
+    expect(a.netWorth).toBe(-10_000);
+  });
+});
+
 describe("aggregateNetWorth", () => {
   const a = aggregateNetWorth(holdings);
 
@@ -126,6 +144,8 @@ describe("aggregateNetWorth", () => {
   it("reports loan payments and data freshness", () => {
     expect(a.monthlyLoanPayment).toBe(250);
     expect(a.loansCount).toBe(1);
+    // The credit card and the margin debit; not the loan, not the credit balance
+    expect(a.liabilityAccountsCount).toBe(2);
     // The oldest priced holding; the loan and the unpriced vault item have none
     expect(a.asOf).toBe(900);
     expect(aggregateNetWorth([]).asOf).toBeNull();

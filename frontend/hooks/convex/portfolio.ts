@@ -92,7 +92,10 @@ export interface LiabilitiesSummaryData {
   monthlyPayment: number;
   /** Manual loans counted as liabilities (active, defaulted) */
   loansCount: number;
-  /** Every liability account and loan */
+  /**
+   * Liability accounts other than loans (credit cards, provider loan
+   * accounts, margin debits); loans are counted in loansCount only
+   */
   accountsCount: number;
 }
 

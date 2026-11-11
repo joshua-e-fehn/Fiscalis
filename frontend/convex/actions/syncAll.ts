@@ -377,7 +377,15 @@ export const scheduledDailySync = internalAction({
       await ctx.scheduler.runAfter(
         delay + FALLBACK_SNAPSHOT_DELAY_MS,
         internal.portfolioSnapshots.takeSnapshot,
-        { userId, source: "scheduled-daily", onlyIfMissing: true },
+        // Only written when the user's sync left no row for the day (it
+        // failed or timed out), so provider data is from the last
+        // successful syncs: tagged partial
+        {
+          userId,
+          source: "scheduled-daily",
+          onlyIfMissing: true,
+          partial: true,
+        },
       );
     }
 

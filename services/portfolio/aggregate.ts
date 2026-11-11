@@ -96,6 +96,17 @@ export function toHoldingCategory(
     : "unclassified";
 }
 
+/**
+ * Amount owed for a provider position (broker, Bitpanda) classified as a
+ * liability: its absolute value. A debt is usually stored as a negative
+ * position (negative cash), but a user override can put a positive position
+ * in liabilities too; either way it is debt. A position has no credit
+ * balance, unlike a Plaid account or a loan.
+ */
+export function positionOwed(value: number): number {
+  return Math.abs(value);
+}
+
 /** Subcategory of a credit balance counted as cash. */
 export const CREDIT_BALANCE_SUBCATEGORY = "credit-balance";
 
@@ -140,6 +151,12 @@ export interface NetWorthAggregate {
   monthlyLoanPayment: number;
   /** Number of loans counted as liabilities */
   loansCount: number;
+  /**
+   * Number of non-loan holdings counted as liabilities (credit cards,
+   * provider loan accounts, margin debits, liability positions). Loans are
+   * counted in loansCount only.
+   */
+  liabilityAccountsCount: number;
   /**
    * Data freshness: the oldest pricedAt among the holdings that have one
    * (a stale provider sync or spot price makes the whole figure that old).
@@ -204,6 +221,9 @@ export function aggregateNetWorth(
       0,
     ),
     loansCount: loans.length,
+    liabilityAccountsCount: placed.filter(
+      (p) => p.at.category === "liabilities" && p.h.source !== "loan",
+    ).length,
     asOf: pricedAts.length > 0 ? Math.min(...pricedAts) : null,
   };
 }

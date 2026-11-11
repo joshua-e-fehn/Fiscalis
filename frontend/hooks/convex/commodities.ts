@@ -7,8 +7,9 @@
 
 import { useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { useMetalsSummary, useMetals, useVaultTransactions } from "./metals";
-import { usePortfolioHistoricalValues } from "@/hooks/metals";
+import { useMetalsSummary, useMetals } from "./metals";
+import { useVaultPerformance } from "@/hooks/performance/useContinuousPerformance";
+import { useMetalsYTD } from "@/hooks/performance/useMetalsYTD";
 import {
   CategorySummary,
   SubcategoryData,
@@ -20,7 +21,6 @@ import {
   commoditiesSubcategoryUI,
   makeSubcategoryBase,
 } from "@/lib/config/categoryUI";
-import { costLine } from "@/../services/portfolio/unrealizedProfitLoss";
 
 /**
  * Hook to get the commodities category summary
@@ -43,29 +43,28 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
   const { summary: metalsSummary, isLoading: metalsLoading } = useMetalsSummary(currency);
 
   const { items: metalsItems } = useMetals(currency);
-  const { transactions: metalsTransactions } = useVaultTransactions();
 
-  // Calculate current values for the historical values hook
-  const currentPortfolioValue = metalsSummary?.totalMarketValue ?? 0;
-  // The chart's cost line, so value − line is the summary's coverage-based P/L
-  const totalCostValue = metalsSummary
-    ? costLine(metalsSummary.totalMarketValue, metalsSummary.totalProfitLoss)
-    : null;
-
-  // Get historical portfolio values using actual spot prices
-  const { dataPoints: historicalDataPoints, isLoading: historicalLoading } =
-    usePortfolioHistoricalValues(
-      metalsItems,
-      metalsTransactions,
-      currentPortfolioValue,
-      totalCostValue,
-      "1Y", // Fetch 1 year of data to cover all time ranges
-      currency,
-    );
+  // History and YTD from the one vault engine: ledger quantities at
+  // historical spot, sales as outflows (useVaultPerformance / useMetalsYTD)
+  const history = useVaultPerformance("Year", {
+    currency,
+    includeDataPoints: true,
+  });
+  const ytd = useMetalsYTD(currency);
 
   // Build category summary
   const summary = useMemo<CategorySummary | null>(() => {
     if (!userId) return null;
+
+    // Without a fresh spot price items are valued at cost, so their P/L
+    // is unknown rather than 0 (as MetalsPage shows it)
+    const metalsPriced = metalsSummary?.pricedAtSpot !== false;
+    const metalsProfitLoss = metalsPriced
+      ? (metalsSummary?.unrealizedProfitLoss ?? null)
+      : null;
+    const metalsProfitLossPercent = metalsPriced
+      ? (metalsSummary?.unrealizedProfitLossPercent ?? null)
+      : null;
 
     // Build subcategories array from centralized config
     const subcategories: SubcategoryData[] = [];
@@ -98,8 +97,8 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
           ...makeSubcategoryBase(slug, meta),
           totalValue: metalsSummary?.totalMarketValue ?? 0,
           costBasis: metalsSummary?.totalCost ?? null,
-          profitLoss: metalsSummary?.totalProfitLoss ?? null,
-          profitLossPercent: metalsSummary?.totalProfitLossPercent ?? null,
+          profitLoss: metalsProfitLoss,
+          profitLossPercent: metalsProfitLossPercent,
           topHoldings: metalsTopHoldings,
           holdingsCount: metalsItems?.length ?? 0,
           implemented: true,
@@ -113,41 +112,27 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
     // Calculate totals
     const totalValue = subcategories.reduce((sum, s) => sum + s.totalValue, 0);
 
-    // Only precious metals carry data. Their cost and P/L cover just the
-    // items with a purchase price (summarizeMetalItems), so the P/L is taken
+    // Only precious metals carry data. Their cost and unrealized P/L cover
+    // just the items with a cost (summarizeMetalItems), so the P/L is taken
     // from the summary rather than recomputed against the full value.
     const totalCost = metalsSummary?.totalCost ?? null;
-    const profitLoss = metalsSummary?.totalProfitLoss ?? null;
-    const profitLossPercent = metalsSummary?.totalProfitLossPercent ?? null;
+    const profitLoss = metalsProfitLoss;
+    const profitLossPercent = metalsProfitLossPercent;
 
-    // Convert historical data points to the expected format
-    const historyDataPoints: PortfolioDataPoint[] = historicalDataPoints.map(
+    // The chart's cost line: the lots' cost, or the value where unknown
+    const historyDataPoints: PortfolioDataPoint[] = history.dataPoints.map(
       (dp) => ({
-        date: dp.date,
+        date: new Date(dp.timestamp).toLocaleDateString("de-DE"),
         timestamp: dp.timestamp,
         value: dp.value,
-        cost: dp.cost,
+        cost: dp.costBasis ?? dp.value,
       }),
     );
 
-    // Calculate YTD
-    const currentYear = new Date().getFullYear();
-    const startOfYear = new Date(currentYear, 0, 1).getTime();
-    const pointBeforeYear = historyDataPoints
-      .filter((dp) => dp.timestamp <= startOfYear)
-      .sort((a, b) => b.timestamp - a.timestamp)[0];
-    const valueAtYearStart = pointBeforeYear?.value ?? null;
-
-    let ytdProfitLoss: number | null = null;
-    let ytdProfitLossPercent: number | null = null;
-
-    if (valueAtYearStart !== null && valueAtYearStart > 0) {
-      ytdProfitLoss = totalValue - valueAtYearStart;
-      ytdProfitLossPercent = (ytdProfitLoss / valueAtYearStart) * 100;
-    } else if (profitLoss !== null) {
-      ytdProfitLoss = profitLoss;
-      ytdProfitLossPercent = profitLossPercent;
-    }
+    // YTD net of this year's purchases and sales; null without a value at 1 Jan
+    const ytdProfitLoss = ytd.ytdProfitLoss;
+    const ytdProfitLossPercent = ytd.ytdProfitLossPercent;
+    const valueAtYearStart = ytd.valueAtStartOfYear;
 
     return {
       totalValue,
@@ -160,10 +145,10 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
       subcategories,
       historyDataPoints,
     };
-  }, [userId, metalsSummary, metalsItems, historicalDataPoints]);
+  }, [userId, metalsSummary, metalsItems, history.dataPoints, ytd]);
 
   return {
     summary,
-    isLoading: metalsLoading || historicalLoading,
+    isLoading: metalsLoading || history.isLoading || ytd.isLoading,
   };
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -34,6 +35,7 @@ import {
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
+import { saleProfitLoss } from "@/../services/finance/metalsLedger";
 import { Loader2, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 
 interface SellItemDialogProps {
@@ -84,15 +86,14 @@ export function SellItemDialog({
   const parsedPrice = parseFloat(pricePerUnit) || 0;
   const totalSaleValue = parsedPrice * quantity;
 
-  // Calculate profit/loss for this sale
-  const costBasis = item.purchasePricePerUnit
-    ? item.purchasePricePerUnit * quantity
-    : null;
-  const saleProfit = costBasis !== null ? totalSaleValue - costBasis : null;
-  const saleProfitPercent =
-    costBasis !== null && costBasis > 0
-      ? ((totalSaleValue - costBasis) / costBasis) * 100
+  // P/L of this sale against the item's average cost (EUR), as the ledger
+  // will realize it; not comparable with a price in another currency
+  const preview =
+    saleCurrency === "EUR"
+      ? saleProfitLoss(item.averageCost, quantity, parsedPrice)
       : null;
+  const saleProfit = preview?.profitLoss ?? null;
+  const saleProfitPercent = preview?.profitLossPercent ?? null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +123,11 @@ export function SellItemDialog({
       onClose();
     } catch (err) {
       console.error("Failed to record sale:", err);
-      setError("Failed to record sale. Please try again.");
+      setError(
+        err instanceof ConvexError
+          ? String(err.data)
+          : "Failed to record sale. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -160,19 +165,12 @@ export function SellItemDialog({
                   size="sm"
                 />
               </div>
-              {item.purchasePricePerUnit && (
+              {item.averageCost !== null && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Cost Basis (each)
+                    Average Cost (each)
                   </span>
-                  <PriceDisplay
-                    value={item.purchasePricePerUnit}
-                    currency={
-                      (item.purchaseCurrency?.toLowerCase() as MetalsCurrency) ||
-                      currency
-                    }
-                    size="sm"
-                  />
+                  <PriceDisplay value={item.averageCost} currency="eur" size="sm" />
                 </div>
               )}
             </div>

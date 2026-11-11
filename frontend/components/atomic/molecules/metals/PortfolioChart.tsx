@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -22,64 +22,46 @@ import { cn } from "@/lib/utils";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MS } from "@/../services/finance/financeService";
+import type { PerformanceTimeRangeLabel } from "@/lib/performance";
 
 // ═══════════════════════════════════════════════════════════════
-// Types using unified performance service
+// Types
 // ═══════════════════════════════════════════════════════════════
+
+/** The ranges the chart offers (shared PerformanceTimeRangeLabel values) */
+export type ChartTimeRange = Extract<
+  PerformanceTimeRangeLabel,
+  "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL"
+>;
+
+export const CHART_TIME_RANGES: readonly ChartTimeRange[] = [
+  "1W",
+  "1M",
+  "3M",
+  "6M",
+  "1Y",
+  "ALL",
+];
 
 /**
- * @deprecated Use PerformanceTimeRangeLabel from @/lib/performance instead
+ * One point of the vault's value history (useVaultPerformance): value at
+ * the quantity held then and historical spot, and the cost line (null
+ * where the cost is unknown).
  */
-export type ChartTimeRange = "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL";
-
-interface PortfolioDataPoint {
-  date: string;
-  value: number;
-  cost: number;
+export interface PortfolioChartPoint {
   timestamp: number;
-}
-
-interface Transaction {
-  transactionDate: string;
-  transactionType: "buy" | "sell" | "gift_received" | "gift_given";
-  quantity: number;
-  pricePerUnit: number;
+  value: number;
+  cost: number | null;
 }
 
 interface PortfolioChartProps {
-  transactions: Transaction[] | undefined;
-  currentValue: number;
-  totalCost: number | null;
+  dataPoints: PortfolioChartPoint[];
+  timeRange: ChartTimeRange;
+  onTimeRangeChange: (range: ChartTimeRange) => void;
   currency?: MetalsCurrency;
   isLoading?: boolean;
   className?: string;
 }
-
-/**
- * Time range labels for UI buttons
- */
-const timeRangeLabels: Record<ChartTimeRange, string> = {
-  "1W": "1W",
-  "1M": "1M",
-  "3M": "3M",
-  "6M": "6M",
-  "1Y": "1Y",
-  ALL: "All",
-};
-
-/**
- * Time range to milliseconds mapping
- * Uses unified MS constants from finance service
- */
-const timeRangeMs: Record<ChartTimeRange, number | null> = {
-  "1W": MS.DAY * 7,
-  "1M": MS.DAY * 30,
-  "3M": MS.DAY * 90,
-  "6M": MS.DAY * 180,
-  "1Y": MS.DAY * 365,
-  ALL: null,
-};
 
 function formatCurrency(value: number, currency: MetalsCurrency): string {
   const currencyMap: Record<MetalsCurrency, string> = {
@@ -103,121 +85,6 @@ function formatDate(timestamp: number, range: ChartTimeRange): string {
   return date.toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
 }
 
-/**
- * Build portfolio value history from transactions
- * This creates a running total of invested cost over time
- * The chart shows:
- * - "value" line: historical cost basis, ending at current market value
- * - "cost" line: horizontal reference showing total cost basis
- */
-function buildPortfolioHistory(
-  transactions: Transaction[],
-  currentValue: number,
-  totalCost: number | null,
-  timeRange: ChartTimeRange,
-): PortfolioDataPoint[] {
-  if (!transactions || transactions.length === 0) {
-    return [];
-  }
-
-  // Sort transactions by date
-  const sorted = [...transactions].sort(
-    (a, b) =>
-      new Date(a.transactionDate).getTime() -
-      new Date(b.transactionDate).getTime(),
-  );
-
-  // Calculate cutoff date for time range
-  const now = Date.now();
-  const msRange = timeRangeMs[timeRange];
-  const cutoffDate = msRange ? now - msRange : 0;
-
-  // Build running cost total - track cost before cutoff too
-  let runningCost = 0;
-  let costAtCutoff = 0;
-  const dataPoints: PortfolioDataPoint[] = [];
-
-  for (const tx of sorted) {
-    const txDate = new Date(tx.transactionDate).getTime();
-
-    // Calculate cost change
-    const costChange = tx.quantity * tx.pricePerUnit;
-
-    if (
-      tx.transactionType === "buy" ||
-      tx.transactionType === "gift_received"
-    ) {
-      runningCost += costChange;
-    } else if (
-      tx.transactionType === "sell" ||
-      tx.transactionType === "gift_given"
-    ) {
-      runningCost -= costChange;
-    }
-
-    // Track cost at the cutoff point
-    if (txDate < cutoffDate) {
-      costAtCutoff = runningCost;
-    }
-
-    // Only include data points if within time range
-    if (txDate >= cutoffDate) {
-      dataPoints.push({
-        date: new Date(tx.transactionDate).toLocaleDateString("de-DE"),
-        value: runningCost, // Use cost as proxy for historical value
-        cost: runningCost,
-        timestamp: txDate,
-      });
-    }
-  }
-
-  // Calculate the final cost basis to use as reference line
-  const finalCost = totalCost ?? runningCost;
-
-  // If we have holdings (runningCost > 0), always show the chart
-  if (runningCost > 0 || currentValue > 0) {
-    // Add starting point at cutoff if we had holdings before the range
-    if (dataPoints.length === 0 && costAtCutoff > 0) {
-      dataPoints.push({
-        date: formatDate(cutoffDate, timeRange),
-        value: costAtCutoff,
-        cost: finalCost, // Use final cost basis as horizontal reference
-        timestamp: cutoffDate,
-      });
-    }
-
-    // Update all data points to show the final cost basis as a horizontal reference line
-    for (const point of dataPoints) {
-      point.cost = finalCost;
-    }
-
-    // Add current point with actual market value
-    dataPoints.push({
-      date: new Date().toLocaleDateString("de-DE"),
-      value: currentValue,
-      cost: finalCost,
-      timestamp: now,
-    });
-  }
-
-  // Ensure we have at least 2 points for a proper chart
-  if (dataPoints.length === 1) {
-    const firstPoint = dataPoints[0];
-    // Add a point from the start of the range
-    dataPoints.unshift({
-      date: formatDate(
-        cutoffDate || firstPoint.timestamp - 7 * 24 * 60 * 60 * 1000,
-        timeRange,
-      ),
-      value: 0,
-      cost: finalCost,
-      timestamp: cutoffDate || firstPoint.timestamp - 7 * 24 * 60 * 60 * 1000,
-    });
-  }
-
-  return dataPoints;
-}
-
 // Custom tooltip component
 function CustomTooltip({
   active,
@@ -233,9 +100,12 @@ function CustomTooltip({
   if (!active || !payload || payload.length === 0) return null;
 
   const value = payload.find((p) => p.dataKey === "value")?.value ?? 0;
-  const cost = payload.find((p) => p.dataKey === "cost")?.value ?? 0;
-  const profitLoss = value - cost;
-  const profitLossPercent = cost > 0 ? (profitLoss / cost) * 100 : 0;
+  const cost = payload.find((p) => p.dataKey === "cost")?.value ?? null;
+  const profitLoss = cost !== null ? value - cost : null;
+  const profitLossPercent =
+    profitLoss !== null && cost !== null && cost > 0
+      ? (profitLoss / cost) * 100
+      : null;
 
   return (
     <div className="bg-popover border rounded-lg shadow-lg p-3 text-sm">
@@ -245,62 +115,65 @@ function CustomTooltip({
           <span className="text-muted-foreground">Value:</span>
           <span className="font-medium">{formatCurrency(value, currency)}</span>
         </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-muted-foreground">Cost:</span>
-          <span>{formatCurrency(cost, currency)}</span>
-        </div>
-        <div className="flex justify-between gap-4">
-          <span className="text-muted-foreground">P/L:</span>
-          <span
-            className={cn(
-              "font-medium",
-              profitLoss >= 0 ? "text-profit" : "text-loss",
-            )}
-          >
-            {profitLoss >= 0 ? "+" : ""}
-            {formatCurrency(profitLoss, currency)} (
-            {profitLossPercent.toFixed(1)}%)
-          </span>
-        </div>
+        {cost !== null && profitLoss !== null && (
+          <>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Cost:</span>
+              <span>{formatCurrency(cost, currency)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">P/L:</span>
+              <span
+                className={cn(
+                  "font-medium",
+                  profitLoss >= 0 ? "text-profit" : "text-loss",
+                )}
+              >
+                {profitLoss >= 0 ? "+" : ""}
+                {formatCurrency(profitLoss, currency)}
+                {profitLossPercent !== null &&
+                  ` (${profitLossPercent.toFixed(1)}%)`}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
 export function PortfolioChart({
-  transactions,
-  currentValue,
-  totalCost,
+  dataPoints,
+  timeRange,
+  onTimeRangeChange,
   currency = "eur",
   isLoading = false,
   className,
 }: PortfolioChartProps) {
-  const [timeRange, setTimeRange] = useState<ChartTimeRange>("3M");
-
   const chartData = useMemo(
     () =>
-      buildPortfolioHistory(
-        transactions ?? [],
-        currentValue,
-        totalCost,
-        timeRange,
-      ),
-    [transactions, currentValue, totalCost, timeRange],
+      dataPoints.map((p) => ({
+        ...p,
+        date: formatDate(p.timestamp, timeRange),
+      })),
+    [dataPoints, timeRange],
   );
 
-  const profitLoss = totalCost !== null ? currentValue - totalCost : null;
-  const isProfit = profitLoss !== null && profitLoss >= 0;
+  const last = dataPoints[dataPoints.length - 1];
+  const isProfit = !last || last.cost === null || last.value >= last.cost;
+
+  const header = (
+    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+      <TrendingUp className="h-4 w-4" />
+      Portfolio Performance
+    </CardTitle>
+  );
 
   // Loading state
   if (isLoading) {
     return (
       <Card className={cn("h-full", className)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Portfolio Performance
-          </CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-2">{header}</CardHeader>
         <CardContent>
           <div className="h-48 bg-muted animate-pulse rounded-lg" />
         </CardContent>
@@ -308,19 +181,11 @@ export function PortfolioChart({
     );
   }
 
-  // No data state - but show current value if we have holdings
-  if (
-    (!transactions || transactions.length === 0 || chartData.length === 0) &&
-    currentValue === 0
-  ) {
+  // Nothing held in the range, or no price history for it
+  if (chartData.length < 2) {
     return (
       <Card className={cn("h-full", className)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Portfolio Performance
-          </CardTitle>
-        </CardHeader>
+        <CardHeader className="pb-2">{header}</CardHeader>
         <CardContent className="flex items-center justify-center h-48">
           <span className="text-sm text-muted-foreground">
             Add items to your vault to see portfolio performance
@@ -330,75 +195,18 @@ export function PortfolioChart({
     );
   }
 
-  // Has holdings but no transaction history - show simple value display
-  if (
-    (!transactions || transactions.length === 0 || chartData.length === 0) &&
-    currentValue > 0
-  ) {
-    return (
-      <Card className={cn("h-full", className)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Portfolio Performance
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center h-48 space-y-4">
-          <div className="text-center">
-            <div className="text-3xl font-bold">
-              {formatCurrency(currentValue, currency)}
-            </div>
-            <div className="text-sm text-muted-foreground mt-1">
-              Current Portfolio Value
-            </div>
-          </div>
-          {totalCost !== null && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">P/L:</span>
-              <span
-                className={cn(
-                  "font-medium",
-                  currentValue - totalCost >= 0 ? "text-profit" : "text-loss",
-                )}
-              >
-                {currentValue - totalCost >= 0 ? "+" : ""}
-                {formatCurrency(currentValue - totalCost, currency)}
-                {totalCost > 0 && (
-                  <span className="ml-1">
-                    (
-                    {(((currentValue - totalCost) / totalCost) * 100).toFixed(
-                      1,
-                    )}
-                    %)
-                  </span>
-                )}
-              </span>
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground text-center max-w-xs">
-            Add purchase details to your items to see historical performance
-            charts
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Portfolio Performance
-          </CardTitle>
+          {header}
 
           {/* Time Range Selector */}
           <div className="flex gap-1">
-            {(Object.keys(timeRangeLabels) as ChartTimeRange[]).map((range) => (
+            {CHART_TIME_RANGES.map((range) => (
               <button
                 key={range}
-                onClick={() => setTimeRange(range)}
+                onClick={() => onTimeRangeChange(range)}
                 className={cn(
                   "px-2 py-1 text-xs rounded-md transition-colors",
                   timeRange === range
@@ -406,7 +214,7 @@ export function PortfolioChart({
                     : "text-muted-foreground hover:bg-muted",
                 )}
               >
-                {timeRangeLabels[range]}
+                {range === "ALL" ? "All" : range}
               </button>
             ))}
           </div>
@@ -482,8 +290,9 @@ export function PortfolioChart({
                     fill: "white",
                   }}
                 />
-                {/* Cost baseline - horizontal reference line (rendered on top) */}
+                {/* Cost line: the lots' cost over time (rendered on top) */}
                 <Line
+                  connectNulls={false}
                   type="monotone"
                   dataKey="cost"
                   stroke="hsl(var(--muted-foreground))"

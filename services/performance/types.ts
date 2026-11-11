@@ -316,7 +316,10 @@ export interface HoldingData {
   id: string;
   /** Asset type identifier (e.g., "gold", "silver") */
   assetType: string;
-  /** Number of units */
+  /**
+   * Number of units. Negative for a ledger lot that sold or gave units
+   * away: from its date on it reduces what is held.
+   */
   quantity: number;
   /**
    * For metals: fine weight in grams. A holding with a fine weight is valued
@@ -337,6 +340,13 @@ export interface HoldingData {
    * in another currency than the series' is not used as the purchase flow.
    */
   purchaseCurrency?: string;
+  /**
+   * Cost per unit this holding adds to the cost line, when it differs from
+   * the flow price: a sale lot (negative quantity, see metalsLedger
+   * `ledgerHoldings`) moves money at its proceeds but removes its average
+   * cost. Null: unknown cost. Undefined: purchasePricePerUnit.
+   */
+  costPerUnit?: number | null;
 }
 
 /**

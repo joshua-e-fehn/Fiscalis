@@ -1,9 +1,164 @@
-import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import { ConvexError, v } from "convex/values";
+import {
+  query,
+  mutation,
+  type MutationCtx,
+  type QueryCtx,
+} from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { resolvePremiums } from "../../services/finance/metals";
+import { toBase, type FxRates } from "../../services/finance/currency";
+import {
+  LedgerError,
+  itemProjection,
+  missingOpeningTransaction,
+  replayLedger,
+  validateTransactionInput,
+  type ItemLedger,
+  type LedgerTransaction,
+  type ToBaseAmount,
+} from "../../services/finance/metalsLedger";
+import { loadFxRates } from "./fxRates";
 import { scheduleSnapshot } from "./portfolioSnapshots";
+
+// ═══════════════════════════════════════════════════════════════
+// LEDGER - vaultTransactions are the source of truth
+// ═══════════════════════════════════════════════════════════════
+// An item's quantity and cost come from replaying its transactions
+// (services/finance/metalsLedger.ts). vaultItems.quantity and
+// vaultItems.purchasePricePerUnit are cached projections that every
+// mutation changing the ledger rewrites (syncProjection), so net worth and
+// snapshots keep reading the item fields.
+
+type VaultItemDoc = Doc<"vaultItems">;
+type VaultTransactionDoc = Doc<"vaultTransactions">;
+
+const transactionTypeValidator = v.union(
+  v.literal("buy"),
+  v.literal("sell"),
+  v.literal("gift_received"),
+  v.literal("gift_given"),
+);
+
+/** EUR amounts through the FX mirror (services/finance/currency toBase). */
+export function toBaseAmountWith(rates: FxRates): ToBaseAmount {
+  return (amount, currency) => {
+    const converted = toBase(amount, currency, rates);
+    return converted.ok ? converted.value : null;
+  };
+}
+
+export function asLedgerTransaction(tx: VaultTransactionDoc): LedgerTransaction {
+  return {
+    transactionType: tx.transactionType,
+    quantity: tx.quantity,
+    pricePerUnit: tx.pricePerUnit ?? null,
+    currency: tx.currency,
+    transactionDate: tx.transactionDate ?? null,
+    createdAt: tx.createdAt,
+  };
+}
+
+/** The opening balance: flagged, or noted "Initial purchase" on old documents. */
+export function isOpeningTransaction(tx: VaultTransactionDoc): boolean {
+  return tx.isOpening ?? tx.notes === "Initial purchase";
+}
+
+export async function itemTransactions(
+  ctx: { db: QueryCtx["db"] },
+  vaultItemId: Id<"vaultItems">,
+): Promise<VaultTransactionDoc[]> {
+  return await ctx.db
+    .query("vaultTransactions")
+    .withIndex("by_item", (q) => q.eq("vaultItemId", vaultItemId))
+    .collect();
+}
+
+/**
+ * The item's ledger, including the opening balance an item stored before
+ * the ledger was complete is missing (computed, not written). Null when the
+ * stored ledger cannot be replayed (it sells more than it holds).
+ */
+function readItemLedger(
+  item: VaultItemDoc,
+  txs: VaultTransactionDoc[],
+  toBaseAmount: ToBaseAmount,
+): ItemLedger | null {
+  const ledger = txs.map(asLedgerTransaction);
+  const opening = missingOpeningTransaction(item, ledger);
+  try {
+    return replayLedger(opening ? [...ledger, opening] : ledger, toBaseAmount);
+  } catch (error) {
+    if (error instanceof LedgerError) return null;
+    throw error;
+  }
+}
+
+/** A LedgerError as an error the client can show; anything else rethrown. */
+function asUserError(error: unknown): unknown {
+  return error instanceof LedgerError ? new ConvexError(error.message) : error;
+}
+
+function validateInput(tx: Parameters<typeof validateTransactionInput>[0]) {
+  try {
+    validateTransactionInput(tx);
+  } catch (error) {
+    throw asUserError(error);
+  }
+}
+
+/**
+ * Write the opening balance an older item is missing, so the ledger
+ * accounts for its whole quantity before it changes. Returns the item's
+ * transactions including it.
+ */
+export async function ensureOpeningTransaction(
+  ctx: MutationCtx,
+  item: VaultItemDoc,
+): Promise<VaultTransactionDoc[]> {
+  const txs = await itemTransactions(ctx, item._id);
+  const opening = missingOpeningTransaction(item, txs.map(asLedgerTransaction));
+  if (!opening) return txs;
+  const id = await ctx.db.insert("vaultTransactions", {
+    userId: item.userId,
+    vaultItemId: item._id,
+    transactionType: "buy",
+    quantity: opening.quantity,
+    pricePerUnit: opening.pricePerUnit ?? undefined,
+    currency: opening.currency,
+    transactionDate: opening.transactionDate ?? undefined,
+    isOpening: true,
+    notes: "Opening balance",
+    createdAt: item.createdAt,
+  });
+  return [...txs, (await ctx.db.get(id))!];
+}
+
+/**
+ * Replay the item's ledger and write its cached quantity and average cost.
+ * Throws (rolling the whole mutation back) when the ledger would hold a
+ * negative quantity at any date.
+ */
+export async function syncProjection(
+  ctx: MutationCtx,
+  vaultItemId: Id<"vaultItems">,
+  toBaseAmount?: ToBaseAmount,
+): Promise<ItemLedger> {
+  const txs = await itemTransactions(ctx, vaultItemId);
+  const convert = toBaseAmount ?? toBaseAmountWith(await loadFxRates(ctx));
+  let ledger: ItemLedger;
+  try {
+    ledger = replayLedger(txs.map(asLedgerTransaction), convert);
+  } catch (error) {
+    throw asUserError(error);
+  }
+  await ctx.db.patch(vaultItemId, {
+    ...itemProjection(ledger),
+    updatedAt: Date.now(),
+  });
+  return ledger;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES - Metal Catalog
@@ -91,18 +246,22 @@ export const getUserVaultItems = query({
       .query("vaultItems")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
+    const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
 
-    // Enrich with catalog data if available
+    // Enrich with catalog data and the item's replayed ledger (quantity over
+    // time, average cost, realized P/L; null when it cannot be replayed)
     const enrichedItems = await Promise.all(
       items.map(async (item) => {
         let catalogItem = null;
         if (item.catalogItemId) {
           catalogItem = await ctx.db.get(item.catalogItemId);
         }
+        const txs = await itemTransactions(ctx, item._id);
         return {
           ...item,
           catalogItem,
           displayName: item.customName || catalogItem?.name || "Unknown Item",
+          ledger: readItemLedger(item, txs, toBaseAmount),
         };
       }),
     );
@@ -155,6 +314,11 @@ export const getVaultItem = query({
       ...item,
       catalogItem,
       displayName: item.customName || catalogItem?.name || "Unknown Item",
+      ledger: readItemLedger(
+        item,
+        await itemTransactions(ctx, item._id),
+        toBaseAmountWith(await loadFxRates(ctx)),
+      ),
     };
   },
 });
@@ -254,9 +418,80 @@ export const getUserTransactions = query({
   },
 });
 
+
 // ═══════════════════════════════════════════════════════════════
 // MUTATIONS - Vault Items
 // ═══════════════════════════════════════════════════════════════
+
+const openingArgs = {
+  quantity: v.number(),
+  purchasePricePerUnit: v.optional(v.number()),
+  // New entries are asked for it (D3); without one the opening balance is
+  // held since before any range, never dated at record creation
+  purchaseDate: v.optional(v.string()),
+  purchaseCurrency: v.optional(v.string()),
+};
+
+/**
+ * Insert a vault item with its opening balance and the projection of that
+ * ledger. Every item starts with an opening transaction, priced or not,
+ * dated or not.
+ */
+async function createVaultItem(
+  ctx: MutationCtx,
+  userId: string,
+  fields: Omit<
+    VaultItemDoc,
+    | "_id"
+    | "_creationTime"
+    | "userId"
+    | "quantity"
+    | "purchasePricePerUnit"
+    | "purchaseDate"
+    | "purchaseCurrency"
+    | "createdAt"
+    | "updatedAt"
+  >,
+  opening: {
+    quantity: number;
+    purchasePricePerUnit?: number;
+    purchaseDate?: string;
+    purchaseCurrency?: string;
+  },
+): Promise<Id<"vaultItems">> {
+  validateInput({
+    quantity: opening.quantity,
+    pricePerUnit: opening.purchasePricePerUnit,
+    transactionDate: opening.purchaseDate,
+  });
+  const now = Date.now();
+  const currency = opening.purchaseCurrency ?? "EUR";
+  const vaultItemId = await ctx.db.insert("vaultItems", {
+    ...fields,
+    userId,
+    quantity: opening.quantity,
+    purchasePricePerUnit: opening.purchasePricePerUnit,
+    purchaseDate: opening.purchaseDate,
+    purchaseCurrency: currency,
+    createdAt: now,
+    updatedAt: now,
+  });
+  await ctx.db.insert("vaultTransactions", {
+    userId,
+    vaultItemId,
+    transactionType: "buy",
+    quantity: opening.quantity,
+    pricePerUnit: opening.purchasePricePerUnit,
+    currency,
+    transactionDate: opening.purchaseDate,
+    isOpening: true,
+    notes: "Initial purchase",
+    createdAt: now,
+  });
+  await syncProjection(ctx, vaultItemId);
+  await scheduleSnapshot(ctx, userId, "vault");
+  return vaultItemId;
+}
 
 /**
  * Add item from catalog to user's vault
@@ -264,12 +499,9 @@ export const getUserTransactions = query({
 export const addVaultItemFromCatalog = mutation({
   args: {
     catalogItemId: v.id("metalCatalog"),
-    quantity: v.number(),
+    ...openingArgs,
     buyPremium: v.optional(v.number()), // Override default buy premium
     sellPremium: v.optional(v.number()), // Override default sell premium
-    purchasePricePerUnit: v.optional(v.number()),
-    purchaseDate: v.optional(v.string()),
-    purchaseCurrency: v.optional(v.string()),
     storageLocation: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
@@ -280,7 +512,6 @@ export const addVaultItemFromCatalog = mutation({
       throw new Error("Catalog item not found");
     }
 
-    const now = Date.now();
     // Explicit premium, then the catalog default, then the legacy single
     // `defaultPremium` field on old catalog documents, then the shared default.
     const { buyPremium, sellPremium } = resolvePremiums({
@@ -292,43 +523,23 @@ export const addVaultItemFromCatalog = mutation({
       sell: [args.sellPremium, catalogItem.defaultSellPremium],
     });
 
-    const vaultItemId = await ctx.db.insert("vaultItems", {
+    return await createVaultItem(
+      ctx,
       userId,
-      catalogItemId: args.catalogItemId,
-      metalType: catalogItem.metalType,
-      category: catalogItem.category,
-      purity: catalogItem.purity,
-      weightGrams: catalogItem.weightGrams,
-      fineWeightGrams: catalogItem.fineWeightGrams,
-      quantity: args.quantity,
-      buyPremium,
-      sellPremium,
-      purchasePricePerUnit: args.purchasePricePerUnit,
-      purchaseDate: args.purchaseDate,
-      purchaseCurrency: args.purchaseCurrency ?? "EUR",
-      storageLocation: args.storageLocation,
-      notes: args.notes,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    // Create initial transaction if purchase info provided
-    if (args.purchasePricePerUnit && args.purchaseDate) {
-      await ctx.db.insert("vaultTransactions", {
-        userId,
-        vaultItemId,
-        transactionType: "buy",
-        quantity: args.quantity,
-        pricePerUnit: args.purchasePricePerUnit,
-        currency: args.purchaseCurrency ?? "EUR",
-        transactionDate: args.purchaseDate,
-        notes: "Initial purchase",
-        createdAt: now,
-      });
-    }
-
-    await scheduleSnapshot(ctx, userId, "vault");
-    return vaultItemId;
+      {
+        catalogItemId: args.catalogItemId,
+        metalType: catalogItem.metalType,
+        category: catalogItem.category,
+        purity: catalogItem.purity,
+        weightGrams: catalogItem.weightGrams,
+        fineWeightGrams: catalogItem.fineWeightGrams,
+        buyPremium,
+        sellPremium,
+        storageLocation: args.storageLocation,
+        notes: args.notes,
+      },
+      args,
+    );
   },
 });
 
@@ -352,64 +563,43 @@ export const addCustomVaultItem = mutation({
     ),
     purity: v.number(),
     weightGrams: v.number(),
-    quantity: v.number(),
+    ...openingArgs,
     buyPremium: v.number(),
     sellPremium: v.number(),
-    purchasePricePerUnit: v.optional(v.number()),
-    purchaseDate: v.optional(v.string()),
-    purchaseCurrency: v.optional(v.string()),
     storageLocation: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const now = Date.now();
-
-    // Calculate fine weight from total weight and purity
-    const fineWeightGrams = args.weightGrams * (args.purity / 1000);
-
-    const vaultItemId = await ctx.db.insert("vaultItems", {
-      userId,
-      customName: args.customName,
-      metalType: args.metalType,
-      category: args.category,
-      purity: args.purity,
-      weightGrams: args.weightGrams,
-      fineWeightGrams,
-      quantity: args.quantity,
-      buyPremium: args.buyPremium,
-      sellPremium: args.sellPremium,
-      purchasePricePerUnit: args.purchasePricePerUnit,
-      purchaseDate: args.purchaseDate,
-      purchaseCurrency: args.purchaseCurrency ?? "EUR",
-      storageLocation: args.storageLocation,
-      notes: args.notes,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    // Create initial transaction if purchase info provided
-    if (args.purchasePricePerUnit && args.purchaseDate) {
-      await ctx.db.insert("vaultTransactions", {
-        userId,
-        vaultItemId,
-        transactionType: "buy",
-        quantity: args.quantity,
-        pricePerUnit: args.purchasePricePerUnit,
-        currency: args.purchaseCurrency ?? "EUR",
-        transactionDate: args.purchaseDate,
-        notes: "Initial purchase",
-        createdAt: now,
-      });
+    if (!(args.weightGrams > 0) || !(args.purity > 0)) {
+      throw new ConvexError("Weight and purity must be greater than 0");
     }
-
-    await scheduleSnapshot(ctx, userId, "vault");
-    return vaultItemId;
+    return await createVaultItem(
+      ctx,
+      userId,
+      {
+        customName: args.customName,
+        metalType: args.metalType,
+        category: args.category,
+        purity: args.purity,
+        weightGrams: args.weightGrams,
+        // Fine weight from total weight and purity (per mille)
+        fineWeightGrams: args.weightGrams * (args.purity / 1000),
+        buyPremium: args.buyPremium,
+        sellPremium: args.sellPremium,
+        storageLocation: args.storageLocation,
+        notes: args.notes,
+      },
+      args,
+    );
   },
 });
 
 /**
- * Update a vault item
+ * Update a vault item. Quantity, purchase price, date and currency are
+ * ledger fields: they edit the item's opening balance (the quantity is the
+ * new total held, the price is per unit in purchaseCurrency), and the
+ * edit is rejected when the ledger would then hold a negative quantity.
  */
 export const updateVaultItem = mutation({
   args: {
@@ -425,7 +615,14 @@ export const updateVaultItem = mutation({
     customName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { vaultItemId, ...updates } = args;
+    const {
+      vaultItemId,
+      quantity,
+      purchasePricePerUnit,
+      purchaseDate,
+      purchaseCurrency,
+      ...updates
+    } = args;
 
     const userId = await requireUserId(ctx);
     const existing = await getOwnedDoc(ctx, userId, vaultItemId);
@@ -433,18 +630,56 @@ export const updateVaultItem = mutation({
       throw new Error("Vault item not found");
     }
 
-    // Filter out undefined values
+    // Non-ledger fields: filter out undefined values
     const filteredUpdates: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
         filteredUpdates[key] = value;
       }
     }
-
     await ctx.db.patch(vaultItemId, {
       ...filteredUpdates,
       updatedAt: Date.now(),
     });
+
+    const editsLedger =
+      quantity !== undefined ||
+      purchasePricePerUnit !== undefined ||
+      purchaseDate !== undefined ||
+      purchaseCurrency !== undefined;
+    if (editsLedger) {
+      const txs = await ensureOpeningTransaction(ctx, existing);
+      const opening = txs.find(isOpeningTransaction);
+      if (!opening) {
+        throw new ConvexError(
+          "This item has no opening balance; record a buy or sale instead",
+        );
+      }
+      const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
+      let held: number;
+      try {
+        held = replayLedger(txs.map(asLedgerTransaction), toBaseAmount).quantity;
+      } catch (error) {
+        throw asUserError(error);
+      }
+      const openingQuantity =
+        opening.quantity + (quantity === undefined ? 0 : quantity - held);
+      const next = {
+        quantity: openingQuantity,
+        pricePerUnit: purchasePricePerUnit ?? opening.pricePerUnit,
+        transactionDate: purchaseDate ?? opening.transactionDate,
+      };
+      validateInput(next);
+      await ctx.db.patch(opening._id, {
+        ...next,
+        currency: purchaseCurrency ?? opening.currency,
+        isOpening: true,
+      });
+      if (purchaseDate !== undefined) {
+        await ctx.db.patch(vaultItemId, { purchaseDate });
+      }
+      await syncProjection(ctx, vaultItemId, toBaseAmount);
+    }
 
     await scheduleSnapshot(ctx, userId, "vault");
     return vaultItemId;
@@ -463,12 +698,7 @@ export const deleteVaultItem = mutation({
     }
 
     // Delete all related transactions first
-    const transactions = await ctx.db
-      .query("vaultTransactions")
-      .withIndex("by_item", (q) => q.eq("vaultItemId", args.vaultItemId))
-      .collect();
-
-    for (const tx of transactions) {
+    for (const tx of await itemTransactions(ctx, args.vaultItemId)) {
       await ctx.db.delete(tx._id);
     }
 
@@ -484,18 +714,52 @@ export const deleteVaultItem = mutation({
 // MUTATIONS - Transactions
 // ═══════════════════════════════════════════════════════════════
 
+interface TransactionInput {
+  transactionType: VaultTransactionDoc["transactionType"];
+  quantity: number;
+  pricePerUnit: number;
+  currency: string;
+  transactionDate: string;
+  spotPriceAtTransaction?: number;
+  notes?: string;
+}
+
+/**
+ * Append a transaction to an item's ledger and rewrite its projection.
+ * Throws when the input is invalid or the item would hold a negative
+ * quantity at any date.
+ */
+async function recordTransaction(
+  ctx: MutationCtx,
+  userId: string,
+  vaultItemId: Id<"vaultItems">,
+  tx: TransactionInput,
+  toBaseAmount: ToBaseAmount,
+): Promise<Id<"vaultTransactions">> {
+  validateInput(tx);
+  // Re-read: an earlier sale in the same mutation changed the projection
+  const vaultItem = await getOwnedDoc(ctx, userId, vaultItemId);
+  if (!vaultItem) {
+    throw new Error("Vault item not found");
+  }
+  await ensureOpeningTransaction(ctx, vaultItem);
+  const transactionId = await ctx.db.insert("vaultTransactions", {
+    userId,
+    vaultItemId,
+    ...tx,
+    createdAt: Date.now(),
+  });
+  await syncProjection(ctx, vaultItemId, toBaseAmount);
+  return transactionId;
+}
+
 /**
  * Add a transaction (supports backdated entries)
  */
 export const addTransaction = mutation({
   args: {
     vaultItemId: v.id("vaultItems"),
-    transactionType: v.union(
-      v.literal("buy"),
-      v.literal("sell"),
-      v.literal("gift_received"),
-      v.literal("gift_given"),
-    ),
+    transactionType: transactionTypeValidator,
     quantity: v.number(),
     pricePerUnit: v.number(),
     currency: v.string(),
@@ -505,53 +769,69 @@ export const addTransaction = mutation({
   },
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
-    const vaultItem = await getOwnedDoc(ctx, userId, args.vaultItemId);
-    if (!vaultItem) {
-      throw new Error("Vault item not found");
-    }
-
-    const transactionId = await ctx.db.insert("vaultTransactions", {
+    const { vaultItemId, ...tx } = args;
+    const transactionId = await recordTransaction(
+      ctx,
       userId,
-      vaultItemId: args.vaultItemId,
-      transactionType: args.transactionType,
-      quantity: args.quantity,
-      pricePerUnit: args.pricePerUnit,
-      currency: args.currency,
-      transactionDate: args.transactionDate,
-      spotPriceAtTransaction: args.spotPriceAtTransaction,
-      notes: args.notes,
-      createdAt: Date.now(),
-    });
-
-    // Update vault item quantity based on transaction type
-    let newQuantity = vaultItem.quantity;
-    if (
-      args.transactionType === "buy" ||
-      args.transactionType === "gift_received"
-    ) {
-      newQuantity += args.quantity;
-    } else if (
-      args.transactionType === "sell" ||
-      args.transactionType === "gift_given"
-    ) {
-      newQuantity -= args.quantity;
-      if (newQuantity < 0) {
-        throw new Error("Cannot sell/give more than owned quantity");
-      }
-    }
-
-    await ctx.db.patch(args.vaultItemId, {
-      quantity: newQuantity,
-      updatedAt: Date.now(),
-    });
-
+      vaultItemId,
+      tx,
+      toBaseAmountWith(await loadFxRates(ctx)),
+    );
     await scheduleSnapshot(ctx, userId, "vault");
     return transactionId;
   },
 });
 
 /**
- * Delete a transaction
+ * Sell several items at once, in one transaction: either every sale is
+ * recorded or none is.
+ */
+export const sellItems = mutation({
+  args: {
+    sales: v.array(
+      v.object({
+        vaultItemId: v.id("vaultItems"),
+        quantity: v.number(),
+        pricePerUnit: v.number(),
+        notes: v.optional(v.string()),
+      }),
+    ),
+    currency: v.string(),
+    transactionDate: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    if (args.sales.length === 0) {
+      throw new ConvexError("Nothing to sell");
+    }
+    const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
+    const transactionIds: Id<"vaultTransactions">[] = [];
+    for (const sale of args.sales) {
+      transactionIds.push(
+        await recordTransaction(
+          ctx,
+          userId,
+          sale.vaultItemId,
+          {
+            transactionType: "sell",
+            quantity: sale.quantity,
+            pricePerUnit: sale.pricePerUnit,
+            currency: args.currency,
+            transactionDate: args.transactionDate,
+            notes: sale.notes,
+          },
+          toBaseAmount,
+        ),
+      );
+    }
+    await scheduleSnapshot(ctx, userId, "vault");
+    return transactionIds;
+  },
+});
+
+/**
+ * Delete a transaction. Rejected when the item would then hold a negative
+ * quantity at any date (e.g. deleting a buy that a later sale relies on).
  */
 export const deleteTransaction = mutation({
   args: {
@@ -563,30 +843,16 @@ export const deleteTransaction = mutation({
     if (!transaction) {
       throw new Error("Transaction not found");
     }
-
-    // Reverse the quantity change
     const vaultItem = await getOwnedDoc(ctx, userId, transaction.vaultItemId);
     if (vaultItem) {
-      let newQuantity = vaultItem.quantity;
-      if (
-        transaction.transactionType === "buy" ||
-        transaction.transactionType === "gift_received"
-      ) {
-        newQuantity -= transaction.quantity;
-      } else if (
-        transaction.transactionType === "sell" ||
-        transaction.transactionType === "gift_given"
-      ) {
-        newQuantity += transaction.quantity;
-      }
-
-      await ctx.db.patch(transaction.vaultItemId, {
-        quantity: Math.max(0, newQuantity),
-        updatedAt: Date.now(),
-      });
+      await ensureOpeningTransaction(ctx, vaultItem);
     }
 
     await ctx.db.delete(args.transactionId);
+
+    if (vaultItem) {
+      await syncProjection(ctx, vaultItem._id);
+    }
 
     await scheduleSnapshot(ctx, userId, "vault");
     return { success: true };

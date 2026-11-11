@@ -1,9 +1,12 @@
 /**
- * Continuous (price-based) performance input for the vault.
+ * Continuous (price-based) performance of the vault: the one history engine
+ * for the metals pages, the commodities summary and metals YTD.
  *
- * Loads what the continuous strategy values the vault from: the vault items
- * as holdings, each held metal's price history and the live spot. It does
- * not calculate; useCategoryPerformance runs the strategy.
+ * useVaultPerformanceInput loads what the continuous strategy values the
+ * vault from: each item's ledger lots as holdings (quantity held at t, sales
+ * as outflows, services/finance/metalsLedger.ts), each held metal's price
+ * history and the live spot. useCategoryPerformance runs it within the
+ * hybrid strategy; useVaultPerformance runs it for the vault alone.
  */
 
 import { useMemo } from "react";
@@ -11,12 +14,15 @@ import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
-import type {
-  TimeRange,
-  HoldingData,
-  PriceData,
-  PricePoint,
-  ContinuousPerformanceInput,
+import {
+  getContinuousStrategy,
+  type TimeRange,
+  type HoldingData,
+  type PriceData,
+  type PricePoint,
+  type ContinuousPerformanceInput,
+  type PerformanceDataPoint,
+  type PerformanceMetrics,
 } from "@/lib/performance";
 import {
   MS,
@@ -24,6 +30,7 @@ import {
   getTimeRangeStartTimestamp,
 } from "@/../services/finance/financeService";
 import { resolvePremiums } from "@/../services/finance/metals";
+import { ledgerHoldings } from "@/../services/finance/metalsLedger";
 
 import { getSpotPrice, useMetalPricesRange, useMetalsPrices } from "@/hooks/metals";
 import type { MetalCurrency, MetalType } from "@/lib/types/metals";
@@ -99,20 +106,36 @@ export function useVaultPerformanceInput(
   const input = useMemo<ContinuousPerformanceInput | undefined>(() => {
     if (!vaultItems || vaultItems.length === 0) return undefined;
 
-    const holdings: HoldingData[] = vaultItems.map((item) => ({
-      id: item._id,
-      assetType: item.metalType,
-      quantity: item.quantity,
-      fineWeightGrams: item.fineWeightGrams,
-      sellPremium: resolvePremiums({ sell: [item.sellPremium] }).sellPremium,
-      // No date: held since before the range (never the record's creation)
-      purchaseDate: item.purchaseDate
-        ? new Date(item.purchaseDate).getTime()
-        : undefined,
-      purchasePricePerUnit: item.purchasePricePerUnit ?? undefined,
-      // Stored items without one were entered in EUR (vault.ts default)
-      purchaseCurrency: item.purchaseCurrency ?? "EUR",
-    }));
+    const holdings: HoldingData[] = vaultItems.flatMap((item): HoldingData[] => {
+      const sellPremium = resolvePremiums({ sell: [item.sellPremium] }).sellPremium;
+      if (item.ledger) {
+        return ledgerHoldings(
+          {
+            id: item._id,
+            metalType: item.metalType,
+            fineWeightGrams: item.fineWeightGrams,
+            sellPremium,
+          },
+          item.ledger.lots,
+        );
+      }
+      // A ledger that cannot be replayed: the cached quantity, held since
+      // its purchase date or before the range (never the record's creation)
+      return [
+        {
+          id: item._id,
+          assetType: item.metalType,
+          quantity: item.quantity,
+          fineWeightGrams: item.fineWeightGrams,
+          sellPremium,
+          purchaseDate: item.purchaseDate
+            ? new Date(item.purchaseDate).getTime()
+            : undefined,
+          purchasePricePerUnit: item.purchasePricePerUnit ?? undefined,
+          purchaseCurrency: item.purchaseCurrency ?? "EUR",
+        },
+      ];
+    });
 
     // Per-ounce closes; the client's gap-filled points are dropped so the
     // strategy's own lookup decides how gaps are bridged. A metal whose
@@ -142,4 +165,35 @@ export function useVaultPerformanceInput(
   }, [vaultItems, held, goldData, silverData, platinumData, palladiumData, live.data, currency]);
 
   return { input, isLoading };
+}
+
+export interface VaultPerformanceResult {
+  metrics: PerformanceMetrics | null;
+  /** Value and cost line over the range, ending at live spot */
+  dataPoints: PerformanceDataPoint[];
+  isLoading: boolean;
+}
+
+/** The vault's continuous performance over a range (vault items only). */
+export function useVaultPerformance(
+  timeRange: TimeRange,
+  options?: { currency?: MetalsCurrency; enabled?: boolean; includeDataPoints?: boolean },
+): VaultPerformanceResult {
+  const { input, isLoading } = useVaultPerformanceInput({
+    timeRange,
+    currency: options?.currency,
+    enabled: options?.enabled ?? true,
+  });
+  const includeDataPoints = options?.includeDataPoints ?? false;
+
+  return useMemo<VaultPerformanceResult>(() => {
+    const result = input
+      ? getContinuousStrategy().calculate(input, { timeRange, includeDataPoints })
+      : null;
+    return {
+      metrics: result && result.metrics.dataPointCount > 0 ? result.metrics : null,
+      dataPoints: result?.dataPoints ?? [],
+      isLoading,
+    };
+  }, [input, timeRange, includeDataPoints, isLoading]);
 }

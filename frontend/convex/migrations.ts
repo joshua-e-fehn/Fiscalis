@@ -6,6 +6,13 @@ import {
 } from "./lib/classification";
 import { loadFxRates } from "./fxRates";
 import {
+  ensureOpeningTransaction,
+  isOpeningTransaction,
+  itemTransactions,
+  syncProjection,
+  toBaseAmountWith,
+} from "./vault";
+import {
   bankAccountBaseFields,
   brokerAccountBaseFields,
   positionBaseFields,
@@ -489,5 +496,60 @@ export const backfillBaseCurrencyFields = internalMutation({
       brokerPositions: positions.length,
       unconverted: unknown,
     };
+  },
+});
+
+/**
+ * Migration: make vaultTransactions the complete ledger of every vault item.
+ *
+ * For each item: flags the legacy "Initial purchase" transaction as the
+ * opening balance, writes the opening balance an item stored before every
+ * change went through the ledger is missing (the cached quantity minus what
+ * its transactions add up to, at the item's purchase price and date;
+ * undated when it has none, D3), then rewrites the cached quantity and
+ * average cost (EUR) from the replay. Idempotent. An item whose ledger
+ * sells more than it holds keeps its cached fields and is reported.
+ *
+ * Run once: npx convex run migrations:backfillVaultLedger
+ */
+export const backfillVaultLedger = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
+    let openingsFlagged = 0;
+    let openingsWritten = 0;
+    let projectionsUpdated = 0;
+    const unreplayable: string[] = [];
+
+    for (const item of await ctx.db.query("vaultItems").collect()) {
+      const before = await itemTransactions(ctx, item._id);
+      if (!before.some((tx) => tx.isOpening)) {
+        const legacy = before.find(isOpeningTransaction);
+        if (legacy) {
+          await ctx.db.patch(legacy._id, { isOpening: true });
+          openingsFlagged++;
+        }
+      }
+      const after = await ensureOpeningTransaction(ctx, item);
+      if (after.length > before.length) openingsWritten++;
+      try {
+        const ledger = await syncProjection(ctx, item._id, toBaseAmount);
+        if (
+          ledger.quantity !== item.quantity ||
+          (ledger.averageCost ?? undefined) !== item.purchasePricePerUnit
+        ) {
+          projectionsUpdated++;
+        }
+      } catch (error) {
+        unreplayable.push(`${item._id}: ${String(error)}`);
+      }
+    }
+
+    console.log(
+      `backfillVaultLedger: ${openingsFlagged} openings flagged, ` +
+        `${openingsWritten} written, ${projectionsUpdated} projections updated, ` +
+        `${unreplayable.length} items not replayable`,
+    );
+    return { openingsFlagged, openingsWritten, projectionsUpdated, unreplayable };
   },
 });

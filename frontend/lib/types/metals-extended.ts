@@ -86,10 +86,10 @@ export interface MetalItemWithValuation {
   purity: number;
   weightGrams: number;
   fineWeightGrams: number;
-  quantity: number;
+  quantity: number; // Held, from the transaction ledger
   buyPremium: number; // Premium when buying (e.g., 0.03 = 3%)
   sellPremium: number; // Premium/discount when selling (e.g., -0.02 = 2% below spot)
-  purchasePricePerUnit?: number;
+  purchasePricePerUnit?: number; // Average cost per unit held (EUR), from the ledger
   purchaseDate?: string;
   purchaseCurrency?: string;
   storageLocation?: string;
@@ -113,8 +113,16 @@ export interface MetalItemWithValuation {
   sellPremiumValue: number; // Premium/discount portion of sell price
   // P/L calculations
   totalCost: number | null;
-  profitLoss: number | null;
+  profitLoss: number | null; // Unrealized
   profitLossPercent: number | null;
+  /** Valued at a fresh spot price; false: at cost (stale or missing spot) */
+  pricedAtSpot: boolean;
+  /** Ledger (services/finance/metalsLedger.ts), EUR */
+  averageCost: number | null;
+  /** Realized P/L of the item's sales; null when a sale's cost is unknown */
+  realizedProfitLoss: number | null;
+  /** Average cost of the units the item sold */
+  soldCost: number;
 }
 
 /** Summary totals by metal type */

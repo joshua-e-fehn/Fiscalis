@@ -77,9 +77,6 @@ function createPriceHistory(
 }
 
 /**
- * Create price data for multiple metals
- */
-/**
  * Metal prices are quoted per troy ounce. The tests reason in €/g, so this
  * converts a per-gram price to the per-ounce price the strategy expects.
  */

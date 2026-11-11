@@ -8,6 +8,7 @@ import {
   ledgerOverCounts,
   missingOpeningTransaction,
   replayLedger,
+  retainedBasePrice,
   saleProfitLoss,
   sortLedger,
   sumSaleProfitLoss,
@@ -390,5 +391,34 @@ describe("ledger lots in the continuous strategy", () => {
     );
     expect(result.metrics.startValue).toBeCloseTo(300);
     expect(result.metrics.netFlows ?? 0).toBeCloseTo(0);
+  });
+});
+
+describe("retainedBasePrice", () => {
+  const opening = {
+    pricePerUnit: 200,
+    currency: "USD",
+    transactionDate: null,
+    pricePerUnitBase: 180,
+  };
+
+  it("keeps the stored EUR price on a quantity-only edit", () => {
+    expect(
+      retainedBasePrice(opening, { pricePerUnit: 200, currency: "usd", transactionDate: undefined }),
+    ).toBe(180);
+  });
+
+  it("converts again when the price, currency or date changes", () => {
+    expect(retainedBasePrice(opening, { ...opening, pricePerUnit: 210 })).toBeUndefined();
+    expect(retainedBasePrice(opening, { ...opening, currency: "CHF" })).toBeUndefined();
+    expect(
+      retainedBasePrice(opening, { ...opening, transactionDate: "2025-01-01" }),
+    ).toBeUndefined();
+  });
+
+  it("converts when no EUR price was stored", () => {
+    expect(
+      retainedBasePrice({ ...opening, pricePerUnitBase: undefined }, opening),
+    ).toBeUndefined();
   });
 });

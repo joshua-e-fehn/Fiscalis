@@ -183,6 +183,28 @@ export function transactionUnitAmount(
   return tx.pricePerUnit != null ? toBase(tx.pricePerUnit, tx.currency) : null;
 }
 
+/**
+ * The EUR price an edited transaction keeps: its stored one while the
+ * price, currency and date it was converted from are unchanged (a
+ * quantity-only edit must not reprice the acquisition at today's rates).
+ * Undefined when it has to be converted again: one of them changed, or no
+ * EUR price was stored.
+ */
+export function retainedBasePrice(
+  previous: Pick<
+    LedgerTransaction,
+    "pricePerUnit" | "currency" | "transactionDate" | "pricePerUnitBase"
+  >,
+  next: Pick<LedgerTransaction, "pricePerUnit" | "currency" | "transactionDate">,
+): number | undefined {
+  if (previous.pricePerUnitBase == null) return undefined;
+  const unchanged =
+    (previous.pricePerUnit ?? null) === (next.pricePerUnit ?? null) &&
+    previous.currency.toUpperCase() === next.currency.toUpperCase() &&
+    (previous.transactionDate || null) === (next.transactionDate || null);
+  return unchanged ? previous.pricePerUnitBase : undefined;
+}
+
 /** Ledger order: undated opening balances first, then by date, then creation. */
 export function sortLedger<T extends LedgerTransaction>(txs: readonly T[]): T[] {
   return [...txs].sort((a, b) => {

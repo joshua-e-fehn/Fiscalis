@@ -15,7 +15,14 @@ import {
   isExtraPaymentType,
   settleLoanBalance,
 } from "../../services/finance/loanScheduleService";
+import type { LoanStatus } from "../../services/finance/loanScheduleService";
 import { roundMoney } from "../../services/finance/financeService";
+import {
+  loanPaymentFrequencyValidator,
+  loanPaymentTypeValidator,
+  loanStatusValidator,
+  loanTypeValidator,
+} from "./schema";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { scheduleSnapshot } from "./portfolioSnapshots";
 
@@ -26,28 +33,6 @@ import { scheduleSnapshot } from "./portfolioSnapshots";
 export type Loan = Doc<"loans">;
 export type LoanPayment = Doc<"loanPayments">;
 export type LoanScenario = Doc<"loanScenarios">;
-
-export type LoanType =
-  | "ANNUITY"
-  | "CONSTANT_PRINCIPAL"
-  | "BULLET"
-  | "INTEREST_ONLY_THEN";
-
-export type PaymentFrequency =
-  | "MONTHLY"
-  | "QUARTERLY"
-  | "SEMI_ANNUAL"
-  | "ANNUAL";
-
-export type LoanStatus = "active" | "paid_off" | "defaulted" | "refinanced";
-
-export type PaymentType =
-  | "scheduled"
-  | "additional_principal"
-  | "prepayment"
-  | "final"
-  | "partial"
-  | "late";
 
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
@@ -330,23 +315,13 @@ export const getLoansSummary = query({
 export const createLoan = mutation({
   args: {
     name: v.string(),
-    loanType: v.union(
-      v.literal("ANNUITY"),
-      v.literal("CONSTANT_PRINCIPAL"),
-      v.literal("BULLET"),
-      v.literal("INTEREST_ONLY_THEN"),
-    ),
+    loanType: loanTypeValidator,
     originalPrincipal: v.number(),
     currentBalance: v.number(),
     annualInterestRate: v.number(),
     currency: v.string(),
     termMonths: v.number(),
-    paymentFrequency: v.union(
-      v.literal("MONTHLY"),
-      v.literal("QUARTERLY"),
-      v.literal("SEMI_ANNUAL"),
-      v.literal("ANNUAL"),
-    ),
+    paymentFrequency: loanPaymentFrequencyValidator,
     scheduledPayment: v.optional(v.number()),
     startDate: v.string(),
     nextPaymentDate: v.string(),
@@ -410,14 +385,7 @@ export const updateLoan = mutation({
     annualInterestRate: v.optional(v.number()),
     scheduledPayment: v.optional(v.number()),
     nextPaymentDate: v.optional(v.string()),
-    status: v.optional(
-      v.union(
-        v.literal("active"),
-        v.literal("paid_off"),
-        v.literal("defaulted"),
-        v.literal("refinanced"),
-      ),
-    ),
+    status: v.optional(loanStatusValidator),
     lender: v.optional(v.string()),
     contractNumber: v.optional(v.string()),
     collateral: v.optional(v.string()),
@@ -494,14 +462,7 @@ export const recordPayment = mutation({
     principalPortion: v.number(),
     interestPortion: v.number(),
     feesPortion: v.optional(v.number()),
-    paymentType: v.union(
-      v.literal("scheduled"),
-      v.literal("additional_principal"),
-      v.literal("prepayment"),
-      v.literal("final"),
-      v.literal("partial"),
-      v.literal("late"),
-    ),
+    paymentType: loanPaymentTypeValidator,
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -567,16 +528,7 @@ export const updatePayment = mutation({
     amount: v.optional(v.number()),
     principalPortion: v.optional(v.number()),
     interestPortion: v.optional(v.number()),
-    paymentType: v.optional(
-      v.union(
-        v.literal("scheduled"),
-        v.literal("additional_principal"),
-        v.literal("prepayment"),
-        v.literal("final"),
-        v.literal("partial"),
-        v.literal("late"),
-      ),
-    ),
+    paymentType: v.optional(loanPaymentTypeValidator),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

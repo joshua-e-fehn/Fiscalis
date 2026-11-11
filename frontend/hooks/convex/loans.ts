@@ -7,27 +7,19 @@ import { useCallback } from "react";
 // Types
 // ═══════════════════════════════════════════════════════════════
 
-export type LoanType =
-  | "ANNUITY"
-  | "CONSTANT_PRINCIPAL"
-  | "BULLET"
-  | "INTEREST_ONLY_THEN";
-
-export type PaymentFrequency =
-  | "MONTHLY"
-  | "QUARTERLY"
-  | "SEMI_ANNUAL"
-  | "ANNUAL";
-
-export type LoanStatus = "active" | "paid_off" | "defaulted" | "refinanced";
-
-export type PaymentType =
-  | "scheduled"
-  | "additional_principal"
-  | "prepayment"
-  | "final"
-  | "partial"
-  | "late";
+// Declared once in the loan engine
+export type {
+  LoanType,
+  LoanPaymentFrequency as PaymentFrequency,
+  LoanStatus,
+  LoanPaymentType as PaymentType,
+} from "@/../services/finance/loanScheduleService";
+import type {
+  LoanType,
+  LoanPaymentFrequency as PaymentFrequency,
+  LoanStatus,
+  LoanPaymentType as PaymentType,
+} from "@/../services/finance/loanScheduleService";
 
 // ═══════════════════════════════════════════════════════════════
 // Query Hooks

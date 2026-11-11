@@ -469,21 +469,16 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   }, [open]);
 
   // Planned extra payments, saved as the loan's "Planned extra payments"
-  // scenario. Recurring entries add up and start at the earliest start date.
+  // scenario. A scenario holds one recurring extra (amount + start date), so
+  // the form allows a single recurring entry rather than merging several.
+  const hasRecurringExtra = extraPayments.some((ep) => ep.type === "recurring");
   const plannedPrepayments = () => {
     if (!allowPrepayment) return undefined;
     const valid = extraPayments.filter((ep) => parseFloat(ep.amount) > 0);
-    const recurring = valid.filter((ep) => ep.type === "recurring");
-    const starts = recurring
-      .map((ep) => ep.startDate)
-      .filter((d): d is string => !!d)
-      .sort();
+    const recurring = valid.find((ep) => ep.type === "recurring");
     return {
-      extraPerPeriod: recurring.reduce(
-        (sum, ep) => sum + parseFloat(ep.amount),
-        0,
-      ),
-      extraPerPeriodFrom: starts[0],
+      extraPerPeriod: recurring ? parseFloat(recurring.amount) : 0,
+      extraPerPeriodFrom: recurring?.startDate || undefined,
       oneTimePrepayments: valid
         .filter((ep) => ep.type === "one_time" && ep.date)
         .map((ep) => ({ date: ep.date!, amount: parseFloat(ep.amount) })),
@@ -589,6 +584,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   // ═══════════════════════════════════════════════════════════════
 
   const addExtraPayment = (type: "one_time" | "recurring") => {
+    if (type === "recurring" && hasRecurringExtra) return;
     setExtraPayments((prev) => [
       ...prev,
       {
@@ -1164,6 +1160,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => addExtraPayment("recurring")}
+                          disabled={hasRecurringExtra}
+                          title={
+                            hasRecurringExtra
+                              ? "One recurring extra per loan; edit its amount or start date"
+                              : undefined
+                          }
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           Recurring

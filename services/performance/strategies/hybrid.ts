@@ -97,15 +97,21 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
     options: PerformanceCalculationOptions,
   ): HybridPerformanceResult {
     const context = this.createContext(options);
+    // Both sub-strategies must share one end (and so one grid); otherwise each
+    // reads Date.now() separately and merge-by-timestamp misses points.
+    const subOptions: PerformanceCalculationOptions = {
+      ...options,
+      endTimestamp: context.endTimestamp,
+    };
 
     // Calculate discrete and continuous separately
     const discreteResult = this.calculateDiscreteIfPresent(
       input.discrete,
-      options,
+      subOptions,
     );
     const continuousResult = this.calculateContinuousIfPresent(
       input.continuous,
-      options,
+      subOptions,
     );
 
     // Merge results

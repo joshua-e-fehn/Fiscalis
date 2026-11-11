@@ -657,6 +657,15 @@ describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
     );
   });
 
+  it("anchors the range start to endTimestamp", () => {
+    const result = calculateDiscretePerformance(
+      { snapshots: dailySnapshots(42) },
+      options,
+    );
+    expect(result.metrics.startTimestamp).toBe(END - 30 * MS_PER_DAY);
+    expect(result.metrics.endTimestamp).toBe(END);
+  });
+
   it("reports no snapshot timestamps for empty input", () => {
     const result = calculateDiscretePerformance({ snapshots: [] }, options);
     expect(result.actualSnapshotTimestamps).toEqual([]);

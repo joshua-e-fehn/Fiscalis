@@ -74,7 +74,9 @@ export interface DiscretePerformanceInput {
    * them (set by the hybrid strategy). A snapshot that cannot be split by
    * source (an entry of an excluded source's category without per-source
    * values, or no breakdown at all) keeps its full value and its points are
-   * flagged `includesContinuous`.
+   * flagged `includesContinuous`. Their cost line is left out too where the
+   * sources record their cost; otherwise the points are flagged
+   * `costIncludesContinuous`.
    */
   excludeSources?: ContinuousSource[];
 }

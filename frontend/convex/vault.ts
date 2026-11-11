@@ -19,6 +19,7 @@ import {
   ledgerOverCounts,
   missingOpeningTransaction,
   replayLedger,
+  retainedBasePrice,
   transactionUnitAmount,
   validateTransactionInput,
   type ItemLedger,
@@ -723,10 +724,15 @@ export const updateVaultItem = mutation({
       };
       validateInput(next);
       const currency = purchaseCurrency ?? opening.currency;
+      // A quantity-only edit keeps the acquisition's EUR price: converting
+      // again would reprice it at today's rate (undated openings)
+      const pricePerUnitBase =
+        retainedBasePrice(asLedgerTransaction(opening), { ...next, currency }) ??
+        (await basePricePerUnit(ctx, { ...next, currency }));
       await ctx.db.patch(opening._id, {
         ...next,
         currency,
-        pricePerUnitBase: await basePricePerUnit(ctx, { ...next, currency }),
+        pricePerUnitBase,
         isOpening: true,
       });
       if (purchaseDate !== undefined) {

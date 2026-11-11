@@ -6,6 +6,7 @@ import {
   SPOT_PRICE_MAX_FUTURE_SKEW_MS,
   TROY_OUNCE_GRAMS,
   DEFAULT_BUY_PREMIUM,
+  convertAtSpotRates,
   freshSpotPerOunce,
   parseLatestMetalPrices,
   resolvePremiums,
@@ -261,5 +262,29 @@ describe("summarizeMetalItems", () => {
     expect(s.totalCost).toBeNull();
     expect(s.totalProfitLoss).toBeNull();
     expect(s.coverage).toBe(0);
+  });
+});
+
+describe("convertAtSpotRates", () => {
+  const rates = { eurToUsd: 2, eurToChf: 0.5 };
+
+  it("leaves an amount in the same currency unchanged", () => {
+    expect(convertAtSpotRates(100, "eur", "EUR", null)).toBe(100);
+  });
+
+  it("converts an EUR cost to the display currency", () => {
+    // A USD 200 purchase stored as EUR 100 is USD 200 again in a USD view
+    expect(convertAtSpotRates(100, "EUR", "usd", rates)).toBe(200);
+    expect(convertAtSpotRates(100, "EUR", "chf", rates)).toBe(50);
+  });
+
+  it("converts between two non-EUR currencies through EUR", () => {
+    expect(convertAtSpotRates(200, "USD", "CHF", rates)).toBe(50);
+  });
+
+  it("is null without a usable rate", () => {
+    expect(convertAtSpotRates(100, "EUR", "USD", { eurToUsd: null, eurToChf: 1 })).toBeNull();
+    expect(convertAtSpotRates(100, "EUR", "USD", undefined)).toBeNull();
+    expect(convertAtSpotRates(100, "GBP", "EUR", rates)).toBeNull();
   });
 });

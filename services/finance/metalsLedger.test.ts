@@ -8,6 +8,7 @@ import {
   ledgerOverCounts,
   missingOpeningTransaction,
   replayLedger,
+  retainedBasePrice,
   saleProfitLoss,
   sortLedger,
   sumSaleProfitLoss,
@@ -135,6 +136,7 @@ describe("replayLedger", () => {
       quantity: -1,
       flowPricePerUnit: null,
       costPerUnit: 100,
+      costLine: { knownCost: -100, unknownQuantity: 0 },
     });
   });
 
@@ -340,6 +342,47 @@ describe("ledger lots in the continuous strategy", () => {
     expect(result.metrics.profitLoss).toBeCloseTo(0);
   });
 
+  it("clears an unknown-cost pool from the cost line once sold out", () => {
+    // Unknown-cost opening of 1, a buy of 1 at 100, both sold at 150 each
+    const ledger = replayLedger(
+      [buy(1, null, null), buy(1, 100, "2026-02-01"), sell(2, 150, "2026-04-01")],
+      eurOnly,
+    );
+    expect(ledger.lots.map((l) => l.costLine)).toEqual([
+      { knownCost: 0, unknownQuantity: 1 },
+      { knownCost: 100, unknownQuantity: 0 },
+      { knownCost: -100, unknownQuantity: -1 },
+    ]);
+    const result = new ContinuousPerformanceStrategy().calculate(
+      { holdings: ledgerHoldings(item, ledger.lots), prices: { gold: flat() }, currency: "eur" },
+      { timeRange: "YTD", includeDataPoints: true },
+    );
+    const at = (date: string) =>
+      result.dataPoints.find((p) => p.timestamp >= Date.parse(date))!;
+    // Held: the known 100 plus the unknown unit at its value (100)
+    expect(at("2026-03-01").costBasis).toBeCloseTo(200);
+    // Sold out: nothing is left on the cost line
+    const last = result.dataPoints[result.dataPoints.length - 1];
+    expect(last.value).toBeCloseTo(0);
+    expect(last.costBasis).toBeCloseTo(0);
+  });
+
+  it("removes a partial sale's share of a mixed pool", () => {
+    const ledger = replayLedger(
+      [buy(2, null, null), buy(2, 50, "2026-02-01"), sell(1, 150, "2026-04-01")],
+      eurOnly,
+    );
+    expect(ledger.lots[2].costLine).toEqual({ knownCost: -25, unknownQuantity: -0.5 });
+    const result = new ContinuousPerformanceStrategy().calculate(
+      { holdings: ledgerHoldings(item, ledger.lots), prices: { gold: flat() }, currency: "eur" },
+      { timeRange: "YTD", includeDataPoints: true },
+    );
+    const last = result.dataPoints[result.dataPoints.length - 1];
+    // 3 held: known 75 plus 1.5 unknown-cost units at 100
+    expect(last.value).toBeCloseTo(300);
+    expect(last.costBasis).toBeCloseTo(225);
+  });
+
   it("treats an undated opening as held before the range (D3)", () => {
     const ledger = replayLedger([buy(3, null, null)], eurOnly);
     const result = new ContinuousPerformanceStrategy().calculate(
@@ -348,5 +391,34 @@ describe("ledger lots in the continuous strategy", () => {
     );
     expect(result.metrics.startValue).toBeCloseTo(300);
     expect(result.metrics.netFlows ?? 0).toBeCloseTo(0);
+  });
+});
+
+describe("retainedBasePrice", () => {
+  const opening = {
+    pricePerUnit: 200,
+    currency: "USD",
+    transactionDate: null,
+    pricePerUnitBase: 180,
+  };
+
+  it("keeps the stored EUR price on a quantity-only edit", () => {
+    expect(
+      retainedBasePrice(opening, { pricePerUnit: 200, currency: "usd", transactionDate: undefined }),
+    ).toBe(180);
+  });
+
+  it("converts again when the price, currency or date changes", () => {
+    expect(retainedBasePrice(opening, { ...opening, pricePerUnit: 210 })).toBeUndefined();
+    expect(retainedBasePrice(opening, { ...opening, currency: "CHF" })).toBeUndefined();
+    expect(
+      retainedBasePrice(opening, { ...opening, transactionDate: "2025-01-01" }),
+    ).toBeUndefined();
+  });
+
+  it("converts when no EUR price was stored", () => {
+    expect(
+      retainedBasePrice({ ...opening, pricePerUnitBase: undefined }, opening),
+    ).toBeUndefined();
   });
 });

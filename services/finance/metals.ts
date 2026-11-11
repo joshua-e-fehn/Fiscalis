@@ -195,6 +195,41 @@ export function parseLatestMetalPrices(
   return prices;
 }
 
+/** EUR rates served with the spot prices (`exchangeRates` of the latest payload). */
+export interface SpotExchangeRates {
+  eurToUsd: number | null;
+  eurToChf: number | null;
+}
+
+/**
+ * `amount` in `from` expressed in `to` (EUR, USD or CHF) at the rates the
+ * spot prices were served with, so a cost compares with a spot value in
+ * the same currency. Null when a rate is missing or a currency is not one
+ * of the three.
+ */
+export function convertAtSpotRates(
+  amount: number,
+  from: string,
+  to: string,
+  rates: SpotExchangeRates | null | undefined,
+): number | null {
+  const source = from.toUpperCase();
+  const target = to.toUpperCase();
+  if (source === target) return amount;
+  const perEur = (currency: string): number | null => {
+    const rate =
+      currency === "EUR" ? 1
+      : currency === "USD" ? rates?.eurToUsd
+      : currency === "CHF" ? rates?.eurToChf
+      : null;
+    return rate != null && Number.isFinite(rate) && rate > 0 ? rate : null;
+  };
+  const sourceRate = perEur(source);
+  const targetRate = perEur(target);
+  if (sourceRate === null || targetRate === null) return null;
+  return (amount / sourceRate) * targetRate;
+}
+
 // ============================================
 // Item valuation
 // ============================================

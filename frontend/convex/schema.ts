@@ -813,6 +813,12 @@ export default defineSchema({
 										}),
 									),
 								),
+								// Cost of the source's holdings that have one,
+								// and the value it covers (0 when none has);
+								// absent on older rows (aggregate.ts
+								// SnapshotSourceEntry)
+								costBasis: v.optional(v.number()),
+								coveredValue: v.optional(v.number()),
 								// External flow into the source since the
 								// previous day's snapshot
 								netFlow: v.optional(v.number()),

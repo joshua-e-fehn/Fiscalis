@@ -107,7 +107,8 @@ export function lastIndexAtOrBefore(
 /**
  * Value of an ascending series at t, or null when nothing is known at t:
  * there is no point at or before t and none within half the tolerance
- * after it. A value is never carried backward from a later point.
+ * after it (with `interpolate: false`, none at all after it: a price is
+ * never looked ahead). A value is never carried backward from a later point.
  */
 export function valueAt<T extends SeriesPoint>(
   sorted: readonly T[],
@@ -119,7 +120,12 @@ export function valueAt<T extends SeriesPoint>(
   const after = i + 1 < sorted.length ? sorted[i + 1] : undefined;
 
   if (!before) {
-    if (after && after.timestamp - t <= options.toleranceMs / 2) {
+    // Without interpolation (prices) nothing is taken from after t
+    if (
+      options.interpolate !== false &&
+      after &&
+      after.timestamp - t <= options.toleranceMs / 2
+    ) {
       return { value: after.value, kind: "observed", point: after };
     }
     return null;

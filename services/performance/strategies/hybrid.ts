@@ -193,10 +193,13 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
 
 /**
  * Sum the parts at each grid timestamp where all of them have a point. The
- * cost line is the first part's when it is the discrete one (the snapshot's
- * cost line already covers the continuously valued holdings), else the sum.
- * A discrete point flagged `includesContinuous` (a legacy snapshot that
- * already holds the continuous sources) is taken alone.
+ * cost line is the sum of the parts' (a part without one counts at its
+ * value: no P/L), so a holding the continuous part values but the last
+ * snapshot did not yet hold brings its cost with it. A discrete point whose
+ * cost line still holds the continuous sources (`costIncludesContinuous`, a
+ * row without per-source costs) keeps its cost line alone. A discrete point
+ * flagged `includesContinuous` (a legacy snapshot that already holds the
+ * continuous sources) is taken alone.
  */
 function mergeOnGrid(
   parts: PerformanceDataPoint[][],
@@ -208,19 +211,21 @@ function mergeOnGrid(
   const merged: PerformanceDataPoint[] = [];
   for (const point of parts[0]) {
     if (firstIsDiscrete && point.includesContinuous) {
-      const { includesContinuous: _flag, ...alone } = point;
+      const {
+        includesContinuous: _flag,
+        costIncludesContinuous: _costFlag,
+        ...alone
+      } = point;
       merged.push(alone);
       continue;
     }
     const atTs = maps.map((m) => m.get(point.timestamp));
     if (atTs.some((p) => p === undefined)) continue;
     const present = atTs as PerformanceDataPoint[];
-    const costs = present.map((p) => p.costBasis);
-    const costBasis = firstIsDiscrete
-      ? costs[0]
-      : costs.every((c) => c === null)
-        ? null
-        : costs.reduce<number>((sum, c) => sum + (c ?? 0), 0);
+    const costBasis =
+      firstIsDiscrete && point.costIncludesContinuous
+        ? point.costBasis
+        : sumCostLines(present);
     merged.push({
       timestamp: point.timestamp,
       date: point.date,
@@ -235,6 +240,12 @@ function mergeOnGrid(
     });
   }
   return merged;
+}
+
+/** Sum of the parts' cost lines; null when no part has one. */
+function sumCostLines(points: PerformanceDataPoint[]): number | null {
+  if (points.every((p) => p.costBasis === null)) return null;
+  return points.reduce((sum, p) => sum + (p.costBasis ?? p.value), 0);
 }
 
 // ═══════════════════════════════════════════════════════════════

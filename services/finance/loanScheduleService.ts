@@ -183,6 +183,8 @@ export interface LoanProjection {
   rows: ProjectedRow[];
   /** Prepayments dated before the first projected period, taken off the opening balance. */
   initialPrepayment: number;
+  /** Penalty charged on {@link initialPrepayment}. */
+  initialPenalty: number;
   totalInterest: number;
   /** Regular principal plus prepayments (equals the opening balance). */
   totalPrincipal: number;
@@ -736,6 +738,7 @@ function amortize(plan: AmortizationPlan): LoanProjection {
   return {
     rows,
     initialPrepayment: initial.amount,
+    initialPenalty: initial.penalty,
     totalInterest: sum((r) => r.interest),
     totalPrincipal: roundMoney(sum((r) => r.principal) + totalPrepayments),
     totalPayments: sum((r) => r.payment),
@@ -1328,6 +1331,9 @@ export interface AmortizationRow {
   scheduledPayment: number;
   principalPayment: number;
   prepaymentAmount: number;
+  /** Prepayment penalty charged with this row's prepayment. */
+  penaltyAmount: number;
+  /** Everything paid on this date: payment + prepayment + penalty. */
   totalPayment: number;
   closingBalance: number;
   cumulativeInterest: number;
@@ -1338,7 +1344,7 @@ export interface AmortizationRow {
 export interface LoanSummary {
   principal: number;
   totalInterest: number;
-  /** Everything paid: regular payments plus prepayments. */
+  /** Everything paid: regular payments, prepayments and their penalties. */
   totalPayment: number;
   totalPrepayments: number;
   totalPenalty: number;
@@ -1383,6 +1389,9 @@ export function calculateLoanSchedule(input: LoanInput): LoanSummary {
     const prepaymentAmount = roundMoney(
       row.prepayment + (i === 0 ? projection.initialPrepayment : 0),
     );
+    const penaltyAmount = roundMoney(
+      row.penalty + (i === 0 ? projection.initialPenalty : 0),
+    );
     cumulativeInterest = roundMoney(cumulativeInterest + row.interest);
     cumulativePrincipal = roundMoney(
       cumulativePrincipal + row.principal + row.prepayment,
@@ -1395,7 +1404,8 @@ export function calculateLoanSchedule(input: LoanInput): LoanSummary {
       scheduledPayment: row.payment,
       principalPayment: row.principal,
       prepaymentAmount,
-      totalPayment: roundMoney(row.payment + prepaymentAmount),
+      penaltyAmount,
+      totalPayment: roundMoney(row.payment + prepaymentAmount + penaltyAmount),
       closingBalance: row.closingBalance,
       cumulativeInterest,
       cumulativePrincipal,
@@ -1410,7 +1420,9 @@ export function calculateLoanSchedule(input: LoanInput): LoanSummary {
     principal: input.principal,
     totalInterest: projection.totalInterest,
     totalPayment: roundMoney(
-      projection.totalPayments + projection.totalPrepayments,
+      projection.totalPayments +
+        projection.totalPrepayments +
+        projection.totalPenalty,
     ),
     totalPrepayments: projection.totalPrepayments,
     totalPenalty: projection.totalPenalty,

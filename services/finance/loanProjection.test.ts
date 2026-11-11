@@ -226,6 +226,32 @@ describe("calculateLoanSchedule — prepayments", () => {
     expect(result.totalPenalty).toBe(2);
   });
 
+  it("counts prepayment penalties in what is paid", () => {
+    const plain = calculateLoanSchedule({
+      ...calcInput,
+      prepayments: [{ date: "2026-06-01", amount: 100 }],
+    });
+    const result = calculateLoanSchedule({
+      ...calcInput,
+      prepayments: [{ date: "2026-06-01", amount: 100 }],
+      prepaymentPenaltyRate: 0.02,
+    });
+    expect(result.schedule[0].penaltyAmount).toBe(2);
+    expect(result.schedule[0].totalPayment).toBe(
+      plain.schedule[0].totalPayment + 2,
+    );
+    expect(result.totalPayment).toBe(plain.totalPayment + 2);
+
+    // A prepayment on the start date is charged with the first row
+    const upfront = calculateLoanSchedule({
+      ...calcInput,
+      prepayments: [{ date: calcInput.startDate, amount: 100 }],
+      prepaymentPenaltyRate: 0.02,
+    });
+    expect(upfront.schedule[0].penaltyAmount).toBe(2);
+    expect(upfront.totalPenalty).toBe(2);
+  });
+
   it("adds a recurring extra to every period", () => {
     const result = calculateLoanSchedule({ ...calcInput, extraPerPeriod: 100 });
     expect(result.schedule[0].prepaymentAmount).toBe(100);

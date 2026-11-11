@@ -159,9 +159,10 @@ function tradeTime(date: string): number {
  * date order: a buy adds its quantity and EUR amount; a reward adds its
  * quantity at zero cost (it is income, so it shows as P/L, never as money
  * put in); a sell removes its quantity at the running average (so the
- * average does not change). Deposits, withdrawals and transfers carry no
- * price and are left out. A symbol is missing when nothing bought is still
- * held or a buy's currency has no rate.
+ * average does not change), and selling out starts the book afresh.
+ * Deposits, withdrawals and transfers carry no price and are left out. A
+ * symbol is missing when nothing bought is still held or a buy since the
+ * book last emptied has a currency without a rate.
  */
 export function averageCostPerUnit(
   trades: readonly ProviderTrade[],
@@ -189,6 +190,13 @@ export function averageCostPerUnit(
       const sold = Math.min(quantity, book.quantity);
       book.cost -= (book.cost / book.quantity) * sold;
       book.quantity -= sold;
+      // Sold out: the next buy starts a fresh book, so a buy that could
+      // not be priced no longer leaves later ones uncosted
+      if (book.quantity <= 1e-12) {
+        book.quantity = 0;
+        book.cost = 0;
+        book.unknown = false;
+      }
     }
   }
   const average = new Map<string, AverageCost>();

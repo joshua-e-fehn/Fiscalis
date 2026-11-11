@@ -317,6 +317,30 @@ describe("averageCostPerUnit", () => {
     expect(avg.has("BTC")).toBe(false);
   });
 
+  it("forgets an unpriced buy once everything bought is sold", () => {
+    const avg = averageCostPerUnit(
+      [
+        trade("buy", 1, 1_000, "2026-01-01", { currency: "XYZ" }),
+        trade("sell", 1, 1_100, "2026-01-02"),
+        trade("buy", 1, 500, "2026-01-03"),
+      ],
+      eur,
+    );
+    expect(avg.get("BTC")).toEqual({ perUnit: 500, quantity: 1 });
+  });
+
+  it("stays unknown while units of an unpriced buy are still held", () => {
+    const avg = averageCostPerUnit(
+      [
+        trade("buy", 2, 1_000, "2026-01-01", { currency: "XYZ" }),
+        trade("sell", 1, 600, "2026-01-02"),
+        trade("buy", 1, 500, "2026-01-03"),
+      ],
+      eur,
+    );
+    expect(avg.has("BTC")).toBe(false);
+  });
+
   it("costs a holding at the average times the quantity held, never fiat", () => {
     const avg = new Map([["BTC", { perUnit: 20_000, quantity: 2 }]]);
     expect(bitpandaCostBasis({ assetType: "crypto", symbol: "btc", quantity: 1.5 }, avg)).toBe(30_000);

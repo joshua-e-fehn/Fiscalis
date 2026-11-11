@@ -120,6 +120,112 @@ export function positionToHolding(p: PositionLike): CategoryHolding {
   };
 }
 
+/** A synced provider trade (Bitpanda), its amount in its own currency. */
+export interface ProviderTrade {
+  /** buy | sell | deposit | withdrawal | transfer | reward | other */
+  type: string;
+  symbol: string;
+  quantity: number;
+  /** Fiat amount paid (buy) or received (sell) */
+  amount: number;
+  currency: string;
+  /** ISO 8601, or epoch seconds as a string (see tradeTime) */
+  transactionDate: string;
+}
+
+/** A symbol's cost book from its trades. */
+export interface AverageCost {
+  /** EUR cost per unit of the quantity the trades account for */
+  perUnit: number;
+  /** Units the trades account for: bought plus rewarded, less sold */
+  quantity: number;
+}
+
+/**
+ * Time of a trade in ms. Stored dates are ISO 8601, or epoch seconds (or
+ * ms) as a string when the provider sent a unix time; unknown is 0.
+ */
+function tradeTime(date: string): number {
+  if (/^\d+(\.\d+)?$/.test(date.trim())) {
+    const n = Number(date);
+    return n < 1e12 ? n * 1000 : n;
+  }
+  const parsed = Date.parse(date);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+/**
+ * Cost book in EUR by symbol (upper-case), from the trades replayed in
+ * date order: a buy adds its quantity and EUR amount; a reward adds its
+ * quantity at zero cost (it is income, so it shows as P/L, never as money
+ * put in); a sell removes its quantity at the running average (so the
+ * average does not change). Deposits, withdrawals and transfers carry no
+ * price and are left out. A symbol is missing when nothing bought is still
+ * held or a buy's currency has no rate.
+ */
+export function averageCostPerUnit(
+  trades: readonly ProviderTrade[],
+  toEur: (amount: number, currency: string) => number | null,
+): Map<string, AverageCost> {
+  const books = new Map<string, { quantity: number; cost: number; unknown: boolean }>();
+  const ordered = [...trades].sort(
+    (a, b) => tradeTime(a.transactionDate) - tradeTime(b.transactionDate),
+  );
+  for (const t of ordered) {
+    if (t.type !== "buy" && t.type !== "sell" && t.type !== "reward") continue;
+    const quantity = Math.abs(t.quantity);
+    if (!(quantity > 0)) continue;
+    const symbol = t.symbol.toUpperCase();
+    const book = books.get(symbol) ?? { quantity: 0, cost: 0, unknown: false };
+    books.set(symbol, book);
+    if (t.type === "buy") {
+      const eur = toEur(Math.abs(t.amount), t.currency);
+      if (eur === null) book.unknown = true;
+      else book.cost += eur;
+      book.quantity += quantity;
+    } else if (t.type === "reward") {
+      book.quantity += quantity;
+    } else if (book.quantity > 0) {
+      const sold = Math.min(quantity, book.quantity);
+      book.cost -= (book.cost / book.quantity) * sold;
+      book.quantity -= sold;
+    }
+  }
+  const average = new Map<string, AverageCost>();
+  for (const [symbol, book] of books) {
+    if (!book.unknown && book.quantity > 1e-12 && book.cost > 0) {
+      average.set(symbol, {
+        perUnit: book.cost / book.quantity,
+        quantity: book.quantity,
+      });
+    }
+  }
+  return average;
+}
+
+/** Quantity held beyond the trades' that is still rounding (fees, dust). */
+const UNTRADED_QUANTITY_TOLERANCE = 0.001;
+
+/**
+ * Cost basis in EUR of a Bitpanda holding: the average cost of its symbol
+ * times the quantity held. Undefined for fiat wallets (cash), symbols
+ * without an average (averageCostPerUnit), and holdings larger than their
+ * trades account for: units transferred in have an unknown cost, so the
+ * holding is left uncovered rather than costed at the buys' price.
+ */
+export function bitpandaCostBasis(
+  holding: { assetType: string; symbol: string; quantity: number },
+  averageCost: ReadonlyMap<string, AverageCost>,
+): number | undefined {
+  if (holding.assetType === "fiat") return undefined;
+  const book = averageCost.get(holding.symbol.toUpperCase());
+  if (book === undefined) return undefined;
+  if (holding.quantity > book.quantity * (1 + UNTRADED_QUANTITY_TOLERANCE)) {
+    return undefined;
+  }
+  return book.perUnit * holding.quantity;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Accounts and loans
 // ═══════════════════════════════════════════════════════════════
@@ -290,20 +396,44 @@ export function groupSmallSlices<T extends { value: number }>(
 // P/L shown on a category page
 // ═══════════════════════════════════════════════════════════════
 
-export type ProfitLossSource = "cost-basis" | "first-snapshot";
+export type ProfitLossSource = "cost-basis" | "since-tracking";
+
+/**
+ * A category's performance since its first snapshot (the performance
+ * engine with the "firstPoint" baseline): net of flows when flowAdjusted.
+ */
+export interface TrackedChange {
+  change: number;
+  changePercent: number | null;
+  /** Timestamp the history starts at */
+  since: number;
+  flowAdjusted: boolean;
+  flowsEstimated: boolean;
+}
 
 export interface ResolvedProfitLoss {
+  /** The holdings' cost basis; never inferred from a snapshot */
   costBasis: number | null;
   /**
-   * The cost line a chart draws against the category's full value:
+   * The line a chart draws against the category's full value:
    * currentValue − profitLoss, so the chart's gap and the KPI agree even when
-   * only some holdings carry a cost basis. Null when there is no P/L.
+   * only some holdings carry a cost basis. Since tracking started it is the
+   * value then plus the net flows since. Null when there is no P/L.
    */
   costLine: number | null;
   profitLoss: number | null;
   profitLossPercent: number | null;
   /** Where the figures come from; null when there is no P/L to show */
   source: ProfitLossSource | null;
+  /** since-tracking: when the history starts; null otherwise */
+  since: number | null;
+  /**
+   * since-tracking: the figure is net of purchases and deposits. When false
+   * (or flowsEstimated) it is shown as a change since tracking started, not
+   * as a profit.
+   */
+  flowAdjusted: boolean;
+  flowsEstimated: boolean;
 }
 
 /**
@@ -311,8 +441,9 @@ export interface ResolvedProfitLoss {
  * and the chart's cost line (`costLine`) so they never disagree:
  *
  * 1. the holdings' own cost basis (coverage-based, from the summary);
- * 2. otherwise the category's first non-zero snapshot value as an inferred
- *    cost basis (for providers that report no cost at all).
+ * 2. otherwise the performance since tracking started, net of flows where
+ *    they are known. The first snapshot is never taken as a cost basis:
+ *    deposits since then are not profit (D2).
  */
 export function resolveCategoryProfitLoss(input: {
   currentValue: number;
@@ -320,9 +451,9 @@ export function resolveCategoryProfitLoss(input: {
     HoldingsSummary,
     "costBasis" | "profitLoss" | "profitLossPercent"
   > | null;
-  firstSnapshotValue: number | null;
+  sinceTracking: TrackedChange | null;
 }): ResolvedProfitLoss {
-  const { currentValue, holdings, firstSnapshotValue } = input;
+  const { currentValue, holdings, sinceTracking } = input;
 
   if (holdings && holdings.costBasis !== null && holdings.profitLoss !== null) {
     return {
@@ -333,21 +464,22 @@ export function resolveCategoryProfitLoss(input: {
         holdings.profitLossPercent ??
         percentOf(holdings.profitLoss, holdings.costBasis),
       source: "cost-basis",
+      since: null,
+      flowAdjusted: false,
+      flowsEstimated: false,
     };
   }
 
-  if (
-    firstSnapshotValue !== null &&
-    firstSnapshotValue > 0 &&
-    currentValue > 0
-  ) {
-    const profitLoss = currentValue - firstSnapshotValue;
+  if (sinceTracking && currentValue > 0) {
     return {
-      costBasis: firstSnapshotValue,
-      costLine: costLine(currentValue, profitLoss),
-      profitLoss,
-      profitLossPercent: percentOf(profitLoss, firstSnapshotValue),
-      source: "first-snapshot",
+      costBasis: null,
+      costLine: costLine(currentValue, sinceTracking.change),
+      profitLoss: sinceTracking.change,
+      profitLossPercent: sinceTracking.changePercent,
+      source: "since-tracking",
+      since: sinceTracking.since,
+      flowAdjusted: sinceTracking.flowAdjusted,
+      flowsEstimated: sinceTracking.flowsEstimated,
     };
   }
 
@@ -357,5 +489,8 @@ export function resolveCategoryProfitLoss(input: {
     profitLoss: null,
     profitLossPercent: null,
     source: null,
+    since: null,
+    flowAdjusted: false,
+    flowsEstimated: false,
   };
 }

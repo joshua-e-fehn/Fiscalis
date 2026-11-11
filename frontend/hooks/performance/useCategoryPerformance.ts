@@ -16,6 +16,7 @@ import { api } from "@/convex/_generated/api";
 import {
   continuousSourcesFor,
   getHybridStrategy,
+  type PerformanceCalculationOptions,
   type PerformanceDataPoint,
   type PerformanceMetrics,
   type SnapshotData,
@@ -83,6 +84,8 @@ export function useSnapshots(
           costBasis: c.costBasis,
           coveredValue: c.coveredValue,
           sources: c.sources,
+          netFlow: c.netFlow,
+          netFlowEstimated: c.netFlowEstimated,
         })),
         source: s.source,
       })),
@@ -100,6 +103,8 @@ export interface UseCategoryPerformanceOptions {
   includeDataPoints?: boolean;
   currency?: MetalsCurrency;
   enabled?: boolean;
+  /** "firstPoint": measure since tracking started when that is later */
+  baseline?: PerformanceCalculationOptions["baseline"];
 }
 
 export interface CategoryPerformanceResult {
@@ -115,7 +120,12 @@ export function useCategoryPerformance(
   timeRange: TimeRange,
   options: UseCategoryPerformanceOptions = {},
 ): CategoryPerformanceResult {
-  const { includeDataPoints = false, currency = "eur", enabled = true } = options;
+  const {
+    includeDataPoints = false,
+    currency = "eur",
+    enabled = true,
+    baseline,
+  } = options;
 
   const scope =
     measure.kind === "category" ? (measure.category as HoldingCategory) : "all";
@@ -144,7 +154,7 @@ export function useCategoryPerformance(
         continuous: needsVault ? vault.input : undefined,
         continuousSources,
       },
-      { timeRange, includeDataPoints },
+      { timeRange, includeDataPoints, baseline },
     );
   }, [
     enabled,
@@ -156,6 +166,7 @@ export function useCategoryPerformance(
     continuousSources,
     timeRange,
     includeDataPoints,
+    baseline,
   ]);
 
   return {
@@ -167,26 +178,42 @@ export function useCategoryPerformance(
 }
 
 /**
- * A period's change for a KPI card: a plain change in value (savings and
- * purchases raise it), null with `trackingSince` when the history starts
+ * A period's change for a KPI card (D2). For an investment category it is
+ * the P/L net of money moved in and out (purchases, deposits, sales), with
+ * the time-weighted return; for net worth and cash a plain change in value
+ * (savings raise it). Null with `trackingSince` when the history starts
  * after the period does.
  */
 export interface PeriodChange {
+  /** P/L net of flows when flowAdjusted, else the change in value */
   change: number | null;
+  /** Time-weighted return (else Modified Dietz) when flowAdjusted, else the % change */
   changePercent: number | null;
   valueAtStart: number | null;
   /** First known point when there is no value at the period start */
   trackingSince: number | null;
   partial: boolean;
+  /** The change is net of external flows: label it a return, not a change */
+  flowAdjusted: boolean;
+  /** Some flows were assumed (holdings without a cost basis) */
+  flowsEstimated: boolean;
 }
 
 export function toPeriodChange(metrics: PerformanceMetrics | null): PeriodChange {
+  const flowAdjusted =
+    metrics !== null && metrics.flowCoverage !== "none";
   return {
-    change: metrics?.absoluteChange ?? null,
-    changePercent: metrics?.percentChange ?? null,
+    change: flowAdjusted
+      ? metrics.profitLoss
+      : (metrics?.absoluteChange ?? null),
+    changePercent: flowAdjusted
+      ? (metrics.timeWeightedPercent ?? metrics.modifiedDietzPercent)
+      : (metrics?.percentChange ?? null),
     valueAtStart: metrics?.startValue ?? null,
     trackingSince:
       metrics?.insufficientHistory ? metrics.firstPointTimestamp : null,
     partial: metrics?.partial ?? false,
+    flowAdjusted,
+    flowsEstimated: metrics?.flowCoverage === "estimated",
   };
 }

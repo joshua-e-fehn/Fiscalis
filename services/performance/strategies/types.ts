@@ -18,6 +18,8 @@ import type {
   PriceData,
   PricePoint,
   ContinuousSource,
+  CashFlow,
+  FlowCoverage,
 } from "../types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -38,7 +40,18 @@ export interface PerformanceCalculationOptions {
   includeDataPoints?: boolean;
   /** Interpolation gap limit in grid intervals (ValuationConfig.maxInterpolationGap) */
   maxInterpolationGap?: number;
+  /** Where the changes are measured from (default "rangeStart") */
+  baseline?: Baseline;
 }
+
+/**
+ * The point changes are measured from:
+ * - rangeStart: the value at the range start; a series that starts later
+ *   has insufficient history and no changes;
+ * - firstPoint: the first point of the series, i.e. since tracking started
+ *   when that is after the range start.
+ */
+export type Baseline = "rangeStart" | "firstPoint";
 
 /**
  * The figure a snapshot series measures. Every caller names it, so a chart
@@ -79,6 +92,8 @@ export interface ContinuousPerformanceInput {
    * with valueVaultItem, the function behind the Total Value cards.
    */
   livePrices?: Partial<Record<string, PricePoint>>;
+  /** Currency of `prices` and `livePrices` (e.g. "eur") */
+  currency?: string;
 }
 
 /**
@@ -173,6 +188,8 @@ export interface CalculationContext {
   expectedDataPoints: number;
   /** Interpolation gap limit in grid intervals */
   maxInterpolationGap?: number;
+  /** Where the changes are measured from (default "rangeStart") */
+  baseline?: Baseline;
 }
 
 /**
@@ -191,4 +208,13 @@ export interface DataPointGenerationResult {
    * from, ascending. Discrete strategy only.
    */
   actualSnapshotTimestamps?: number[];
+  /** External flows into the measured holdings, any order (may lie outside the range) */
+  flows?: CashFlow[];
+  /** How far the flows are known; "none" (default) when not flow-adjusted */
+  flowCoverage?: FlowCoverage;
+  /**
+   * Timestamps of in-range flows that were assumed rather than derived.
+   * The coverage is "estimated" only when one lies inside the measured span.
+   */
+  estimatedFlowTimestamps?: number[];
 }

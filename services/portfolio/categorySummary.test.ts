@@ -2,7 +2,9 @@ import { describe, it, expect } from "vitest";
 
 import { fxRatesFromDaily } from "../finance/currency";
 import {
+  averageCostPerUnit,
   bankAccountValue,
+  bitpandaCostBasis,
   brokerAccountCash,
   brokerAccountMarginDebt,
   buildCategorySummary,
@@ -230,54 +232,153 @@ describe("groupSmallSlices", () => {
   });
 });
 
+describe("averageCostPerUnit", () => {
+  const eur = (amount: number, currency: string) =>
+    currency === "EUR" ? amount : currency === "USD" ? amount * 0.9 : null;
+  const trade = (
+    type: string,
+    quantity: number,
+    amount: number,
+    date: string,
+    extra: { symbol?: string; currency?: string } = {},
+  ) => ({
+    type,
+    symbol: extra.symbol ?? "btc",
+    quantity,
+    amount,
+    currency: extra.currency ?? "EUR",
+    transactionDate: date,
+  });
+
+  it("averages buys and keeps the average through a sale", () => {
+    const avg = averageCostPerUnit(
+      [
+        trade("buy", 2, 20_000, "2026-03-01"),
+        trade("sell", 1, 15_000, "2026-05-01"),
+        trade("buy", 1, 40_000, "2026-02-01"),
+        trade("reward", 0.5, 0, "2026-04-01"),
+      ],
+      eur,
+    );
+    // Feb 1 @ 40k, Mar 1 2 @ 10k, a 0.5 reward at no cost → 60k / 3.5;
+    // the sale keeps the average and leaves 2.5 units
+    expect(avg.get("BTC")!.perUnit).toBeCloseTo(60_000 / 3.5);
+    expect(avg.get("BTC")!.quantity).toBeCloseTo(2.5);
+  });
+
+  it("adds a reward at no cost, so the cost basis does not move", () => {
+    const before = averageCostPerUnit([trade("buy", 1, 20_000, "2026-01-01")], eur);
+    const after = averageCostPerUnit(
+      [trade("buy", 1, 20_000, "2026-01-01"), trade("reward", 0.1, 0, "2026-01-02")],
+      eur,
+    );
+    const cost = (books: typeof before, quantity: number) =>
+      bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity }, books);
+    expect(cost(before, 1)).toBeCloseTo(20_000);
+    // The reward's value is a gain on the same cost
+    expect(cost(after, 1.1)).toBeCloseTo(20_000);
+  });
+
+  it("replays trades in time order whatever the date format", () => {
+    // A sale stored as epoch seconds (a unix time as a string) sorts
+    // before ISO dates as text, but comes after both buys
+    const avg = averageCostPerUnit(
+      [
+        trade("sell", 1, 0, String(Date.UTC(2026, 2, 1) / 1000)),
+        trade("buy", 1, 100, "2026-01-01T00:00:00Z"),
+        trade("buy", 1, 300, "2026-02-01T00:00:00Z"),
+      ],
+      eur,
+    );
+    expect(avg.get("BTC")).toEqual({ perUnit: 200, quantity: 1 });
+  });
+
+  it("converts each buy to EUR and gives up on a currency without a rate", () => {
+    expect(
+      averageCostPerUnit([trade("buy", 1, 1_000, "2026-01-01", { currency: "USD" })], eur).get("BTC")!
+        .perUnit,
+    ).toBeCloseTo(900);
+    expect(
+      averageCostPerUnit(
+        [
+          trade("buy", 1, 1_000, "2026-01-01"),
+          trade("buy", 1, 1_000, "2026-01-02", { currency: "XYZ" }),
+        ],
+        eur,
+      ).has("BTC"),
+    ).toBe(false);
+  });
+
+  it("has no average once everything bought is sold", () => {
+    const avg = averageCostPerUnit(
+      [trade("buy", 1, 100, "2026-01-01"), trade("sell", 1, 150, "2026-01-02")],
+      eur,
+    );
+    expect(avg.has("BTC")).toBe(false);
+  });
+
+  it("costs a holding at the average times the quantity held, never fiat", () => {
+    const avg = new Map([["BTC", { perUnit: 20_000, quantity: 2 }]]);
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "btc", quantity: 1.5 }, avg)).toBe(30_000);
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "ETH", quantity: 1 }, avg)).toBeUndefined();
+    expect(bitpandaCostBasis({ assetType: "fiat", symbol: "BTC", quantity: 1 }, avg)).toBeUndefined();
+  });
+
+  it("leaves a holding uncovered when more is held than the trades account for", () => {
+    // 1 BTC transferred in next to 0.01 bought: the transfer's cost is unknown
+    const avg = new Map([["BTC", { perUnit: 60_000, quantity: 0.01 }]]);
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity: 1.01 }, avg)).toBeUndefined();
+    // Rounding within the tolerance still counts
+    expect(bitpandaCostBasis({ assetType: "crypto", symbol: "BTC", quantity: 0.010005 }, avg))
+      .toBeCloseTo(600.3);
+  });
+});
+
 describe("resolveCategoryProfitLoss", () => {
   const holdings = { costBasis: 1000, profitLoss: 0, profitLossPercent: 0 };
+  const noCost = { costBasis: null, profitLoss: null, profitLossPercent: null };
+  const tracked = {
+    change: 300,
+    changePercent: 7.5,
+    since: 1_700_000_000_000,
+    flowAdjusted: true,
+    flowsEstimated: false,
+  };
+  const none = { since: null, flowAdjusted: false, flowsEstimated: false };
 
   it("prefers the holdings' cost basis, even at break-even", () => {
     expect(
-      resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings,
-        firstSnapshotValue: 4000,
-      }),
+      resolveCategoryProfitLoss({ currentValue: 5000, holdings, sinceTracking: tracked }),
     ).toEqual({
       costBasis: 1000,
       costLine: 5000,
       profitLoss: 0,
       profitLossPercent: 0,
       source: "cost-basis",
+      ...none,
     });
   });
 
-  it("falls back to the first snapshot value when no holding has a cost", () => {
+  it("falls back to the performance since tracking, never a snapshot cost basis", () => {
     expect(
-      resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings: {
-          costBasis: null,
-          profitLoss: null,
-          profitLossPercent: null,
-        },
-        firstSnapshotValue: 4000,
-      }),
+      resolveCategoryProfitLoss({ currentValue: 5000, holdings: noCost, sinceTracking: tracked }),
     ).toEqual({
-      costBasis: 4000,
-      costLine: 4000,
-      profitLoss: 1000,
-      profitLossPercent: 25,
-      source: "first-snapshot",
+      costBasis: null,
+      costLine: 4700,
+      profitLoss: 300,
+      profitLossPercent: 7.5,
+      source: "since-tracking",
+      since: tracked.since,
+      flowAdjusted: true,
+      flowsEstimated: false,
     });
   });
 
   it("draws a cost line whose gap to the value is the KPI P/L", () => {
     // 5000 in the category, of which 1200 carry a cost of 1000
     const partial = { costBasis: 1000, profitLoss: 200, profitLossPercent: 20 };
-    for (const firstSnapshotValue of [4000, null]) {
-      const r = resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings: partial,
-        firstSnapshotValue,
-      });
+    for (const sinceTracking of [tracked, null]) {
+      const r = resolveCategoryProfitLoss({ currentValue: 5000, holdings: partial, sinceTracking });
       expect(r.source).toBe("cost-basis");
       expect(r.costBasis).toBe(1000);
       expect(5000 - r.costLine!).toBe(r.profitLoss);
@@ -285,19 +386,16 @@ describe("resolveCategoryProfitLoss", () => {
     }
   });
 
-  it("reports nothing without a cost basis or snapshot", () => {
+  it("reports nothing without a cost basis or history", () => {
     expect(
-      resolveCategoryProfitLoss({
-        currentValue: 5000,
-        holdings: null,
-        firstSnapshotValue: null,
-      }),
+      resolveCategoryProfitLoss({ currentValue: 5000, holdings: null, sinceTracking: null }),
     ).toEqual({
       costBasis: null,
       costLine: null,
       profitLoss: null,
       profitLossPercent: null,
       source: null,
+      ...none,
     });
   });
 });

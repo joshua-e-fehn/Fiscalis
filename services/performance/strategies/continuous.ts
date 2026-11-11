@@ -9,7 +9,10 @@
 
 import { calculateSellPrice, valueVaultItem } from "../../finance/metals";
 
+const DAY_MS = 86_400_000;
+
 import type {
+  CashFlow,
   PerformanceDataPoint,
   PerformanceResult,
   HoldingData,
@@ -50,6 +53,10 @@ import type {
  *   as the Total Value cards), otherwise at the last close.
  * - A held asset without any price series is left out and the result is
  *   flagged partial.
+ * - Every dated purchase is an external flow (D2): its cost (purchase price
+ *   × quantity), or its value at the purchase date when it has no price.
+ *   Holdings are current quantities, so a sale changes no past value and
+ *   needs no flow.
  *
  * Each series is sorted once per calculation and looked up by binary search.
  */
@@ -113,7 +120,57 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
       interpolatedDataPoints: dataPoints.length - observed,
       dataQuality: assessDataQuality(observed, context.expectedDataPoints),
       partial,
+      ...this.purchaseFlows(priced, series, lookup, input.currency),
     };
+  }
+
+  /**
+   * One flow per dated purchase: its cost when paid in the series'
+   * currency, else its value at the purchase date. A purchase with neither (no price on that date) is assumed to be
+   * no flow and its date reported as estimated.
+   */
+  private purchaseFlows(
+    holdings: HoldingData[],
+    series: Map<string, SeriesPoint[]>,
+    lookup: SeriesLookupOptions,
+    currency: string | undefined,
+  ): Pick<
+    DataPointGenerationResult,
+    "flows" | "flowCoverage" | "estimatedFlowTimestamps"
+  > {
+    const flows: CashFlow[] = [];
+    const estimatedFlowTimestamps: number[] = [];
+    for (const h of holdings) {
+      if (h.purchaseDate === undefined) continue;
+      // Known to the day only: weighted as made within the day up to the
+      // date it is valued from, not exactly at it
+      const spanStart = h.purchaseDate - DAY_MS;
+      // A price paid in another currency than the series' is not comparable
+      // with its values: the purchase is taken at its value that day instead
+      const priceComparable =
+        h.purchaseCurrency === undefined ||
+        currency === undefined ||
+        h.purchaseCurrency.toUpperCase() === currency.toUpperCase();
+      if (h.purchasePricePerUnit != null && priceComparable) {
+        flows.push({
+          timestamp: h.purchaseDate,
+          amount: h.purchasePricePerUnit * h.quantity,
+          spanStart,
+        });
+        continue;
+      }
+      const price = valueAt(series.get(h.assetType)!, h.purchaseDate, lookup);
+      if (price) {
+        flows.push({
+          timestamp: h.purchaseDate,
+          amount: this.calculateItemValue(h, price.value),
+          spanStart,
+        });
+      } else {
+        estimatedFlowTimestamps.push(h.purchaseDate);
+      }
+    }
+    return { flows, flowCoverage: "complete", estimatedFlowTimestamps };
   }
 
   // ═══════════════════════════════════════════════════════════════

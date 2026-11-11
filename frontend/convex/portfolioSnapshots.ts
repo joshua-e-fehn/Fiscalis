@@ -5,7 +5,8 @@
  * a provider sync, a manual vault or loan change) upserts today's row with
  * the current net worth (lib/netWorth.ts computeNetWorth), so the series has
  * one point per day however often the data changed. Manual changes schedule
- * the snapshot through scheduleSnapshot, debounced.
+ * the snapshot through scheduleSnapshot, debounced. Each category entry
+ * records its net external flow since the previous day's row.
  */
 
 import { v } from "convex/values";
@@ -16,7 +17,9 @@ import {
   type MutationCtx,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { computeNetWorth } from "./lib/netWorth";
+import { withoutSnapshotHoldings } from "../../services/portfolio/aggregate";
 import { getUserId } from "./lib/auth";
 
 /** Delay before a snapshot requested by a manual change is taken. */
@@ -80,6 +83,17 @@ export const takeSnapshot = internalMutation({
       };
     }
 
+    // The newest row of an earlier day: each category's netFlow is the
+    // money moved in or out since then, derived from the holdings both rows
+    // keep (aggregate.ts categoryFlowFromHoldings)
+    const previous = await ctx.db
+      .query("portfolioSnapshots")
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", userId).lt("date", today),
+      )
+      .order("desc")
+      .first();
+
     const {
       totalAssets,
       totalLiabilities,
@@ -88,7 +102,7 @@ export const takeSnapshot = internalMutation({
       totalCoveredValue,
       categoryBreakdown,
       asOf,
-    } = await computeNetWorth(ctx, userId);
+    } = await computeNetWorth(ctx, userId, previous?.categoryBreakdown);
 
     const fields = {
       timestamp: now,
@@ -111,11 +125,40 @@ export const takeSnapshot = internalMutation({
         date: today,
         ...fields,
       });
+      // The first row of a new day: only it and `previous` still need their
+      // holdings, so the row before `previous` drops them
+      if (previous) {
+        const older = await ctx.db
+          .query("portfolioSnapshots")
+          .withIndex("by_user_date", (q) =>
+            q.eq("userId", userId).lt("date", previous.date),
+          )
+          .order("desc")
+          .first();
+        if (
+          older?.categoryBreakdown?.some((c) =>
+            c.sources?.some((s) => s.holdings !== undefined),
+          )
+        ) {
+          await ctx.db.patch(older._id, {
+            categoryBreakdown: withoutSnapshotHoldings(older.categoryBreakdown),
+          });
+        }
+      }
     }
 
     return { totalAssets, totalLiabilities, netWorth };
   },
 });
+
+function withoutHoldings(snapshot: Doc<"portfolioSnapshots">) {
+  return snapshot.categoryBreakdown
+    ? {
+        ...snapshot,
+        categoryBreakdown: withoutSnapshotHoldings(snapshot.categoryBreakdown),
+      }
+    : snapshot;
+}
 
 /**
  * Get portfolio snapshots for historical performance charts, oldest first.
@@ -147,7 +190,8 @@ export const getSnapshots = query({
       .order("desc")
       .take(limit);
 
-    const snapshots = newestFirst.reverse();
+    // Holdings are kept for the snapshot writer only
+    const snapshots = newestFirst.reverse().map(withoutHoldings);
 
     if (since === undefined) return snapshots;
 
@@ -159,7 +203,7 @@ export const getSnapshots = query({
       .order("desc")
       .first();
 
-    return baseline ? [baseline, ...snapshots] : snapshots;
+    return baseline ? [withoutHoldings(baseline), ...snapshots] : snapshots;
   },
 });
 

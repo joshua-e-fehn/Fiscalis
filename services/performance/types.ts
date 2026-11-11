@@ -6,6 +6,7 @@
  */
 
 import type { TimeRange, TimeInterval } from "../finance/financeService";
+import type { SnapshotCategoryEntry } from "../portfolio/aggregate";
 
 // Re-export for convenience
 export type { TimeRange, TimeInterval };
@@ -142,6 +143,38 @@ export interface PerformanceDataPoint {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// External Flows
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Money moved into (> 0: a purchase, a deposit, a newly connected account)
+ * or out of (< 0: sale proceeds, a disconnection) the measured holdings at
+ * a time. A flow changes the value without being performance.
+ */
+export interface CashFlow {
+  /** When the flow is in the value: exactly then, or by then (spanStart) */
+  timestamp: number;
+  amount: number;
+  /**
+   * The flow happened at an unknown time after this and up to `timestamp`
+   * (a flow derived by comparing two snapshots, a purchase known only to
+   * the day). Modified Dietz then weights it at the middle of that span
+   * rather than at its end, where it would count as never invested.
+   */
+  spanStart?: number;
+}
+
+/**
+ * How far a series' flows are known (D2):
+ * - none: the measure is not flow-adjusted (net worth, cash, liabilities):
+ *   its change is a plain change in value;
+ * - estimated: some flows were assumed 0 (holdings without a cost basis);
+ * - complete: every flow is derived (purchases, cost-basis changes,
+ *   holdings appearing or disappearing).
+ */
+export type FlowCoverage = "none" | "estimated" | "complete";
+
+// ═══════════════════════════════════════════════════════════════
 // Performance Metrics
 // ═══════════════════════════════════════════════════════════════
 
@@ -156,6 +189,18 @@ export interface PerformanceMetrics {
   absoluteChange: number | null;
   /** Change relative to |startValue|; null when the start is unknown or 0 */
   percentChange: number | null;
+
+  // Flow-adjusted performance (computePeriodReturn). Null when the start is
+  // unknown or the measure is not flow-adjusted (flowCoverage "none").
+  /** Net external flows dated after the start, up to the end */
+  netFlows: number | null;
+  /** absoluteChange − netFlows: the gain that is not money moved in */
+  profitLoss: number | null;
+  /** profitLoss over the start value plus time-weighted flows, in % */
+  modifiedDietzPercent: number | null;
+  /** Time-weighted return: Modified Dietz chained between observations, in % */
+  timeWeightedPercent: number | null;
+  flowCoverage: FlowCoverage;
 
   // Range statistics
   highValue: number;
@@ -238,18 +283,11 @@ export interface ContinuousSource {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Category breakdown within a snapshot
+ * Category breakdown within a snapshot: the entry the snapshot writer
+ * builds (services/portfolio/aggregate.ts buildSnapshotBreakdown), with its
+ * cost, per-source values and net flow.
  */
-export interface SnapshotCategoryBreakdown {
-  category: string;
-  value: number;
-  /** Cost of the holdings that have one */
-  costBasis?: number;
-  /** Value of the holdings costBasis covers; absent on old snapshots */
-  coveredValue?: number;
-  /** Value per holding source (e.g. vault vs bitpanda); absent on old snapshots */
-  sources?: { source: string; value: number }[];
-}
+export type SnapshotCategoryBreakdown = SnapshotCategoryEntry;
 
 /**
  * Portfolio snapshot data (from Convex portfolioSnapshots table)
@@ -292,8 +330,13 @@ export interface HoldingData {
    * any range start: an item is never dated at record creation.
    */
   purchaseDate?: number;
-  /** Cost per unit at purchase */
+  /** Cost per unit at purchase, in purchaseCurrency */
   purchasePricePerUnit?: number;
+  /**
+   * Currency of purchasePricePerUnit (vaultItems.purchaseCurrency). A price
+   * in another currency than the series' is not used as the purchase flow.
+   */
+  purchaseCurrency?: string;
 }
 
 /**

@@ -9,10 +9,14 @@
  *   twice;
  * - a grid point is kept only where every part present has a value, so a
  *   series of one scope is never spliced onto a series of another;
- * - metrics, including high and low, come from the merged series.
+ * - metrics, including high and low, come from the merged series;
+ * - flows are the parts' flows, only for a flow-adjusted measure (D2: the
+ *   vault's purchases are not flows of net worth).
  */
 
+import { isFlowAdjustedCategory } from "../../portfolio/aggregate";
 import type {
+  CashFlow,
   PerformanceDataPoint,
   PerformanceResult,
 } from "../types";
@@ -86,12 +90,7 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
   ): HybridPerformanceResult {
     const { generation, breakdown } = this.combine(input, context);
     return {
-      metrics: this.calculateMetrics(
-        generation.dataPoints,
-        context,
-        generation.dataQuality,
-        generation.partial,
-      ),
+      metrics: this.calculateMetrics(generation.dataPoints, context, generation),
       dataPoints: includeDataPoints ? generation.dataPoints : [],
       valueType: "hybrid",
       breakdown,
@@ -112,19 +111,20 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
     input: HybridPerformanceInput,
     context: CalculationContext,
   ): { generation: DataPointGenerationResult; breakdown: PerformanceBreakdown } {
-    const discrete = input.discrete
-      ? this.discreteStrategy.calculateInContext(
-          {
-            ...input.discrete,
-            excludeSources: input.continuous ? input.continuousSources : [],
-          },
-          context,
-          true,
-        )
+    // The parts' generations (flows are not part of a PerformanceResult)
+    const discreteInput = input.discrete && {
+      ...input.discrete,
+      excludeSources: input.continuous ? input.continuousSources : [],
+    };
+    const discreteGen = discreteInput
+      ? this.discreteStrategy.generate(discreteInput, context)
       : undefined;
-    const continuous = input.continuous
-      ? this.continuousStrategy.calculateInContext(input.continuous, context, true)
+    const continuousGen = input.continuous
+      ? this.continuousStrategy.generate(input.continuous, context)
       : undefined;
+    const discrete = discreteGen && this.discreteStrategy.toResult(discreteGen, context);
+    const continuous =
+      continuousGen && this.continuousStrategy.toResult(continuousGen, context);
 
     // A discrete part with no points (no snapshots yet) is left out only
     // when the continuous sources cover the measure's whole scope (their own
@@ -147,6 +147,31 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
     );
     const observed = dataPoints.filter((p) => p.source !== "interpolated").length;
 
+    // Flows of the parts merged, for a flow-adjusted measure only. A legacy
+    // snapshot that already holds the continuous sources stands alone in
+    // the merged series, so continuous flows up to the last such point are
+    // in its value (and its flow) already.
+    const tracksFlows =
+      metric === undefined
+        ? continuousGen !== undefined
+        : metric.kind === "category" && isFlowAdjustedCategory(metric.category);
+    const used = [
+      parts.includes(discrete!) ? discreteGen : undefined,
+      parts.includes(continuous!) ? continuousGen : undefined,
+    ].filter((g): g is DataPointGenerationResult => g !== undefined);
+    const lastLegacy = (discrete?.dataPoints ?? [])
+      .filter((p) => p.includesContinuous)
+      .reduce((max, p) => Math.max(max, p.timestamp), -Infinity);
+    const flows: CashFlow[] = used.flatMap((g) =>
+      (g.flows ?? []).filter(
+        (f) => g === discreteGen || f.timestamp > lastLegacy,
+      ),
+    );
+    const flowCoverage =
+      !tracksFlows || used.some((g) => (g.flowCoverage ?? "none") === "none")
+        ? ("none" as const)
+        : ("complete" as const);
+
     return {
       generation: {
         dataPoints,
@@ -155,6 +180,11 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
         dataQuality: assessDataQuality(observed, context.expectedDataPoints),
         partial: [discrete, continuous].some((r) => r?.metrics.partial),
         actualSnapshotTimestamps: discrete?.actualSnapshotTimestamps,
+        flows,
+        flowCoverage,
+        estimatedFlowTimestamps: used.flatMap(
+          (g) => g.estimatedFlowTimestamps ?? [],
+        ),
       },
       breakdown: { discrete, continuous },
     };

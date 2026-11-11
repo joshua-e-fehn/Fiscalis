@@ -9,11 +9,18 @@ import { useMemo } from "react";
 import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance";
 
 export interface PortfolioYTDResult {
+  /** P/L net of flows for an investment category, else the change in value */
   ytdProfitLoss: number | null;
   ytdProfitLossPercent: number | null;
   valueAtYearStart: number | null;
+  /** First known point when there is no value at 1 Jan; null otherwise */
+  trackingSince: number | null;
   /** Some held assets had no price series and are missing from the values */
   partial: boolean;
+  /** Net of purchases, deposits and sales (D2): a return, not a change */
+  flowAdjusted: boolean;
+  /** Some flows were assumed (holdings without a cost basis) */
+  flowsEstimated: boolean;
   isLoading: boolean;
 }
 
@@ -56,7 +63,10 @@ export function useNetWorthYTD(options?: {
   }, [metrics, isLoading]);
 }
 
-/** YTD change of one category (vault metals valued at market prices). */
+/**
+ * YTD performance of one category (vault metals valued at market prices):
+ * flow-adjusted for the investment categories, a plain change otherwise.
+ */
 export function useCategoryYTD(
   category: string,
   options?: { enabled?: boolean },
@@ -74,7 +84,10 @@ export function useCategoryYTD(
       ytdProfitLoss: ytd.change,
       ytdProfitLossPercent: ytd.changePercent,
       valueAtYearStart: ytd.valueAtStart,
+      trackingSince: ytd.trackingSince,
       partial: ytd.partial,
+      flowAdjusted: ytd.flowAdjusted,
+      flowsEstimated: ytd.flowsEstimated,
       isLoading,
     };
   }, [metrics, isLoading]);

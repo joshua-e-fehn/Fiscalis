@@ -8,8 +8,14 @@
  */
 
 import { snapshotCostLine } from "../../portfolio/unrealizedProfitLoss";
+import {
+  isFlowAdjustedCategory,
+  snapshotCategoryFlow,
+  type NetFlow,
+} from "../../portfolio/aggregate";
 
 import type {
+  CashFlow,
   ContinuousSource,
   PerformanceDataPoint,
   PerformanceResult,
@@ -161,6 +167,30 @@ export function snapshotMetricValue(
   };
 }
 
+/**
+ * External flow into a flow-adjusted category between two consecutive
+ * snapshots (services/portfolio/aggregate.ts snapshotCategoryFlow: the
+ * flow the snapshot writer stored, else an estimate), less the excluded
+ * sources; null for a measure that is not flow-adjusted (net worth, total
+ * assets, cash, liabilities: D2).
+ */
+export function snapshotMetricFlow(
+  prev: SnapshotData,
+  cur: SnapshotData,
+  metric: SnapshotMetric,
+  exclude: ContinuousSource[] = [],
+): NetFlow | null {
+  if (metric.kind !== "category" || !isFlowAdjustedCategory(metric.category)) {
+    return null;
+  }
+  const find = (s: SnapshotData) =>
+    s.categoryBreakdown?.find((c) => c.category === metric.category);
+  const excluded = new Set(
+    exclude.filter((e) => e.category === metric.category).map((e) => e.source),
+  );
+  return snapshotCategoryFlow(find(prev), find(cur), excluded);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Discrete Performance Strategy
 // ═══════════════════════════════════════════════════════════════
@@ -174,6 +204,11 @@ export function snapshotMetricValue(
  * before it, else interpolated across gaps up to the limit, else the last
  * value held. Nothing is carried backward before the first snapshot, so a
  * range that starts before tracking has insufficient history.
+ *
+ * For a flow-adjusted category each snapshot also yields the external flow
+ * since the previous one, dated at the snapshot. A value is never
+ * interpolated toward a snapshot that received a flow: the jump is money
+ * moved in on that day, not a gain accruing before it.
  */
 export class DiscretePerformanceStrategy extends BasePerformanceStrategy<DiscretePerformanceInput> {
   readonly strategyType = "discrete" as const;
@@ -182,12 +217,36 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     input: DiscretePerformanceInput,
     context: CalculationContext,
   ): DataPointGenerationResult {
-    const values = sortByTimestamp(
-      (input.snapshots ?? []).flatMap((s) => {
-        const v = snapshotMetricValue(s, input.metric, input.excludeSources);
-        return v ? [v] : [];
-      }),
-    );
+    const values: (SnapshotValue & { flow: NetFlow | null })[] = [];
+    let prev: SnapshotData | undefined;
+    for (const s of sortByTimestamp(input.snapshots ?? [])) {
+      const v = snapshotMetricValue(s, input.metric, input.excludeSources);
+      if (!v) continue;
+      values.push({
+        ...v,
+        flow: prev
+          ? snapshotMetricFlow(prev, s, input.metric, input.excludeSources)
+          : null,
+      });
+      prev = s;
+    }
+    const tracksFlows =
+      input.metric.kind === "category" &&
+      isFlowAdjustedCategory(input.metric.category);
+    const flows: CashFlow[] = [];
+    const estimatedFlowTimestamps: number[] = [];
+    for (const [i, v] of values.entries()) {
+      if (!v.flow) continue;
+      if (v.flow.amount !== 0) {
+        // Somewhere between the previous snapshot and this one
+        flows.push({
+          timestamp: v.timestamp,
+          amount: v.flow.amount,
+          spanStart: values[i - 1].timestamp,
+        });
+      }
+      if (v.flow.estimated) estimatedFlowTimestamps.push(v.timestamp);
+    }
 
     const dataPoints: PerformanceDataPoint[] = [];
     let observed = 0;
@@ -200,11 +259,13 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       const { costBasis, includesContinuous } = found.point;
       // Never interpolate between a row that holds the excluded sources and
       // one that does not: the two values measure different scopes.
+      // ... nor toward a snapshot that received a flow
       const next = values[lastIndexAtOrBefore(values, ts) + 1];
       const value =
         found.kind === "interpolated" &&
         next !== undefined &&
-        next.includesContinuous !== includesContinuous
+        (next.includesContinuous !== includesContinuous ||
+          (next.flow !== null && next.flow.amount !== 0))
           ? found.point.value
           : found.value;
       const point =
@@ -226,6 +287,11 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       actualSnapshotTimestamps: values
         .map((s) => s.timestamp)
         .filter((t) => t <= context.endTimestamp),
+      ...(tracksFlows && {
+        flows,
+        flowCoverage: "complete" as const,
+        estimatedFlowTimestamps,
+      }),
     };
   }
 }

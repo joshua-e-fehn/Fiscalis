@@ -153,6 +153,9 @@ export default defineSchema({
 		// (services/finance/currency.ts brokerAccountBaseFields)
 		balanceCurrency: v.optional(v.string()), // Currency of balance/cash when the API reports one; else `currency`
 		balanceInBaseCurrency: v.optional(v.number()), // Balance in EUR
+		// The balance sums holdings with no rate into balanceCurrency, so it has
+		// no EUR value; kept so a re-stamp (backfill) does not invent one
+		balanceIsMixed: v.optional(v.boolean()),
 		cashValueInBaseCurrency: v.optional(v.number()), // Cash value in EUR
 		cashExchangeRateUsed: v.optional(v.number()), // EUR per unit at sync time
 		exchangeRateDate: v.optional(v.string()), // Day of the rate (YYYY-MM-DD)

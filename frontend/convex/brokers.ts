@@ -734,6 +734,7 @@ export const replaceAccountHoldings = internalMutation({
     await ctx.db.patch(account._id, {
       balance: fields.balance,
       balanceCurrency: fields.balanceCurrency,
+      balanceIsMixed: fields.balanceIsMixed,
       cash,
       cashSource: fields.cashSource ?? account.cashSource,
       cashInvestmentCategory:

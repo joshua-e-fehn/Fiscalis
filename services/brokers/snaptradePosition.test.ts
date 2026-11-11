@@ -1,9 +1,15 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  mapSnaptradeHoldings,
   normalizeAssetType,
+  positionOverrideKeys,
+  positionProfitLoss,
   readSnaptradeSymbolFields,
+  snaptradeAccountFields,
+  type SnaptradeHoldingsLike,
 } from "./snaptradePosition";
+import { fxRatesFromDaily } from "../finance/currency";
 import { classifySnaptradePosition } from "../../frontend/convex/lib/classification/engine";
 import { parseClassificationOverride } from "../../frontend/lib/types/classification";
 
@@ -62,7 +68,7 @@ describe("readSnaptradeSymbolFields", () => {
   };
 
   it("reads ticker, type, currency and FIGI from the UniversalSymbol", () => {
-    expect(readSnaptradeSymbolFields(sap)).toEqual({
+    expect(readSnaptradeSymbolFields(sap, "EUR")).toEqual({
       symbol: "SAP.DE",
       symbolId: "universal-id",
       name: "SAP SE",
@@ -75,27 +81,269 @@ describe("readSnaptradeSymbolFields", () => {
   });
 
   it("prefers the position's quote currency over the listing currency", () => {
-    const r = readSnaptradeSymbolFields({ ...sap, currency: { code: "USD" } });
+    const r = readSnaptradeSymbolFields(
+      { ...sap, currency: { code: "USD" } },
+      "EUR",
+    );
     expect(r?.currency).toBe("USD");
   });
 
   it("never stringifies the symbol object", () => {
-    const r = readSnaptradeSymbolFields(sap);
+    const r = readSnaptradeSymbolFields(sap, "EUR");
     expect(r?.symbol).not.toContain("[object");
   });
 
   it("returns null without a ticker", () => {
-    expect(readSnaptradeSymbolFields({})).toBeNull();
-    expect(readSnaptradeSymbolFields({ symbol: { id: "x" } })).toBeNull();
+    expect(readSnaptradeSymbolFields({}, "EUR")).toBeNull();
+    expect(readSnaptradeSymbolFields({ symbol: { id: "x" } }, "EUR")).toBeNull();
     expect(
-      readSnaptradeSymbolFields({ symbol: { symbol: { symbol: "" } } }),
+      readSnaptradeSymbolFields({ symbol: { symbol: { symbol: "" } } }, "EUR"),
     ).toBeNull();
   });
 
-  it("falls back to USD and type other when the payload omits them", () => {
-    const r = readSnaptradeSymbolFields({ symbol: { symbol: { symbol: "X" } } });
-    expect(r?.currency).toBe("USD");
+  it("falls back to the account currency and type other when the payload omits them", () => {
+    const r = readSnaptradeSymbolFields(
+      { symbol: { symbol: { symbol: "X" } } },
+      "CHF",
+    );
+    expect(r?.currency).toBe("CHF");
     expect(r?.assetType).toBe("other");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Holdings response
+// ═══════════════════════════════════════════════════════════════
+
+// 1 EUR = 1.25 USD, so 1 USD = 0.8 EUR
+const rates = fxRatesFromDaily([
+  { date: "2026-11-10", currency: "USD", unitsPerEur: 1.25 },
+]);
+
+const stock = (ticker: string, units: number, price: number, extra = {}) => ({
+  symbol: {
+    symbol: {
+      symbol: ticker,
+      currency: { code: "USD" },
+      type: { code: "cs" },
+    },
+  },
+  units,
+  price,
+  ...extra,
+});
+
+describe("mapSnaptradeHoldings", () => {
+  it("maps stock positions with value and cost", () => {
+    const mapped = mapSnaptradeHoldings(
+      { positions: [stock("AAPL", 10, 200, { average_purchase_price: 150 })] },
+      "USD",
+    );
+    expect(mapped.positions).toEqual([
+      expect.objectContaining({
+        symbol: "AAPL",
+        quantity: 10,
+        currentPrice: 200,
+        marketValue: 2_000,
+        averageCostBasis: 150,
+        totalCostBasis: 1_500,
+      }),
+    ]);
+  });
+
+  it("values option positions as contracts times price times multiplier", () => {
+    const holdings: SnaptradeHoldingsLike = {
+      option_positions: [
+        {
+          symbol: {
+            option_symbol: {
+              id: "opt-1",
+              ticker: "AAPL  261218C00200000",
+              option_type: "CALL",
+              strike_price: 200,
+              expiration_date: "2026-12-18",
+              underlying_symbol: { symbol: "AAPL", currency: { code: "USD" } },
+            },
+          },
+          units: 2,
+          price: 5.5,
+          average_purchase_price: 400,
+        },
+        {
+          symbol: {
+            option_symbol: {
+              ticker: "MINI",
+              is_mini_option: true,
+              underlying_symbol: { symbol: "SPY" },
+            },
+          },
+          units: -1,
+          price: 3,
+        },
+      ],
+    };
+    const [standard, mini] = mapSnaptradeHoldings(holdings, "USD").positions;
+    expect(standard).toEqual(
+      expect.objectContaining({
+        symbol: "AAPL  261218C00200000",
+        assetType: "option",
+        currency: "USD",
+        quantity: 2,
+        currentPrice: 550,
+        marketValue: 1_100,
+        averageCostBasis: 400,
+        totalCostBasis: 800,
+        name: "AAPL 2026-12-18 200 CALL",
+      }),
+    );
+    // Short mini option: 10 shares per contract, negative value
+    expect(mini.marketValue).toBe(-30);
+    expect(mini.totalCostBasis).toBeUndefined();
+  });
+
+  it("tells absent cash apart from a reported zero", () => {
+    expect(mapSnaptradeHoldings({}, "USD").cashBalances).toBeUndefined();
+    expect(
+      mapSnaptradeHoldings({ balances: [{ cash: null }] }, "USD").cashBalances,
+    ).toBeUndefined();
+    expect(mapSnaptradeHoldings({ balances: [] }, "USD").cashBalances).toEqual(
+      [],
+    );
+    expect(
+      mapSnaptradeHoldings(
+        { balances: [{ cash: 0, currency: { code: "USD" } }] },
+        "USD",
+      ).cashBalances,
+    ).toEqual([{ amount: 0, currency: "USD" }]);
+  });
+
+  it("prefers the account's balance total over the deprecated total_value", () => {
+    const mapped = mapSnaptradeHoldings(
+      {
+        account: { balance: { total: { amount: 5_000, currency: "USD" } } },
+        total_value: { value: 4_000, currency: "USD" },
+      },
+      "USD",
+    );
+    expect(mapped.total).toEqual({ amount: 5_000, currency: "USD" });
+    expect(
+      mapSnaptradeHoldings({ total_value: { value: 4_000 } }, "USD").total,
+    ).toEqual({ amount: 4_000, currency: undefined });
+  });
+});
+
+describe("snaptradeAccountFields", () => {
+  it("writes negative cash as a margin-loan liability", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: [stock("AAPL", 250, 200)],
+          balances: [{ cash: -15_000, currency: { code: "USD" } }],
+          account: { balance: { total: { amount: 35_000, currency: "USD" } } },
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(fields).toEqual({
+      balance: 35_000,
+      balanceCurrency: "USD",
+      balanceIsMixed: false,
+      cash: -15_000,
+      cashInvestmentCategory: "liabilities",
+      cashInvestmentSubcategory: "margin-loans",
+    });
+  });
+
+  it("writes a zero cash balance as zero, and leaves absent cash unset", () => {
+    const zero = snaptradeAccountFields(
+      mapSnaptradeHoldings({ balances: [] }, "USD"),
+      "USD",
+      rates,
+    );
+    expect(zero.cash).toBe(0);
+    expect(zero.cashInvestmentCategory).toBe("cash");
+
+    const absent = snaptradeAccountFields(
+      mapSnaptradeHoldings({}, "USD"),
+      "USD",
+      rates,
+    );
+    expect(absent.cash).toBeUndefined();
+    expect(absent.cashInvestmentCategory).toBeUndefined();
+  });
+
+  it("converts cash in other currencies into the balance currency", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          balances: [
+            { cash: 100, currency: { code: "USD" } },
+            { cash: 100, currency: { code: "EUR" } },
+          ],
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    // 100 EUR = 125 USD
+    expect(fields.cash).toBeCloseTo(225, 9);
+  });
+
+  it("takes cash-equivalent positions out of cash once", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: [stock("SPAXX", 1_000, 1, { cash_equivalent: true })],
+          balances: [{ cash: 1_500, currency: { code: "USD" } }],
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(fields.cash).toBe(500);
+    // Without a broker total: positions plus cash
+    expect(fields.balance).toBe(1_500);
+  });
+
+  it("flags a summed balance that has an unconvertible part", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: [
+            {
+              symbol: { symbol: { symbol: "X", currency: { code: "ZZZ" } } },
+              units: 1,
+              price: 10,
+            },
+          ],
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(fields.balanceIsMixed).toBe(true);
+  });
+});
+
+describe("positionProfitLoss", () => {
+  it("derives P/L from value and cost, and none without cost", () => {
+    expect(
+      positionProfitLoss({ marketValue: 2_000, totalCostBasis: 1_500 }),
+    ).toEqual({ unrealizedPL: 500, unrealizedPLPercent: (500 / 1_500) * 100 });
+    expect(positionProfitLoss({ marketValue: 2_000 })).toEqual({});
+  });
+});
+
+describe("positionOverrideKeys", () => {
+  it("keys by ISIN first, then ticker", () => {
+    expect(positionOverrideKeys({ symbol: "sap.de", isin: "de0007164600" }))
+      .toEqual(["isin:DE0007164600", "symbol:SAP.DE"]);
+    expect(positionOverrideKeys({ symbol: "AAPL" })).toEqual(["symbol:AAPL"]);
   });
 });
 

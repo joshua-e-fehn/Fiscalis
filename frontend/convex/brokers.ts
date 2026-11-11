@@ -14,6 +14,11 @@ import {
   brokerAccountBaseFields,
   positionBaseFields,
 } from "../../services/finance/currency";
+import {
+  positionOverrideKeys,
+  positionProfitLoss,
+  snaptradeAccountFields,
+} from "../../services/brokers/snaptradePosition";
 
 // ═══════════════════════════════════════════════════════════════
 // SNAPTRADE USER QUERIES
@@ -528,27 +533,22 @@ export const deleteConnectionData = internalMutation({
 });
 
 /**
- * Upsert broker account
+ * Upsert a broker account's metadata from the accounts list. Balance and
+ * cash are written only by replaceAccountHoldings. Fields the API did not
+ * send are left as stored; connectionId is re-pointed, so an account
+ * follows the brokerage authorization it belongs to. Returns the account
+ * and the currency now stored for it.
  */
 export const upsertAccount = internalMutation({
   args: {
     userId: v.string(),
     connectionId: v.id("brokerConnections"),
     snaptradeAccountId: v.string(),
-    name: v.string(),
+    name: v.optional(v.string()),
     accountNumber: v.optional(v.string()),
-    accountType: v.string(),
-    balance: v.optional(v.number()),
-    cash: v.optional(v.number()),
-    currency: v.string(),
-    // Currency of balance/cash when the holdings API reports one
-    balanceCurrency: v.optional(v.string()),
-    // The balance is a sum over holdings in mixed currencies (the API sent
-    // no total), so it gets no base-currency value
-    balanceIsMixed: v.optional(v.boolean()),
+    accountType: v.optional(v.string()),
+    currency: v.optional(v.string()),
     institutionName: v.optional(v.string()),
-    // Flag to indicate this is a metadata-only update (don't touch balance)
-    skipBalanceUpdate: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -561,205 +561,187 @@ export const upsertAccount = internalMutation({
     const now = Date.now();
 
     if (existing) {
-      // Build update object - only include balance/cash if not skipping
-      const updateData: Record<string, unknown> = {
-        name: args.name,
-        accountNumber: args.accountNumber,
-        accountType: args.accountType,
-        currency: args.currency,
-        institutionName: args.institutionName,
-        lastSyncAt: now,
-      };
-
-      // Only update balance/cash if skipBalanceUpdate is not true
-      if (!args.skipBalanceUpdate) {
-        // Only update if we have actual values (not undefined)
-        if (args.balance !== undefined) {
-          updateData.balance = args.balance;
-        }
-        if (args.cash !== undefined) {
-          updateData.cash = args.cash;
-        }
-        if (args.balanceCurrency !== undefined) {
-          updateData.balanceCurrency = args.balanceCurrency;
-        }
+      if (existing.userId !== args.userId) {
+        throw new Error("Broker account belongs to another user");
       }
-
-      // Re-stamp the base-currency values of what is now stored
-      Object.assign(
-        updateData,
-        brokerAccountBaseFields(
-          {
-            balance:
-              (updateData.balance as number | undefined) ?? existing.balance,
-            cash: (updateData.cash as number | undefined) ?? existing.cash,
-            currency: args.currency,
-            balanceCurrency:
-              (updateData.balanceCurrency as string | undefined) ??
-              existing.balanceCurrency,
-          },
-          await loadFxRates(ctx),
-          { balanceIsMixed: !args.skipBalanceUpdate && args.balanceIsMixed },
-        ),
+      const defined = Object.fromEntries(
+        Object.entries({
+          connectionId: args.connectionId,
+          name: args.name,
+          accountNumber: args.accountNumber,
+          accountType: args.accountType,
+          currency: args.currency,
+          institutionName: args.institutionName,
+        }).filter(([, value]) => value !== undefined),
       );
-
-      await ctx.db.patch(existing._id, updateData);
-      return existing._id;
+      await ctx.db.patch(existing._id, { ...defined, lastSyncAt: now });
+      return {
+        accountId: existing._id,
+        currency: args.currency ?? existing.currency,
+      };
     }
 
-    return await ctx.db.insert("brokerAccounts", {
+    const currency = args.currency ?? "USD";
+    const accountId = await ctx.db.insert("brokerAccounts", {
       userId: args.userId,
       connectionId: args.connectionId,
       snaptradeAccountId: args.snaptradeAccountId,
-      name: args.name,
+      name: args.name ?? "Unknown Account",
       accountNumber: args.accountNumber,
-      accountType: args.accountType,
-      balance: args.balance,
-      cash: args.cash,
-      currency: args.currency,
-      balanceCurrency: args.balanceCurrency,
-      ...brokerAccountBaseFields(args, await loadFxRates(ctx), {
-        balanceIsMixed: args.balanceIsMixed,
-      }),
+      accountType: args.accountType ?? "OTHER",
+      currency,
       institutionName: args.institutionName,
       lastSyncAt: now,
       createdAt: now,
     });
+    return { accountId, currency };
   },
 });
 
+const holdingPositionValidator = v.object({
+  symbol: v.string(),
+  symbolId: v.optional(v.string()),
+  name: v.optional(v.string()),
+  assetType: v.string(),
+  currency: v.string(),
+  isin: v.optional(v.string()),
+  cusip: v.optional(v.string()),
+  figi: v.optional(v.string()),
+  quantity: v.number(),
+  currentPrice: v.number(),
+  marketValue: v.number(),
+  averageCostBasis: v.optional(v.number()),
+  totalCostBasis: v.optional(v.number()),
+});
+
+const moneyValidator = v.object({ amount: v.number(), currency: v.string() });
+
 /**
- * Upsert broker position
- * Automatically classifies positions and stamps their value, cost basis and
- * unrealised P&L in the base currency (EUR)
+ * Replace one account's positions and update its balance and cash from a
+ * holdings response, in one transaction: a sync that fails before this
+ * runs leaves the stored holdings untouched, never half-deleted.
+ *
+ * Each position is classified, stamped in the base currency and given its
+ * unrealised P&L here, so no caller can leave it out. A user's
+ * classification override is carried over by ISIN or ticker
+ * (positionOverrideKeys), as bitpanda.syncHoldings does for Bitpanda.
+ *
+ * Cash: `cashBalances` undefined means the response had no cash figure,
+ * which keeps the stored cash; anything else, zero and negative included,
+ * is written. A negative balance is a margin debit and is stored as a
+ * liability (cashInvestmentCategory "liabilities", margin-loans).
  */
-export const upsertPosition = internalMutation({
+export const replaceAccountHoldings = internalMutation({
   args: {
     userId: v.string(),
     accountId: v.id("brokerAccounts"),
-    snaptradePositionId: v.optional(v.string()),
-    symbol: v.string(),
-    symbolId: v.optional(v.string()),
-    name: v.optional(v.string()),
-    assetType: v.string(),
-    quantity: v.number(),
-    averageCostBasis: v.optional(v.number()),
-    totalCostBasis: v.optional(v.number()),
-    currentPrice: v.optional(v.number()),
-    marketValue: v.optional(v.number()),
-    currency: v.string(),
-    isin: v.optional(v.string()),
-    cusip: v.optional(v.string()),
-    figi: v.optional(v.string()),
-    unrealizedPL: v.optional(v.number()),
-    unrealizedPLPercent: v.optional(v.number()),
-    dayPL: v.optional(v.number()),
-    dayPLPercent: v.optional(v.number()),
+    positions: v.array(holdingPositionValidator),
+    cashBalances: v.optional(v.array(moneyValidator)),
+    cashEquivalents: v.array(moneyValidator),
+    total: v.optional(
+      v.object({ amount: v.number(), currency: v.optional(v.string()) }),
+    ),
   },
   handler: async (ctx, args) => {
-    // Find existing position by account + symbol
+    const account = await ctx.db.get(args.accountId);
+    if (!account || account.userId !== args.userId) {
+      throw new Error("Broker account not found");
+    }
+
+    const rates = await loadFxRates(ctx);
+    const now = Date.now();
+
+    // Capture user overrides, then remove the old rows
+    const overrides = new Map<
+      string,
+      { category?: string; subcategory?: string }
+    >();
     const existing = await ctx.db
       .query("brokerPositions")
       .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
-      .filter((q) => q.eq(q.field("symbol"), args.symbol))
-      .first();
-
-    const now = Date.now();
-
-    // Classify the position
-    const classification = classifySnaptradePosition({
-      assetType: args.assetType,
-      symbol: args.symbol,
-      name: args.name ?? null,
-      quantity: args.quantity,
-      marketValue: args.marketValue ?? null,
-    });
-
-    const classificationFields = getClassificationFields(classification);
-
-    // Value, cost basis and P&L in the base currency (EUR), one rate
-    const currencyConversionFields = positionBaseFields(
-      args,
-      await loadFxRates(ctx),
-    );
-
-    if (existing) {
-      // Preserve user overrides if they exist
-      const preserveUserOverrides =
-        existing.userCategoryOverride || existing.userSubcategoryOverride;
-
-      await ctx.db.patch(existing._id, {
-        snaptradePositionId: args.snaptradePositionId,
-        symbolId: args.symbolId,
-        name: args.name,
-        assetType: args.assetType,
-        quantity: args.quantity,
-        averageCostBasis: args.averageCostBasis,
-        totalCostBasis: args.totalCostBasis,
-        currentPrice: args.currentPrice,
-        marketValue: args.marketValue,
-        currency: args.currency,
-        isin: args.isin,
-        cusip: args.cusip,
-        figi: args.figi,
-        unrealizedPL: args.unrealizedPL,
-        unrealizedPLPercent: args.unrealizedPLPercent,
-        dayPL: args.dayPL,
-        dayPLPercent: args.dayPLPercent,
-        lastSyncAt: now,
-        // Only update classification if no user override exists
-        ...(preserveUserOverrides ? {} : classificationFields),
-        // Always update currency conversion
-        ...currencyConversionFields,
-      });
-      return existing._id;
-    }
-
-    return await ctx.db.insert("brokerPositions", {
-      userId: args.userId,
-      accountId: args.accountId,
-      snaptradePositionId: args.snaptradePositionId,
-      symbol: args.symbol,
-      symbolId: args.symbolId,
-      name: args.name,
-      assetType: args.assetType,
-      quantity: args.quantity,
-      averageCostBasis: args.averageCostBasis,
-      totalCostBasis: args.totalCostBasis,
-      currentPrice: args.currentPrice,
-      marketValue: args.marketValue,
-      currency: args.currency,
-      isin: args.isin,
-      cusip: args.cusip,
-      figi: args.figi,
-      unrealizedPL: args.unrealizedPL,
-      unrealizedPLPercent: args.unrealizedPLPercent,
-      dayPL: args.dayPL,
-      dayPLPercent: args.dayPLPercent,
-      ...classificationFields,
-      ...currencyConversionFields,
-      lastSyncAt: now,
-      createdAt: now,
-    });
-  },
-});
-
-/**
- * Delete all positions for an account (before re-syncing)
- */
-export const deletePositionsForAccount = internalMutation({
-  args: { accountId: v.id("brokerAccounts") },
-  handler: async (ctx, args) => {
-    const positions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
       .collect();
-
-    for (const position of positions) {
+    for (const position of existing) {
+      if (position.userCategoryOverride || position.userSubcategoryOverride) {
+        for (const key of positionOverrideKeys(position)) {
+          overrides.set(key, {
+            category: position.userCategoryOverride,
+            subcategory: position.userSubcategoryOverride,
+          });
+        }
+      }
       await ctx.db.delete(position._id);
     }
 
-    return { deleted: positions.length };
+    for (const position of args.positions) {
+      const classification = getClassificationFields(
+        classifySnaptradePosition({
+          assetType: position.assetType,
+          symbol: position.symbol,
+          name: position.name ?? null,
+          quantity: position.quantity,
+          marketValue: position.marketValue,
+        }),
+      );
+      const override = positionOverrideKeys(position)
+        .map((key) => overrides.get(key))
+        .find((value) => value !== undefined);
+
+      await ctx.db.insert("brokerPositions", {
+        userId: args.userId,
+        accountId: args.accountId,
+        ...position,
+        ...positionProfitLoss(position),
+        ...classification,
+        ...(override
+          ? {
+              userCategoryOverride: override.category,
+              userSubcategoryOverride: override.subcategory,
+              investmentCategory:
+                override.category ?? classification.investmentCategory,
+              investmentSubcategory:
+                override.subcategory ?? classification.investmentSubcategory,
+              classificationSource: "user_override",
+            }
+          : {}),
+        ...positionBaseFields(position, rates),
+        lastSyncAt: now,
+        createdAt: now,
+      });
+    }
+
+    const fields = snaptradeAccountFields(
+      {
+        positions: args.positions,
+        cashBalances: args.cashBalances,
+        cashEquivalents: args.cashEquivalents,
+        total: args.total,
+      },
+      account.currency,
+      rates,
+    );
+    const cash = fields.cash ?? account.cash;
+    await ctx.db.patch(account._id, {
+      balance: fields.balance,
+      balanceCurrency: fields.balanceCurrency,
+      cash,
+      cashInvestmentCategory:
+        fields.cashInvestmentCategory ?? account.cashInvestmentCategory,
+      cashInvestmentSubcategory:
+        fields.cashInvestmentSubcategory ?? account.cashInvestmentSubcategory,
+      ...brokerAccountBaseFields(
+        {
+          balance: fields.balance,
+          cash,
+          currency: account.currency,
+          balanceCurrency: fields.balanceCurrency,
+        },
+        rates,
+        { balanceIsMixed: fields.balanceIsMixed },
+      ),
+      lastSyncAt: now,
+    });
+
+    return { positions: args.positions.length };
   },
 });
 

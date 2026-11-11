@@ -232,6 +232,30 @@ describe("summarizeMetalItems", () => {
     expect(s.platinum).toMatchObject({ itemCount: 0, totalCost: null, coverage: null });
   });
 
+  it("leaves items without a fresh spot price out of cost and P/L", () => {
+    // gold valued at spot; silver fell back to its cost (no fresh spot)
+    const s = summarizeMetalItems([
+      { ...valued("gold", 1200, 1000), pricedAtSpot: true },
+      { ...valued("silver", 500, 500), pricedAtSpot: false },
+    ]);
+    expect(s.totalMarketValue).toBe(1700);
+    expect(s.totalCost).toBe(1000);
+    expect(s.unrealizedProfitLoss).toBe(200);
+    expect(s.coverage).toBeCloseTo(1200 / 1700, 10);
+    expect(s.pricedAtSpot).toBe(false);
+    expect(s.silver).toMatchObject({ totalCost: null, profitLoss: null, coverage: 0 });
+  });
+
+  it("has an unknown P/L when no item has a fresh spot price", () => {
+    const s = summarizeMetalItems([
+      { ...valued("gold", 1000, 1000), pricedAtSpot: false },
+    ]);
+    expect(s.totalMarketValue).toBe(1000);
+    expect(s.unrealizedProfitLoss).toBeNull();
+    expect(s.totalProfitLoss).toBeNull();
+    expect(s.coverage).toBe(0);
+  });
+
   it("has no cost or P/L when no item has a purchase price", () => {
     const s = summarizeMetalItems([valued("gold", 500, null)]);
     expect(s.totalCost).toBeNull();

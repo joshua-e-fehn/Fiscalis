@@ -8,7 +8,10 @@
  * (0.03 = 3% above spot, -0.02 = 2% below spot).
  */
 
-import { summarizeHoldings } from "../portfolio/categorySummary";
+import {
+  summarizeHoldings,
+  type HoldingValuation,
+} from "../portfolio/categorySummary";
 
 // ============================================
 // Units
@@ -346,7 +349,10 @@ export interface MetalTypeSummary {
   itemCount: number;
   marketValue: number;
   meltValue: number;
-  /** Cost of the items that have one; null when none has */
+  /**
+   * Cost of the items that have one and are priced at spot (metalHolding);
+   * null when none has
+   */
   totalCost: number | null;
   /** P/L over the items with a cost (value and cost of the same items) */
   profitLoss: number | null;
@@ -379,14 +385,25 @@ export interface MetalsPortfolioSummary {
   allocation: Record<SpotMetal, number>;
 }
 
+/**
+ * An item as a holding of the coverage policy. An item without a fresh spot
+ * price is valued at its cost (valueVaultItem), so its P/L is unknown, not
+ * break-even: like an item without a purchase price it counts in the value
+ * but not in the cost and P/L, and lowers the coverage.
+ */
+function metalHolding(i: ValuedMetalItem): HoldingValuation {
+  return {
+    value: i.marketValue,
+    costBasis: i.pricedAtSpot === false ? null : i.totalCost,
+  };
+}
+
 function summarizeMetalType(items: ValuedMetalItem[]): MetalTypeSummary {
   const totalFineWeightGrams = items.reduce(
     (sum, i) => sum + i.fineWeightGrams * i.quantity,
     0,
   );
-  const pl = summarizeHoldings(
-    items.map((i) => ({ value: i.marketValue, costBasis: i.totalCost })),
-  );
+  const pl = summarizeHoldings(items.map(metalHolding));
   return {
     totalFineWeightGrams,
     totalFineWeightOz: gramsToTroyOunces(totalFineWeightGrams),
@@ -404,8 +421,8 @@ function summarizeMetalType(items: ValuedMetalItem[]): MetalTypeSummary {
 /**
  * Per-metal and total summary of valued items. Cost and unrealized P/L
  * follow the shared coverage policy (`summarizeHoldings`): only items with a
- * purchase price count, and `coverage` says which share of the value that
- * is. Total P/L adds the realized P/L of past sales (metalsLedger).
+ * purchase price and a fresh spot price count (metalHolding), and
+ * `coverage` says which share of the value that is. Total P/L adds the realized P/L of past sales (metalsLedger).
  */
 export function summarizeMetalItems(
   items: ValuedMetalItem[],
@@ -413,9 +430,7 @@ export function summarizeMetalItems(
   const [gold, silver, platinum, palladium] = SPOT_METALS.map((metal) =>
     summarizeMetalType(items.filter((i) => i.metalType === metal)),
   );
-  const total = summarizeHoldings(
-    items.map((i) => ({ value: i.marketValue, costBasis: i.totalCost })),
-  );
+  const total = summarizeHoldings(items.map(metalHolding));
   const share = (v: number) => (total.value > 0 ? (v / total.value) * 100 : 0);
 
   // Nothing held is a known 0 unrealized; sold-out items keep their realized

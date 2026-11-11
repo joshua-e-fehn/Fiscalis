@@ -4,6 +4,8 @@ import {
   normalizeAssetType,
   readSnaptradeSymbolFields,
 } from "./snaptradePosition";
+import { classifySnaptradePosition } from "../../frontend/convex/lib/classification/engine";
+import { parseClassificationOverride } from "../../frontend/lib/types/classification";
 
 describe("normalizeAssetType", () => {
   it.each([
@@ -94,5 +96,88 @@ describe("readSnaptradeSymbolFields", () => {
     const r = readSnaptradeSymbolFields({ symbol: { symbol: { symbol: "X" } } });
     expect(r?.currency).toBe("USD");
     expect(r?.assetType).toBe("other");
+  });
+});
+
+describe("SnapTrade classification by symbol", () => {
+  const classify = (symbol: string, assetType: string) =>
+    classifySnaptradePosition({
+      assetType,
+      symbol,
+      name: null,
+      quantity: 1,
+      marketValue: 100,
+    });
+
+  it("does not turn an ETF with a crypto-like ticker into a coin", () => {
+    expect(classify("BTC", "etf")).toMatchObject({
+      category: "equities",
+      subcategory: "etfs",
+    });
+    expect(classify("DAI", "equity")).toMatchObject({
+      category: "equities",
+      subcategory: "stocks",
+    });
+  });
+
+  it("refines crypto holdings by ticker", () => {
+    expect(classify("BTC", "cryptocurrency")).toMatchObject({
+      category: "crypto",
+      subcategory: "bitcoin",
+    });
+    expect(classify("USDC", "cryptocurrency")).toMatchObject({
+      category: "crypto",
+      subcategory: "stablecoins",
+    });
+  });
+
+  it("keeps money-market funds in cash, by symbol and by name", () => {
+    expect(classify("SPAXX", "mutual_fund")).toMatchObject({
+      category: "cash",
+      subcategory: "money-market",
+    });
+    expect(
+      classifySnaptradePosition({
+        assetType: "mutual_fund",
+        symbol: "XYZXX",
+        name: "Acme Government Money Fund",
+        quantity: 1,
+        marketValue: 1,
+      }),
+    ).toMatchObject({ category: "cash", subcategory: "money-market" });
+  });
+});
+
+describe("parseClassificationOverride", () => {
+  it("accepts a subcategory of its category", () => {
+    expect(parseClassificationOverride("commodities", "metals")).toEqual({
+      category: "commodities",
+      subcategory: "metals",
+    });
+    // "funds" exists under equities and bonds alike
+    expect(parseClassificationOverride("bonds", "funds").category).toBe(
+      "bonds",
+    );
+  });
+
+  it("rejects unknown values and mismatched pairs", () => {
+    expect(() => parseClassificationOverride("stocks", "etfs")).toThrow();
+    expect(() => parseClassificationOverride("equities", "metals")).toThrow();
+    expect(() => parseClassificationOverride("equities", "etf")).toThrow();
+    expect(() =>
+      parseClassificationOverride("constructor", "x"),
+    ).toThrow();
+  });
+
+  it("limits the categories when asked", () => {
+    expect(() =>
+      parseClassificationOverride("equities", "stocks", ["cash", "liabilities"]),
+    ).toThrow();
+    expect(
+      parseClassificationOverride("liabilities", "loans", [
+        "cash",
+        "liabilities",
+      ]).category,
+    ).toBe("liabilities");
   });
 });

@@ -122,3 +122,20 @@ describe("Bitpanda fiat earn metadata", () => {
     ]);
   });
 });
+
+describe("Bitpanda classification by symbol", () => {
+  it("refines crypto wallets by ticker", () => {
+    expect(
+      classifyBitpandaPosition({ assetType: "crypto", symbol: "BTC", name: null }),
+    ).toMatchObject({ category: "crypto", subcategory: "bitcoin" });
+    expect(
+      classifyBitpandaPosition({ assetType: "crypto", symbol: "USDT", name: null }),
+    ).toMatchObject({ category: "crypto", subcategory: "stablecoins" });
+  });
+
+  it("leaves a stock with a crypto-like ticker a stock", () => {
+    expect(
+      classifyBitpandaPosition({ assetType: "stock", symbol: "DAI", name: null }),
+    ).toMatchObject({ category: "equities" });
+  });
+});

@@ -17,13 +17,7 @@ import type {
 
 import { BASE_CURRENCY } from "./currency";
 
-import {
-  CLASSIFICATION_RULES,
-  MONEY_MARKET_FUND_SYMBOLS,
-  STABLECOIN_SYMBOLS,
-  BITCOIN_SYMBOLS,
-  ETHEREUM_SYMBOLS,
-} from "./rules";
+import { CLASSIFICATION_RULES } from "./rules";
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN CLASSIFICATION FUNCTIONS
@@ -88,12 +82,6 @@ export function classifySnaptradePosition(
     };
   }
 
-  // Check symbol-based classifications first (money market funds, etc.)
-  const symbolClassification = classifyBySymbol(context.symbol, context.name);
-  if (symbolClassification) {
-    return symbolClassification;
-  }
-
   // Sort rules by priority (highest first)
   const sortedRules = [...CLASSIFICATION_RULES].sort(
     (a, b) => b.priority - a.priority,
@@ -128,7 +116,8 @@ export function classifySnaptradePosition(
  * Classify a Bitpanda holding
  *
  * Bitpanda spans crypto, metals, commodities, stocks/ETFs, indices and fiat.
- * Order: fiat handling → symbol-based (BTC/ETH/stablecoins/MMF) → asset-type rules → fallback.
+ * Order: fiat handling → rules by priority (money-market and crypto
+ * symbol rules, then asset-type rules) → fallback.
  */
 export function classifyBitpandaPosition(
   context: Omit<BitpandaPositionContext, "provider">,
@@ -153,12 +142,6 @@ export function classifyBitpandaPosition(
         : "Bitpanda Fiat (foreign currency)",
       source: "auto",
     };
-  }
-
-  // Check symbol-based classifications first (BTC, ETH, stablecoins, etc.)
-  const symbolClassification = classifyBySymbol(context.symbol, context.name);
-  if (symbolClassification) {
-    return symbolClassification;
   }
 
   // Sort rules by priority (highest first)
@@ -233,8 +216,13 @@ function matchRule(
 
     case "symbol_exact": {
       if (context.provider === "plaid") return false;
-      const symbol = "symbol" in context ? context.symbol : "";
-      const normalizedSymbol = symbol.toUpperCase();
+      if (matcher.assetTypes) {
+        const assetType = context.assetType.toLowerCase();
+        if (!matcher.assetTypes.some((t) => t.toLowerCase() === assetType)) {
+          return false;
+        }
+      }
+      const normalizedSymbol = context.symbol.toUpperCase();
 
       return matcher.values.some((v) => normalizedSymbol === v.toUpperCase());
     }
@@ -279,87 +267,6 @@ function matchRule(
     default:
       return false;
   }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SYMBOL-BASED CLASSIFICATION
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Classify based on known symbol lists
- */
-function classifyBySymbol(
-  symbol: string,
-  name: string | null,
-): ClassificationResult | null {
-  const normalizedSymbol = symbol.toUpperCase();
-
-  // Check money market funds
-  if (
-    MONEY_MARKET_FUND_SYMBOLS.some((s) => normalizedSymbol === s.toUpperCase())
-  ) {
-    return {
-      category: "cash",
-      subcategory: "money-market",
-      confidence: 1.0,
-      ruleId: "symbol_money_market",
-      ruleName: "Money Market Fund (by symbol)",
-      source: "auto",
-    };
-  }
-
-  // Check Bitcoin
-  if (BITCOIN_SYMBOLS.some((s) => normalizedSymbol === s.toUpperCase())) {
-    return {
-      category: "crypto",
-      subcategory: "bitcoin",
-      confidence: 1.0,
-      ruleId: "symbol_bitcoin",
-      ruleName: "Bitcoin (by symbol)",
-      source: "auto",
-    };
-  }
-
-  // Check Ethereum
-  if (ETHEREUM_SYMBOLS.some((s) => normalizedSymbol === s.toUpperCase())) {
-    return {
-      category: "crypto",
-      subcategory: "ethereum",
-      confidence: 1.0,
-      ruleId: "symbol_ethereum",
-      ruleName: "Ethereum (by symbol)",
-      source: "auto",
-    };
-  }
-
-  // Check stablecoins
-  if (STABLECOIN_SYMBOLS.some((s) => normalizedSymbol === s.toUpperCase())) {
-    return {
-      category: "crypto",
-      subcategory: "stablecoins",
-      confidence: 1.0,
-      ruleId: "symbol_stablecoin",
-      ruleName: "Stablecoin (by symbol)",
-      source: "auto",
-    };
-  }
-
-  // Check name for money market pattern
-  if (name) {
-    const moneyMarketPattern = /money\s*market|treasury\s*liquidity/i;
-    if (moneyMarketPattern.test(name)) {
-      return {
-        category: "cash",
-        subcategory: "money-market",
-        confidence: 0.9,
-        ruleId: "name_money_market",
-        ruleName: "Money Market Fund (by name pattern)",
-        source: "auto",
-      };
-    }
-  }
-
-  return null;
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -281,6 +281,11 @@ export interface SymbolExactMatcher {
   type: "symbol_exact";
   /** Symbol values to match exactly (case-insensitive) */
   values: string[];
+  /**
+   * Only match holdings whose provider asset type is one of these
+   * (case-insensitive); any asset type when absent
+   */
+  assetTypes?: string[];
 }
 
 /**
@@ -539,6 +544,36 @@ export function isValidSubcategory(
   subcategory: InvestmentSubcategory,
 ): boolean {
   return subcategoriesByCategory[category].includes(subcategory);
+}
+
+/**
+ * A user's category/subcategory override checked against the taxonomy.
+ * `allowedCategories` narrows the categories an item may be moved to.
+ * Throws on an unknown category, a subcategory that does not belong to it,
+ * or a category outside `allowedCategories`, so an override can never
+ * file an item under a value no query or card reads.
+ */
+export function parseClassificationOverride(
+  category: string,
+  subcategory: string,
+  allowedCategories?: readonly InvestmentCategory[],
+): { category: InvestmentCategory; subcategory: InvestmentSubcategory } {
+  if (!Object.prototype.hasOwnProperty.call(subcategoriesByCategory, category)) {
+    throw new Error(`Unknown category "${category}"`);
+  }
+  const typedCategory = category as InvestmentCategory;
+  if (allowedCategories && !allowedCategories.includes(typedCategory)) {
+    throw new Error(
+      `This item can only be classified as ${allowedCategories.join(" or ")}`,
+    );
+  }
+  const typedSubcategory = subcategory as InvestmentSubcategory;
+  if (!isValidSubcategory(typedCategory, typedSubcategory)) {
+    throw new Error(
+      `"${subcategory}" is not a subcategory of "${category}"`,
+    );
+  }
+  return { category: typedCategory, subcategory: typedSubcategory };
 }
 
 /**

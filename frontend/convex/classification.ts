@@ -4,6 +4,20 @@ import {
   classifyPlaidAccount,
   classifySnaptradePosition,
 } from "./lib/classification";
+import {
+  parseClassificationOverride,
+  type InvestmentCategory,
+} from "../lib/types/classification";
+
+/**
+ * Categories a bank (Plaid) account can be moved to: the category queries
+ * read Plaid accounts only for cash and liabilities, so any other category
+ * would drop the account from every client total.
+ */
+const PLAID_OVERRIDE_CATEGORIES: readonly InvestmentCategory[] = [
+  "cash",
+  "liabilities",
+];
 
 // ═══════════════════════════════════════════════════════════════
 // CLASSIFICATION OVERRIDE MUTATIONS
@@ -13,7 +27,9 @@ import {
  * Override classification for a Plaid account
  *
  * Sets the user's preferred category and subcategory, which will be
- * preserved even when the account data is synced/refreshed.
+ * preserved even when the account data is synced/refreshed. Values are
+ * checked against the taxonomy (cash or liabilities only, see
+ * PLAID_OVERRIDE_CATEGORIES).
  */
 export const overridePlaidAccountClassification = mutation({
   args: {
@@ -33,11 +49,17 @@ export const overridePlaidAccountClassification = mutation({
       throw new Error("Unauthorized");
     }
 
+    const { category, subcategory } = parseClassificationOverride(
+      args.category,
+      args.subcategory,
+      PLAID_OVERRIDE_CATEGORIES,
+    );
+
     await ctx.db.patch(args.accountId, {
-      userCategoryOverride: args.category,
-      userSubcategoryOverride: args.subcategory,
-      investmentCategory: args.category,
-      investmentSubcategory: args.subcategory,
+      userCategoryOverride: category,
+      userSubcategoryOverride: subcategory,
+      investmentCategory: category,
+      investmentSubcategory: subcategory,
       classificationSource: "user_override",
     });
 
@@ -49,7 +71,9 @@ export const overridePlaidAccountClassification = mutation({
  * Override classification for a broker position
  *
  * Sets the user's preferred category and subcategory, which will be
- * preserved even when position data is synced/refreshed.
+ * preserved even when position data is synced/refreshed
+ * (brokers.replaceAccountHoldings). Values are checked against the
+ * taxonomy.
  */
 export const overrideBrokerPositionClassification = mutation({
   args: {
@@ -69,11 +93,16 @@ export const overrideBrokerPositionClassification = mutation({
       throw new Error("Unauthorized");
     }
 
+    const { category, subcategory } = parseClassificationOverride(
+      args.category,
+      args.subcategory,
+    );
+
     await ctx.db.patch(args.positionId, {
-      userCategoryOverride: args.category,
-      userSubcategoryOverride: args.subcategory,
-      investmentCategory: args.category,
-      investmentSubcategory: args.subcategory,
+      userCategoryOverride: category,
+      userSubcategoryOverride: subcategory,
+      investmentCategory: category,
+      investmentSubcategory: subcategory,
       classificationSource: "user_override",
     });
 

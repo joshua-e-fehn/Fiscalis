@@ -459,10 +459,12 @@ export const updateConnectionStatus = internalMutation({
     lastSyncAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // errorMessage is cleared when absent; lastSyncAt is only ever moved
+    // forward, so a failed or in-progress sync keeps the last good time
     await ctx.db.patch(args.connectionId, {
       status: args.status,
       errorMessage: args.errorMessage,
-      lastSyncAt: args.lastSyncAt,
+      ...(args.lastSyncAt !== undefined ? { lastSyncAt: args.lastSyncAt } : {}),
       updatedAt: Date.now(),
     });
   },

@@ -13,7 +13,10 @@ import {
   requiresReauthentication,
 } from "../lib/snaptrade";
 import { Doc, Id } from "../_generated/dataModel";
-import { mapSnaptradeHoldings } from "../../../services/brokers/snaptradePosition";
+import {
+  mapSnaptradeHoldings,
+  snaptradeHoldingsCurrency,
+} from "../../../services/brokers/snaptradePosition";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -666,10 +669,23 @@ async function syncSnaptrade(
         await refreshConnectionLogo(ctx, credentials, connection);
       }
 
+      let accountsAttempted = 0;
+      let accountsFailed = 0;
+      let reauthError: string | undefined;
+      let lastAccountError: string | undefined;
       for (const apiAccount of apiAccounts) {
         if (!belongsTo(apiAccount, connection)) continue;
+        accountsAttempted++;
         const accountName = apiAccount.name || "Unknown Account";
         try {
+          // Fetch first: nothing is stored unless the holdings arrived
+          const holdings = (
+            await snaptrade.accountInformation.getUserHoldings({
+              ...credentials,
+              accountId: apiAccount.id,
+            })
+          ).data;
+
           const stored: { accountId: Id<"brokerAccounts">; currency: string } =
             await ctx.runMutation(internal.brokers.upsertAccount, {
               userId,
@@ -681,17 +697,11 @@ async function syncSnaptrade(
               currency:
                 apiAccount.meta?.currency ||
                 apiAccount.balance?.total?.currency ||
+                snaptradeHoldingsCurrency(holdings) ||
                 undefined,
               institutionName: apiAccount.institution_name || undefined,
             });
 
-          // Fetch first: nothing is replaced unless the holdings arrived
-          const holdings = (
-            await snaptrade.accountInformation.getUserHoldings({
-              ...credentials,
-              accountId: apiAccount.id,
-            })
-          ).data;
           const mapped = mapSnaptradeHoldings(holdings, stored.currency);
 
           await ctx.runMutation(internal.brokers.replaceAccountHoldings, {
@@ -707,17 +717,35 @@ async function syncSnaptrade(
             `[SNAPTRADE SYNC] Account ${apiAccount.id} failed:`,
             accountError,
           );
-          result.errors.push(
-            `Account ${accountName}: ${parseSnapTradeError(accountError).userMessage}`,
-          );
+          const parsed = parseSnapTradeError(accountError);
+          accountsFailed++;
+          lastAccountError = parsed.userMessage;
+          if (parsed.requiresReauth) reauthError = parsed.userMessage;
+          result.errors.push(`Account ${accountName}: ${parsed.userMessage}`);
         }
       }
 
-      await ctx.runMutation(internal.brokers.updateConnectionStatus, {
-        connectionId: connection._id,
-        status: "connected",
-        lastSyncAt: Date.now(),
-      });
+      // A connection whose accounts all failed, or whose authorization is
+      // broken, is not healthy: show why and keep the last good sync time
+      if (reauthError !== undefined) {
+        await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+          connectionId: connection._id,
+          status: "reauth_required",
+          errorMessage: reauthError,
+        });
+      } else if (accountsAttempted > 0 && accountsFailed === accountsAttempted) {
+        await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+          connectionId: connection._id,
+          status: "error",
+          errorMessage: lastAccountError,
+        });
+      } else {
+        await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+          connectionId: connection._id,
+          status: "connected",
+          lastSyncAt: Date.now(),
+        });
+      }
       result.connectionsProcessed++;
     } catch (connectionError) {
       const parsedError = parseSnapTradeError(connectionError);

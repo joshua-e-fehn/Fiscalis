@@ -55,7 +55,6 @@ interface MetalDetailSlideOverProps {
   item: MetalItemWithValuation | null;
   isOpen: boolean;
   onClose: () => void;
-  userId: string;
   currency?: MetalsCurrency;
   onEdit?: (item: MetalItemWithValuation) => void;
 }
@@ -64,7 +63,6 @@ export function MetalDetailSlideOver({
   item,
   isOpen,
   onClose,
-  userId,
   currency = "eur",
   onEdit,
 }: MetalDetailSlideOverProps) {
@@ -399,7 +397,6 @@ export function MetalDetailSlideOver({
           item={item}
           isOpen={isSellOpen}
           onClose={() => setIsSellOpen(false)}
-          userId={userId}
           currency={currency}
         />
       </SheetContent>

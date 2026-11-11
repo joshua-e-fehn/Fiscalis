@@ -238,12 +238,9 @@ function calculateMetalSummary(
  * Returns metal items enriched with current market valuations
  * calculated using live spot prices from Supabase.
  */
-export function useMetals(
-  userId: string,
-  currency: MetalsCurrency = "eur",
-): UseMetalsReturn {
+export function useMetals(currency: MetalsCurrency = "eur"): UseMetalsReturn {
   // Fetch metal items from Convex
-  const metalItems = useQuery(api.vault.getUserVaultItems, { userId });
+  const metalItems = useQuery(api.vault.getUserVaultItems);
 
   // Fetch prices from Supabase
   const {
@@ -275,14 +272,10 @@ export function useMetals(
  * and allocation percentages using live Supabase prices.
  */
 export function useMetalsSummary(
-  userId: string,
   currency: MetalsCurrency = "eur",
 ): UseMetalsSummaryReturn {
   // Get all items with valuations
-  const { items, isLoading, isError, pricesLoading } = useMetals(
-    userId,
-    currency,
-  );
+  const { items, isLoading, isError, pricesLoading } = useMetals(currency);
 
   // Calculate summary if we have items
   let summary: MetalsSummary | undefined;
@@ -459,13 +452,9 @@ interface UseVaultTransactionsReturn {
  * Get all transactions for a user (for history page)
  */
 export function useVaultTransactions(
-  userId: string,
   limit?: number,
 ): UseVaultTransactionsReturn {
-  const transactions = useQuery(api.vault.getUserTransactions, {
-    userId,
-    limit,
-  });
+  const transactions = useQuery(api.vault.getUserTransactions, { limit });
 
   return {
     transactions,

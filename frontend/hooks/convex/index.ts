@@ -113,9 +113,6 @@ export {
 export {
   useConvexIndicatorSearch,
   useWorldBankSyncStatus,
-  useSyncWorldBankIndicators,
-  useRecordIndicatorTimeout,
-  useRecordIndicatorSuccess,
   useIndicatorByCode,
   useUserFavorites,
   useIsIndicatorFavorited,

@@ -47,7 +47,6 @@ interface BulkSellDialogProps {
   items: MetalItemWithValuation[];
   isOpen: boolean;
   onClose: () => void;
-  userId: string;
   currency?: MetalsCurrency;
   onSuccess?: () => void;
 }
@@ -56,7 +55,6 @@ export function BulkSellDialog({
   items,
   isOpen,
   onClose,
-  userId,
   currency = "eur",
   onSuccess,
 }: BulkSellDialogProps) {
@@ -157,7 +155,6 @@ export function BulkSellDialog({
       // Process each sale
       for (const entry of sellEntries) {
         await addTransaction({
-          userId,
           vaultItemId: entry.item._id as Id<"vaultItems">,
           transactionType: "sell",
           quantity: entry.quantity,

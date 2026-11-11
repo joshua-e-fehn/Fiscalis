@@ -129,7 +129,7 @@ export function useContinuousPerformance(
   // Fetch vault items from Convex
   const vaultItems = useQuery(
     api.vault.getUserVaultItems,
-    enabled && userId ? { userId } : "skip",
+    enabled && userId ? {} : "skip",
   );
 
   // Determine which metal types we need prices for

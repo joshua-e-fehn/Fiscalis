@@ -288,13 +288,11 @@ const MetalPriceCard = ({
 // ═══════════════════════════════════════════════════════════════
 
 interface MetalsPageProps {
-  userId: string;
   currency?: MetalsCurrency;
   className?: string;
 }
 
 export function MetalsPage({
-  userId,
   currency: initialCurrency = "eur",
   className,
 }: MetalsPageProps) {
@@ -305,18 +303,15 @@ export function MetalsPage({
     items,
     isLoading: itemsLoading,
     prices,
-  } = useMetals(userId, initialCurrency);
-  const { summary, isLoading: summaryLoading } = useMetalsSummary(
-    userId,
-    initialCurrency,
-  );
+  } = useMetals(initialCurrency);
+  const { summary, isLoading: summaryLoading } = useMetalsSummary(initialCurrency);
   const {
     data: pricesData,
     isLoading: pricesLoading,
     refetch: refetchPrices,
   } = useMetalsPrices();
   const { transactions: rawTransactions, isLoading: transactionsLoading } =
-    useVaultTransactions(userId);
+    useVaultTransactions();
 
   // ─────────────────────────────────────────────────────────────
   // UI STATE
@@ -1064,7 +1059,6 @@ export function MetalsPage({
         item={selectedItem}
         isOpen={!!selectedItem}
         onClose={() => setSelectedItem(null)}
-        userId={userId}
         currency={initialCurrency}
         onEdit={(item) => {
           console.log("Edit item", item);
@@ -1074,7 +1068,6 @@ export function MetalsPage({
       <AddMetalSlideOver
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
-        userId={userId}
         mode={addMode}
         onModeChange={setAddMode}
         onSuccess={() => {
@@ -1090,7 +1083,6 @@ export function MetalsPage({
           setSelectionMode(false);
           setSelectedIds(new Set());
         }}
-        userId={userId}
         currency={initialCurrency}
       />
     </div>

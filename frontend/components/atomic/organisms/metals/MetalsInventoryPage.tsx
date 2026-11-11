@@ -51,13 +51,11 @@ import { exportTransactionsToCSV } from "@/lib/utils/export";
 import Link from "next/link";
 
 interface MetalsInventoryPageProps {
-  userId: string;
   currency?: MetalsCurrency;
   className?: string;
 }
 
 export function MetalsInventoryPage({
-  userId,
   currency = "eur",
   className,
 }: MetalsInventoryPageProps) {
@@ -66,18 +64,15 @@ export function MetalsInventoryPage({
     items,
     isLoading: itemsLoading,
     prices,
-  } = useMetals(userId, currency);
-  const { summary, isLoading: summaryLoading } = useMetalsSummary(
-    userId,
-    currency,
-  );
+  } = useMetals(currency);
+  const { summary, isLoading: summaryLoading } = useMetalsSummary(currency);
   const {
     data: pricesData,
     isLoading: pricesLoading,
     refetch: refetchPrices,
   } = useMetalsPrices();
   const { transactions: rawTransactions, isLoading: transactionsLoading } =
-    useVaultTransactions(userId);
+    useVaultTransactions();
 
   // UI state
   const [activeTab, setActiveTab] = useState<
@@ -474,7 +469,6 @@ export function MetalsInventoryPage({
         item={selectedItem}
         isOpen={!!selectedItem}
         onClose={() => setSelectedItem(null)}
-        userId={userId}
         currency={currency}
         onEdit={(item) => {
           // TODO: Open edit mode
@@ -485,7 +479,6 @@ export function MetalsInventoryPage({
       <AddMetalSlideOver
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
-        userId={userId}
         mode={addMode}
         onModeChange={setAddMode}
         onSuccess={() => {
@@ -501,7 +494,6 @@ export function MetalsInventoryPage({
           setSelectionMode(false);
           setSelectedIds(new Set());
         }}
-        userId={userId}
         currency={currency}
       />
     </div>

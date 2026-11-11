@@ -502,7 +502,6 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
         : runningBalance;
 
       const loanId = await createLoan({
-        userId: user.id,
         name,
         loanType,
         originalPrincipal: principal,
@@ -537,7 +536,6 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
       // Record past payments if any were marked as paid
       if (historicalPayments.length > 0) {
         await recordHistoricalPayments({
-          userId: user.id,
           loanId,
           payments: historicalPayments,
         });

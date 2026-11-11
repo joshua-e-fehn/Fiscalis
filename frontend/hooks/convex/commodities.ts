@@ -39,15 +39,10 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
   const { userId } = useAuth();
 
   // Get metals data
-  const { summary: metalsSummary, isLoading: metalsLoading } = useMetalsSummary(
-    userId ?? "",
-    currency,
-  );
+  const { summary: metalsSummary, isLoading: metalsLoading } = useMetalsSummary(currency);
 
-  const { items: metalsItems } = useMetals(userId ?? "", currency);
-  const { transactions: metalsTransactions } = useVaultTransactions(
-    userId ?? "",
-  );
+  const { items: metalsItems } = useMetals(currency);
+  const { transactions: metalsTransactions } = useVaultTransactions();
 
   // Calculate current values for the historical values hook
   const currentPortfolioValue = metalsSummary?.totalMarketValue ?? 0;

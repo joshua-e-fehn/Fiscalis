@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES - Metal Catalog
@@ -80,11 +81,13 @@ export const getCatalogItem = query({
  * Get all vault items for a user
  */
 export const getUserVaultItems = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
     const items = await ctx.db
       .query("vaultItems")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     // Enrich with catalog data if available
@@ -111,7 +114,6 @@ export const getUserVaultItems = query({
  */
 export const getUserVaultItemsByMetal = query({
   args: {
-    userId: v.string(),
     metalType: v.union(
       v.literal("gold"),
       v.literal("silver"),
@@ -120,10 +122,12 @@ export const getUserVaultItemsByMetal = query({
     ),
   },
   handler: async (ctx, args) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
     return await ctx.db
       .query("vaultItems")
       .withIndex("by_user_metal", (q) =>
-        q.eq("userId", args.userId).eq("metalType", args.metalType),
+        q.eq("userId", userId).eq("metalType", args.metalType),
       )
       .collect();
   },
@@ -135,7 +139,9 @@ export const getUserVaultItemsByMetal = query({
 export const getVaultItem = query({
   args: { vaultItemId: v.id("vaultItems") },
   handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.vaultItemId);
+    const userId = await getUserId(ctx);
+    if (!userId) return null;
+    const item = await getOwnedDoc(ctx, userId, args.vaultItemId);
     if (!item) return null;
 
     let catalogItem = null;
@@ -155,12 +161,15 @@ export const getVaultItem = query({
  * Get aggregated summary by metal type for a user
  */
 export const getUserVaultSummary = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const items = await ctx.db
-      .query("vaultItems")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getUserId(ctx);
+    const items = userId
+      ? await ctx.db
+          .query("vaultItems")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect()
+      : [];
 
     // Aggregate by metal type
     const summary = {
@@ -192,6 +201,9 @@ export const getUserVaultSummary = query({
 export const getVaultItemTransactions = query({
   args: { vaultItemId: v.id("vaultItems") },
   handler: async (ctx, args) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
+    if (!(await getOwnedDoc(ctx, userId, args.vaultItemId))) return [];
     return await ctx.db
       .query("vaultTransactions")
       .withIndex("by_item", (q) => q.eq("vaultItemId", args.vaultItemId))
@@ -205,13 +217,14 @@ export const getVaultItemTransactions = query({
  */
 export const getUserTransactions = query({
   args: {
-    userId: v.string(),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
     let query = ctx.db
       .query("vaultTransactions")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc");
 
     const transactions = args.limit
@@ -248,7 +261,6 @@ export const getUserTransactions = query({
  */
 export const addVaultItemFromCatalog = mutation({
   args: {
-    userId: v.string(),
     catalogItemId: v.id("metalCatalog"),
     quantity: v.number(),
     buyPremium: v.optional(v.number()), // Override default buy premium
@@ -260,6 +272,7 @@ export const addVaultItemFromCatalog = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const catalogItem = await ctx.db.get(args.catalogItemId);
     if (!catalogItem) {
       throw new Error("Catalog item not found");
@@ -276,7 +289,7 @@ export const addVaultItemFromCatalog = mutation({
       args.sellPremium ?? catalogItem.defaultSellPremium ?? 0.0;
 
     const vaultItemId = await ctx.db.insert("vaultItems", {
-      userId: args.userId,
+      userId,
       catalogItemId: args.catalogItemId,
       metalType: catalogItem.metalType,
       category: catalogItem.category,
@@ -298,7 +311,7 @@ export const addVaultItemFromCatalog = mutation({
     // Create initial transaction if purchase info provided
     if (args.purchasePricePerUnit && args.purchaseDate) {
       await ctx.db.insert("vaultTransactions", {
-        userId: args.userId,
+        userId,
         vaultItemId,
         transactionType: "buy",
         quantity: args.quantity,
@@ -319,7 +332,6 @@ export const addVaultItemFromCatalog = mutation({
  */
 export const addCustomVaultItem = mutation({
   args: {
-    userId: v.string(),
     customName: v.string(),
     metalType: v.union(
       v.literal("gold"),
@@ -345,13 +357,14 @@ export const addCustomVaultItem = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const now = Date.now();
 
     // Calculate fine weight from total weight and purity
     const fineWeightGrams = args.weightGrams * (args.purity / 1000);
 
     const vaultItemId = await ctx.db.insert("vaultItems", {
-      userId: args.userId,
+      userId,
       customName: args.customName,
       metalType: args.metalType,
       category: args.category,
@@ -373,7 +386,7 @@ export const addCustomVaultItem = mutation({
     // Create initial transaction if purchase info provided
     if (args.purchasePricePerUnit && args.purchaseDate) {
       await ctx.db.insert("vaultTransactions", {
-        userId: args.userId,
+        userId,
         vaultItemId,
         transactionType: "buy",
         quantity: args.quantity,
@@ -408,7 +421,8 @@ export const updateVaultItem = mutation({
   handler: async (ctx, args) => {
     const { vaultItemId, ...updates } = args;
 
-    const existing = await ctx.db.get(vaultItemId);
+    const userId = await requireUserId(ctx);
+    const existing = await getOwnedDoc(ctx, userId, vaultItemId);
     if (!existing) {
       throw new Error("Vault item not found");
     }
@@ -436,6 +450,11 @@ export const updateVaultItem = mutation({
 export const deleteVaultItem = mutation({
   args: { vaultItemId: v.id("vaultItems") },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+    if (!(await getOwnedDoc(ctx, userId, args.vaultItemId))) {
+      throw new Error("Vault item not found");
+    }
+
     // Delete all related transactions first
     const transactions = await ctx.db
       .query("vaultTransactions")
@@ -462,7 +481,6 @@ export const deleteVaultItem = mutation({
  */
 export const addTransaction = mutation({
   args: {
-    userId: v.string(),
     vaultItemId: v.id("vaultItems"),
     transactionType: v.union(
       v.literal("buy"),
@@ -478,18 +496,14 @@ export const addTransaction = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const vaultItem = await ctx.db.get(args.vaultItemId);
+    const userId = await requireUserId(ctx);
+    const vaultItem = await getOwnedDoc(ctx, userId, args.vaultItemId);
     if (!vaultItem) {
       throw new Error("Vault item not found");
     }
 
-    // Verify the vault item belongs to the user
-    if (vaultItem.userId !== args.userId) {
-      throw new Error("Unauthorized");
-    }
-
     const transactionId = await ctx.db.insert("vaultTransactions", {
-      userId: args.userId,
+      userId,
       vaultItemId: args.vaultItemId,
       transactionType: args.transactionType,
       quantity: args.quantity,
@@ -533,20 +547,16 @@ export const addTransaction = mutation({
 export const deleteTransaction = mutation({
   args: {
     transactionId: v.id("vaultTransactions"),
-    userId: v.string(),
   },
   handler: async (ctx, args) => {
-    const transaction = await ctx.db.get(args.transactionId);
+    const userId = await requireUserId(ctx);
+    const transaction = await getOwnedDoc(ctx, userId, args.transactionId);
     if (!transaction) {
       throw new Error("Transaction not found");
     }
 
-    if (transaction.userId !== args.userId) {
-      throw new Error("Unauthorized");
-    }
-
     // Reverse the quantity change
-    const vaultItem = await ctx.db.get(transaction.vaultItemId);
+    const vaultItem = await getOwnedDoc(ctx, userId, transaction.vaultItemId);
     if (vaultItem) {
       let newQuantity = vaultItem.quantity;
       if (

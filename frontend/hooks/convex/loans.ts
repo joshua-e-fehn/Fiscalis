@@ -36,15 +36,15 @@ export type PaymentType =
 /**
  * Get all loans for the current user
  */
-export function useLoans(userId: string | undefined) {
-  return useQuery(api.loans.getLoans, userId ? { userId } : "skip");
+export function useLoans() {
+  return useQuery(api.loans.getLoans);
 }
 
 /**
  * Get only active loans for the current user
  */
-export function useActiveLoans(userId: string | undefined) {
-  return useQuery(api.loans.getActiveLoans, userId ? { userId } : "skip");
+export function useActiveLoans() {
+  return useQuery(api.loans.getActiveLoans);
 }
 
 /**
@@ -71,11 +71,8 @@ export function useLoanPayments(loanId: Id<"loans"> | undefined) {
 /**
  * Get upcoming payments for all loans (default 30 days)
  */
-export function useUpcomingPayments(userId: string | undefined, days?: number) {
-  return useQuery(
-    api.loans.getUpcomingPayments,
-    userId ? { userId, days } : "skip",
-  );
+export function useUpcomingPayments(days?: number) {
+  return useQuery(api.loans.getUpcomingPayments, { days });
 }
 
 /**
@@ -88,8 +85,8 @@ export function useLoanScenarios(loanId: Id<"loans"> | undefined) {
 /**
  * Get summary statistics for all loans
  */
-export function useLoansSummary(userId: string | undefined) {
-  return useQuery(api.loans.getLoansSummary, userId ? { userId } : "skip");
+export function useLoansSummary() {
+  return useQuery(api.loans.getLoansSummary);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -104,7 +101,6 @@ export function useCreateLoan() {
 
   const createLoan = useCallback(
     async (args: {
-      userId: string;
       name: string;
       loanType: LoanType;
       originalPrincipal: number;
@@ -185,7 +181,6 @@ export function useRecordPayment() {
 
   const recordPayment = useCallback(
     async (args: {
-      userId: string;
       loanId: Id<"loans">;
       paymentDate: string;
       scheduledDate?: string;
@@ -252,7 +247,6 @@ export function useSaveScenario() {
 
   const saveScenario = useCallback(
     async (args: {
-      userId: string;
       loanId: Id<"loans">;
       name: string;
       description?: string;
@@ -321,7 +315,6 @@ export function useRecordHistoricalPayments() {
 
   const recordHistoricalPayments = useCallback(
     async (args: {
-      userId: string;
       loanId: Id<"loans">;
       payments: Array<{
         paymentDate: string;

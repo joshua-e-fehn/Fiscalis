@@ -17,6 +17,7 @@ import {
   settleLoanBalance,
 } from "../../services/finance/loanScheduleService";
 import { roundMoney } from "../../services/finance/financeService";
+import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -69,6 +70,36 @@ async function recomputeNextPaymentDate(
   return computeNextPaymentDate(loan, payments) ?? loan.nextPaymentDate;
 }
 
+// Missing and foreign docs get the same error, so IDs can't be probed
+async function requireOwnedLoan(ctx: MutationCtx, loanId: Id<"loans">) {
+  const userId = await requireUserId(ctx);
+  const loan = await getOwnedDoc(ctx, userId, loanId);
+  if (!loan) throw new Error("Loan not found");
+  return { userId, loan };
+}
+
+async function requireOwnedPayment(
+  ctx: MutationCtx,
+  paymentId: Id<"loanPayments">,
+) {
+  const userId = await requireUserId(ctx);
+  const payment = await getOwnedDoc(ctx, userId, paymentId);
+  if (!payment) throw new Error("Payment not found");
+  const loan = await getOwnedDoc(ctx, userId, payment.loanId);
+  if (!loan) throw new Error("Loan not found");
+  return { payment, loan };
+}
+
+async function requireOwnedScenario(
+  ctx: MutationCtx,
+  scenarioId: Id<"loanScenarios">,
+) {
+  const userId = await requireUserId(ctx);
+  const scenario = await getOwnedDoc(ctx, userId, scenarioId);
+  if (!scenario) throw new Error("Scenario not found");
+  return scenario;
+}
+
 const HISTORICAL_PAYMENT_NOTE =
   "Historical payment (recorded during loan import)";
 
@@ -78,27 +109,27 @@ const HISTORICAL_PAYMENT_NOTE =
 
 // Get all loans for a user
 export const getLoans = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
     return await ctx.db
       .query("loans")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
   },
 });
 
 // Get active loans for a user
 export const getActiveLoans = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
     return await ctx.db
       .query("loans")
       .withIndex("by_status", (q) =>
-        q.eq("userId", args.userId).eq("status", "active"),
+        q.eq("userId", userId).eq("status", "active"),
       )
       .collect();
   },
@@ -110,7 +141,9 @@ export const getLoan = query({
     loanId: v.id("loans"),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.loanId);
+    const userId = await getUserId(ctx);
+    if (!userId) return null;
+    return await getOwnedDoc(ctx, userId, args.loanId);
   },
 });
 
@@ -120,7 +153,9 @@ export const getLoanWithPayments = query({
     loanId: v.id("loans"),
   },
   handler: async (ctx, args) => {
-    const loan = await ctx.db.get(args.loanId);
+    const userId = await getUserId(ctx);
+    if (!userId) return null;
+    const loan = await getOwnedDoc(ctx, userId, args.loanId);
     if (!loan) return null;
 
     const payments = await ctx.db
@@ -144,6 +179,9 @@ export const getLoanPayments = query({
     loanId: v.id("loans"),
   },
   handler: async (ctx, args) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
+    if (!(await getOwnedDoc(ctx, userId, args.loanId))) return [];
     const payments = await ctx.db
       .query("loanPayments")
       .withIndex("by_loan", (q) => q.eq("loanId", args.loanId))
@@ -160,10 +198,11 @@ export const getLoanPayments = query({
 // Get upcoming payments across all loans
 export const getUpcomingPayments = query({
   args: {
-    userId: v.string(),
     days: v.optional(v.number()), // Default 30 days
   },
   handler: async (ctx, args) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
     const daysAhead = args.days ?? 30;
     const today = new Date();
     const futureDate = new Date();
@@ -172,7 +211,7 @@ export const getUpcomingPayments = query({
     const loans = await ctx.db
       .query("loans")
       .withIndex("by_status", (q) =>
-        q.eq("userId", args.userId).eq("status", "active"),
+        q.eq("userId", userId).eq("status", "active"),
       )
       .collect();
 
@@ -203,6 +242,9 @@ export const getLoanScenarios = query({
     loanId: v.id("loans"),
   },
   handler: async (ctx, args) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
+    if (!(await getOwnedDoc(ctx, userId, args.loanId))) return [];
     return await ctx.db
       .query("loanScenarios")
       .withIndex("by_loan", (q) => q.eq("loanId", args.loanId))
@@ -212,16 +254,17 @@ export const getLoanScenarios = query({
 
 // Get loan summary statistics
 export const getLoansSummary = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const loans = await ctx.db
-      .query("loans")
-      .withIndex("by_status", (q) =>
-        q.eq("userId", args.userId).eq("status", "active"),
-      )
-      .collect();
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getUserId(ctx);
+    const loans = userId
+      ? await ctx.db
+          .query("loans")
+          .withIndex("by_status", (q) =>
+            q.eq("userId", userId).eq("status", "active"),
+          )
+          .collect()
+      : [];
 
     if (loans.length === 0) {
       return {
@@ -286,7 +329,6 @@ export const getLoansSummary = query({
 // Create a new loan
 export const createLoan = mutation({
   args: {
-    userId: v.string(),
     name: v.string(),
     loanType: v.union(
       v.literal("ANNUITY"),
@@ -317,6 +359,7 @@ export const createLoan = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const now = Date.now();
 
     // Calculate expected end date
@@ -354,7 +397,7 @@ export const createLoan = mutation({
     }
 
     const loanId = await ctx.db.insert("loans", {
-      userId: args.userId,
+      userId,
       name: args.name,
       loanType: args.loanType,
       originalPrincipal: args.originalPrincipal,
@@ -412,8 +455,7 @@ export const updateLoan = mutation({
     // (kept as an arg for older clients)
     const { loanId, nextPaymentDate: _nextPaymentDate, ...updates } = args;
 
-    const loan = await ctx.db.get(loanId);
-    if (!loan) throw new Error("Loan not found");
+    const { loan } = await requireOwnedLoan(ctx, loanId);
 
     // Filter out undefined values
     const filteredUpdates = Object.fromEntries(
@@ -438,6 +480,8 @@ export const deleteLoan = mutation({
     loanId: v.id("loans"),
   },
   handler: async (ctx, args) => {
+    await requireOwnedLoan(ctx, args.loanId);
+
     // Delete all related payments
     const payments = await ctx.db
       .query("loanPayments")
@@ -466,7 +510,6 @@ export const deleteLoan = mutation({
 // Record a payment
 export const recordPayment = mutation({
   args: {
-    userId: v.string(),
     loanId: v.id("loans"),
     paymentDate: v.string(),
     scheduledDate: v.optional(v.string()),
@@ -485,8 +528,7 @@ export const recordPayment = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const loan = await ctx.db.get(args.loanId);
-    if (!loan) throw new Error("Loan not found");
+    const { userId, loan } = await requireOwnedLoan(ctx, args.loanId);
 
     // Calculate new balance (snapped to 0 once paid off)
     const principalPortion = capPrincipalPortion(
@@ -503,7 +545,7 @@ export const recordPayment = mutation({
 
     // Insert payment record
     const paymentId = await ctx.db.insert("loanPayments", {
-      userId: args.userId,
+      userId,
       loanId: args.loanId,
       paymentDate: args.paymentDate,
       scheduledDate: args.scheduledDate,
@@ -562,11 +604,7 @@ export const updatePayment = mutation({
   handler: async (ctx, args) => {
     const { paymentId, ...updates } = args;
 
-    const payment = await ctx.db.get(paymentId);
-    if (!payment) throw new Error("Payment not found");
-
-    const loan = await ctx.db.get(payment.loanId);
-    if (!loan) throw new Error("Loan not found");
+    const { payment, loan } = await requireOwnedPayment(ctx, paymentId);
 
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
@@ -617,11 +655,7 @@ export const deletePayment = mutation({
     paymentId: v.id("loanPayments"),
   },
   handler: async (ctx, args) => {
-    const payment = await ctx.db.get(args.paymentId);
-    if (!payment) throw new Error("Payment not found");
-
-    const loan = await ctx.db.get(payment.loanId);
-    if (!loan) throw new Error("Loan not found");
+    const { payment, loan } = await requireOwnedPayment(ctx, args.paymentId);
 
     // Restore the balance
     const restoredBalance = settleLoanBalance(
@@ -750,7 +784,6 @@ export const repairLoans = internalMutation({
 // Save a scenario
 export const saveScenario = mutation({
   args: {
-    userId: v.string(),
     loanId: v.id("loans"),
     name: v.string(),
     description: v.optional(v.string()),
@@ -769,10 +802,11 @@ export const saveScenario = mutation({
     monthsSaved: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const { userId } = await requireOwnedLoan(ctx, args.loanId);
     const now = Date.now();
 
     return await ctx.db.insert("loanScenarios", {
-      userId: args.userId,
+      userId,
       loanId: args.loanId,
       name: args.name,
       description: args.description,
@@ -810,6 +844,7 @@ export const updateScenario = mutation({
   },
   handler: async (ctx, args) => {
     const { scenarioId, ...updates } = args;
+    await requireOwnedScenario(ctx, scenarioId);
 
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
@@ -828,6 +863,7 @@ export const deleteScenario = mutation({
     scenarioId: v.id("loanScenarios"),
   },
   handler: async (ctx, args) => {
+    await requireOwnedScenario(ctx, args.scenarioId);
     await ctx.db.delete(args.scenarioId);
   },
 });
@@ -835,7 +871,6 @@ export const deleteScenario = mutation({
 // Record historical payments (for loan import - doesn't modify loan balance)
 export const recordHistoricalPayments = mutation({
   args: {
-    userId: v.string(),
     loanId: v.id("loans"),
     payments: v.array(
       v.object({
@@ -848,12 +883,13 @@ export const recordHistoricalPayments = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    const { userId } = await requireOwnedLoan(ctx, args.loanId);
     const now = Date.now();
 
     // Insert all payment records without modifying the loan balance
     for (const payment of args.payments) {
       await ctx.db.insert("loanPayments", {
-        userId: args.userId,
+        userId,
         loanId: args.loanId,
         paymentDate: payment.paymentDate,
         scheduledDate: payment.scheduledDate,

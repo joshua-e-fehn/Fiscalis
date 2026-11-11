@@ -7,11 +7,11 @@ import { v } from "convex/values";
 import {
   query,
   mutation,
-  action,
   internalMutation,
   internalAction,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { getUserId, requireUserId } from "./lib/auth";
 
 const WORLDBANK_BASE_URL = "https://api.worldbank.org/v2";
 const INDICATORS_PER_PAGE = 1000; // Max allowed by World Bank API
@@ -179,13 +179,13 @@ export const getSyncStatus = query({
  * Get user's favorite indicators
  */
 export const getUserFavorites = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
     const favorites = await ctx.db
       .query("worldBankFavorites")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     return favorites.map((fav) => ({
@@ -202,14 +202,15 @@ export const getUserFavorites = query({
  */
 export const isIndicatorFavorited = query({
   args: {
-    userId: v.string(),
     indicatorCode: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return false;
     const favorite = await ctx.db
       .query("worldBankFavorites")
       .withIndex("by_user_indicator", (q) =>
-        q.eq("userId", args.userId).eq("indicatorCode", args.indicatorCode),
+        q.eq("userId", userId).eq("indicatorCode", args.indicatorCode),
       )
       .first();
 
@@ -222,17 +223,17 @@ export const isIndicatorFavorited = query({
  */
 export const addToFavorites = mutation({
   args: {
-    userId: v.string(),
     indicatorCode: v.string(),
     indicatorName: v.string(),
     indicatorDescription: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     // Check if already favorited
     const existing = await ctx.db
       .query("worldBankFavorites")
       .withIndex("by_user_indicator", (q) =>
-        q.eq("userId", args.userId).eq("indicatorCode", args.indicatorCode),
+        q.eq("userId", userId).eq("indicatorCode", args.indicatorCode),
       )
       .first();
 
@@ -241,7 +242,7 @@ export const addToFavorites = mutation({
     }
 
     return await ctx.db.insert("worldBankFavorites", {
-      userId: args.userId,
+      userId,
       indicatorCode: args.indicatorCode,
       indicatorName: args.indicatorName,
       indicatorDescription: args.indicatorDescription,
@@ -255,14 +256,14 @@ export const addToFavorites = mutation({
  */
 export const removeFromFavorites = mutation({
   args: {
-    userId: v.string(),
     indicatorCode: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const favorite = await ctx.db
       .query("worldBankFavorites")
       .withIndex("by_user_indicator", (q) =>
-        q.eq("userId", args.userId).eq("indicatorCode", args.indicatorCode),
+        q.eq("userId", userId).eq("indicatorCode", args.indicatorCode),
       )
       .first();
 
@@ -280,16 +281,16 @@ export const removeFromFavorites = mutation({
  */
 export const toggleFavorite = mutation({
   args: {
-    userId: v.string(),
     indicatorCode: v.string(),
     indicatorName: v.string(),
     indicatorDescription: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
     const existing = await ctx.db
       .query("worldBankFavorites")
       .withIndex("by_user_indicator", (q) =>
-        q.eq("userId", args.userId).eq("indicatorCode", args.indicatorCode),
+        q.eq("userId", userId).eq("indicatorCode", args.indicatorCode),
       )
       .first();
 
@@ -299,7 +300,7 @@ export const toggleFavorite = mutation({
     }
 
     await ctx.db.insert("worldBankFavorites", {
-      userId: args.userId,
+      userId,
       indicatorCode: args.indicatorCode,
       indicatorName: args.indicatorName,
       indicatorDescription: args.indicatorDescription,
@@ -481,8 +482,8 @@ export const fetchIndicatorPage = internalAction({
 
 /**
  * Main sync action - fetches all indicators from World Bank API
- * Can be called manually or scheduled via cron
- * This is internal for cron, but we also expose a public wrapper
+ * Runs weekly via cron. Manual run (from frontend/):
+ *   npx convex run worldbank:syncAllIndicatorsInternal
  */
 export const syncAllIndicatorsInternal = internalAction({
   args: {},
@@ -626,30 +627,15 @@ export const syncAllIndicatorsInternal = internalAction({
   },
 });
 
-/**
- * Public wrapper for manual sync (can be called from HTTP)
- */
-export const syncAllIndicators = action({
-  args: {},
-  handler: async (
-    ctx,
-  ): Promise<{ success: boolean; indicatorCount: number; message: string }> => {
-    return await ctx.runAction(
-      internal.worldbank.syncAllIndicatorsInternal,
-      {},
-    );
-  },
-});
-
 // ═══════════════════════════════════════════════════════════════
 // Timeout Tracking
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Record a timeout for an indicator
- * Called from frontend when an indicator fails to load
+ * Record a timeout for an indicator. Internal: indicator status is global,
+ * so clients must not be able to flip it.
  */
-export const recordIndicatorTimeout = mutation({
+export const recordIndicatorTimeout = internalMutation({
   args: {
     code: v.string(),
   },
@@ -690,7 +676,7 @@ export const recordIndicatorTimeout = mutation({
  * Record a successful load for an indicator
  * Resets timeout count (but keeps a memory of past issues)
  */
-export const recordIndicatorSuccess = mutation({
+export const recordIndicatorSuccess = internalMutation({
   args: {
     code: v.string(),
   },

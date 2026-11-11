@@ -201,7 +201,6 @@ export function LoanPaymentsTab({ loan, payments }: LoanPaymentsTabProps) {
     setIsSubmitting(true);
     try {
       await recordPayment({
-        userId: user.id,
         loanId: loan._id,
         paymentDate,
         amount: parseFloat(amount),

@@ -110,7 +110,7 @@ export function IndicatorSearch({
   const { indicatorCount, needsSync, lastSync } = useWorldBankSyncStatus();
 
   // User favorites
-  const { favorites } = useUserFavorites(userId);
+  const { favorites } = useUserFavorites();
   const toggleFavorite = useToggleFavorite();
 
   // Check if indicator is favorited
@@ -130,7 +130,6 @@ export function IndicatorSearch({
       e.stopPropagation();
       if (!userId) return;
       await toggleFavorite({
-        userId,
         indicatorCode: code,
         indicatorName: name,
         indicatorDescription: description,

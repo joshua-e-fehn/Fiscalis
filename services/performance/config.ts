@@ -1,170 +1,143 @@
 /**
- * Performance Calculation Service - Configuration
+ * Performance Calculation Service - Valuation resolution
  *
- * Defines asset categories and their value calculation strategies.
- * Crypto and stocks are currently discrete (snapshot-based) but are flagged
- * for potential future upgrade to continuous (price-based) calculation.
- */
-
-import type { AssetCategoryConfig } from "./types";
-
-// ═══════════════════════════════════════════════════════════════
-// Asset Category Configuration
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * All asset categories supported by the performance service
+ * Which strategy values a holding's history is resolved in three tiers,
+ * the most specific winning (docs/VALUATION_RESOLUTION_PLAN.md):
  *
- * Value Type Strategy:
- * - discrete: Uses portfolio snapshots from Convex (taken at sync time)
- * - continuous: Uses real-time price data to calculate value at any timestamp
+ *   asset override → subcategory override → category default
  *
- * Current Classification:
- * - Discrete: Cash, Equities, Bonds, Crypto, Real Estate, Pension, Other Assets
- * - Continuous: Commodities (Precious Metals)
+ * A subcategory without an override inherits its category's default, so a
+ * new subcategory needs no entry here. A continuous method only takes effect
+ * when the app has a price feed for it (PRICE_FEEDS); until then the
+ * holding is valued from snapshots like any discrete one.
  */
-export const ASSET_CATEGORIES: AssetCategoryConfig[] = [
-  // ─────────────────────────────────────────────────────────────
-  // Discrete Assets (Snapshot-based)
-  // ─────────────────────────────────────────────────────────────
-  {
-    id: "cash",
-    name: "Cash & Bank Accounts",
-    valueType: "discrete",
-    snapshotCategory: "cash",
-    canUpgradeToContinuous: false,
-  },
-  {
-    id: "equities",
-    name: "Stocks & ETFs",
-    valueType: "discrete",
-    snapshotCategory: "equities",
-    // Could be upgraded once we integrate real-time stock price APIs
-    canUpgradeToContinuous: true,
-  },
-  {
-    id: "bonds",
-    name: "Bonds & Fixed Income",
-    valueType: "discrete",
-    snapshotCategory: "bonds",
-    canUpgradeToContinuous: false,
-  },
-  {
-    id: "crypto",
-    name: "Cryptocurrency",
-    valueType: "discrete",
-    snapshotCategory: "crypto",
-    // Could be upgraded once we integrate crypto price APIs
-    canUpgradeToContinuous: true,
-  },
-  {
-    id: "real-estate",
-    name: "Real Estate",
-    valueType: "discrete",
-    snapshotCategory: "real-estate",
-    canUpgradeToContinuous: false,
-  },
-  {
-    id: "pension",
-    name: "Pension & Retirement",
-    valueType: "discrete",
-    snapshotCategory: "pension",
-    canUpgradeToContinuous: false,
-  },
-  {
-    id: "other-assets",
-    name: "Other Assets",
-    valueType: "discrete",
-    snapshotCategory: "other-assets",
-    canUpgradeToContinuous: false,
-  },
 
-  // ─────────────────────────────────────────────────────────────
-  // Continuous Assets (Price-based)
-  // ─────────────────────────────────────────────────────────────
-  {
-    id: "commodities",
-    name: "Precious Metals",
-    valueType: "continuous",
-    priceProvider: "metals",
-    canUpgradeToContinuous: false, // Already continuous
-  },
-];
+import type {
+  HoldingCategory,
+  HoldingSource,
+} from "../portfolio/aggregate";
+import type {
+  ContinuousSource,
+  PriceProvider,
+  ValuationConfig,
+  ValueType,
+} from "./types";
 
 // ═══════════════════════════════════════════════════════════════
-// Lookup Helpers
+// Registry
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Map of category ID to config for O(1) lookup
- */
-export const ASSET_CATEGORY_MAP = new Map<string, AssetCategoryConfig>(
-  ASSET_CATEGORIES.map((c) => [c.id, c]),
-);
+const DISCRETE: ValuationConfig = { method: "discrete", priceProvider: "manual" };
 
-/**
- * Get asset category configuration by ID
- */
-export function getAssetCategory(id: string): AssetCategoryConfig | undefined {
-  return ASSET_CATEGORY_MAP.get(id);
-}
-
-/**
- * Get all discrete asset categories
- */
-export function getDiscreteCategories(): AssetCategoryConfig[] {
-  return ASSET_CATEGORIES.filter((c) => c.valueType === "discrete");
-}
-
-/**
- * Get all continuous asset categories
- */
-export function getContinuousCategories(): AssetCategoryConfig[] {
-  return ASSET_CATEGORIES.filter((c) => c.valueType === "continuous");
-}
-
-/**
- * Get categories that can be upgraded to continuous
- */
-export function getUpgradeableCategories(): AssetCategoryConfig[] {
-  return ASSET_CATEGORIES.filter((c) => c.canUpgradeToContinuous);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Performance Calculation Defaults
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Default confidence threshold for data quality assessment
- */
-export const DEFAULT_CONFIDENCE_THRESHOLD = {
-  high: 0.9,
-  medium: 0.7,
-  low: 0.5,
+/** Tier 1: every category's baseline. */
+export const CATEGORY_VALUATION_DEFAULTS: Record<
+  HoldingCategory,
+  ValuationConfig
+> = {
+  cash: DISCRETE,
+  equities: DISCRETE,
+  bonds: DISCRETE,
+  crypto: DISCRETE,
+  commodities: DISCRETE,
+  "real-estate": DISCRETE,
+  collectibles: DISCRETE,
+  unclassified: DISCRETE,
+  liabilities: DISCRETE,
 };
 
 /**
- * Maximum interpolation gap before quality degrades
- * Expressed as a multiplier of the expected interval
+ * Tier 2: only the subcategories that differ from their category default.
+ * Keyed by category because subcategory ids repeat (equities and bonds both
+ * have "funds").
  */
-export const MAX_INTERPOLATION_GAP_MULTIPLIER = 3;
+export const SUBCATEGORY_VALUATION_OVERRIDES: Partial<
+  Record<HoldingCategory, Record<string, Partial<ValuationConfig>>>
+> = {
+  equities: {
+    stocks: { method: "continuous", priceProvider: "market-data" },
+    etfs: { method: "continuous", priceProvider: "market-data" },
+    options: { method: "continuous", priceProvider: "market-data" },
+    funds: { method: "semi-continuous", priceProvider: "market-data" },
+  },
+  crypto: {
+    bitcoin: { method: "continuous", priceProvider: "crypto-exchange" },
+    ethereum: { method: "continuous", priceProvider: "crypto-exchange" },
+    altcoins: { method: "continuous", priceProvider: "crypto-exchange" },
+    stablecoins: { method: "semi-continuous", priceProvider: "crypto-exchange" },
+  },
+  commodities: {
+    metals: { method: "continuous", priceProvider: "metals" },
+  },
+  "real-estate": {
+    reits: { method: "continuous", priceProvider: "market-data" },
+  },
+  collectibles: {
+    nfts: { method: "semi-continuous", priceProvider: "nft-floor" },
+  },
+};
 
 /**
- * Default time ranges to show in UI
+ * Resolve a holding's valuation config: category default, then the
+ * subcategory override, then a per-asset override (tier 3, for example a
+ * manually entered stock without a ticker is discrete).
  */
-export const DEFAULT_TIME_RANGE_OPTIONS = [
-  "1D",
-  "1W",
-  "1M",
-  "3M",
-  "6M",
-  "YTD",
-  "1Y",
-  "ALL",
-] as const;
+export function resolveValuationConfig(
+  category: HoldingCategory,
+  subcategory?: string,
+  assetOverride?: Partial<ValuationConfig>,
+): ValuationConfig {
+  const sub = subcategory
+    ? SUBCATEGORY_VALUATION_OVERRIDES[category]?.[subcategory]
+    : undefined;
+  return { ...CATEGORY_VALUATION_DEFAULTS[category], ...sub, ...assetOverride };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Price feeds and strategy selection
+// ═══════════════════════════════════════════════════════════════
 
 /**
- * Platform launch date - earliest possible data
+ * Price feeds the app can value history from, with the holding source each
+ * one values. Only vault metals have one today: Bitpanda and broker metals
+ * in the same subcategory are valued from snapshots.
  */
-export const PLATFORM_LAUNCH_DATE = new Date("2024-01-01T00:00:00Z");
-export const PLATFORM_LAUNCH_TIMESTAMP = PLATFORM_LAUNCH_DATE.getTime();
+export const PRICE_FEEDS: Partial<
+  Record<
+    PriceProvider,
+    { source: HoldingSource; category: HoldingCategory; subcategory: string }
+  >
+> = {
+  metals: { source: "vault", category: "commodities", subcategory: "metals" },
+};
+
+/**
+ * The value type a config is calculated with: continuous only when the method
+ * is continuous and a feed exists for its provider; semi-continuous is the
+ * discrete algorithm.
+ */
+export function getValueTypeForConfig(config: ValuationConfig): ValueType {
+  return config.method === "continuous" &&
+    config.priceProvider !== undefined &&
+    PRICE_FEEDS[config.priceProvider] !== undefined
+    ? "continuous"
+    : "discrete";
+}
+
+/**
+ * Holding sources valued continuously within a category (or the whole
+ * portfolio for "all"), each with the category its value is stored under in
+ * snapshots. The discrete part of a hybrid calculation leaves them out of
+ * the snapshot values, so they are not counted twice.
+ */
+export function continuousSourcesFor(
+  category: HoldingCategory | "all",
+): ContinuousSource[] {
+  return Object.entries(PRICE_FEEDS).flatMap(([provider, feed]) => {
+    if (!feed || (category !== "all" && feed.category !== category)) return [];
+    const config = resolveValuationConfig(feed.category, feed.subcategory);
+    return config.priceProvider === provider &&
+      getValueTypeForConfig(config) === "continuous"
+      ? [{ source: feed.source, category: feed.category }]
+      : [];
+  });
+}

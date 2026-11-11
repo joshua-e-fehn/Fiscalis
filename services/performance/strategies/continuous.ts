@@ -7,19 +7,23 @@
  * Uses: inventory (holdings) + historical prices = value at any timestamp
  */
 
-import { getTimeIntervalInMilliseconds } from "../../finance/financeService";
-import { calculateSellPrice } from "../../finance/metals";
+import { calculateSellPrice, valueVaultItem } from "../../finance/metals";
 
 import type {
   PerformanceDataPoint,
   PerformanceResult,
-  DataQuality,
   HoldingData,
-  PriceData,
   PricePoint,
 } from "../types";
 
-import { BasePerformanceStrategy } from "./base";
+import {
+  BasePerformanceStrategy,
+  assessDataQuality,
+  sortByTimestamp,
+  valueAt,
+  type SeriesLookupOptions,
+  type SeriesPoint,
+} from "./base";
 import type {
   ContinuousPerformanceInput,
   PerformanceCalculationOptions,
@@ -34,75 +38,30 @@ import type {
 /**
  * Continuous Performance Strategy
  *
- * For assets with continuous price history:
- * - Precious metals (gold, silver, platinum, palladium)
- * - Future: Stocks, ETFs, Crypto with real-time price APIs
+ * For assets with a price history (vault metals today):
+ *   Value(t) = Σ value(holding_i held at t, price_i(t))
  *
- * Calculates: Value(t) = Σ(quantity_i(t) × price_i(t) × premium_i)
+ * - A holding counts from its purchase date; one without a date is held
+ *   since before the range (it is never dated at record creation).
+ * - price_i(t) is the last price at or before t (no look-ahead), so a range
+ *   starting on 1 Jan takes the 31 Dec close when the series is fetched
+ *   from a few days earlier.
+ * - The range-end point is valued at live spot when given (valueVaultItem,
+ *   as the Total Value cards), otherwise at the last close.
+ * - A held asset without any price series is left out and the result is
+ *   flagged partial.
+ *
+ * Each series is sorted once per calculation and looked up by binary search.
  */
 export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<ContinuousPerformanceInput> {
   readonly strategyType = "continuous" as const;
 
-  // ═══════════════════════════════════════════════════════════════
-  // Public Interface
-  // ═══════════════════════════════════════════════════════════════
-
-  /**
-   * Assess data quality based on price data coverage
-   */
-  assessDataQuality(
-    input: ContinuousPerformanceInput,
-    options: PerformanceCalculationOptions,
-  ): DataQuality {
-    const context = this.createContext(options);
-    const { holdings, prices } = input;
-
-    if (!holdings || holdings.length === 0) {
-      return "low"; // No holdings means no meaningful data
-    }
-
-    // Get unique asset types from holdings
-    const assetTypes = [...new Set(holdings.map((h) => h.assetType))];
-
-    // Check price data coverage for each asset type
-    let totalExpectedPoints = 0;
-    let totalActualPoints = 0;
-
-    for (const assetType of assetTypes) {
-      const assetPrices = prices[assetType] || [];
-      const rangePoints = assetPrices.filter(
-        (p) =>
-          p.timestamp >= context.startTimestamp &&
-          p.timestamp <= context.endTimestamp,
-      );
-
-      totalExpectedPoints += context.expectedDataPoints;
-      totalActualPoints += rangePoints.length;
-    }
-
-    if (totalActualPoints === 0) return "low";
-
-    const coverageRatio = totalActualPoints / totalExpectedPoints;
-
-    if (coverageRatio >= 0.9) return "high";
-    if (coverageRatio >= 0.7) return "medium";
-    return "low";
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // Protected Implementation
-  // ═══════════════════════════════════════════════════════════════
-
-  /**
-   * Generate data points from holdings and price data
-   */
   protected generateDataPointsInternal(
     input: ContinuousPerformanceInput,
     context: CalculationContext,
   ): DataPointGenerationResult {
-    const { holdings, prices } = input;
-
-    if (!holdings || holdings.length === 0) {
+    const holdings = input.holdings ?? [];
+    if (holdings.length === 0) {
       return {
         dataPoints: [],
         actualDataPoints: 0,
@@ -110,41 +69,50 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
         dataQuality: "low",
       };
     }
-
-    // Generate timestamp series
     const timestamps = this.generateTimestampSeries(context);
+    const lookup = this.lookupOptions(context, false);
 
-    // Calculate portfolio value at each timestamp
-    const dataPoints: PerformanceDataPoint[] = [];
-    let interpolatedCount = 0;
-
-    for (const ts of timestamps) {
-      const result = this.calculatePortfolioValueAtTimestamp(
-        holdings,
-        prices,
-        ts,
-        context.startTimestamp,
-      );
-
-      if (result) {
-        dataPoints.push(result.point);
-        if (result.isInterpolated) {
-          interpolatedCount++;
-        }
+    // Sort each held asset's series once
+    const series = new Map<string, SeriesPoint[]>();
+    let partial = false;
+    for (const assetType of new Set(holdings.map((h) => h.assetType))) {
+      const prices = input.prices[assetType];
+      if (!prices || prices.length === 0) {
+        partial = true;
+        continue;
       }
+      series.set(
+        assetType,
+        sortByTimestamp(prices.map((p) => ({ timestamp: p.timestamp, value: p.price }))),
+      );
+    }
+    const priced = holdings.filter((h) => series.has(h.assetType));
+    if (priced.length === 0) {
+      return {
+        dataPoints: [],
+        actualDataPoints: 0,
+        interpolatedDataPoints: 0,
+        dataQuality: "low",
+        partial,
+      };
     }
 
-    const dataQuality = this.assessQuality(
-      dataPoints.length,
-      context.expectedDataPoints,
-      interpolatedCount,
-    );
+    const dataPoints: PerformanceDataPoint[] = [];
+    let observed = 0;
+    for (const ts of timestamps) {
+      const live = ts === context.endTimestamp ? input.livePrices : undefined;
+      const point = this.valueAtTimestamp(priced, series, ts, lookup, live);
+      if (!point) continue;
+      dataPoints.push(point);
+      if (point.source !== "interpolated") observed++;
+    }
 
     return {
       dataPoints,
-      actualDataPoints: dataPoints.length - interpolatedCount,
-      interpolatedDataPoints: interpolatedCount,
-      dataQuality,
+      actualDataPoints: observed,
+      interpolatedDataPoints: dataPoints.length - observed,
+      dataQuality: assessDataQuality(observed, context.expectedDataPoints),
+      partial,
     };
   }
 
@@ -153,117 +121,64 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
   // ═══════════════════════════════════════════════════════════════
 
   /**
-   * Calculate total portfolio value at a specific timestamp
+   * Value of the holdings held at `timestamp`, or null when a held asset has
+   * no price at or before it yet. Holding nothing yet is a known 0. The cost is
+   * the cost line: purchase cost plus the value of items without one.
    */
-  private calculatePortfolioValueAtTimestamp(
+  private valueAtTimestamp(
     holdings: HoldingData[],
-    prices: PriceData,
+    series: Map<string, SeriesPoint[]>,
     timestamp: number,
-    rangeStartTimestamp: number,
-  ): { point: PerformanceDataPoint; isInterpolated: boolean } | null {
+    lookup: SeriesLookupOptions,
+    livePrices: Partial<Record<string, PricePoint>> | undefined,
+  ): PerformanceDataPoint | null {
     let totalValue = 0;
-    let totalCostBasis = 0;
-    let hasAnyPrice = false;
-    let hasInterpolation = false;
+    let costLine = 0;
+    let hasCost = false;
+    let allObserved = true;
 
-    // Filter holdings that existed at this timestamp
-    const activeHoldings = holdings.filter((h) => {
-      const purchaseTs = h.purchaseDate || 0;
-      return purchaseTs <= timestamp;
-    });
-
-    // Additionally, for timestamps at or before range start,
-    // only include items purchased before range start
-    const relevantHoldings =
-      timestamp <= rangeStartTimestamp
-        ? activeHoldings.filter(
-            (h) => (h.purchaseDate || 0) < rangeStartTimestamp,
-          )
-        : activeHoldings;
-
-    for (const holding of relevantHoldings) {
-      const assetPrices = prices[holding.assetType];
-      if (!assetPrices || assetPrices.length === 0) continue;
-
-      const priceResult = this.getPriceAtTimestamp(assetPrices, timestamp);
-      if (!priceResult) continue;
-
-      hasAnyPrice = true;
-      if (priceResult.isInterpolated) hasInterpolation = true;
-
-      // Calculate value based on holding type
-      const itemValue = this.calculateItemValue(holding, priceResult.price);
-      totalValue += itemValue;
-
-      // Add cost basis if available
-      if (holding.purchasePricePerUnit && holding.quantity) {
-        totalCostBasis += holding.purchasePricePerUnit * holding.quantity;
+    for (const holding of holdings) {
+      if (holding.purchaseDate !== undefined && holding.purchaseDate > timestamp) {
+        continue;
+      }
+      const live = livePrices?.[holding.assetType];
+      let value: number;
+      if (live) {
+        value = this.liveValue(holding, live, timestamp);
+      } else {
+        const price = valueAt(series.get(holding.assetType)!, timestamp, lookup);
+        if (!price) return null;
+        if (price.kind !== "observed") allObserved = false;
+        value = this.calculateItemValue(holding, price.value);
+      }
+      totalValue += value;
+      if (holding.purchasePricePerUnit != null) {
+        hasCost = true;
+        costLine += holding.purchasePricePerUnit * holding.quantity;
+      } else {
+        costLine += value;
       }
     }
 
-    if (!hasAnyPrice) return null;
-
-    const confidence = hasInterpolation ? 0.8 : 0.95;
-    const point = this.createCalculatedPoint(
-      timestamp,
-      totalValue,
-      totalCostBasis > 0 ? totalCostBasis : null,
-      confidence,
-    );
-
-    // Override source if interpolated
-    if (hasInterpolation) {
-      point.source = "interpolated";
-    }
-
-    return { point, isInterpolated: hasInterpolation };
+    const costBasis = hasCost ? costLine : null;
+    return allObserved
+      ? this.createCalculatedPoint(timestamp, totalValue, costBasis)
+      : this.createInterpolatedPoint(timestamp, totalValue, costBasis);
   }
 
-  /**
-   * Get price at a specific timestamp from price array
-   * Returns exact price or interpolates between surrounding prices
-   */
-  private getPriceAtTimestamp(
-    prices: PricePoint[],
-    timestamp: number,
-  ): { price: number; isInterpolated: boolean } | null {
-    if (prices.length === 0) return null;
-
-    // Sort prices by timestamp (should already be sorted)
-    const sortedPrices = [...prices].sort((a, b) => a.timestamp - b.timestamp);
-
-    // Find exact match
-    const exactMatch = sortedPrices.find((p) => p.timestamp === timestamp);
-    if (exactMatch) {
-      return { price: exactMatch.price, isInterpolated: false };
-    }
-
-    // Find surrounding prices
-    let before: PricePoint | null = null;
-    let after: PricePoint | null = null;
-
-    for (const price of sortedPrices) {
-      if (price.timestamp <= timestamp) {
-        before = price;
-      } else if (price.timestamp > timestamp && !after) {
-        after = price;
-        break;
-      }
-    }
-
-    // Edge cases
-    if (!before && !after) return null;
-    if (!before && after) return { price: after.price, isInterpolated: true };
-    if (before && !after) return { price: before.price, isInterpolated: true };
-
-    // Interpolate between two prices
-    const interpolatedPrice = this.interpolateValue(
-      timestamp,
-      { timestamp: before!.timestamp, value: before!.price },
-      { timestamp: after!.timestamp, value: after!.price },
-    );
-
-    return { price: interpolatedPrice, isInterpolated: true };
+  /** Live-spot value through valueVaultItem (metals) or quantity × price. */
+  private liveValue(holding: HoldingData, live: PricePoint, now: number): number {
+    if (holding.fineWeightGrams === undefined) return holding.quantity * live.price;
+    return valueVaultItem(
+      {
+        fineWeightGrams: holding.fineWeightGrams,
+        quantity: holding.quantity,
+        sellPremium: holding.sellPremium,
+        purchasePricePerUnit: holding.purchasePricePerUnit,
+      },
+      { eurPerOunce: live.price, sourceTimestamp: live.timestamp },
+      now,
+    ).value;
   }
 
   /**

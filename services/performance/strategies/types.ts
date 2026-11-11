@@ -16,6 +16,8 @@ import type {
   SnapshotData,
   HoldingData,
   PriceData,
+  PricePoint,
+  ContinuousSource,
 } from "../types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -34,16 +36,34 @@ export interface PerformanceCalculationOptions {
   endTimestamp?: number;
   /** Include detailed data points in result */
   includeDataPoints?: boolean;
+  /** Interpolation gap limit in grid intervals (ValuationConfig.maxInterpolationGap) */
+  maxInterpolationGap?: number;
 }
+
+/**
+ * The figure a snapshot series measures. Every caller names it, so a chart
+ * and a card on the same page cannot silently measure different things.
+ */
+export type SnapshotMetric =
+  | { kind: "netWorth" }
+  | { kind: "totalAssets" }
+  | { kind: "category"; category: string };
 
 /**
  * Input for discrete (snapshot-based) performance calculation
  */
 export interface DiscretePerformanceInput {
-  /** Portfolio snapshots ordered by timestamp */
+  /** Portfolio snapshots (any order) */
   snapshots: SnapshotData[];
-  /** Optional: filter to specific category */
-  categoryFilter?: string;
+  metric: SnapshotMetric;
+  /**
+   * Holding sources left out of the values because another strategy values
+   * them (set by the hybrid strategy). A snapshot that cannot be split by
+   * source (an entry of an excluded source's category without per-source
+   * values, or no breakdown at all) keeps its full value and its points are
+   * flagged `includesContinuous`.
+   */
+  excludeSources?: ContinuousSource[];
 }
 
 /**
@@ -52,16 +72,23 @@ export interface DiscretePerformanceInput {
 export interface ContinuousPerformanceInput {
   /** Holdings to calculate value for */
   holdings: HoldingData[];
-  /** Historical price data keyed by asset type */
+  /** Historical price data keyed by asset type (fetch from a few days before the range start) */
   prices: PriceData;
+  /**
+   * Live spot per asset type. The point at the range end is valued at it
+   * with valueVaultItem, the function behind the Total Value cards.
+   */
+  livePrices?: Partial<Record<string, PricePoint>>;
 }
 
 /**
- * Combined input for hybrid calculation
+ * Combined input for hybrid calculation: snapshots for everything except
+ * `continuousSources`, which the continuous input values.
  */
 export interface HybridPerformanceInput {
   discrete?: DiscretePerformanceInput;
   continuous?: ContinuousPerformanceInput;
+  continuousSources: ContinuousSource[];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -88,6 +115,13 @@ export interface IPerformanceStrategy<TInput> {
     options: PerformanceCalculationOptions,
   ): PerformanceResult;
 
+  /** Calculate on a given context, so combined strategies share one grid */
+  calculateInContext(
+    input: TInput,
+    context: CalculationContext,
+    includeDataPoints?: boolean,
+  ): PerformanceResult;
+
   /**
    * Generate time series data points
    */
@@ -95,14 +129,6 @@ export interface IPerformanceStrategy<TInput> {
     input: TInput,
     options: PerformanceCalculationOptions,
   ): PerformanceDataPoint[];
-
-  /**
-   * Assess data quality for the given input and time range
-   */
-  assessDataQuality(
-    input: TInput,
-    options: PerformanceCalculationOptions,
-  ): DataQuality;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -145,6 +171,8 @@ export interface CalculationContext {
   interval: TimeInterval;
   /** Expected number of data points */
   expectedDataPoints: number;
+  /** Interpolation gap limit in grid intervals */
+  maxInterpolationGap?: number;
 }
 
 /**
@@ -152,9 +180,12 @@ export interface CalculationContext {
  */
 export interface DataPointGenerationResult {
   dataPoints: PerformanceDataPoint[];
+  /** Grid points backed by a real observation */
   actualDataPoints: number;
   interpolatedDataPoints: number;
   dataQuality: DataQuality;
+  /** Some held assets had no price series (continuous) */
+  partial?: boolean;
   /**
    * Timestamps of the real snapshots (not grid points) the series was built
    * from, ascending. Discrete strategy only.

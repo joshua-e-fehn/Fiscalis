@@ -6,7 +6,8 @@
  *
  * Architecture:
  * - types.ts: Core type definitions (TimeRange, DataPoint, Metrics, etc.)
- * - config.ts: Asset category configuration and calculation defaults
+ * - config.ts: Valuation resolution (category → subcategory → asset) and price feeds
+ * - strategies/base.ts also holds the sorted-series lookup, data quality and percent change
  * - strategies/: Strategy pattern implementations
  *   - base.ts: Abstract base class with shared utilities
  *   - discrete.ts: Snapshot-based calculation (bank accounts, equities, etc.)
@@ -42,9 +43,11 @@ export {
   type PerformanceMetrics,
   type PerformanceResult,
 
-  // Asset category config
+  // Valuation config
+  type ValuationMethod,
+  type ValuationConfig,
   type PriceProvider,
-  type AssetCategoryConfig,
+  type ContinuousSource,
 
   // Snapshot types
   type SnapshotCategoryBreakdown,
@@ -61,18 +64,28 @@ export {
 // ═══════════════════════════════════════════════════════════════
 
 export {
-  ASSET_CATEGORIES,
-  ASSET_CATEGORY_MAP,
-  getAssetCategory,
-  getDiscreteCategories,
-  getContinuousCategories,
-  getUpgradeableCategories,
+  CATEGORY_VALUATION_DEFAULTS,
+  SUBCATEGORY_VALUATION_OVERRIDES,
+  resolveValuationConfig,
+  PRICE_FEEDS,
+  getValueTypeForConfig,
+  continuousSourcesFor,
+} from "./config";
+
+export {
+  type SeriesPoint,
+  type LookupKind,
+  type LookupResult,
+  type SeriesLookupOptions,
+  sortByTimestamp,
+  lastIndexAtOrBefore,
+  valueAt,
+  lookupOptionsForInterval,
+  assessDataQuality,
+  changePercent,
   DEFAULT_CONFIDENCE_THRESHOLD,
   MAX_INTERPOLATION_GAP_MULTIPLIER,
-  DEFAULT_TIME_RANGE_OPTIONS,
-  PLATFORM_LAUNCH_DATE,
-  PLATFORM_LAUNCH_TIMESTAMP,
-} from "./config";
+} from "./strategies/base";
 
 // ═══════════════════════════════════════════════════════════════
 // Strategies
@@ -111,3 +124,6 @@ export {
   type PerformanceBreakdown,
   type HybridPerformanceResult,
 } from "./strategies";
+
+export type { SnapshotMetric } from "./strategies/types";
+export { snapshotMetricValue } from "./strategies/discrete";

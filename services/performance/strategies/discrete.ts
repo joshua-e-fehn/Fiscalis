@@ -7,22 +7,29 @@
  * Uses interpolation to estimate values at timestamps between snapshots.
  */
 
-import { getTimeIntervalInMilliseconds } from "../../finance/financeService";
 import { snapshotCostLine } from "../../portfolio/unrealizedProfitLoss";
 
 import type {
+  ContinuousSource,
   PerformanceDataPoint,
   PerformanceResult,
-  DataQuality,
+  SnapshotCategoryBreakdown,
   SnapshotData,
 } from "../types";
 
-import { BasePerformanceStrategy } from "./base";
+import {
+  BasePerformanceStrategy,
+  assessDataQuality,
+  lastIndexAtOrBefore,
+  sortByTimestamp,
+  valueAt,
+} from "./base";
 import type {
   DiscretePerformanceInput,
   PerformanceCalculationOptions,
   CalculationContext,
   DataPointGenerationResult,
+  SnapshotMetric,
 } from "./types";
 
 // ═══════════════════════════════════════════════════════════════
@@ -33,6 +40,125 @@ interface SnapshotValue {
   timestamp: number;
   value: number;
   costBasis: number | null;
+  /**
+   * The value still holds the excluded (continuously valued) sources,
+   * because the snapshot cannot be split by source: a legacy entry without
+   * per-source values, or a row without a category breakdown.
+   */
+  includesContinuous: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Snapshot value extraction
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Value of the excluded sources in one breakdown entry, or null when the
+ * entry holds one of them but cannot be split (an entry written before
+ * per-source values existed: old commodities entries were vault plus
+ * Bitpanda and broker metals together).
+ */
+function excludedValue(
+  entry: SnapshotCategoryBreakdown,
+  exclude: ContinuousSource[],
+): number | null {
+  let total = 0;
+  for (const ex of exclude) {
+    if (entry.sources) {
+      total += entry.sources
+        .filter((s) => s.source === ex.source)
+        .reduce((sum, s) => sum + s.value, 0);
+    } else if (entry.category === ex.category) {
+      return null;
+    }
+  }
+  return total;
+}
+
+/**
+ * Value of the excluded sources across the entries in scope, or null when
+ * the snapshot cannot be split: then its full value is kept, flagged as
+ * already including them.
+ */
+function excludedTotal(
+  breakdown: SnapshotCategoryBreakdown[] | undefined,
+  metric: SnapshotMetric,
+  exclude: ContinuousSource[],
+): number | null {
+  if (exclude.length === 0) return 0;
+  if (!breakdown) return null;
+  let total = 0;
+  for (const e of breakdown) {
+    if (metric.kind === "category" && e.category !== metric.category) continue;
+    const v = excludedValue(e, exclude);
+    if (v === null) return null;
+    total += v;
+  }
+  return total;
+}
+
+/**
+ * A snapshot's value and cost line for a metric, or null when the snapshot
+ * does not record it (a category on a legacy row without a breakdown). The
+ * cost line is the stored one for the whole metric: it already covers the
+ * excluded sources, so the hybrid strategy uses it as is. A row that cannot
+ * be split by source keeps its full value with `includesContinuous` set;
+ * it already holds the excluded sources at that day's prices.
+ */
+export function snapshotMetricValue(
+  s: SnapshotData,
+  metric: SnapshotMetric,
+  exclude: ContinuousSource[] = [],
+): SnapshotValue | null {
+  const breakdown = s.categoryBreakdown;
+
+  if (metric.kind === "category" && metric.category === "liabilities") {
+    // Debt is stored as the snapshot's total, not as a breakdown entry
+    return {
+      timestamp: s.timestamp,
+      value: s.totalLiabilities,
+      costBasis: null,
+      includesContinuous: false,
+    };
+  }
+  if (metric.kind === "category" && !breakdown) return null;
+
+  const excludedOrNull = excludedTotal(breakdown, metric, exclude);
+  const includesContinuous = excludedOrNull === null;
+  const excluded = excludedOrNull ?? 0;
+
+  if (metric.kind === "category") {
+    const entry = breakdown!.find((c) => c.category === metric.category);
+    // A breakdown without the category means it was empty then
+    return {
+      timestamp: s.timestamp,
+      value: (entry?.value ?? 0) - excluded,
+      costBasis: entry ? snapshotCostLine(entry) : null,
+      includesContinuous,
+    };
+  }
+
+  const assetsCostLine = snapshotCostLine({
+    value: s.totalAssets,
+    costBasis: s.totalCostBasis,
+    coveredValue: s.totalCoveredValue,
+  });
+  if (metric.kind === "totalAssets") {
+    return {
+      timestamp: s.timestamp,
+      value: s.totalAssets - excluded,
+      costBasis: assetsCostLine,
+      includesContinuous,
+    };
+  }
+  // Net worth: the same P/L against the cost line less the debt
+  return {
+    timestamp: s.timestamp,
+    value: s.netWorth - excluded,
+    costBasis:
+      assetsCostLine === null ? null : assetsCostLine - s.totalLiabilities,
+    includesContinuous,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -42,312 +168,65 @@ interface SnapshotValue {
 /**
  * Discrete Performance Strategy
  *
- * For assets with values known only at discrete sync points:
- * - Bank account balances
- * - Broker positions (at sync time)
- * - Credit card balances
- * - Real estate values
- *
- * Interpolates between snapshots when data at exact timestamps is needed.
+ * For values known only at sync points (bank balances, broker positions,
+ * manual valuations). Each grid point takes the value as known at that
+ * time through the shared series lookup: the snapshot within one interval
+ * before it, else interpolated across gaps up to the limit, else the last
+ * value held. Nothing is carried backward before the first snapshot, so a
+ * range that starts before tracking has insufficient history.
  */
 export class DiscretePerformanceStrategy extends BasePerformanceStrategy<DiscretePerformanceInput> {
   readonly strategyType = "discrete" as const;
 
-  // ═══════════════════════════════════════════════════════════════
-  // Public Interface
-  // ═══════════════════════════════════════════════════════════════
-
-  /**
-   * Assess data quality based on snapshot coverage
-   */
-  assessDataQuality(
-    input: DiscretePerformanceInput,
-    options: PerformanceCalculationOptions,
-  ): DataQuality {
-    const context = this.createContext(options);
-    const { snapshots, categoryFilter } = input;
-
-    if (!snapshots || snapshots.length === 0) {
-      return "low";
-    }
-
-    // Filter snapshots within range
-    const rangeSnapshots = snapshots.filter(
-      (s) =>
-        s.timestamp >= context.startTimestamp &&
-        s.timestamp <= context.endTimestamp,
-    );
-
-    // Calculate coverage
-    const coverageRatio = rangeSnapshots.length / context.expectedDataPoints;
-
-    // Check for category-specific data if filtering
-    if (categoryFilter) {
-      const hasCategory = rangeSnapshots.some((s) =>
-        s.categoryBreakdown?.some((c) => c.category === categoryFilter),
-      );
-      if (!hasCategory) return "low";
-    }
-
-    return this.assessQuality(
-      rangeSnapshots.length,
-      context.expectedDataPoints,
-      0,
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // Protected Implementation
-  // ═══════════════════════════════════════════════════════════════
-
-  /**
-   * Generate data points from snapshots
-   */
   protected generateDataPointsInternal(
     input: DiscretePerformanceInput,
     context: CalculationContext,
   ): DataPointGenerationResult {
-    const { snapshots, categoryFilter } = input;
-
-    if (!snapshots || snapshots.length === 0) {
-      return {
-        dataPoints: [],
-        actualDataPoints: 0,
-        interpolatedDataPoints: 0,
-        dataQuality: "low",
-        actualSnapshotTimestamps: [],
-      };
-    }
-
-    // Extract values from snapshots
-    const snapshotValues = this.extractSnapshotValues(
-      snapshots,
-      categoryFilter,
+    const values = sortByTimestamp(
+      (input.snapshots ?? []).flatMap((s) => {
+        const v = snapshotMetricValue(s, input.metric, input.excludeSources);
+        return v ? [v] : [];
+      }),
     );
 
-    // Sort by timestamp
-    snapshotValues.sort((a, b) => a.timestamp - b.timestamp);
-
-    // For category-specific calculations, check if the category had meaningful value
-    // before the range start. If the category had 0 value (or didn't exist) before
-    // the range, we shouldn't show misleading YTD performance.
-    let shouldUseCurrentAsBaseline = false;
-
-    if (categoryFilter) {
-      // Check if there's a meaningful baseline (non-zero value) at or before range start
-      // A snapshot with 0 value doesn't count as a valid baseline for this category
-      // because if something went from 0 to X, there's no meaningful "performance" to measure
-      const hasNonZeroSnapshotBeforeRangeStart = snapshotValues.some(
-        (s) => s.timestamp <= context.startTimestamp && s.value > 0,
-      );
-
-      // If this category didn't have a non-zero value before range start,
-      // use the current value as baseline (showing 0% change)
-      shouldUseCurrentAsBaseline = !hasNonZeroSnapshotBeforeRangeStart;
-    }
-
-    // Generate timestamp series for the context
-    const timestamps = this.generateTimestampSeries(context);
-
-    // Snapshots are stamped at sync time, never exactly on the grid. A grid
-    // point counts as backed by a real snapshot when the latest one at or
-    // before it lies within one interval (see getValueAtTimestamp).
-    const intervalMs = getTimeIntervalInMilliseconds(context.interval);
-
-    // Build data points by mapping timestamps to values
     const dataPoints: PerformanceDataPoint[] = [];
-    let interpolatedCount = 0;
+    let observed = 0;
+    let interpolated = 0;
+    const lookup = this.lookupOptions(context);
 
-    for (const ts of timestamps) {
-      const point = this.getValueAtTimestamp(
-        snapshotValues,
-        ts,
-        intervalMs,
+    for (const ts of this.generateTimestampSeries(context)) {
+      const found = valueAt(values, ts, lookup);
+      if (!found) continue;
+      const { costBasis, includesContinuous } = found.point;
+      // Never interpolate between a row that holds the excluded sources and
+      // one that does not: the two values measure different scopes.
+      const next = values[lastIndexAtOrBefore(values, ts) + 1];
+      const value =
+        found.kind === "interpolated" &&
+        next !== undefined &&
+        next.includesContinuous !== includesContinuous
+          ? found.point.value
+          : found.value;
+      const point =
+        found.kind === "observed"
+          ? this.createSnapshotPoint(ts, value, costBasis)
+          : this.createInterpolatedPoint(ts, value, costBasis);
+      if (found.kind === "observed") observed++;
+      else interpolated++;
+      dataPoints.push(
+        includesContinuous ? { ...point, includesContinuous: true } : point,
       );
-      if (point) {
-        dataPoints.push(point);
-        if (point.source === "interpolated") {
-          interpolatedCount++;
-        }
-      }
     }
-
-    // If we should use current value as baseline (only 1 snapshot in range,
-    // no historical data before range), flatten all points to the current value
-    if (shouldUseCurrentAsBaseline && dataPoints.length > 0) {
-      const latestValue = dataPoints[dataPoints.length - 1].value;
-      const latestCostBasis = dataPoints[dataPoints.length - 1].costBasis;
-      for (const point of dataPoints) {
-        point.value = latestValue;
-        point.costBasis = latestCostBasis;
-        point.source = "interpolated";
-      }
-      interpolatedCount = dataPoints.length;
-    }
-
-    const dataQuality = this.assessQuality(
-      dataPoints.length,
-      context.expectedDataPoints,
-      interpolatedCount,
-    );
 
     return {
       dataPoints,
-      actualDataPoints: dataPoints.length - interpolatedCount,
-      interpolatedDataPoints: interpolatedCount,
-      dataQuality,
-      actualSnapshotTimestamps: snapshotValues
+      actualDataPoints: observed,
+      interpolatedDataPoints: interpolated,
+      dataQuality: assessDataQuality(observed, context.expectedDataPoints),
+      actualSnapshotTimestamps: values
         .map((s) => s.timestamp)
         .filter((t) => t <= context.endTimestamp),
     };
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // Private Helpers
-  // ═══════════════════════════════════════════════════════════════
-
-  /**
-   * Extract snapshot values, optionally filtering by category. The cost is
-   * the snapshot's cost line: stored cost plus the value it does not cover.
-   */
-  private extractSnapshotValues(
-    snapshots: SnapshotData[],
-    categoryFilter?: string,
-  ): SnapshotValue[] {
-    return snapshots.map((s) => {
-      if (categoryFilter && s.categoryBreakdown) {
-        const categoryData = s.categoryBreakdown.find(
-          (c) => c.category === categoryFilter,
-        );
-        return {
-          timestamp: s.timestamp,
-          value: categoryData?.value ?? 0,
-          costBasis: categoryData ? snapshotCostLine(categoryData) : null,
-        };
-      }
-
-      return {
-        timestamp: s.timestamp,
-        value: s.totalAssets,
-        costBasis: snapshotCostLine({
-          value: s.totalAssets,
-          costBasis: s.totalCostBasis,
-          coveredValue: s.totalCoveredValue,
-        }),
-      };
-    });
-  }
-
-  /**
-   * Get value at a grid timestamp, without looking ahead:
-   * - the latest real snapshot at or before the grid point, when it lies
-   *   within one interval, is the value as known at that time (source
-   *   "snapshot", kept on the grid timestamp);
-   * - with no snapshot at or before the grid point at all (start of history),
-   *   the first one after it counts when it lies within half an interval;
-   * - otherwise the value is interpolated between neighbours.
-   */
-  private getValueAtTimestamp(
-    snapshotValues: SnapshotValue[],
-    timestamp: number,
-    intervalMs: number,
-  ): PerformanceDataPoint | null {
-    if (snapshotValues.length === 0) return null;
-
-    const matched = this.findMatchingSnapshot(
-      snapshotValues,
-      timestamp,
-      intervalMs,
-    );
-    if (matched) {
-      return this.createSnapshotPoint(
-        timestamp,
-        matched.value,
-        matched.costBasis,
-      );
-    }
-
-    // Find surrounding snapshots for interpolation
-    const { before, after } = this.findSurroundingSnapshots(
-      snapshotValues,
-      timestamp,
-    );
-
-    // Handle edge cases
-    if (!before && !after) return null;
-
-    if (!before && after) {
-      // Before range start, use first snapshot value (carry backward)
-      return this.createInterpolatedPoint(
-        timestamp,
-        after.value,
-        after.costBasis,
-      );
-    }
-
-    if (before && !after) {
-      // After last snapshot, use last value (carry forward)
-      return this.createInterpolatedPoint(
-        timestamp,
-        before.value,
-        before.costBasis,
-      );
-    }
-
-    // Interpolate between two snapshots
-    const interpolatedValue = this.interpolateValue(
-      timestamp,
-      { timestamp: before!.timestamp, value: before!.value },
-      { timestamp: after!.timestamp, value: after!.value },
-    );
-
-    // For cost basis, we don't interpolate - use the before value
-    return this.createInterpolatedPoint(
-      timestamp,
-      interpolatedValue,
-      before!.costBasis,
-    );
-  }
-
-  /**
-   * The snapshot that backs a grid point (see getValueAtTimestamp), or null.
-   */
-  private findMatchingSnapshot(
-    snapshotValues: SnapshotValue[],
-    timestamp: number,
-    intervalMs: number,
-  ): SnapshotValue | null {
-    const { before, after } = this.findSurroundingSnapshots(
-      snapshotValues,
-      timestamp,
-    );
-    if (before) {
-      return timestamp - before.timestamp <= intervalMs ? before : null;
-    }
-    if (after && after.timestamp - timestamp <= intervalMs / 2) return after;
-    return null;
-  }
-
-  /**
-   * Find snapshots immediately before and after a timestamp
-   */
-  private findSurroundingSnapshots(
-    snapshotValues: SnapshotValue[],
-    timestamp: number,
-  ): { before: SnapshotValue | null; after: SnapshotValue | null } {
-    let before: SnapshotValue | null = null;
-    let after: SnapshotValue | null = null;
-
-    for (const snapshot of snapshotValues) {
-      if (snapshot.timestamp <= timestamp) {
-        before = snapshot;
-      } else if (snapshot.timestamp > timestamp && !after) {
-        after = snapshot;
-        break;
-      }
-    }
-
-    return { before, after };
   }
 }
 

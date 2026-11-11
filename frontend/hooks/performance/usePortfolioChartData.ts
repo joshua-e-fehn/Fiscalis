@@ -1,115 +1,74 @@
 /**
- * Portfolio Chart Data Hook
- *
- * Provides data points for the portfolio performance chart on the dashboard.
- *
- * The line plots one measure only: portfolio snapshot totals (total assets,
- * which already include vault metals at spot). Before the first real
- * snapshot there is no data, so nothing is drawn. A metals-only series is
- * never spliced in, because joining two series of different scope into one
- * line shows a fake jump on the day tracking started.
+ * Portfolio chart data: adapts the performance engine's total-assets series
+ * (the chart's Portfolio view) to the chart's point shape. The engine owns
+ * the grid, the values, the vault's continuous valuation and the cost line;
+ * nothing is drawn before the first known point.
  */
 
 import { useMemo } from "react";
 
 import type { TimeRange } from "@/lib/performance";
-import {
-  getDefaultIntervalForRange,
-  getTimeIntervalInMilliseconds,
-} from "@/../services/finance/financeService";
 
-import { useDiscretePerformance } from "./useDiscretePerformance";
+import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance";
 
-// ═══════════════════════════════════════════════════════════════
-// Types
-// ═══════════════════════════════════════════════════════════════
-
-export interface PortfolioDataPoint {
+export interface PortfolioChartPoint {
   date: string;
   timestamp: number;
   value: number;
+  /**
+   * Axis-bounds helper only: the engine's cost line, or the point's own value
+   * where it has none. CategoryPerformanceChart draws no per-point cost line
+   * (its dashed line is `totalCost`, null when unknown), so this fallback is
+   * never shown as a P/L. Making it null needs PortfolioDataPoint.cost to be
+   * nullable, which is deferred to the chart follow-up.
+   */
   cost: number;
-  /** "snapshot": a real snapshot lies within half an interval; otherwise interpolated */
-  source: "snapshot" | "interpolated";
 }
 
 export interface UsePortfolioChartDataOptions {
-  /** Time range for the chart */
   timeRange: TimeRange;
-  /** Whether to enable the queries (default: true) */
   enabled?: boolean;
 }
 
 export interface UsePortfolioChartDataResult {
-  /** Data points for the chart (empty before the first snapshot) */
-  dataPoints: PortfolioDataPoint[];
-  /** Current portfolio value (latest snapshot total), 0 without snapshots */
+  dataPoints: PortfolioChartPoint[];
+  /** Total assets at the range end, 0 without data */
   currentValue: number;
-  /** Cost basis from the latest snapshot, null when unknown */
+  /** Cost line at the range end, null when unknown */
   totalCost: number | null;
-  /** When snapshot tracking started (first real snapshot), if any */
+  /** First known point when there is no value at the range start; null otherwise */
   trackingSince: number | null;
-  /** Loading state */
+  /** Some held assets had no price series and are missing from the values */
+  partial: boolean;
   isLoading: boolean;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Hook Implementation
-// ═══════════════════════════════════════════════════════════════
+const TOTAL_ASSETS = { kind: "totalAssets" } as const;
 
 export function usePortfolioChartData(
   options: UsePortfolioChartDataOptions,
 ): UsePortfolioChartDataResult {
   const { timeRange, enabled = true } = options;
+  const { dataPoints, metrics, isLoading } =
+    useCategoryPerformance(TOTAL_ASSETS, timeRange, {
+      includeDataPoints: true,
+      enabled,
+    });
 
-  const discreteResult = useDiscretePerformance({
-    timeRange,
-    includeDataPoints: true,
-    enabled,
-  });
-
-  const { isLoading, dataPoints, actualSnapshotTimestamps, metrics } =
-    discreteResult;
-
-  return useMemo<UsePortfolioChartDataResult>(() => {
-    const trackingSince =
-      actualSnapshotTimestamps.length > 0 ? actualSnapshotTimestamps[0] : null;
-
-    if (isLoading || trackingSince === null) {
-      return {
-        dataPoints: [],
-        currentValue: 0,
-        totalCost: null,
-        trackingSince,
-        isLoading,
-      };
-    }
-
-    // Grid points before tracking started carry the first snapshot backward;
-    // that is not a value the user held, so drop them. A grid point within
-    // half an interval of the first snapshot is backed by it and stays.
-    const halfInterval =
-      getTimeIntervalInMilliseconds(getDefaultIntervalForRange(timeRange)) / 2;
-    const visible = dataPoints.filter(
-      (p) => p.timestamp >= trackingSince - halfInterval,
-    );
-
-    const chartPoints: PortfolioDataPoint[] = visible.map((p) => ({
-      date: new Date(p.timestamp).toISOString().split("T")[0],
-      timestamp: p.timestamp,
-      value: p.value,
-      cost: p.costBasis ?? 0,
-      source: p.source === "snapshot" ? "snapshot" : "interpolated",
-    }));
-
-    const last = visible.length > 0 ? visible[visible.length - 1] : null;
-
+  return useMemo(() => {
+    const last = dataPoints.at(-1);
     return {
-      dataPoints: chartPoints,
+      dataPoints: dataPoints.map((p) => ({
+        date: new Date(p.timestamp).toISOString().slice(0, 10),
+        timestamp: p.timestamp,
+        value: p.value,
+        cost: p.costBasis ?? p.value,
+      })),
       currentValue: metrics?.endValue ?? 0,
       totalCost: last?.costBasis ?? null,
-      trackingSince,
-      isLoading: false,
+      trackingSince: toPeriodChange(metrics).trackingSince,
+      partial: metrics?.partial ?? false,
+      isLoading,
     };
-  }, [isLoading, dataPoints, actualSnapshotTimestamps, metrics, timeRange]);
+  }, [dataPoints, metrics, isLoading]);
 }

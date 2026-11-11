@@ -4,7 +4,7 @@
  * Tests for combined discrete + continuous performance calculation.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   HybridPerformanceStrategy,
   calculateHybridPerformance,
@@ -24,6 +24,18 @@ import type { SnapshotData, HoldingData, PriceData, PricePoint } from "./types";
 // ═══════════════════════════════════════════════════════════════
 
 const MS_PER_DAY = 86400000;
+const TOTAL = { kind: "totalAssets" } as const;
+const VAULT = [{ source: "vault", category: "commodities" }];
+
+// Pinned clock: fixtures and calculations all read this time
+const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(NOW);
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 const MS_PER_HOUR = 3600000;
 
 /**
@@ -45,6 +57,8 @@ function createSnapshot(
     totalLiabilities: 0,
     netWorth: totalAssets,
     totalCostBasis: options?.totalCostBasis,
+    // Split by source (no vault in it), so the hybrid adds the vault
+    categoryBreakdown: [{ category: "cash", value: totalAssets }],
   };
 }
 
@@ -129,7 +143,8 @@ describe("HybridPerformanceStrategy", () => {
     it("should work with only discrete input", () => {
       const snapshots = createLinearGrowthSnapshots(10, 10000, 12000, 30);
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
       };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
@@ -146,7 +161,8 @@ describe("HybridPerformanceStrategy", () => {
     it("should handle empty continuous input", () => {
       const snapshots = createLinearGrowthSnapshots(10, 10000, 12000, 30);
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
         continuous: { holdings: [], prices: {} },
       };
       const options: PerformanceCalculationOptions = {
@@ -169,6 +185,7 @@ describe("HybridPerformanceStrategy", () => {
       };
 
       const input: HybridPerformanceInput = {
+        continuousSources: VAULT,
         continuous: { holdings, prices },
       };
       const options: PerformanceCalculationOptions = {
@@ -196,7 +213,8 @@ describe("HybridPerformanceStrategy", () => {
       };
 
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
         continuous: { holdings, prices },
       };
       const options: PerformanceCalculationOptions = {
@@ -213,7 +231,7 @@ describe("HybridPerformanceStrategy", () => {
 
       // Check that values are combined (end > start)
       expect(result.metrics.endValue).toBeGreaterThan(
-        result.metrics.startValue,
+        result.metrics.startValue!,
       );
 
       // Verify breakdown exists with positive changes
@@ -236,7 +254,8 @@ describe("HybridPerformanceStrategy", () => {
       };
 
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
         continuous: { holdings, prices },
       };
       const options: PerformanceCalculationOptions = {
@@ -270,7 +289,8 @@ describe("HybridPerformanceStrategy", () => {
       };
 
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
         continuous: { holdings, prices },
       };
       const options: PerformanceCalculationOptions = {
@@ -299,7 +319,8 @@ describe("HybridPerformanceStrategy", () => {
       };
 
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
         continuous: { holdings, prices },
       };
       const options: PerformanceCalculationOptions = {
@@ -314,7 +335,7 @@ describe("HybridPerformanceStrategy", () => {
 
       // Each point should have combined value > discrete alone
       const discreteOnly = strategy.calculate(
-        { discrete: { snapshots } },
+        { discrete: { snapshots, metric: TOTAL }, continuousSources: VAULT },
         options,
       );
 
@@ -323,42 +344,6 @@ describe("HybridPerformanceStrategy", () => {
       const lastDiscrete =
         discreteOnly.dataPoints[discreteOnly.dataPoints.length - 1];
       expect(lastCombined.value).toBeGreaterThan(lastDiscrete.value);
-    });
-  });
-
-  describe("assessDataQuality", () => {
-    it("should return low for empty input", () => {
-      const input: HybridPerformanceInput = {};
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      expect(quality).toBe("low");
-    });
-
-    it("should return combined quality (lowest of both)", () => {
-      // Dense discrete snapshots (high quality)
-      const snapshots = createLinearGrowthSnapshots(30, 10000, 11000, 30);
-
-      // Sparse prices (low quality)
-      const holdings = [createMetalHolding("gold-1", "gold", 100, 1, 0.05)];
-      const prices: PriceData = {
-        gold: [
-          { timestamp: Date.now() - 30 * MS_PER_DAY, price: 60 },
-          { timestamp: Date.now(), price: 66 },
-        ],
-      };
-
-      const input: HybridPerformanceInput = {
-        discrete: { snapshots },
-        continuous: { holdings, prices },
-      };
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      // Should be medium or low due to sparse price data
-      expect(["low", "medium"]).toContain(quality);
     });
   });
 
@@ -371,7 +356,8 @@ describe("HybridPerformanceStrategy", () => {
       };
 
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
         continuous: { holdings, prices },
       };
       const options: PerformanceCalculationOptions = {
@@ -408,7 +394,8 @@ describe("HybridPerformanceStrategy", () => {
     it("should work correctly", () => {
       const snapshots = createLinearGrowthSnapshots(10, 50000, 55000, 30);
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
       };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
@@ -434,7 +421,7 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
   });
 
   it("should handle completely empty input", () => {
-    const input: HybridPerformanceInput = {};
+    const input: HybridPerformanceInput = { continuousSources: VAULT };
     const options: PerformanceCalculationOptions = {
       timeRange: "Month",
       includeDataPoints: true,
@@ -442,14 +429,15 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
 
     const result = strategy.calculate(input, options);
 
-    expect(result.metrics.startValue).toBe(0);
+    expect(result.metrics.startValue).toBeNull();
     expect(result.metrics.endValue).toBe(0);
     expect(result.metrics.dataQuality).toBe("low");
   });
 
   it("should handle discrete with empty snapshots", () => {
     const input: HybridPerformanceInput = {
-      discrete: { snapshots: [] },
+      continuousSources: VAULT,
+      discrete: { snapshots: [], metric: TOTAL },
     };
     const options: PerformanceCalculationOptions = {
       timeRange: "Month",
@@ -464,6 +452,7 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
   it("should handle continuous with no price data", () => {
     const holdings = [createMetalHolding("gold-1", "gold", 1000, 1, 0.05)];
     const input: HybridPerformanceInput = {
+      continuousSources: VAULT,
       continuous: { holdings, prices: {} },
     };
     const options: PerformanceCalculationOptions = {
@@ -473,8 +462,9 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
 
     const result = strategy.calculate(input, options);
 
-    // Without prices, continuous should not contribute
-    expect(result.breakdown.continuous).toBeUndefined();
+    // Without prices the holdings cannot be valued: flagged partial
+    expect(result.breakdown.continuous?.dataPoints).toEqual([]);
+    expect(result.metrics.partial).toBe(true);
   });
 
   it("should handle very large portfolios", () => {
@@ -492,7 +482,8 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
     };
 
     const input: HybridPerformanceInput = {
-      discrete: { snapshots },
+      continuousSources: VAULT,
+      discrete: { snapshots, metric: TOTAL },
       continuous: { holdings, prices },
     };
     const options: PerformanceCalculationOptions = {
@@ -522,7 +513,8 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
       );
 
       const input: HybridPerformanceInput = {
-        discrete: { snapshots },
+        continuousSources: VAULT,
+        discrete: { snapshots, metric: TOTAL },
       };
       const options: PerformanceCalculationOptions = {
         timeRange: "YTD",
@@ -547,7 +539,8 @@ describe("HybridPerformanceStrategy - Edge Cases", () => {
     };
 
     const input: HybridPerformanceInput = {
-      discrete: { snapshots },
+      continuousSources: VAULT,
+      discrete: { snapshots, metric: TOTAL },
       continuous: { holdings, prices },
     };
     const options: PerformanceCalculationOptions = {
@@ -571,7 +564,8 @@ describe("HybridPerformanceStrategy - Integration", () => {
 
     const snapshots = createLinearGrowthSnapshots(10, 10000, 11000, 30);
     const input: HybridPerformanceInput = {
-      discrete: { snapshots },
+      continuousSources: VAULT,
+      discrete: { snapshots, metric: TOTAL },
     };
     const options: PerformanceCalculationOptions = {
       timeRange: "Month",
@@ -581,15 +575,8 @@ describe("HybridPerformanceStrategy - Integration", () => {
     const result1 = strategy.calculate(input, options);
     const result2 = strategy.calculate(input, options);
 
-    // Use toBeCloseTo for floating point comparison
-    expect(result1.metrics.percentChange).toBeCloseTo(
-      result2.metrics.percentChange,
-      5,
-    );
-    expect(result1.metrics.absoluteChange).toBeCloseTo(
-      result2.metrics.absoluteChange,
-      0,
-    );
+    // With the clock pinned the results are identical
+    expect(result1.metrics).toEqual(result2.metrics);
   });
 
   it("should work with different time ranges", () => {
@@ -597,7 +584,8 @@ describe("HybridPerformanceStrategy - Integration", () => {
 
     const snapshots = createLinearGrowthSnapshots(52, 10000, 12000, 365);
     const input: HybridPerformanceInput = {
-      discrete: { snapshots },
+      continuousSources: VAULT,
+      discrete: { snapshots, metric: TOTAL },
     };
 
     const timeRanges: Array<"Week" | "Month" | "Year"> = [

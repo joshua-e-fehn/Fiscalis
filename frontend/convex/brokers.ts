@@ -581,6 +581,8 @@ export const upsertAccount = internalMutation({
       };
     }
 
+    // The sync passes the listing's currency, else one from the holdings
+    // response (snaptradeHoldingsCurrency); USD only when neither has one
     const currency = args.currency ?? "USD";
     const accountId = await ctx.db.insert("brokerAccounts", {
       userId: args.userId,
@@ -626,9 +628,10 @@ const moneyValidator = v.object({ amount: v.number(), currency: v.string() });
  * classification override is carried over by ISIN or ticker
  * (positionOverrideKeys), as bitpanda.syncHoldings does for Bitpanda.
  *
- * Cash: `cashBalances` undefined means the response had no cash figure,
- * which keeps the stored cash; anything else, zero and negative included,
- * is written. A negative balance is a margin debit and is stored as a
+ * Cash (snaptradeAccountFields): a reported cash figure is written, zero
+ * and negative included; without one, cash is the broker total minus the
+ * positions (cashSource "residual"); with neither, the stored cash is
+ * kept. Only a negative reported balance is a margin debit, stored as a
  * liability (cashInvestmentCategory "liabilities", margin-loans).
  */
 export const replaceAccountHoldings = internalMutation({
@@ -718,12 +721,17 @@ export const replaceAccountHoldings = internalMutation({
       },
       account.currency,
       rates,
+      {
+        cash: account.cash,
+        currency: account.balanceCurrency ?? account.currency,
+      },
     );
-    const cash = fields.cash ?? account.cash;
+    const cash = fields.cash;
     await ctx.db.patch(account._id, {
       balance: fields.balance,
       balanceCurrency: fields.balanceCurrency,
       cash,
+      cashSource: fields.cashSource ?? account.cashSource,
       cashInvestmentCategory:
         fields.cashInvestmentCategory ?? account.cashInvestmentCategory,
       cashInvestmentSubcategory:

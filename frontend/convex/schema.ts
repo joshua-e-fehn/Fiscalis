@@ -146,6 +146,9 @@ export default defineSchema({
 		// Cash classification fields (for uninvested cash tracking)
 		cashInvestmentCategory: v.optional(v.string()), // "cash" or "liabilities" (if margin)
 		cashInvestmentSubcategory: v.optional(v.string()), // "broker-cash" or "margin-loans"
+		// "reported" broker cash, or "residual" = total minus positions
+		// (services/brokers/snaptradePosition.ts snaptradeAccountFields)
+		cashSource: v.optional(v.union(v.literal("reported"), v.literal("residual"))),
 		// Base-currency fields, stamped at sync time
 		// (services/finance/currency.ts brokerAccountBaseFields)
 		balanceCurrency: v.optional(v.string()), // Currency of balance/cash when the API reports one; else `currency`

@@ -377,6 +377,34 @@ function convertBetween(
   return inBase.value / unit.rate;
 }
 
+/**
+ * Currency a holdings response reports anywhere: the broker total, then
+ * the first cash balance, then the first position. For an account whose
+ * listing names no currency, so it is not stored as USD by default.
+ */
+export function snaptradeHoldingsCurrency(
+  holdings: SnaptradeHoldingsLike,
+): string | undefined {
+  const fromTotal =
+    optionalString(holdings.account?.balance?.total?.currency) ??
+    optionalString(holdings.total_value?.currency);
+  if (fromTotal) return fromTotal;
+  for (const balance of holdings.balances ?? []) {
+    const code = optionalString(balance.currency?.code);
+    if (code) return code;
+  }
+  for (const position of holdings.positions ?? []) {
+    const code =
+      optionalString(position.currency?.code) ??
+      optionalString(position.symbol?.symbol?.currency?.code);
+    if (code) return code;
+  }
+  return undefined;
+}
+
+/** Where a broker account's stored cash came from. */
+export type SnaptradeCashSource = "reported" | "residual";
+
 /** Stored balance and cash of a broker account after a holdings sync. */
 export interface SnaptradeAccountFields {
   /** Total account value in `balanceCurrency` */
@@ -386,59 +414,107 @@ export interface SnaptradeAccountFields {
   balanceIsMixed: boolean;
   /**
    * Cash in `balanceCurrency`, signed: negative is a margin debit.
-   * Undefined when the response reported no cash (keep the stored value).
+   * Undefined when nothing is known about the account's cash.
    */
   cash?: number;
+  /**
+   * "reported": the broker's cash figure; "residual": derived as the
+   * broker total minus the positions, because no cash figure was sent.
+   * Undefined when the stored cash was kept unchanged.
+   */
+  cashSource?: SnaptradeCashSource;
   /** "liabilities" for a margin debit, else "cash"; undefined with cash */
   cashInvestmentCategory?: "cash" | "liabilities";
   cashInvestmentSubcategory?: "broker-cash" | "margin-loans";
 }
 
+/** The account's stored cash, kept when a response says nothing new. */
+export interface StoredSnaptradeCash {
+  cash?: number;
+  /** Currency the stored cash is in (the previous balanceCurrency) */
+  currency: string;
+}
+
 /**
  * Balance and cash of an account from its mapped holdings, all in one
- * currency (the broker total's, else the account's). Cash in other
- * currencies is converted into it; the balance is the broker total, or,
- * when the broker sent none, positions plus cash. Cash-equivalent
- * positions are taken out of cash (SnapTrade counts them in both). A
- * negative cash balance
- * is a margin debit and is classified as a liability at write time.
+ * currency. Amounts in other currencies are converted into it.
+ *
+ * Cash, in order of preference:
+ * - reported: the broker's cash balances. Cash-equivalent positions are
+ *   stored as positions and SnapTrade counts them in cash too, so they are
+ *   taken out of positive cash, never below zero. Only a negative reported
+ *   cash is a margin debit (classified as a liability at write time).
+ * - residual: with a broker total but no cash figure, total minus the
+ *   positions (never below zero), so the account still adds up to its
+ *   total.
+ * - stored: with neither, the stored cash is kept in its own currency,
+ *   which then becomes the balance currency.
+ *
+ * The balance is the broker total, or, without one, positions plus cash.
  */
 export function snaptradeAccountFields(
   mapped: MappedSnaptradeHoldings,
   accountCurrency: string,
   rates: FxRates,
+  stored?: StoredSnaptradeCash,
 ): SnaptradeAccountFields {
-  const balanceCurrency = mapped.total?.currency ?? accountCurrency;
-  let balanceIsMixed = false;
+  const keepStored =
+    mapped.cashBalances === undefined &&
+    mapped.total === undefined &&
+    stored?.cash !== undefined;
+  const balanceCurrency =
+    mapped.total?.currency ??
+    (keepStored ? stored?.currency : undefined) ??
+    accountCurrency;
 
-  const sumIn = (amounts: MoneyAmount[]): number => {
+  /** Sum in balanceCurrency; `complete` is false when a rate was missing */
+  const sumIn = (amounts: MoneyAmount[]) => {
     let sum = 0;
+    let complete = true;
     for (const { amount, currency } of amounts) {
       const converted = convertBetween(amount, currency, balanceCurrency, rates);
-      if (converted === undefined) balanceIsMixed = true;
+      if (converted === undefined) complete = false;
       else sum += converted;
     }
-    return sum;
+    return { sum, complete };
   };
 
-  const cash =
-    mapped.cashBalances !== undefined
-      ? sumIn(mapped.cashBalances) - sumIn(mapped.cashEquivalents)
-      : undefined;
+  const positions = sumIn(
+    mapped.positions.map((p) => ({ amount: p.marketValue, currency: p.currency })),
+  );
+
+  let cash: number | undefined;
+  let cashSource: SnaptradeCashSource | undefined;
+  let cashComplete = true;
+  if (mapped.cashBalances !== undefined) {
+    const reported = sumIn(mapped.cashBalances);
+    const equivalents = sumIn(mapped.cashEquivalents);
+    cash =
+      reported.sum > 0
+        ? Math.max(0, reported.sum - equivalents.sum)
+        : reported.sum;
+    cashSource = "reported";
+    cashComplete = reported.complete && equivalents.complete;
+  } else if (mapped.total !== undefined) {
+    // A position without a rate would inflate the residual: keep the
+    // stored cash rather than guess
+    if (positions.complete) {
+      cash = Math.max(0, mapped.total.amount - positions.sum);
+      cashSource = "residual";
+    }
+  } else if (keepStored) {
+    cash = stored?.cash;
+  }
 
   let balance: number;
+  let balanceIsMixed: boolean;
   if (mapped.total !== undefined) {
     balance = mapped.total.amount;
-    // A cash conversion gap does not affect a broker-reported total
+    // A conversion gap does not affect a broker-reported total
     balanceIsMixed = false;
   } else {
-    balance =
-      sumIn(
-        mapped.positions.map((p) => ({
-          amount: p.marketValue,
-          currency: p.currency,
-        })),
-      ) + (cash ?? 0);
+    balance = positions.sum + (cash ?? 0);
+    balanceIsMixed = !positions.complete || !cashComplete;
   }
 
   return {
@@ -446,6 +522,7 @@ export function snaptradeAccountFields(
     balanceCurrency,
     balanceIsMixed,
     cash,
+    cashSource,
     ...(cash === undefined
       ? {}
       : cash < 0

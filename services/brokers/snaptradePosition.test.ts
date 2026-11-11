@@ -7,6 +7,7 @@ import {
   positionProfitLoss,
   readSnaptradeSymbolFields,
   snaptradeAccountFields,
+  snaptradeHoldingsCurrency,
   type SnaptradeHoldingsLike,
 } from "./snaptradePosition";
 import { fxRatesFromDaily } from "../finance/currency";
@@ -251,6 +252,7 @@ describe("snaptradeAccountFields", () => {
       balanceCurrency: "USD",
       balanceIsMixed: false,
       cash: -15_000,
+      cashSource: "reported",
       cashInvestmentCategory: "liabilities",
       cashInvestmentSubcategory: "margin-loans",
     });
@@ -309,6 +311,115 @@ describe("snaptradeAccountFields", () => {
     expect(fields.balance).toBe(1_500);
   });
 
+  it("never turns a cash equivalent into margin debt", () => {
+    const sweep = [stock("SPAXX", 1_000, 1, { cash_equivalent: true })];
+    const zeroCash = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        { positions: sweep, balances: [{ cash: 0, currency: { code: "USD" } }] },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(zeroCash.cash).toBe(0);
+    expect(zeroCash.cashInvestmentCategory).toBe("cash");
+    expect(zeroCash.cashInvestmentSubcategory).toBe("broker-cash");
+    expect(zeroCash.balance).toBe(1_000);
+
+    const smallCash = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: sweep,
+          balances: [{ cash: 300, currency: { code: "USD" } }],
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(smallCash.cash).toBe(0);
+    expect(smallCash.cashInvestmentCategory).toBe("cash");
+    expect(smallCash.balance).toBe(1_000);
+  });
+
+  it("keeps a negative reported cash as margin debt despite equivalents", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: [stock("SPAXX", 1_000, 1, { cash_equivalent: true })],
+          balances: [{ cash: -200, currency: { code: "USD" } }],
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(fields.cash).toBe(-200);
+    expect(fields.cashInvestmentCategory).toBe("liabilities");
+  });
+
+  it("derives cash as total minus positions when no cash is reported", () => {
+    const cashOnly = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        { account: { balance: { total: { amount: 5_000, currency: "USD" } } } },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(cashOnly).toEqual({
+      balance: 5_000,
+      balanceCurrency: "USD",
+      balanceIsMixed: false,
+      cash: 5_000,
+      cashSource: "residual",
+      cashInvestmentCategory: "cash",
+      cashInvestmentSubcategory: "broker-cash",
+    });
+
+    const withPositions = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: [stock("AAPL", 10, 200)],
+          account: { balance: { total: { amount: 2_500, currency: "USD" } } },
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(withPositions.cash).toBe(500);
+
+    // Positions worth more than the total: no fake debt
+    const over = snaptradeAccountFields(
+      mapSnaptradeHoldings(
+        {
+          positions: [stock("AAPL", 10, 200)],
+          account: { balance: { total: { amount: 1_500, currency: "USD" } } },
+        },
+        "USD",
+      ),
+      "USD",
+      rates,
+    );
+    expect(over.cash).toBe(0);
+    expect(over.cashInvestmentCategory).toBe("cash");
+  });
+
+  it("keeps stored cash in its own currency and counts it in the balance", () => {
+    const fields = snaptradeAccountFields(
+      mapSnaptradeHoldings({ positions: [stock("AAPL", 10, 200)] }, "USD"),
+      "USD",
+      rates,
+      { cash: 400, currency: "EUR" },
+    );
+    expect(fields.balanceCurrency).toBe("EUR");
+    expect(fields.cash).toBe(400);
+    expect(fields.cashSource).toBeUndefined();
+    // 2000 USD = 1600 EUR, plus the kept 400 EUR
+    expect(fields.balance).toBeCloseTo(2_000, 9);
+  });
+
   it("flags a summed balance that has an unconvertible part", () => {
     const fields = snaptradeAccountFields(
       mapSnaptradeHoldings(
@@ -327,6 +438,28 @@ describe("snaptradeAccountFields", () => {
       rates,
     );
     expect(fields.balanceIsMixed).toBe(true);
+  });
+});
+
+describe("snaptradeHoldingsCurrency", () => {
+  it("reads the total, then cash, then a position, else nothing", () => {
+    expect(
+      snaptradeHoldingsCurrency({
+        account: { balance: { total: { amount: 1, currency: "CAD" } } },
+        balances: [{ cash: 1, currency: { code: "EUR" } }],
+      }),
+    ).toBe("CAD");
+    expect(
+      snaptradeHoldingsCurrency({
+        balances: [{ cash: 1, currency: { code: "EUR" } }],
+      }),
+    ).toBe("EUR");
+    expect(
+      snaptradeHoldingsCurrency({
+        positions: [{ symbol: { symbol: { symbol: "X", currency: { code: "GBP" } } } }],
+      }),
+    ).toBe("GBP");
+    expect(snaptradeHoldingsCurrency({})).toBeUndefined();
   });
 });
 

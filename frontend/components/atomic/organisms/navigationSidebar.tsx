@@ -212,6 +212,10 @@ const data = {
 					url: "#",
 				},
 				{
+					title: "API Keys",
+					url: "/settings/api-keys",
+				},
+				{
 					title: "Team",
 					url: "#",
 				},

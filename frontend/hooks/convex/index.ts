@@ -155,3 +155,12 @@ export {
   useRetirementNetWorth,
   type RetirementNetWorth,
 } from "./retirement";
+
+// Re-export public API key hooks
+export {
+  useApiKeys,
+  useCreateApiKey,
+  useRevokeApiKey,
+  netWorthEndpointUrl,
+  apiKeyErrorMessage,
+} from "./apiKeys";

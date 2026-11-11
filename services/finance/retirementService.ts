@@ -54,6 +54,7 @@ import {
   type ScheduleLoan,
   type SchedulePayment,
 } from "./loanScheduleService";
+import { loanCountsAsLiability } from "../portfolio/categorySummary";
 
 // ───────────────────────────────────────────────────────────────
 // Defaults (single source of truth — also imported by convex/retirement.ts)
@@ -505,12 +506,6 @@ export function retirementTimeline(
 }
 
 /**
- * Loan statuses the dashboard's liabilities (convex/categories.ts
- * getLiabilities) count. Keep in sync with that query.
- */
-const LIABILITY_LOAN_STATUSES: ReadonlySet<string> = new Set(["active"]);
-
-/**
  * A tracked loan as the residence-mortgage input: the repayments still to
  * come, amortised from today's balance (loanScheduleService
  * projectOutstandingPayments — due dates before `today` count as reflected in
@@ -532,7 +527,8 @@ export function residenceMortgageFromLoan(
       date: row.date,
       closingBalance: row.closingBalance,
     })),
-    countedInLiabilities: LIABILITY_LOAN_STATUSES.has(loan.status ?? "active"),
+    // The same status rule as the dashboard liabilities (D1)
+    countedInLiabilities: loanCountsAsLiability(loan.status ?? "active"),
   };
 }
 

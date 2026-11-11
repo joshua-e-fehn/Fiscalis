@@ -1181,18 +1181,34 @@ export function projectOutstandingPayments(
   today: string,
 ): LoanScheduleRow[] {
   if (isLoanPaidOff(loan)) return [];
-  const { coveredPeriods } = assignDueDates(loan, sortByPaymentDate(payments));
+  const { coveredPeriods } = walkRecordedPayments(loan, payments);
   let elapsed = coveredPeriods;
   while (elapsed < MAX_PROJECTED_PERIODS && getDueDate(loan, elapsed + 1) < today) {
     elapsed++;
   }
+  const projection = amortize({
+    terms: loan,
+    annualInterestRate: loan.annualInterestRate,
+    fromPeriod: elapsed + 1,
+    openingBalance: loan.currentBalance,
+    annuityPayment: agreedAnnuityPayment(loan),
+    today,
+  });
   let cumulativeInterest = 0;
   let cumulativePrincipal = 0;
-  return projectRemainingPayments(loan, elapsed, today).map((row, index) => {
+  return projection.rows.map((row, index) => {
     cumulativeInterest = roundMoney(cumulativeInterest + row.interest);
     cumulativePrincipal = roundMoney(cumulativePrincipal + row.principal);
     return {
-      ...row,
+      date: row.dueDate,
+      dueDate: row.dueDate,
+      openingBalance: row.openingBalance,
+      payment: row.payment,
+      principal: row.principal,
+      interest: row.interest,
+      closingBalance: row.closingBalance,
+      status: "scheduled" as const,
+      overdue: row.overdue,
       period: index + 1,
       cumulativeInterest,
       cumulativePrincipal,

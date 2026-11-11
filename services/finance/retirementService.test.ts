@@ -602,7 +602,7 @@ describe("primary residence mortgage", () => {
   });
 
   it("keeps other debts when the mortgage is not in the liabilities", () => {
-    // e.g. a defaulted loan the dashboard's liabilities don't count
+    // e.g. a paid-off loan the dashboard's liabilities don't count
     const r = at(owns, {
       assetsByCategory: { equities: 100000 },
       totalLiabilities: 20000,
@@ -612,12 +612,14 @@ describe("primary residence mortgage", () => {
     expect(r.fundableNow).toBe(80000);
   });
 
-  it("marks only loans the liabilities count", () => {
+  it("marks only loans the liabilities count (D1: active or defaulted)", () => {
     expect(mortgage.countedInLiabilities).toBe(true);
-    expect(
-      residenceMortgageFromLoan({ ...loan, status: "defaulted" }, [], "2026-01-15")
-        .countedInLiabilities,
-    ).toBe(false);
+    const counted = (status: string) =>
+      residenceMortgageFromLoan({ ...loan, status }, [], "2026-01-15")
+        .countedInLiabilities;
+    expect(counted("defaulted")).toBe(true);
+    expect(counted("paid_off")).toBe(false);
+    expect(counted("refinanced")).toBe(false);
   });
 
   it("adds what the schedule still shows owed at retirement to the target", () => {

@@ -102,7 +102,7 @@ export function useRetirementMortgageCandidates() {
 export function useRetirementFundingBase(
 	primaryResidenceLoanId: string | undefined,
 ): RetirementFundingBase | undefined {
-	const { summary, isLoading } = usePortfolioOverview("eur");
+	const { summary, isLoading } = usePortfolioOverview();
 	const loans = useRetirementMortgageCandidates();
 	const loan = primaryResidenceLoanId
 		? loans?.find((l) => l._id === primaryResidenceLoanId)

@@ -13,6 +13,7 @@ import {
 } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import { computeNetWorth } from "./lib/netWorth";
+import { getUserId } from "./lib/auth";
 
 /**
  * Internal mutation to take a portfolio snapshot
@@ -99,10 +100,8 @@ export const getSnapshots = query({
     since: v.optional(v.number()), // Range start (ms); a baseline at/before it is included
   },
   handler: async (ctx, { limit = 365, since }) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const userId = identity.subject;
+    const userId = await getUserId(ctx);
+    if (!userId) return [];
 
     const newestFirst = await ctx.db
       .query("portfolioSnapshots")
@@ -136,10 +135,8 @@ export const getSnapshots = query({
 export const getLatestSnapshot = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
+    const userId = await getUserId(ctx);
+    if (!userId) return null;
 
     const snapshot = await ctx.db
       .query("portfolioSnapshots")

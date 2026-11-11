@@ -69,8 +69,6 @@ import {
 } from "@/hooks/worldbank";
 import { useTimePlayback } from "@/hooks/useTimePlayback";
 import {
-  useRecordIndicatorTimeout,
-  useRecordIndicatorSuccess,
   useIsIndicatorFavorited,
   useToggleFavorite,
 } from "@/hooks/convex";
@@ -198,37 +196,11 @@ export default function WorldMapPage() {
     ? featuredQuery.refetch
     : dynamicQuery.refetch;
 
-  // Timeout tracking for Convex indicator reliability
-  const recordTimeout = useRecordIndicatorTimeout();
-  const recordSuccess = useRecordIndicatorSuccess();
-
   // Favorites
-  const { isFavorited: isCurrentFavorited } = useIsIndicatorFavorited(
-    userId,
-    selectedIndicator.id,
-  );
+  const { isFavorited: isCurrentFavorited } =
+    useIsIndicatorFavorited(selectedIndicator.id);
   const toggleFavorite = useToggleFavorite();
 
-  // Track timeouts/successes for dynamic indicators
-  useEffect(() => {
-    if (isFeaturedIndicator) return; // Skip for featured indicators
-
-    if (error && error.message?.includes("timed out")) {
-      // Record timeout in Convex
-      recordTimeout({ code: selectedIndicator.id }).catch(console.error);
-    } else if (worldData && !isLoading && !error) {
-      // Record success (data loaded successfully)
-      recordSuccess({ code: selectedIndicator.id }).catch(console.error);
-    }
-  }, [
-    selectedIndicator.id,
-    error,
-    worldData,
-    isLoading,
-    isFeaturedIndicator,
-    recordTimeout,
-    recordSuccess,
-  ]);
 
   const { data: indicatorsData } = useIndicatorsGrouped();
 
@@ -642,7 +614,6 @@ export default function WorldMapPage() {
                   size="icon"
                   onClick={() =>
                     toggleFavorite({
-                      userId,
                       indicatorCode: selectedIndicator.id,
                       indicatorName: selectedIndicator.name,
                       indicatorDescription: selectedIndicator.description,

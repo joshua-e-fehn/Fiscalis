@@ -40,7 +40,6 @@ interface SellItemDialogProps {
   item: MetalItemWithValuation | null;
   isOpen: boolean;
   onClose: () => void;
-  userId: string;
   currency?: MetalsCurrency;
 }
 
@@ -48,7 +47,6 @@ export function SellItemDialog({
   item,
   isOpen,
   onClose,
-  userId,
   currency = "eur",
 }: SellItemDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,7 +111,6 @@ export function SellItemDialog({
     setIsSubmitting(true);
     try {
       await addTransaction({
-        userId,
         vaultItemId: item._id as Id<"vaultItems">,
         transactionType: "sell",
         quantity,

@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // World Bank Sync API
-// Endpoints for triggering and monitoring indicator sync
+// Read-only sync status. The sync itself is internal: it runs weekly via
+// cron, or manually with `npx convex run worldbank:syncAllIndicatorsInternal`.
 // ═══════════════════════════════════════════════════════════════
 
 import { Hono } from "hono";
@@ -17,35 +18,6 @@ const getConvexClient = () => {
   }
   return new ConvexHttpClient(deploymentUrl);
 };
-
-/**
- * POST /api/worldbank/sync
- * Trigger a full sync of World Bank indicators
- */
-worldbankSync.post("/sync", async (c) => {
-  try {
-    const client = getConvexClient();
-
-    // Note: Convex actions return FunctionReference results
-    // We call the action via the HTTP client
-    const result = await client.action(api.worldbank.syncAllIndicators, {});
-
-    return c.json({
-      success: result.success,
-      indicatorCount: result.indicatorCount,
-      message: result.message,
-    });
-  } catch (error) {
-    console.error("[WorldBank Sync] Error:", error);
-    return c.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      500,
-    );
-  }
-});
 
 /**
  * GET /api/worldbank/sync/status

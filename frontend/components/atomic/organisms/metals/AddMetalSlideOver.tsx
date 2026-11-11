@@ -37,7 +37,6 @@ import { Search, Loader2, Package, Plus } from "lucide-react";
 interface AddMetalSlideOverProps {
   isOpen: boolean;
   onClose: () => void;
-  userId: string;
   mode: "catalog" | "custom";
   onModeChange: (mode: "catalog" | "custom") => void;
   onSuccess?: () => void;
@@ -46,7 +45,6 @@ interface AddMetalSlideOverProps {
 export function AddMetalSlideOver({
   isOpen,
   onClose,
-  userId,
   mode,
   onModeChange,
   onSuccess,
@@ -151,7 +149,6 @@ export function AddMetalSlideOver({
     try {
       if (mode === "catalog" && selectedCatalogItem) {
         await addFromCatalog({
-          userId,
           catalogItemId: selectedCatalogItem,
           quantity: parseInt(quantity) || 1,
           purchasePricePerUnit: purchasePrice
@@ -164,7 +161,6 @@ export function AddMetalSlideOver({
         });
       } else if (mode === "custom") {
         await addCustom({
-          userId,
           customName,
           metalType: customMetal,
           category: customCategory,

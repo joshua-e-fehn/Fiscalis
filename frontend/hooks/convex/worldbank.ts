@@ -46,39 +46,6 @@ export function useWorldBankSyncStatus() {
 }
 
 /**
- * Trigger manual sync of World Bank indicators
- */
-export function useSyncWorldBankIndicators() {
-  // Note: Actions are called differently than mutations
-  // This returns a function that can be called to trigger the sync
-  return {
-    // The sync action needs to be triggered via a different mechanism
-    // since Convex actions are HTTP actions, not real-time
-    syncAll: async () => {
-      // Call the action via fetch to the Convex HTTP endpoint
-      const response = await fetch("/api/worldbank/sync", { method: "POST" });
-      return response.json();
-    },
-  };
-}
-
-/**
- * Record a timeout for an indicator
- */
-export function useRecordIndicatorTimeout() {
-  const recordTimeout = useMutation(api.worldbank.recordIndicatorTimeout);
-  return recordTimeout;
-}
-
-/**
- * Record a successful load for an indicator
- */
-export function useRecordIndicatorSuccess() {
-  const recordSuccess = useMutation(api.worldbank.recordIndicatorSuccess);
-  return recordSuccess;
-}
-
-/**
  * Get indicator by code (for checking status)
  */
 export function useIndicatorByCode(code: string) {
@@ -102,15 +69,12 @@ export function useIndicatorByCode(code: string) {
 /**
  * Get user's favorite indicators
  */
-export function useUserFavorites(userId: string | undefined) {
-  const favorites = useQuery(
-    api.worldbank.getUserFavorites,
-    userId ? { userId } : "skip",
-  );
+export function useUserFavorites() {
+  const favorites = useQuery(api.worldbank.getUserFavorites);
 
   return {
     data: favorites,
-    isLoading: favorites === undefined && !!userId,
+    isLoading: favorites === undefined,
     favorites: favorites ?? [],
   };
 }
@@ -118,18 +82,15 @@ export function useUserFavorites(userId: string | undefined) {
 /**
  * Check if an indicator is favorited
  */
-export function useIsIndicatorFavorited(
-  userId: string | undefined,
-  indicatorCode: string,
-) {
+export function useIsIndicatorFavorited(indicatorCode: string) {
   const isFavorited = useQuery(
     api.worldbank.isIndicatorFavorited,
-    userId && indicatorCode ? { userId, indicatorCode } : "skip",
+    indicatorCode ? { indicatorCode } : "skip",
   );
 
   return {
     isFavorited: isFavorited ?? false,
-    isLoading: isFavorited === undefined && !!userId && !!indicatorCode,
+    isLoading: isFavorited === undefined && !!indicatorCode,
   };
 }
 

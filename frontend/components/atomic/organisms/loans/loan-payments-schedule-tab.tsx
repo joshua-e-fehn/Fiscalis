@@ -203,7 +203,6 @@ export function LoanPaymentsScheduleTab({
     setIsSubmitting(true);
     try {
       await recordPayment({
-        userId: user.id,
         loanId: loan._id,
         paymentDate,
         amount: totalAmount,

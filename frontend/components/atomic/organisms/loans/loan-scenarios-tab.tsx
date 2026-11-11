@@ -475,7 +475,6 @@ export function LoanScenariosTab({
     setIsSubmitting(true);
     try {
       await saveScenario({
-        userId: user.id,
         loanId: loan._id,
         name: scenarioName,
         extraMonthlyPayment: extraPayment,

@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import {
   classifyPlaidAccount,
   classifySnaptradePosition,
@@ -16,7 +16,7 @@ import {
  *
  * Run once: await ctx.runMutation(api.migrations.migratePremiums)
  */
-export const migratePremiums = mutation({
+export const migratePremiums = internalMutation({
   args: {},
   handler: async (ctx) => {
     let catalogUpdated = 0;
@@ -66,7 +66,7 @@ export const migratePremiums = mutation({
  * Clean up old fields after migration
  * This removes the deprecated fields from documents
  */
-export const cleanupOldPremiumFields = mutation({
+export const cleanupOldPremiumFields = internalMutation({
   args: {},
   handler: async (ctx) => {
     let catalogCleaned = 0;
@@ -116,7 +116,7 @@ export const cleanupOldPremiumFields = mutation({
  *
  * Run: await ctx.runMutation(api.migrations.classifyPlaidAccounts)
  */
-export const classifyPlaidAccounts = mutation({
+export const classifyPlaidAccounts = internalMutation({
   args: {},
   handler: async (ctx) => {
     let classified = 0;
@@ -173,7 +173,7 @@ export const classifyPlaidAccounts = mutation({
  *
  * Run: await ctx.runMutation(api.migrations.classifyBrokerPositions)
  */
-export const classifyBrokerPositions = mutation({
+export const classifyBrokerPositions = internalMutation({
   args: {},
   handler: async (ctx) => {
     let classified = 0;
@@ -243,7 +243,7 @@ export const classifyBrokerPositions = mutation({
  *
  * Run: await ctx.runMutation(api.migrations.reclassifyAll)
  */
-export const reclassifyAll = mutation({
+export const reclassifyAll = internalMutation({
   args: {},
   handler: async (ctx) => {
     let plaidClassified = 0;
@@ -329,7 +329,7 @@ export const reclassifyAll = mutation({
  * Returns a summary of how items are classified across the database.
  * Useful for debugging and monitoring.
  */
-export const getClassificationStats = mutation({
+export const getClassificationStats = internalMutation({
   args: {},
   handler: async (ctx) => {
     const plaidAccounts = await ctx.db.query("plaidAccounts").collect();
@@ -387,7 +387,7 @@ export const getClassificationStats = mutation({
  *
  * Run: await ctx.runMutation(api.migrations.reclassifyNftsToCollectibles)
  */
-export const reclassifyNftsToCollectibles = mutation({
+export const reclassifyNftsToCollectibles = internalMutation({
   args: {},
   handler: async (ctx) => {
     let positionsUpdated = 0;

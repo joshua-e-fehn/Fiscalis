@@ -30,5 +30,5 @@ export default function PreciousMetalsPage() {
     );
   }
 
-  return <MetalsPage userId={userId} currency={currency} />;
+  return <MetalsPage currency={currency} />;
 }

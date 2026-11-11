@@ -89,9 +89,9 @@ export default function LoansPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const loans = useActiveLoans(user?.id);
-  const summary = useLoansSummary(user?.id);
-  const upcomingPayments = useUpcomingPayments(user?.id, 30);
+  const loans = useActiveLoans();
+  const summary = useLoansSummary();
+  const upcomingPayments = useUpcomingPayments(30);
 
   const isLoading = loans === undefined || summary === undefined;
 

@@ -89,15 +89,19 @@ export const getTotalNetWorth = query({
       }
     }
 
-    // Get broker accounts for cash balance
-    const brokerAccounts = await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    // Broker account cash in EUR, net of any margin debit (the stored
+    // explicit cash; the account balance is never read as cash)
+    const rates = await loadFxRates(ctx);
+    const brokerAccounts = (
+      await ctx.db
+        .query("brokerAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).map((acc) => brokerAccountWithBaseFields(acc, rates));
 
     for (const account of brokerAccounts) {
-      const cashValue = account.cashValueInBaseCurrency ?? account.cash ?? 0;
-      snaptradeCash += cashValue;
+      snaptradeCash +=
+        brokerAccountCash(account) - brokerAccountMarginDebt(account);
     }
 
     const snaptradeTotal =
@@ -218,10 +222,13 @@ export const getProviderAllocation = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    const brokerAccounts = await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const brokerRates = await loadFxRates(ctx);
+    const brokerAccounts = (
+      await ctx.db
+        .query("brokerAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).map((acc) => brokerAccountWithBaseFields(acc, brokerRates));
 
     // Calculate provider totals (using base currency where available)
     const plaidTotal = plaidAccounts.reduce((sum, a) => {
@@ -239,7 +246,7 @@ export const getProviderAllocation = query({
     );
 
     const snaptradeCashTotal = brokerAccounts.reduce(
-      (sum, a) => sum + (a.cashValueInBaseCurrency ?? a.cash ?? 0),
+      (sum, a) => sum + brokerAccountCash(a) - brokerAccountMarginDebt(a),
       0,
     );
 
@@ -741,13 +748,16 @@ export const getCategoryBreakdown = query({
     }
 
     // Add broker cash
-    const brokerAccounts = await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const brokerRates = await loadFxRates(ctx);
+    const brokerAccounts = (
+      await ctx.db
+        .query("brokerAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).map((acc) => brokerAccountWithBaseFields(acc, brokerRates));
 
     for (const account of brokerAccounts) {
-      const cashValue = account.cashValueInBaseCurrency ?? account.cash ?? 0;
+      const cashValue = brokerAccountCash(account);
       if (cashValue > 0) {
         addToCategory("cash", "Cash & Savings", cashValue, "snaptrade");
       }
@@ -825,10 +835,13 @@ export const getNetWorthForUser = internalQuery({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    const brokerAccounts = await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const brokerRates = await loadFxRates(ctx);
+    const brokerAccounts = (
+      await ctx.db
+        .query("brokerAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).map((acc) => brokerAccountWithBaseFields(acc, brokerRates));
 
     const snaptradeTotal =
       brokerPositions.reduce(
@@ -836,7 +849,7 @@ export const getNetWorthForUser = internalQuery({
         0,
       ) +
       brokerAccounts.reduce(
-        (sum, a) => sum + (a.cashValueInBaseCurrency ?? a.cash ?? 0),
+        (sum, a) => sum + brokerAccountCash(a) - brokerAccountMarginDebt(a),
         0,
       );
 

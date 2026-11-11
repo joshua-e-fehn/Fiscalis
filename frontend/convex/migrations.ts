@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import {
-  isLegacyFullTermAnnuityPayment,
+  isLegacyInterestOnlyThenPayment,
   rederiveScheduledPayment,
 } from "../../services/finance/loanScheduleService";
 import {
@@ -628,11 +628,13 @@ export const backfillLoanScenarioExtraPerPeriod = internalMutation({
 /**
  * Migration: INTEREST_ONLY_THEN loans now store the post-grace annuity as
  * `scheduledPayment` (the engine projects with it). The old add-loan dialog
- * stored an annuity over the whole term, ignoring the grace periods, which
- * leaves a balloon at the end. Re-derives the payment from the current
- * balance over the periods left after the grace periods. Only loans whose
- * stored payment still equals that old computed annuity are rewritten; a
- * payment the user typed in is returned in `skipped` for manual review.
+ * stored an annuity over the whole term, ignoring the grace periods, and the
+ * old createLoan fallback stored the interest-only payment; both leave a
+ * balloon at the end. Re-derives the payment from the current balance over
+ * the periods left after the grace periods. Only loans whose stored payment
+ * still equals one of those computed values are rewritten (until then the
+ * engine ignores them, see isLegacyInterestOnlyThenPayment); a payment the
+ * user typed in is returned in `skipped` for manual review.
  * Idempotent.
  * Dry run first:
  *   npx convex run migrations:backfillInterestOnlyScheduledPayments '{"dryRun": true}'
@@ -651,7 +653,7 @@ export const backfillInterestOnlyScheduledPayments = internalMutation({
       ) {
         continue;
       }
-      if (!isLegacyFullTermAnnuityPayment(loan)) {
+      if (!isLegacyInterestOnlyThenPayment(loan)) {
         skipped.push({
           loanId: loan._id,
           scheduledPayment: loan.scheduledPayment,

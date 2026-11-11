@@ -12,6 +12,7 @@ import {
   paymentSplitBasis,
   projectLoan,
   isLegacyFullTermAnnuityPayment,
+  isLegacyInterestOnlyThenPayment,
   rederiveScheduledPayment,
   resolveGracePeriods,
   scheduledPaymentAfterEdit,
@@ -423,14 +424,14 @@ describe("next payment & KPIs", () => {
   });
 
   it("surfaces the final balloon of a payment that covers interest but can't amortise", () => {
-    // A legacy INTEREST_ONLY_THEN payment (full-term annuity, ignoring grace)
-    const legacy = {
+    // A typed post-grace payment too small to repay 1000 over 2 periods
+    const undersized = {
       ...loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 }),
-      scheduledPayment: 315.47,
+      scheduledPayment: 320,
     };
-    const kpis = loanKpis(legacy, [], "2026-01-01");
+    const kpis = loanKpis(undersized, [], "2026-01-01");
     expect(kpis.paymentBelowInterest).toBe(false);
-    expect(kpis.finalBalloon).toBe(784.53);
+    expect(kpis.finalBalloon).toBe(780);
     expect(loanKpis(loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 }), [], "2026-01-01").finalBalloon).toBe(0);
   });
 });
@@ -495,6 +496,59 @@ describe("rederiveScheduledPayment", () => {
     ).toBe(false);
     expect(isLegacyFullTermAnnuityPayment(loan)).toBe(false);
     expect(isLegacyFullTermAnnuityPayment(base)).toBe(false);
+  });
+});
+
+describe("legacy INTEREST_ONLY_THEN payments", () => {
+  const loan = loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 });
+  // Old dialog: full-term annuity; old createLoan fallback: interest only
+  const legacyDialog = { ...loan, scheduledPayment: 315.47 };
+  const legacyFallback = { ...loan, scheduledPayment: 100 };
+
+  it("recognises both legacy payments, not the post-grace annuity", () => {
+    expect(loan.scheduledPayment).toBe(576.19);
+    expect(isLegacyInterestOnlyThenPayment(legacyDialog)).toBe(true);
+    expect(isLegacyInterestOnlyThenPayment(legacyFallback)).toBe(true);
+    expect(isLegacyInterestOnlyThenPayment(loan)).toBe(false);
+    expect(
+      isLegacyInterestOnlyThenPayment({ ...loan, scheduledPayment: 400 }),
+    ).toBe(false);
+    expect(
+      isLegacyInterestOnlyThenPayment({ ...base, scheduledPayment: 100 }),
+    ).toBe(false);
+  });
+
+  it("projects a legacy row as if it stored the post-grace annuity", () => {
+    const expected = projectLoan(loan, []);
+    expect(expected.finalBalloon).toBe(0);
+    for (const legacy of [legacyDialog, legacyFallback]) {
+      const projection = projectLoan(legacy, []);
+      expect(projection.rows.map((r) => r.payment)).toEqual(
+        expected.rows.map((r) => r.payment),
+      );
+      expect(projection.finalBalloon).toBe(0);
+      expect(loanKpis(legacy, [], "2026-01-01").regularPayment).toBe(100);
+    }
+  });
+
+  it("derives the annuity from the current balance once past the grace", () => {
+    const pastGrace = (scheduledPayment: number) => ({
+      ...loan,
+      scheduledPayment,
+      currentBalance: 500,
+    });
+    const interestOnly = (date: string): SchedulePayment => ({
+      paymentDate: date,
+      amount: 100,
+      principalPortion: 0,
+      interestPortion: 100,
+      paymentType: "scheduled",
+    });
+    const payments = [interestOnly("2027-01-01"), interestOnly("2028-01-01")];
+    // 500 at 10% over the 2 periods left
+    expect(
+      projectLoan(pastGrace(100), payments).rows.map((r) => r.payment),
+    ).toEqual([288.1, 288.09]);
   });
 });
 

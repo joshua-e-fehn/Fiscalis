@@ -785,7 +785,7 @@ function scheduledAmountAt(
       annualInterestRate: loan.annualInterestRate,
       fromPeriod: k,
       openingBalance: balance,
-      annuityPayment: loan.scheduledPayment,
+      annuityPayment: agreedAnnuityPayment(loan),
       maxRows: 1,
     }).rows[0]?.payment ?? 0
   );
@@ -951,7 +951,8 @@ export function projectLoan(
     fromPeriod: coveredPeriods + 1,
     openingBalance: isLoanPaidOff(loan) ? 0 : loan.currentBalance,
     // A new rate re-derives the annuity over the remaining periods
-    annuityPayment: newRate === undefined ? loan.scheduledPayment : undefined,
+    annuityPayment:
+      newRate === undefined ? agreedAnnuityPayment(loan) : undefined,
     extraPerPeriod: options.extraPerPeriod,
     extraPerPeriodFrom: options.extraPerPeriodFrom,
     prepayments: options.oneTimePrepayments,
@@ -984,8 +985,9 @@ function regularPaymentOf(
   if (second) return first.payment;
   // Only the final row is left: count what recurs, not the settlement
   if (loan.loanType === "BULLET") return first.interest;
-  if (projection.finalBalloon > 0) {
-    return Math.min(first.payment, loan.scheduledPayment);
+  const agreed = agreedAnnuityPayment(loan);
+  if (projection.finalBalloon > 0 && agreed !== undefined) {
+    return Math.min(first.payment, agreed);
   }
   return first.payment;
 }
@@ -1108,6 +1110,42 @@ export function isLegacyFullTermAnnuityPayment(
     periods,
   );
   return Math.abs(legacy - loan.scheduledPayment) <= PAID_OFF_THRESHOLD;
+}
+
+/**
+ * The stored payment of an INTEREST_ONLY_THEN loan predates
+ * `scheduledPayment` meaning the post-grace annuity: either the old add-loan
+ * dialog's full-term annuity ({@link isLegacyFullTermAnnuityPayment}) or the
+ * old createLoan fallback, which stored the interest-only payment
+ * (originalPrincipal × periodic rate). Projecting with either leaves an
+ * undersized payment and a large final balloon.
+ */
+export function isLegacyInterestOnlyThenPayment(
+  loan: Parameters<typeof isLegacyFullTermAnnuityPayment>[0],
+): boolean {
+  if (loan.loanType !== "INTEREST_ONLY_THEN") return false;
+  if (isLegacyFullTermAnnuityPayment(loan)) return true;
+  const interestOnly = roundMoney(
+    loan.originalPrincipal *
+      getPeriodicRate(loan.annualInterestRate, loan.paymentFrequency),
+  );
+  return (
+    interestOnly > 0 &&
+    Math.abs(interestOnly - loan.scheduledPayment) <= PAID_OFF_THRESHOLD
+  );
+}
+
+/**
+ * The agreed regular payment the engine projects with. A legacy
+ * INTEREST_ONLY_THEN payment (see {@link isLegacyInterestOnlyThenPayment})
+ * isn't one: until `migrations:backfillInterestOnlyScheduledPayments`
+ * rewrites it, the post-grace annuity is derived over the remaining periods
+ * instead, as the tracker did before.
+ */
+function agreedAnnuityPayment(loan: ScheduleLoan): number | undefined {
+  return isLegacyInterestOnlyThenPayment(loan)
+    ? undefined
+    : loan.scheduledPayment;
 }
 
 // ───────────────────────────────────────────────────────────────

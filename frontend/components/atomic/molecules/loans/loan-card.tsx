@@ -1,6 +1,7 @@
 "use client";
 
 import { Doc } from "@/convex/_generated/dataModel";
+import type { LoanKpis } from "@/../services/finance/loanScheduleService";
 import {
   Card,
   CardContent,
@@ -26,7 +27,8 @@ import {
 // Types
 // ═══════════════════════════════════════════════════════════════
 
-type Loan = Doc<"loans">;
+// An active loan with its schedule KPIs (getActiveLoans)
+type Loan = Doc<"loans"> & { kpis: LoanKpis };
 
 interface LoanCardProps {
   loan: Loan;
@@ -51,12 +53,21 @@ function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
+// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
+    timeZone: "UTC",
   });
 }
+
+const PERIOD_SUFFIX: Record<Loan["paymentFrequency"], string> = {
+  MONTHLY: "/mo",
+  QUARTERLY: "/qtr",
+  SEMI_ANNUAL: "/half-yr",
+  ANNUAL: "/yr",
+};
 
 function getLoanIcon(name: string) {
   const lowerName = name.toLowerCase();
@@ -128,16 +139,14 @@ function getLoanColor(name: string): string {
   return "bg-gray-100 text-gray-600";
 }
 
+// Time to the projected payoff (from the schedule, not the original end date)
 function getRemainingTime(loan: Loan): string {
-  if (loan.status === "paid_off") return "Paid off";
+  const { nextPayment } = loan.kpis;
+  if (loan.status === "paid_off" || !nextPayment) return "Paid off";
+  if (nextPayment.overdue) return "Overdue";
 
-  const today = new Date();
-  const endDate = new Date(loan.expectedEndDate);
-  const months =
-    (endDate.getFullYear() - today.getFullYear()) * 12 +
-    (endDate.getMonth() - today.getMonth());
-
-  if (months <= 0) return "Overdue";
+  const months = loan.kpis.remainingMonths;
+  if (months <= 0) return "< 1m left";
   if (months < 12) return `${months}m left`;
 
   const years = Math.floor(months / 12);
@@ -152,9 +161,9 @@ function getRemainingTime(loan: Loan): string {
 // ═══════════════════════════════════════════════════════════════
 
 export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
-  const progress =
-    ((loan.originalPrincipal - loan.currentBalance) / loan.originalPrincipal) *
-    100;
+  const { progress, nextPayment } = loan.kpis;
+  const nextAmount = nextPayment?.amount ?? 0;
+  const nextDate = nextPayment?.dueDate ?? loan.nextPaymentDate;
 
   if (viewMode === "list") {
     return (
@@ -190,13 +199,13 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
               <div className="text-right hidden lg:block">
                 <p className="text-sm text-muted-foreground">Payment</p>
                 <p className="font-semibold">
-                  {formatCurrency(loan.scheduledPayment, loan.currency)}
+                  {formatCurrency(nextAmount, loan.currency)}
                 </p>
               </div>
               <div className="text-right hidden sm:block">
                 <p className="text-sm text-muted-foreground">Next Due</p>
                 <p className="font-semibold">
-                  {formatDate(loan.nextPaymentDate)}
+                  {formatDate(nextDate)}
                 </p>
               </div>
               <div className="w-24 hidden md:block">
@@ -262,7 +271,8 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
           <div className="flex items-center gap-1 text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {formatCurrency(loan.scheduledPayment, loan.currency)}/mo
+              {formatCurrency(nextAmount, loan.currency)}
+              {PERIOD_SUFFIX[loan.paymentFrequency]}
             </span>
           </div>
         </div>
@@ -286,7 +296,9 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
         {/* Next Payment */}
         <div className="flex items-center justify-between pt-2 border-t">
           <span className="text-sm text-muted-foreground">Next payment</span>
-          <Badge variant="secondary">{formatDate(loan.nextPaymentDate)}</Badge>
+          <Badge variant={nextPayment?.overdue ? "destructive" : "secondary"}>
+            {formatDate(nextDate)}
+          </Badge>
         </div>
       </CardContent>
     </Card>

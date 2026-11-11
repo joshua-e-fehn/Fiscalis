@@ -5,9 +5,11 @@ import { useUser } from "@clerk/nextjs";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useSaveScenario, useDeleteScenario } from "@/hooks/convex/loans";
 import {
-  addMonthsToISODate,
-  computeNextPaymentDate,
-  getPaymentsPerYear,
+  getMonthsPerPeriod,
+  projectLoan,
+  type LoanProjection,
+  type PrepaymentEffect,
+  type ProjectLoanOptions,
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
 import {
@@ -97,6 +99,8 @@ interface ScenarioResult {
   originalEndDate: string;
   newEndDate: string;
   totalExtraPayments: number;
+  totalPenalty: number;
+  prepaymentsCapped: number;
   // Chart data
   balanceHistory: Array<{
     date: string;
@@ -114,6 +118,7 @@ interface ScenarioResult {
 }
 
 // Helper functions
+// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatCurrency(value: number, currency: string = "USD"): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -127,6 +132,7 @@ function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString("en-US", {
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -145,23 +151,9 @@ function getPaymentFrequencyLabel(frequency: string): string {
   }
 }
 
-function addPaymentPeriod(date: Date, frequency: string): Date {
-  const newDate = new Date(date);
-  switch (frequency) {
-    case "MONTHLY":
-      newDate.setMonth(newDate.getMonth() + 1);
-      break;
-    case "QUARTERLY":
-      newDate.setMonth(newDate.getMonth() + 3);
-      break;
-    case "SEMI_ANNUAL":
-      newDate.setMonth(newDate.getMonth() + 6);
-      break;
-    case "ANNUAL":
-      newDate.setFullYear(newDate.getFullYear() + 1);
-      break;
-  }
-  return newDate;
+// extraMonthlyPayment is the deprecated name of the same per-period extra
+function scenarioExtraPerPeriod(scenario: LoanScenario): number {
+  return scenario.extraPerPeriod ?? scenario.extraMonthlyPayment ?? 0;
 }
 
 // Chart configs
@@ -195,223 +187,75 @@ const paymentChartConfig: ChartConfig = {
   },
 };
 
+// Closing balance at the end of each calendar year, starting from today
+function yearlyBalances(
+  projection: LoanProjection,
+  today: string,
+  openingBalance: number,
+): Map<string, number> {
+  const byYear = new Map([[today.slice(0, 4), openingBalance]]);
+  for (const row of projection.rows) {
+    byYear.set(row.dueDate.slice(0, 4), row.closingBalance);
+  }
+  return byYear;
+}
+
+// The current plan and the scenario are two projections of the same engine,
+// so the What-If agrees with the Overview and Schedule tabs for every loan type
 function calculateScenario(
   loan: Loan,
   payments: LoanPayment[],
-  extraPeriodicPayment: number,
-  oneTimePrepayments: OneTimePrepayment[] = [],
+  options: ProjectLoanOptions,
 ): ScenarioResult {
-  const paymentsPerYear = getPaymentsPerYear(loan.paymentFrequency);
-  const periodicRate = loan.annualInterestRate / paymentsPerYear;
+  const today = todayLocalISO();
+  const original = projectLoan(loan, payments, {}, today);
+  const scenario = projectLoan(loan, payments, options, today);
+  const monthsPerPeriod = getMonthsPerPeriod(loan.paymentFrequency);
 
-  // Sort prepayments by date
-  const sortedPrepayments = [...oneTimePrepayments].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-  );
+  const originalYears = yearlyBalances(original, today, loan.currentBalance);
+  const scenarioYears = yearlyBalances(scenario, today, loan.currentBalance);
+  const balanceHistory = [
+    ...new Set([...originalYears.keys(), ...scenarioYears.keys()]),
+  ]
+    .sort()
+    .map((year) => ({
+      date: year,
+      originalBalance: originalYears.get(year) ?? null,
+      scenarioBalance: scenarioYears.get(year) ?? null,
+    }));
 
-  // Data for charts
-  const balanceHistory: ScenarioResult["balanceHistory"] = [];
-  const paymentBreakdown: ScenarioResult["paymentBreakdown"] = [];
-
-  // Calculate original scenario (no changes)
-  let originalBalance = loan.currentBalance;
-  let originalPeriods = 0;
-  let originalTotalInterest = 0;
-  const originalBalanceData: Array<{ date: Date; balance: number }> = [];
-
-  let currentDate = new Date();
-  originalBalanceData.push({
-    date: new Date(currentDate),
-    balance: originalBalance,
-  });
-
-  while (originalBalance > 0.01 && originalPeriods < 600) {
-    const interest = originalBalance * periodicRate;
-    const principal = Math.min(
-      loan.scheduledPayment - interest,
-      originalBalance,
-    );
-    originalBalance = Math.max(0, originalBalance - principal);
-    originalTotalInterest += interest;
-    originalPeriods++;
-    currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-    originalBalanceData.push({
-      date: new Date(currentDate),
-      balance: originalBalance,
-    });
-  }
-
-  // Calculate new scenario with extra payment
-  let scenarioBalance = loan.currentBalance;
-  let scenarioPeriods = 0;
-  let scenarioTotalInterest = 0;
-  const newPayment = loan.scheduledPayment + extraPeriodicPayment;
-  const scenarioBalanceData: Array<{ date: Date; balance: number }> = [];
-  let prepaymentIndex = 0;
-  let totalPrepaymentAmount = 0;
-
-  currentDate = new Date();
-  scenarioBalanceData.push({
-    date: new Date(currentDate),
-    balance: scenarioBalance,
-  });
-
-  while (scenarioBalance > 0.01 && scenarioPeriods < 600) {
-    const periodDate = currentDate;
-
-    // Check for prepayments that should be applied before this period
-    while (
-      prepaymentIndex < sortedPrepayments.length &&
-      new Date(sortedPrepayments[prepaymentIndex].date) <= periodDate
-    ) {
-      const prepayment = sortedPrepayments[prepaymentIndex];
-      scenarioBalance = Math.max(0, scenarioBalance - prepayment.amount);
-      totalPrepaymentAmount += prepayment.amount;
-      prepaymentIndex++;
-    }
-
-    if (scenarioBalance <= 0.01) break;
-
-    const interest = scenarioBalance * periodicRate;
-    const principal = Math.min(newPayment - interest, scenarioBalance);
-    scenarioBalance = Math.max(0, scenarioBalance - principal);
-    scenarioTotalInterest += interest;
-    scenarioPeriods++;
-    currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-    scenarioBalanceData.push({
-      date: new Date(currentDate),
-      balance: scenarioBalance,
-    });
-  }
-
-  // Build balance history for chart (yearly data points)
-  const allDates = new Set<number>();
-  originalBalanceData.forEach((d) => allDates.add(d.date.getFullYear()));
-  scenarioBalanceData.forEach((d) => allDates.add(d.date.getFullYear()));
-
-  const sortedYears = Array.from(allDates).sort();
-
-  sortedYears.forEach((year) => {
-    // Get the last balance for this year
-    const originalYearData = originalBalanceData.filter(
-      (d) => d.date.getFullYear() === year,
-    );
-    const scenarioYearData = scenarioBalanceData.filter(
-      (d) => d.date.getFullYear() === year,
-    );
-
-    const origBal =
-      originalYearData.length > 0
-        ? originalYearData[originalYearData.length - 1].balance
-        : null;
-    const scenBal =
-      scenarioYearData.length > 0
-        ? scenarioYearData[scenarioYearData.length - 1].balance
-        : null;
-
-    balanceHistory.push({
-      date: `${year}`,
-      originalBalance: origBal,
-      scenarioBalance: scenBal,
-    });
-  });
-
-  // Build payment breakdown (first 12 periods or all if fewer)
   const periodsToShow = Math.min(
     12,
-    Math.max(originalPeriods, scenarioPeriods),
+    Math.max(original.rows.length, scenario.rows.length),
   );
-  let origBal = loan.currentBalance;
-  let scenBal = loan.currentBalance;
-  prepaymentIndex = 0;
-  currentDate = new Date();
+  const paymentBreakdown = Array.from({ length: periodsToShow }, (_, i) => {
+    const orig = original.rows[i];
+    const scen = scenario.rows[i];
+    return {
+      period: formatDate((orig ?? scen).dueDate),
+      originalPrincipal: orig?.principal ?? 0,
+      originalInterest: orig?.interest ?? 0,
+      scenarioPrincipal: scen?.principal ?? 0,
+      scenarioInterest: scen?.interest ?? 0,
+      extraPayment:
+        (scen?.prepayment ?? 0) + (i === 0 ? scenario.initialPrepayment : 0),
+    };
+  });
 
-  for (let i = 0; i < periodsToShow; i++) {
-    const periodDate = currentDate;
-
-    // Check for prepayments in this period for scenario
-    let periodPrepayment = 0;
-    while (
-      prepaymentIndex < sortedPrepayments.length &&
-      new Date(sortedPrepayments[prepaymentIndex].date) <= periodDate
-    ) {
-      periodPrepayment += sortedPrepayments[prepaymentIndex].amount;
-      scenBal = Math.max(
-        0,
-        scenBal - sortedPrepayments[prepaymentIndex].amount,
-      );
-      prepaymentIndex++;
-    }
-
-    // Original calculation (standard payment only)
-    const origInterest = origBal > 0.01 ? origBal * periodicRate : 0;
-    const origPrincipal =
-      origBal > 0.01
-        ? Math.min(loan.scheduledPayment - origInterest, origBal)
-        : 0;
-    origBal = Math.max(0, origBal - origPrincipal);
-
-    // Scenario calculation - separate the base payment from extra
-    const scenInterest = scenBal > 0.01 ? scenBal * periodicRate : 0;
-    // Base principal (from scheduled payment)
-    const basePrincipal =
-      scenBal > 0.01
-        ? Math.min(loan.scheduledPayment - scenInterest, scenBal)
-        : 0;
-    // Extra payment goes entirely to principal
-    const extraPrincipalFromPayment =
-      scenBal > 0.01
-        ? Math.min(extraPeriodicPayment, scenBal - basePrincipal)
-        : 0;
-    const scenPrincipal = basePrincipal + extraPrincipalFromPayment;
-    scenBal = Math.max(0, scenBal - scenPrincipal);
-
-    // Total extra for this period (recurring + any lump sum)
-    const totalExtraThisPeriod = extraPrincipalFromPayment + periodPrepayment;
-
-    paymentBreakdown.push({
-      period: formatDate(periodDate.toISOString()),
-      originalPrincipal: origPrincipal,
-      originalInterest: origInterest,
-      scenarioPrincipal: basePrincipal,
-      scenarioInterest: scenInterest,
-      extraPayment: totalExtraThisPeriod,
-    });
-
-    currentDate = addPaymentPeriod(currentDate, loan.paymentFrequency);
-  }
-
-  // Calculate results
-  const periodsSaved = originalPeriods - scenarioPeriods;
-  const interestSaved = originalTotalInterest - scenarioTotalInterest;
-
-  // Payoff dates count periods from the next due date the schedule derives
-  // (calendar-safe, clamped to month end)
-  const monthsPerPeriod = 12 / paymentsPerYear;
-  const firstDue =
-    computeNextPaymentDate(loan, payments) ??
-    (loan.nextPaymentDate ||
-      addMonthsToISODate(todayLocalISO(), monthsPerPeriod));
-  const endAfter = (periods: number) =>
-    periods > 0
-      ? addMonthsToISODate(firstDue, (periods - 1) * monthsPerPeriod)
-      : firstDue;
-
-  // Convert periods to months for display
-  const periodsPerYear = paymentsPerYear;
-  const monthsSaved = Math.round((periodsSaved / periodsPerYear) * 12);
-
+  const originalMonths = original.rows.length * monthsPerPeriod;
+  const newMonths = scenario.rows.length * monthsPerPeriod;
   return {
-    originalMonths: Math.round((originalPeriods / periodsPerYear) * 12),
-    newMonths: Math.round((scenarioPeriods / periodsPerYear) * 12),
-    monthsSaved,
-    originalTotalInterest,
-    newTotalInterest: scenarioTotalInterest,
-    interestSaved,
-    originalEndDate: endAfter(originalPeriods),
-    newEndDate: endAfter(scenarioPeriods),
-    totalExtraPayments:
-      extraPeriodicPayment * scenarioPeriods + totalPrepaymentAmount,
+    originalMonths,
+    newMonths,
+    monthsSaved: originalMonths - newMonths,
+    originalTotalInterest: original.totalInterest,
+    newTotalInterest: scenario.totalInterest,
+    interestSaved: original.totalInterest - scenario.totalInterest,
+    originalEndDate: original.payoffDate ?? today,
+    newEndDate: scenario.payoffDate ?? today,
+    totalExtraPayments: scenario.totalPrepayments,
+    totalPenalty: scenario.totalPenalty,
+    prepaymentsCapped: scenario.prepaymentsCapped,
     balanceHistory,
     paymentBreakdown,
   };
@@ -426,7 +270,11 @@ export function LoanScenariosTab({
   const { saveScenario } = useSaveScenario();
   const { deleteScenario } = useDeleteScenario();
 
+  // Extra principal per payment period (not per month)
   const [extraPayment, setExtraPayment] = useState(0);
+  const [newRatePercent, setNewRatePercent] = useState("");
+  const [prepaymentEffect, setPrepaymentEffect] =
+    useState<PrepaymentEffect>("reduce_term");
   const [oneTimePrepayments, setOneTimePrepayments] = useState<
     OneTimePrepayment[]
   >([]);
@@ -444,10 +292,19 @@ export function LoanScenariosTab({
   // Payment frequency label
   const frequencyLabel = getPaymentFrequencyLabel(loan.paymentFrequency);
 
+  const newRate =
+    newRatePercent === "" ? undefined : parseFloat(newRatePercent) / 100;
+
   // Calculate live scenario
   const liveScenario = useMemo(
-    () => calculateScenario(loan, payments, extraPayment, oneTimePrepayments),
-    [loan, payments, extraPayment, oneTimePrepayments],
+    () =>
+      calculateScenario(loan, payments, {
+        extraPerPeriod: extraPayment,
+        oneTimePrepayments,
+        newRate,
+        prepaymentEffect,
+      }),
+    [loan, payments, extraPayment, oneTimePrepayments, newRate, prepaymentEffect],
   );
 
   const handleAddPrepayment = () => {
@@ -477,7 +334,13 @@ export function LoanScenariosTab({
       await saveScenario({
         loanId: loan._id,
         name: scenarioName,
-        extraMonthlyPayment: extraPayment,
+        extraPerPeriod: extraPayment,
+        oneTimePrepayments: oneTimePrepayments.map(({ date, amount }) => ({
+          date,
+          amount,
+        })),
+        newInterestRate: newRate,
+        prepaymentEffect,
         projectedEndDate: liveScenario.newEndDate,
         totalInterestSaved: liveScenario.interestSaved,
         monthsSaved: liveScenario.monthsSaved,
@@ -503,13 +366,27 @@ export function LoanScenariosTab({
   };
 
   const handleLoadScenario = (scenario: LoanScenario) => {
-    if (scenario.extraMonthlyPayment) {
-      setExtraPayment(scenario.extraMonthlyPayment);
-    }
+    setExtraPayment(scenarioExtraPerPeriod(scenario));
+    setOneTimePrepayments(
+      (scenario.oneTimePrepayments ?? []).map((p, i) => ({
+        id: `saved-${i}`,
+        ...p,
+      })),
+    );
+    setNewRatePercent(
+      scenario.newInterestRate !== undefined
+        ? String(scenario.newInterestRate * 100)
+        : "",
+    );
+    setPrepaymentEffect(scenario.prepaymentEffect ?? "reduce_term");
   };
 
-  const maxExtraPayment = Math.min(loan.scheduledPayment * 3, 5000);
-  const hasChanges = extraPayment > 0 || oneTimePrepayments.length > 0;
+  const maxExtraPayment = Math.max(
+    100,
+    Math.min(loan.scheduledPayment * 3, 5000),
+  );
+  const hasChanges =
+    extraPayment > 0 || oneTimePrepayments.length > 0 || newRate !== undefined;
 
   return (
     <div className="space-y-6">
@@ -547,6 +424,60 @@ export function LoanScenariosTab({
             </div>
           </div>
 
+          {/* Prepayment effect & refinancing rate */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+            <div>
+              <Label className="mb-2 block">Prepayments</Label>
+              <div className="flex gap-2">
+                {(
+                  [
+                    ["reduce_term", "Shorten the term"],
+                    ["reduce_payment", "Lower the payment"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    size="sm"
+                    variant={prepaymentEffect === value ? "default" : "outline"}
+                    onClick={() => setPrepaymentEffect(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="whatif-rate" className="mb-2 block">
+                New interest rate (%), optional
+              </Label>
+              <Input
+                id="whatif-rate"
+                type="number"
+                step="0.01"
+                placeholder={(loan.annualInterestRate * 100).toFixed(2)}
+                value={newRatePercent}
+                onChange={(e) => setNewRatePercent(e.target.value)}
+                className="w-40"
+              />
+            </div>
+          </div>
+          {(loan.maxAnnualPrepaymentRate || loan.prepaymentPenaltyRate) && (
+            <p className="text-xs text-muted-foreground">
+              Your contract
+              {loan.maxAnnualPrepaymentRate
+                ? ` allows prepaying ${(loan.maxAnnualPrepaymentRate * 100).toFixed(1)}% of the original principal per year`
+                : ""}
+              {loan.maxAnnualPrepaymentRate && loan.prepaymentPenaltyRate
+                ? " and"
+                : ""}
+              {loan.prepaymentPenaltyRate
+                ? ` charges a ${(loan.prepaymentPenaltyRate * 100).toFixed(2)}% prepayment penalty`
+                : ""}
+              ; the simulation applies both.
+            </p>
+          )}
+
           {/* One-Time Prepayments */}
           <div className="border-t pt-4">
             <Label className="mb-3 block">One-Time Prepayments</Label>
@@ -559,18 +490,14 @@ export function LoanScenariosTab({
               />
               <div className="relative flex-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                  {loan.currency === "EUR"
-                    ? "€"
-                    : loan.currency === "GBP"
-                      ? "£"
-                      : "$"}
+                  {loan.currency}
                 </span>
                 <Input
                   type="number"
                   placeholder="Amount"
                   value={newPrepaymentAmount}
                   onChange={(e) => setNewPrepaymentAmount(e.target.value)}
-                  className="pl-7"
+                  className="pl-12"
                 />
               </div>
               <Button
@@ -720,6 +647,17 @@ export function LoanScenariosTab({
               </div>
             </div>
           )}
+
+          {hasChanges &&
+            (liveScenario.totalPenalty > 0 ||
+              liveScenario.prepaymentsCapped > 0) && (
+              <p className="text-sm text-amber-600">
+                {liveScenario.prepaymentsCapped > 0 &&
+                  `${formatCurrency(liveScenario.prepaymentsCapped, loan.currency)} of prepayments exceed the annual limit and are left out. `}
+                {liveScenario.totalPenalty > 0 &&
+                  `Prepayment penalties: ${formatCurrency(liveScenario.totalPenalty, loan.currency)}.`}
+              </p>
+            )}
 
           {/* Save Button */}
           {hasChanges && (
@@ -1023,20 +961,29 @@ export function LoanScenariosTab({
                   <CardContent className="pt-6">
                     <h4 className="font-semibold mb-4">{scenario.name}</h4>
                     <div className="space-y-2 text-sm">
-                      {scenario.extraMonthlyPayment !== undefined &&
-                        scenario.extraMonthlyPayment > 0 && (
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              +
-                              {formatCurrency(
-                                scenario.extraMonthlyPayment,
-                                loan.currency,
-                              )}
-                              /{frequencyLabel.toLowerCase()}
-                            </span>
-                          </div>
-                        )}
+                      {scenarioExtraPerPeriod(scenario) > 0 && (
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            +
+                            {formatCurrency(
+                              scenarioExtraPerPeriod(scenario),
+                              loan.currency,
+                            )}{" "}
+                            per {frequencyLabel.toLowerCase()} payment
+                          </span>
+                        </div>
+                      )}
+                      {(scenario.oneTimePrepayments?.length ?? 0) > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {scenario.oneTimePrepayments!.length} one-time
+                            prepayment
+                            {scenario.oneTimePrepayments!.length > 1 ? "s" : ""}
+                          </span>
+                        </div>
+                      )}
                       {scenario.monthsSaved !== undefined &&
                         scenario.monthsSaved > 0 && (
                           <div className="flex items-center gap-2">

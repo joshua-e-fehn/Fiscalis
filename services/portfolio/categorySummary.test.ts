@@ -317,6 +317,30 @@ describe("averageCostPerUnit", () => {
     expect(avg.has("BTC")).toBe(false);
   });
 
+  it("takes withdrawn units out at the running average", () => {
+    const avg = averageCostPerUnit(
+      [
+        trade("buy", 1, 100, "2026-01-01"),
+        trade("withdrawal", 1, 0, "2026-01-02"),
+        trade("buy", 1, 200, "2026-01-03"),
+      ],
+      eur,
+    );
+    expect(avg.get("BTC")).toEqual({ perUnit: 200, quantity: 1 });
+  });
+
+  it("ignores deposits and transfers, which carry no price", () => {
+    const avg = averageCostPerUnit(
+      [
+        trade("buy", 1, 100, "2026-01-01"),
+        trade("deposit", 1, 0, "2026-01-02"),
+        trade("transfer", 1, 0, "2026-01-03"),
+      ],
+      eur,
+    );
+    expect(avg.get("BTC")).toEqual({ perUnit: 100, quantity: 1 });
+  });
+
   it("forgets an unpriced buy once everything bought is sold", () => {
     const avg = averageCostPerUnit(
       [

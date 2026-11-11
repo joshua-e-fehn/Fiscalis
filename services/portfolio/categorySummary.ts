@@ -137,7 +137,7 @@ export interface ProviderTrade {
 export interface AverageCost {
   /** EUR cost per unit of the quantity the trades account for */
   perUnit: number;
-  /** Units the trades account for: bought plus rewarded, less sold */
+  /** Units the trades account for: bought plus rewarded, less sold or withdrawn */
   quantity: number;
 }
 
@@ -159,8 +159,10 @@ function tradeTime(date: string): number {
  * date order: a buy adds its quantity and EUR amount; a reward adds its
  * quantity at zero cost (it is income, so it shows as P/L, never as money
  * put in); a sell removes its quantity at the running average (so the
- * average does not change), and selling out starts the book afresh.
- * Deposits, withdrawals and transfers carry no price and are left out. A
+ * average does not change), and so does a withdrawal (units sent out of
+ * Bitpanda are no longer held); selling out starts the book afresh.
+ * Deposits and transfers carry no price and are left out (a holding larger
+ * than its book is uncovered, see bitpandaCostBasis). A
  * symbol is missing when nothing bought is still held or a buy since the
  * book last emptied has a currency without a rate.
  */
@@ -173,7 +175,14 @@ export function averageCostPerUnit(
     (a, b) => tradeTime(a.transactionDate) - tradeTime(b.transactionDate),
   );
   for (const t of ordered) {
-    if (t.type !== "buy" && t.type !== "sell" && t.type !== "reward") continue;
+    if (
+      t.type !== "buy" &&
+      t.type !== "sell" &&
+      t.type !== "reward" &&
+      t.type !== "withdrawal"
+    ) {
+      continue;
+    }
     const quantity = Math.abs(t.quantity);
     if (!(quantity > 0)) continue;
     const symbol = t.symbol.toUpperCase();

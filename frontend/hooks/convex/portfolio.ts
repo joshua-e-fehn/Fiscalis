@@ -1,32 +1,24 @@
 /**
- * Portfolio Summary Hook
+ * Portfolio Overview Hook
  *
- * Aggregates data from ALL investment categories and liabilities
- * to provide a unified portfolio overview for the dashboard.
+ * The dashboard's net worth, category cards and liabilities card, read from
+ * portfolio.getOverview: the same server-side loader and aggregator as the
+ * snapshots and GET /api/v1/net-worth, so every surface shows one figure.
  */
 
 import { useMemo } from "react";
-import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
   InvestmentCategory,
+  InvestmentCurrency,
   PortfolioDataPoint,
 } from "@/lib/types/investments";
 import { categoryPrimaryColors } from "@/lib/config/categoryUI";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
-import { useCommoditiesSummary } from "./commodities";
-import { useEquitiesSummary } from "./equities";
-import { useBondsSummary } from "./bonds";
-import { useCryptoSummary } from "./crypto";
-import { useRealEstateSummary } from "./realEstate";
-import { useCashSummary } from "./cash";
-import { useCollectiblesSummary } from "./collectibles";
-import { useLiabilitiesSummary } from "./liabilities";
+import { useUserSettings } from "./onboarding";
 import {
   costLine,
   snapshotCostLine,
-  summarizeUnrealizedProfitLoss,
 } from "@/../services/portfolio/unrealizedProfitLoss";
 import {
   Briefcase,
@@ -36,15 +28,46 @@ import {
   Banknote,
   Bitcoin,
   Gem,
-  CreditCard,
+  HelpCircle,
 } from "lucide-react";
 import React from "react";
+
+// ═══════════════════════════════════════════════════════════════
+// Base currency
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Base currencies the stored values can be in. Every *InBaseCurrency field
+ * and the FX mirror are EUR-based, so EUR is the only one today.
+ */
+const SUPPORTED_BASE_CURRENCIES: readonly InvestmentCurrency[] = ["eur"];
+
+/**
+ * The user's base currency, from userSettings.defaultCurrency, for display
+ * and formatting (lib/utils/currency formatCurrency). A preference the data
+ * cannot be shown in yet falls back to EUR.
+ */
+export function useBaseCurrency(): InvestmentCurrency {
+  const preferred = useUserSettings()?.defaultCurrency?.toLowerCase();
+  return (
+    SUPPORTED_BASE_CURRENCIES.find((c) => c === preferred) ??
+    SUPPORTED_BASE_CURRENCIES[0]
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Overview
+// ═══════════════════════════════════════════════════════════════
+
+/** A dashboard category: an investment category or unclassified holdings */
+export type AssetCategoryId = Exclude<InvestmentCategory, "liabilities">
+  | "unclassified";
 
 /**
  * Asset category data for portfolio overview
  */
 export interface AssetCategoryData {
-  id: InvestmentCategory;
+  id: AssetCategoryId;
   name: string;
   href: string;
   icon: React.ReactNode;
@@ -63,11 +86,14 @@ export interface AssetCategoryData {
  * Liabilities summary for portfolio overview
  */
 export interface LiabilitiesSummaryData {
+  /** Amount owed in the base currency */
   totalBalance: number;
+  /** Loans' scheduled payments as a monthly equivalent */
   monthlyPayment: number;
+  /** Manual loans counted as liabilities (active, defaulted) */
   loansCount: number;
-  upcomingPaymentAmount: number | null;
-  upcomingPaymentDate: string | null;
+  /** Every liability account and loan */
+  accountsCount: number;
 }
 
 /**
@@ -88,10 +114,6 @@ export interface PortfolioSummary {
   /** Share of total assets (0..1) that the unrealised P/L covers */
   unrealizedProfitLossCoverage: number | null;
 
-  // YTD performance
-  ytdProfitLoss: number | null;
-  ytdProfitLossPercent: number | null;
-
   // Category breakdown
   assetCategories: AssetCategoryData[];
 
@@ -100,244 +122,77 @@ export interface PortfolioSummary {
 
   // Historical performance (combined)
   historyDataPoints: PortfolioDataPoint[];
+
+  /** Data freshness: oldest provider sync or spot price (ms) */
+  asOf: number | null;
 }
 
+const ICON = { className: "h-4 w-4" };
+
+/** Display metadata per dashboard category, in card order. */
+const CATEGORY_CARDS: Array<{
+  id: AssetCategoryId;
+  name: string;
+  href: string;
+  icon: React.ReactNode;
+  color: string;
+  implemented: boolean;
+}> = [
+  { id: "equities", name: "Equities", href: "/assets/equities", icon: React.createElement(Briefcase, ICON), color: categoryPrimaryColors.equities, implemented: true },
+  { id: "commodities", name: "Commodities", href: "/assets/commodities", icon: React.createElement(Coins, ICON), color: categoryPrimaryColors.commodities, implemented: true },
+  { id: "bonds", name: "Bonds", href: "/assets/bonds", icon: React.createElement(Receipt, ICON), color: categoryPrimaryColors.bonds, implemented: true },
+  { id: "real-estate", name: "Real Estate", href: "/assets/real-estate", icon: React.createElement(Building2, ICON), color: categoryPrimaryColors["real-estate"], implemented: true },
+  { id: "cash", name: "Cash & Savings", href: "/assets/cash", icon: React.createElement(Banknote, ICON), color: categoryPrimaryColors.cash, implemented: true },
+  { id: "crypto", name: "Cryptocurrency", href: "/assets/crypto", icon: React.createElement(Bitcoin, ICON), color: categoryPrimaryColors.crypto, implemented: true },
+  { id: "collectibles", name: "Collectibles", href: "/assets/collectibles", icon: React.createElement(Gem, ICON), color: categoryPrimaryColors.collectibles, implemented: false },
+  // Holdings without a known category: counted in the totals, shown only
+  // when there are any
+  { id: "unclassified", name: "Unclassified", href: "/integrations", icon: React.createElement(HelpCircle, ICON), color: "#94a3b8", implemented: true },
+];
+
 /**
- * Hook to get the complete portfolio overview
- *
- * Aggregates data from all investment categories and liabilities.
+ * Hook to get the complete portfolio overview (base currency).
  */
-export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
+export function usePortfolioOverview(): {
   summary: PortfolioSummary | null;
   isLoading: boolean;
 } {
-  const { userId } = useAuth();
+  const overview = useQuery(api.portfolio.getOverview);
 
-  // Fetch all category summaries
-  const { summary: commoditiesSummary, isLoading: commoditiesLoading } =
-    useCommoditiesSummary(currency);
-  const { summary: equitiesSummary, isLoading: equitiesLoading } =
-    useEquitiesSummary();
-  const { summary: bondsSummary, isLoading: bondsLoading } = useBondsSummary();
-  const { summary: cryptoSummary, isLoading: cryptoLoading } =
-    useCryptoSummary();
-  const { summary: realEstateSummary, isLoading: realEstateLoading } =
-    useRealEstateSummary();
-  const { summary: cashSummary, isLoading: cashLoading } = useCashSummary();
-  const { summary: collectiblesSummary, isLoading: collectiblesLoading } =
-    useCollectiblesSummary();
-
-  // Fetch liabilities (mortgages, loans, credit cards, margin loans from Plaid + broker)
-  const { summary: liabilitiesSummary, isLoading: liabilitiesLoading } =
-    useLiabilitiesSummary();
-
-  // Fetch portfolio snapshots for historical performance
+  // Portfolio snapshots for the historical chart
   const portfolioSnapshots = useQuery(api.portfolioSnapshots.getSnapshots, {
     limit: 365,
   });
 
   const isLoading =
-    commoditiesLoading ||
-    equitiesLoading ||
-    bondsLoading ||
-    cryptoLoading ||
-    realEstateLoading ||
-    cashLoading ||
-    collectiblesLoading ||
-    liabilitiesLoading ||
-    portfolioSnapshots === undefined;
+    overview === undefined || portfolioSnapshots === undefined;
 
-  // Build portfolio summary
   const summary = useMemo<PortfolioSummary | null>(() => {
-    if (!userId) return null;
+    if (!overview) return null;
 
-    // Build asset categories array
-    const assetCategories: AssetCategoryData[] = [];
-
-    // 1. Equities
-    assetCategories.push({
-      id: "equities",
-      name: "Equities",
-      href: "/assets/equities",
-      icon: React.createElement(Briefcase, { className: "h-4 w-4" }),
-      color: categoryPrimaryColors.equities,
-      totalValue: equitiesSummary?.totalValue ?? 0,
-      costBasis: equitiesSummary?.totalCost ?? null,
-      profitLoss: equitiesSummary?.profitLoss ?? null,
-      profitLossPercent: equitiesSummary?.profitLossPercent ?? null,
-      holdingsCount:
-        equitiesSummary?.subcategories.reduce(
-          (sum, s) => sum + s.holdingsCount,
-          0,
-        ) ?? 0,
-      implemented:
-        equitiesSummary?.subcategories.some((s) => s.implemented) ?? false,
-    });
-
-    // 2. Commodities
-    assetCategories.push({
-      id: "commodities",
-      name: "Commodities",
-      href: "/assets/commodities",
-      icon: React.createElement(Coins, { className: "h-4 w-4" }),
-      color: categoryPrimaryColors.commodities,
-      totalValue: commoditiesSummary?.totalValue ?? 0,
-      costBasis: commoditiesSummary?.totalCost ?? null,
-      profitLoss: commoditiesSummary?.profitLoss ?? null,
-      profitLossPercent: commoditiesSummary?.profitLossPercent ?? null,
-      holdingsCount:
-        commoditiesSummary?.subcategories.reduce(
-          (sum, s) => sum + s.holdingsCount,
-          0,
-        ) ?? 0,
-      implemented:
-        commoditiesSummary?.subcategories.some((s) => s.implemented) ?? false,
-    });
-
-    // 3. Bonds
-    assetCategories.push({
-      id: "bonds",
-      name: "Bonds",
-      href: "/assets/bonds",
-      icon: React.createElement(Receipt, { className: "h-4 w-4" }),
-      color: categoryPrimaryColors.bonds,
-      totalValue: bondsSummary?.totalValue ?? 0,
-      costBasis: bondsSummary?.totalCost ?? null,
-      profitLoss: bondsSummary?.profitLoss ?? null,
-      profitLossPercent: bondsSummary?.profitLossPercent ?? null,
-      holdingsCount:
-        bondsSummary?.subcategories.reduce(
-          (sum, s) => sum + s.holdingsCount,
-          0,
-        ) ?? 0,
-      implemented:
-        bondsSummary?.subcategories.some((s) => s.implemented) ?? false,
-    });
-
-    // 4. Real Estate
-    assetCategories.push({
-      id: "real-estate",
-      name: "Real Estate",
-      href: "/assets/real-estate",
-      icon: React.createElement(Building2, { className: "h-4 w-4" }),
-      color: categoryPrimaryColors["real-estate"],
-      totalValue: realEstateSummary?.totalValue ?? 0,
-      costBasis: realEstateSummary?.totalCost ?? null,
-      profitLoss: realEstateSummary?.profitLoss ?? null,
-      profitLossPercent: realEstateSummary?.profitLossPercent ?? null,
-      holdingsCount:
-        realEstateSummary?.subcategories.reduce(
-          (sum, s) => sum + s.holdingsCount,
-          0,
-        ) ?? 0,
-      implemented:
-        realEstateSummary?.subcategories.some((s) => s.implemented) ?? false,
-    });
-
-    // 5. Cash
-    assetCategories.push({
-      id: "cash",
-      name: "Cash & Savings",
-      href: "/assets/cash",
-      icon: React.createElement(Banknote, { className: "h-4 w-4" }),
-      color: categoryPrimaryColors.cash,
-      totalValue: cashSummary?.totalValue ?? 0,
-      costBasis: cashSummary?.totalCost ?? null,
-      profitLoss: cashSummary?.profitLoss ?? null,
-      profitLossPercent: cashSummary?.profitLossPercent ?? null,
-      holdingsCount:
-        cashSummary?.subcategories.reduce(
-          (sum, s) => sum + s.holdingsCount,
-          0,
-        ) ?? 0,
-      implemented:
-        cashSummary?.subcategories.some((s) => s.implemented) ?? false,
-    });
-
-    // 6. Crypto
-    assetCategories.push({
-      id: "crypto",
-      name: "Cryptocurrency",
-      href: "/assets/crypto",
-      icon: React.createElement(Bitcoin, { className: "h-4 w-4" }),
-      color: categoryPrimaryColors.crypto,
-      totalValue: cryptoSummary?.totalValue ?? 0,
-      costBasis: cryptoSummary?.totalCost ?? null,
-      profitLoss: cryptoSummary?.profitLoss ?? null,
-      profitLossPercent: cryptoSummary?.profitLossPercent ?? null,
-      holdingsCount:
-        cryptoSummary?.subcategories.reduce(
-          (sum, s) => sum + s.holdingsCount,
-          0,
-        ) ?? 0,
-      implemented:
-        cryptoSummary?.subcategories.some((s) => s.implemented) ?? false,
-    });
-
-    // 7. Collectibles
-    assetCategories.push({
-      id: "collectibles",
-      name: "Collectibles",
-      href: "/assets/collectibles",
-      icon: React.createElement(Gem, { className: "h-4 w-4" }),
-      color: categoryPrimaryColors.collectibles,
-      totalValue: collectiblesSummary?.totalValue ?? 0,
-      costBasis: collectiblesSummary?.totalCost ?? null,
-      profitLoss: collectiblesSummary?.profitLoss ?? null,
-      profitLossPercent: collectiblesSummary?.profitLossPercent ?? null,
-      holdingsCount:
-        collectiblesSummary?.subcategories.reduce(
-          (sum, s) => sum + s.holdingsCount,
-          0,
-        ) ?? 0,
-      implemented:
-        collectiblesSummary?.subcategories.some((s) => s.implemented) ?? false,
-    });
-
-    // Calculate totals
-    const totalAssets = assetCategories.reduce(
-      (sum, cat) => sum + cat.totalValue,
-      0,
+    const byId = new Map(overview.categories.map((c) => [c.category, c]));
+    const assetCategories: AssetCategoryData[] = CATEGORY_CARDS.flatMap(
+      (card) => {
+        const c = byId.get(card.id);
+        if (card.id === "unclassified" && !c?.count) return [];
+        return [
+          {
+            ...card,
+            totalValue: c?.value ?? 0,
+            costBasis: c?.costBasis ?? null,
+            profitLoss: c?.profitLoss ?? null,
+            profitLossPercent: c?.profitLossPercent ?? null,
+            holdingsCount: c?.count ?? 0,
+            implemented: card.implemented || (c?.count ?? 0) > 0,
+          },
+        ];
+      },
     );
 
-    // Unrealised P/L over cost-bearing holdings only: each category's P/L
-    // already covers just its holdings with a cost basis; cash and other
-    // cost-less assets are not profit.
-    const unrealized = summarizeUnrealizedProfitLoss(
-      assetCategories.map((cat) => ({
-        value: cat.totalValue,
-        costBasis: cat.costBasis,
-        profitLoss: cat.profitLoss,
-      })),
-    );
-    const totalCostBasis = unrealized.costBasis;
-    const unrealizedProfitLoss = unrealized.profitLoss;
-    const unrealizedProfitLossPercent = unrealized.profitLossPercent;
-    const unrealizedProfitLossCoverage = unrealized.coverage;
+    const { totalAssets, unrealized } = overview;
+    const totalCostLine = costLine(totalAssets, unrealized.profitLoss);
 
-    // Liabilities summary from classified Plaid accounts + broker positions
-    const totalLiabilities = liabilitiesSummary?.totalValue ?? 0;
-    const liabilitiesCount =
-      liabilitiesSummary?.subcategories.reduce(
-        (sum, s) => sum + s.holdingsCount,
-        0,
-      ) ?? 0;
-
-    const liabilities: LiabilitiesSummaryData | null = liabilitiesSummary
-      ? {
-          totalBalance: liabilitiesSummary.totalValue ?? 0,
-          monthlyPayment: 0, // TODO: Calculate from payment schedules
-          loansCount: liabilitiesCount,
-          upcomingPaymentAmount: null,
-          upcomingPaymentDate: null,
-        }
-      : null;
-
-    // Net worth
-    const netWorth = totalAssets - totalLiabilities;
-
-    // Build history data points from portfolio snapshots
-    // Snapshots are taken after each sync and provide accurate historical tracking
+    // History from the daily snapshots
     const historyDataPoints: PortfolioDataPoint[] = (
       portfolioSnapshots ?? []
     ).map((snapshot) => ({
@@ -352,13 +207,10 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
         }) ?? 0,
     }));
 
-    // If we have no snapshots yet but have current data, add today's point
+    // Without a snapshot for today, add today's live point
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
-    const hasToday = historyDataPoints.some((p) => p.date === todayStr);
-    const totalCostLine = costLine(totalAssets, unrealizedProfitLoss);
-
-    if (!hasToday && totalAssets > 0) {
+    if (!historyDataPoints.some((p) => p.date === todayStr) && totalAssets > 0) {
       historyDataPoints.push({
         date: todayStr,
         timestamp: today.getTime(),
@@ -367,55 +219,21 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       });
     }
 
-    // Calculate YTD from history
-    let ytdProfitLoss: number | null = null;
-    let ytdProfitLossPercent: number | null = null;
-
-    if (historyDataPoints.length > 0) {
-      const currentYear = new Date().getFullYear();
-      const yearStartTimestamp = new Date(currentYear, 0, 1).getTime();
-
-      // Find the closest data point to year start
-      const yearStartPoint = historyDataPoints.find(
-        (p) => p.timestamp >= yearStartTimestamp,
-      );
-
-      if (yearStartPoint) {
-        const valueAtYearStart = yearStartPoint.value;
-        ytdProfitLoss = totalAssets - valueAtYearStart;
-        if (valueAtYearStart > 0) {
-          ytdProfitLossPercent = (ytdProfitLoss / valueAtYearStart) * 100;
-        }
-      }
-    }
-
     return {
       totalAssets,
-      totalLiabilities,
-      netWorth,
-      totalCostBasis,
+      totalLiabilities: overview.totalLiabilities,
+      netWorth: overview.netWorth,
+      totalCostBasis: unrealized.costBasis,
       costLine: totalCostLine,
-      unrealizedProfitLoss,
-      unrealizedProfitLossPercent,
-      unrealizedProfitLossCoverage,
-      ytdProfitLoss,
-      ytdProfitLossPercent,
+      unrealizedProfitLoss: unrealized.profitLoss,
+      unrealizedProfitLossPercent: unrealized.profitLossPercent,
+      unrealizedProfitLossCoverage: unrealized.coverage,
       assetCategories,
-      liabilities,
+      liabilities: overview.liabilities,
       historyDataPoints,
+      asOf: overview.asOf,
     };
-  }, [
-    userId,
-    commoditiesSummary,
-    equitiesSummary,
-    bondsSummary,
-    cryptoSummary,
-    realEstateSummary,
-    cashSummary,
-    collectiblesSummary,
-    liabilitiesSummary,
-    portfolioSnapshots,
-  ]);
+  }, [overview, portfolioSnapshots]);
 
   return { summary, isLoading };
 }

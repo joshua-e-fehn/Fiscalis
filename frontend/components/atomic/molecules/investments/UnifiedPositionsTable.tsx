@@ -34,7 +34,6 @@ import {
 } from "@/components/ui/shadcn/select";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { useUnifiedPositions } from "@/hooks/convex/providers";
-import { useAllMetalPrices } from "@/hooks/metals";
 import {
   Search,
   ArrowUpDown,
@@ -74,9 +73,12 @@ interface UnifiedPositionData {
   name: string;
   quantity: number;
   currentPrice?: number;
+  /** Native amount (signed) */
   marketValue: number;
   currency: string;
-  valueInBaseCurrency?: number;
+  /** Value in EUR (signed: a liability is negative) */
+  valueInBaseCurrency: number;
+  /** Cost basis in EUR */
   costBasis?: number;
   unrealizedPL?: number;
   unrealizedPLPercent?: number;
@@ -181,8 +183,6 @@ export function UnifiedPositionsTable({
   compact = false,
 }: UnifiedPositionsTableProps) {
   const { positions: rawPositions, isLoading } = useUnifiedPositions();
-  // Fetch metal prices for commodities valuation
-  const { data: metalPrices } = useAllMetalPrices();
 
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("value");
@@ -191,60 +191,9 @@ export function UnifiedPositionsTable({
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAll, setShowAll] = useState(false);
 
-  // Enrich positions with calculated market values for commodities
-  const positions = useMemo(() => {
-    // 1 troy ounce = 31.1035 grams
-    const TROY_OUNCE_TO_GRAMS = 31.1035;
-
-    const enriched = (rawPositions as UnifiedPositionData[]).map((p) => {
-      // For commodities (metals), calculate market value from spot prices
-      if (
-        p.provider === "manual" &&
-        p.category === "commodities" &&
-        metalPrices
-      ) {
-        const metadata = p.metadata as Record<string, unknown> | undefined;
-        const metalType = metadata?.metalType as string | undefined;
-        const fineWeightGrams = metadata?.fineWeightGrams as number | undefined;
-
-        if (metalType && fineWeightGrams) {
-          // Get spot price per ounce for this metal and convert to per gram
-          const currencyKey = currency.toLowerCase() as "eur" | "usd" | "chf";
-          let spotPricePerOunce = 0;
-
-          switch (metalType) {
-            case "gold":
-              spotPricePerOunce = metalPrices.gold?.[currencyKey] ?? 0;
-              break;
-            case "silver":
-              spotPricePerOunce = metalPrices.silver?.[currencyKey] ?? 0;
-              break;
-            case "platinum":
-              spotPricePerOunce = metalPrices.platinum?.[currencyKey] ?? 0;
-              break;
-            case "palladium":
-              spotPricePerOunce = metalPrices.palladium?.[currencyKey] ?? 0;
-              break;
-          }
-
-          // Convert price per ounce to price per gram
-          const spotPricePerGram = spotPricePerOunce / TROY_OUNCE_TO_GRAMS;
-
-          // Calculate total value: fine weight * quantity * spot price per gram
-          const marketValue = fineWeightGrams * p.quantity * spotPricePerGram;
-
-          return {
-            ...p,
-            marketValue,
-            currentPrice: spotPricePerGram,
-            valueInBaseCurrency: marketValue,
-          };
-        }
-      }
-      return p;
-    });
-    return enriched;
-  }, [rawPositions, metalPrices, currency]);
+  // Valued on the server in EUR (vault metals at spot included), with the
+  // classified category and P/L in EUR (convex/portfolio.ts)
+  const positions = rawPositions as UnifiedPositionData[];
 
   // Get unique categories from positions
   const categories = useMemo(() => {
@@ -286,7 +235,8 @@ export function UnifiedPositionsTable({
           comparison = a.name.localeCompare(b.name);
           break;
         case "value":
-          comparison = Math.abs(a.marketValue) - Math.abs(b.marketValue);
+          comparison =
+            Math.abs(a.valueInBaseCurrency) - Math.abs(b.valueInBaseCurrency);
           break;
         case "quantity":
           comparison = a.quantity - b.quantity;
@@ -523,7 +473,7 @@ export function UnifiedPositionsTable({
                   position.unrealizedPL !== undefined &&
                   position.unrealizedPL !== 0;
                 const isPositive = (position.unrealizedPL ?? 0) > 0;
-                const isNegativeValue = position.marketValue < 0;
+                const isNegativeValue = position.valueInBaseCurrency < 0;
 
                 return (
                   <TableRow key={`${position.provider}-${position.id}`}>
@@ -600,10 +550,7 @@ export function UnifiedPositionsTable({
                         isNegativeValue && "text-red-500",
                       )}
                     >
-                      {formatCurrency(
-                        position.valueInBaseCurrency ?? position.marketValue,
-                        currency,
-                      )}
+                      {formatCurrency(position.valueInBaseCurrency, currency)}
                       {position.currency !== currency.toUpperCase() && (
                         <div className="text-xs text-muted-foreground">
                           {formatCurrency(
@@ -663,7 +610,7 @@ export function UnifiedPositionsTable({
               Total:{" "}
               {formatCurrency(
                 filteredPositions.reduce(
-                  (sum, p) => sum + (p.valueInBaseCurrency ?? p.marketValue),
+                  (sum, p) => sum + p.valueInBaseCurrency,
                   0,
                 ),
                 currency,

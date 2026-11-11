@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import {
+  useBaseCurrency,
   usePortfolioOverview,
   AssetCategoryData,
+  LiabilitiesSummaryData,
 } from "@/hooks/convex/portfolio";
 import {
   CategoryPerformanceChart,
@@ -21,7 +23,7 @@ import {
 } from "@/components/atomic/molecules/investments";
 import { RetirementTeaserCard } from "@/components/atomic/molecules/retirement";
 import { InvestmentCurrency } from "@/lib/types/investments";
-import { currencyCodes } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import {
   TrendingUp,
   TrendingDown,
@@ -39,16 +41,6 @@ import { useNetWorthYTD, usePortfolioChartData } from "@/hooks/performance";
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
 // ═══════════════════════════════════════════════════════════════
-
-function formatCurrency(value: number, currency: InvestmentCurrency): string {
-  const currencyCode = currencyCodes[currency];
-  return new Intl.NumberFormat("de-DE", {
-    style: "currency",
-    currency: currencyCode,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatPercent(value: number | null): string {
   if (value === null) return "—";
@@ -495,20 +487,18 @@ function CategoryCard({ category, currency }: CategoryCardProps) {
 // ═══════════════════════════════════════════════════════════════
 
 interface LiabilitiesCardProps {
-  totalBalance: number;
-  monthlyPayment: number;
-  loansCount: number;
+  liabilities: LiabilitiesSummaryData;
   currency: InvestmentCurrency;
   isLoading?: boolean;
 }
 
 function LiabilitiesCard({
-  totalBalance,
-  monthlyPayment,
-  loansCount,
+  liabilities,
   currency,
   isLoading = false,
 }: LiabilitiesCardProps) {
+  const { totalBalance, monthlyPayment, loansCount, accountsCount } =
+    liabilities;
   return (
     <Link href="/liabilities">
       <Card className="hover:shadow-md hover:border-primary/50 transition-all cursor-pointer border-loss/20 bg-loss/5 h-full">
@@ -529,15 +519,18 @@ function LiabilitiesCard({
               <div className="text-xl font-semibold text-loss">
                 {formatCurrency(totalBalance, currency)}
               </div>
-              {loansCount > 0 && (
-                <>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {loansCount} active loan{loansCount !== 1 ? "s" : ""}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatCurrency(monthlyPayment, currency)}/month
-                  </p>
-                </>
+              {accountsCount > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {accountsCount} account{accountsCount !== 1 ? "s" : ""}
+                  {loansCount > 0 &&
+                    ` · ${loansCount} loan${loansCount !== 1 ? "s" : ""}`}
+                </p>
+              )}
+              {monthlyPayment > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {formatCurrency(monthlyPayment, currency)}/month in loan
+                  payments
+                </p>
               )}
             </>
           )}
@@ -552,8 +545,8 @@ function LiabilitiesCard({
 // ═══════════════════════════════════════════════════════════════
 
 export default function DashboardPage() {
-  const currency: InvestmentCurrency = "eur";
-  const { summary, isLoading } = usePortfolioOverview(currency);
+  const currency = useBaseCurrency();
+  const { summary, isLoading } = usePortfolioOverview();
   const netWorthYTD = useNetWorthYTD();
 
   // Portfolio chart: snapshot totals only, nothing before tracking started
@@ -660,9 +653,7 @@ export default function DashboardPage() {
           {/* Liabilities Card */}
           {summary?.liabilities && (
             <LiabilitiesCard
-              totalBalance={summary.liabilities.totalBalance}
-              monthlyPayment={summary.liabilities.monthlyPayment}
-              loansCount={summary.liabilities.loansCount}
+              liabilities={summary.liabilities}
               currency={currency}
               isLoading={isLoading}
             />

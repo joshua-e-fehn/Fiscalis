@@ -1,4 +1,5 @@
 import { QueryCtx } from "../_generated/server";
+import { valueVaultItem } from "./priceCalculations";
 
 /**
  * Server-side net worth for one user, computed from the stored documents.
@@ -8,7 +9,10 @@ import { QueryCtx } from "../_generated/server";
  * (`GET /api/v1/net-worth`). Values are in the base currency (EUR) that the
  * providers' `valueInBaseCurrency` fields are normalised to.
  *
- * Known limitation: vault items are valued at purchase price, not live spot.
+ * Vault items are valued at live spot (metalSpotPrices, refreshed by
+ * convex/metalPrices.ts) using the dashboard's formula; an item falls back to
+ * purchase price when its metal has no spot price fresher than
+ * SPOT_PRICE_MAX_AGE_MS.
  */
 export async function computeNetWorth(ctx: QueryCtx, userId: string) {
   // Calculate total assets from all sources
@@ -112,23 +116,32 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     brokerCashValue += cashBalance;
   }
 
-  // 3. Vault items (commodities)
-  // Note: We don't have live prices here, so we use the quantity * purchasePricePerUnit as estimate
-  // The actual market value needs to be calculated with current spot prices
+  // 3. Vault items (commodities), valued at live spot like the dashboard,
+  //    falling back to purchase price when no fresh spot price exists.
   const vaultItems = await ctx.db
     .query("vaultItems")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
 
+  const spotByMetal = new Map(
+    (await ctx.db.query("metalSpotPrices").collect()).map((p) => [
+      p.metalType,
+      p,
+    ]),
+  );
+  const now = Date.now();
+
   let commoditiesValue = 0;
   let commoditiesCost = 0;
 
   for (const item of vaultItems) {
-    // Use purchase price as value estimate (actual market value needs live prices)
-    const itemCost = (item.purchasePricePerUnit ?? 0) * item.quantity;
-    commoditiesCost += itemCost;
-    // For now, use cost as value (can be improved with live price lookup later)
-    commoditiesValue += itemCost;
+    const { value, cost } = valueVaultItem(
+      item,
+      spotByMetal.get(item.metalType),
+      now,
+    );
+    commoditiesCost += cost;
+    commoditiesValue += value;
   }
 
   // 4. Bitpanda holdings (mixed: crypto, metals, commodities, stocks, fiat)

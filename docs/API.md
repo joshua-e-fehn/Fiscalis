@@ -39,7 +39,9 @@ The settings page shows the exact URL for your deployment.
 
 The value is computed live from your stored accounts, the same way as the
 portfolio snapshots (`frontend/convex/lib/netWorth.ts`). It reflects the last
-provider sync. Vault items are valued at purchase price.
+provider sync. Vault metals are valued at live spot (refreshed every 15 minutes),
+the same way as the dashboard. An item falls back to its purchase price if no
+spot price from the last 7 days is available.
 
 ### Errors
 

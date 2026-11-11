@@ -258,3 +258,103 @@ export function formatPercentage(
   const sign = percentage >= 0 ? "+" : "";
   return `${sign}${percentage.toFixed(decimals)}%`;
 }
+
+// ============================================
+// Server-side vault valuation (net worth, API, snapshots)
+// ============================================
+
+export type SpotMetal = "gold" | "silver" | "platinum" | "palladium";
+
+export const SPOT_METALS: readonly SpotMetal[] = [
+  "gold",
+  "silver",
+  "platinum",
+  "palladium",
+];
+
+/** Latest EUR spot price per troy ounce for one metal. */
+export interface SpotPrice {
+  metalType: SpotMetal;
+  eurPerOunce: number;
+  /** When the price was observed upstream (ms since epoch). */
+  sourceTimestamp: number;
+}
+
+/**
+ * A spot price older than this is not trusted for valuation; the item falls
+ * back to its purchase price. Generous enough to cover weekends/holidays.
+ */
+export const SPOT_PRICE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Tolerated clock skew for upstream timestamps that lie in the future. */
+export const SPOT_PRICE_MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+/**
+ * Value a vault item the same way the dashboard does
+ * (`hooks/convex/metals.ts` enrichItemWithValuation): liquidation value at
+ * spot, i.e. `calculateSellPrice(spot, fineWeightGrams, sellPremium ?? 0, qty)`.
+ *
+ * Falls back to purchase price when no fresh spot price is available, so a
+ * price-feed outage never silently zeroes a holding.
+ */
+export function valueVaultItem(
+  item: {
+    fineWeightGrams: number;
+    quantity: number;
+    sellPremium?: number;
+    purchasePricePerUnit?: number;
+  },
+  spot: SpotPrice | undefined,
+  now: number,
+): { value: number; cost: number; pricedAtSpot: boolean } {
+  const cost = (item.purchasePricePerUnit ?? 0) * item.quantity;
+  const age = spot ? now - spot.sourceTimestamp : NaN;
+  const fresh =
+    spot !== undefined &&
+    Number.isFinite(spot.eurPerOunce) &&
+    spot.eurPerOunce > 0 &&
+    age <= SPOT_PRICE_MAX_AGE_MS &&
+    age >= -SPOT_PRICE_MAX_FUTURE_SKEW_MS;
+
+  if (!fresh) return { value: cost, cost, pricedAtSpot: false };
+
+  return {
+    value: calculateSellPrice(
+      spot.eurPerOunce,
+      item.fineWeightGrams,
+      item.sellPremium ?? 0,
+      item.quantity,
+    ),
+    cost,
+    pricedAtSpot: true,
+  };
+}
+
+/**
+ * Parse the JSON of `GET /api/metals/prices/all/latest` into EUR spot prices.
+ * Untrusted input: anything missing, non-numeric or non-positive is dropped,
+ * and an unparseable or future timestamp rejects the whole payload.
+ */
+export function parseLatestMetalPrices(
+  json: unknown,
+  now: number,
+): SpotPrice[] {
+  if (typeof json !== "object" || json === null) return [];
+  const body = json as Record<string, unknown>;
+  const sourceTimestamp =
+    typeof body.timestamp === "string" ? Date.parse(body.timestamp) : NaN;
+  if (!Number.isFinite(sourceTimestamp)) return [];
+  // A future timestamp would freeze the mirror (newer-wins upsert) and look
+  // fresh forever, so reject it outright.
+  if (sourceTimestamp - now > SPOT_PRICE_MAX_FUTURE_SKEW_MS) return [];
+
+  const prices: SpotPrice[] = [];
+  for (const metalType of SPOT_METALS) {
+    const entry = body[metalType] as Record<string, unknown> | undefined;
+    const eur = entry?.eur;
+    if (typeof eur === "number" && Number.isFinite(eur) && eur > 0) {
+      prices.push({ metalType, eurPerOunce: eur, sourceTimestamp });
+    }
+  }
+  return prices;
+}

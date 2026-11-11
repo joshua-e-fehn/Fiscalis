@@ -39,6 +39,9 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/api/world-data(.*)", // Public World Bank data API
   "/api/worldbank/sync(.*)", // Public World Bank sync API (for cron jobs)
+  // Latest public metal spot prices (market data, no user data). Pulled by the
+  // Convex cron in convex/metalPrices.ts to value vault items server-side.
+  "/api/metals/prices/all/latest",
 ]);
 
 export default clerkMiddleware(

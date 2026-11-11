@@ -1,7 +1,10 @@
 import { v } from "convex/values";
 import { internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { parseLatestMetalPrices } from "./lib/priceCalculations";
+import {
+  SPOT_PRICE_MAX_FUTURE_SKEW_MS,
+  parseLatestMetalPrices,
+} from "./lib/priceCalculations";
 
 /**
  * Mirror of the latest precious-metal spot prices into Convex.
@@ -38,7 +41,7 @@ export const refreshSpotPrices = internalAction({
       throw new Error(`Metal price fetch failed: HTTP ${response.status}`);
     }
 
-    const prices = parseLatestMetalPrices(await response.json());
+    const prices = parseLatestMetalPrices(await response.json(), Date.now());
     if (prices.length === 0) {
       throw new Error("Metal price fetch returned no usable prices");
     }
@@ -73,7 +76,11 @@ export const upsertSpotPrices = internalMutation({
       if (!existing) {
         await ctx.db.insert("metalSpotPrices", { ...price, fetchedAt });
         updated++;
-      } else if (price.sourceTimestamp > existing.sourceTimestamp) {
+      } else if (
+        price.sourceTimestamp > existing.sourceTimestamp ||
+        // Self-heal a stored row whose timestamp lies in the future.
+        existing.sourceTimestamp - fetchedAt > SPOT_PRICE_MAX_FUTURE_SKEW_MS
+      ) {
         await ctx.db.patch(existing._id, { ...price, fetchedAt });
         updated++;
       }

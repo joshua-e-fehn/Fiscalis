@@ -286,6 +286,9 @@ export interface SpotPrice {
  */
 export const SPOT_PRICE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Tolerated clock skew for upstream timestamps that lie in the future. */
+export const SPOT_PRICE_MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
 /**
  * Value a vault item the same way the dashboard does
  * (`hooks/convex/metals.ts` enrichItemWithValuation): liquidation value at
@@ -305,11 +308,13 @@ export function valueVaultItem(
   now: number,
 ): { value: number; cost: number; pricedAtSpot: boolean } {
   const cost = (item.purchasePricePerUnit ?? 0) * item.quantity;
+  const age = spot ? now - spot.sourceTimestamp : NaN;
   const fresh =
     spot !== undefined &&
     Number.isFinite(spot.eurPerOunce) &&
     spot.eurPerOunce > 0 &&
-    now - spot.sourceTimestamp <= SPOT_PRICE_MAX_AGE_MS;
+    age <= SPOT_PRICE_MAX_AGE_MS &&
+    age >= -SPOT_PRICE_MAX_FUTURE_SKEW_MS;
 
   if (!fresh) return { value: cost, cost, pricedAtSpot: false };
 
@@ -328,14 +333,20 @@ export function valueVaultItem(
 /**
  * Parse the JSON of `GET /api/metals/prices/all/latest` into EUR spot prices.
  * Untrusted input: anything missing, non-numeric or non-positive is dropped,
- * and an unparseable timestamp rejects the whole payload.
+ * and an unparseable or future timestamp rejects the whole payload.
  */
-export function parseLatestMetalPrices(json: unknown): SpotPrice[] {
+export function parseLatestMetalPrices(
+  json: unknown,
+  now: number,
+): SpotPrice[] {
   if (typeof json !== "object" || json === null) return [];
   const body = json as Record<string, unknown>;
   const sourceTimestamp =
     typeof body.timestamp === "string" ? Date.parse(body.timestamp) : NaN;
   if (!Number.isFinite(sourceTimestamp)) return [];
+  // A future timestamp would freeze the mirror (newer-wins upsert) and look
+  // fresh forever, so reject it outright.
+  if (sourceTimestamp - now > SPOT_PRICE_MAX_FUTURE_SKEW_MS) return [];
 
   const prices: SpotPrice[] = [];
   for (const metalType of SPOT_METALS) {

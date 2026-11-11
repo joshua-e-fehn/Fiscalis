@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   SPOT_PRICE_MAX_AGE_MS,
+  SPOT_PRICE_MAX_FUTURE_SKEW_MS,
   TROY_OUNCE_GRAMS,
   parseLatestMetalPrices,
   valueVaultItem,
@@ -50,6 +51,12 @@ describe("valueVaultItem", () => {
     ).toBe(4000);
   });
 
+  it("does not treat a future-dated spot price as fresh", () => {
+    const item = { ...oneOzGold, purchasePricePerUnit: 1 };
+    const future = { ...spot(3000), sourceTimestamp: NOW + SPOT_PRICE_MAX_FUTURE_SKEW_MS + 1 };
+    expect(valueVaultItem(item, future, NOW).pricedAtSpot).toBe(false);
+  });
+
   it("ignores non-positive or non-finite spot prices", () => {
     const item = { ...oneOzGold, purchasePricePerUnit: 1 };
     expect(valueVaultItem(item, spot(0), NOW).pricedAtSpot).toBe(false);
@@ -64,32 +71,35 @@ describe("parseLatestMetalPrices", () => {
     platinum: { eur: 1404.37, usd: 1600, chf: null },
     palladium: { eur: 972.91, usd: 1100, chf: null },
     exchangeRates: { eurToUsd: 1.16, eurToChf: 0.94 },
-    timestamp: "2026-11-11T12:18:00.000Z",
+    timestamp: "2026-11-11T11:48:00.000Z",
   };
 
   it("extracts EUR prices with the upstream timestamp", () => {
-    const prices = parseLatestMetalPrices(payload);
+    const prices = parseLatestMetalPrices(payload, NOW);
     expect(prices).toHaveLength(4);
     expect(prices[0]).toEqual({
       metalType: "gold",
       eurPerOunce: 3632.65,
-      sourceTimestamp: Date.parse("2026-11-11T12:18:00.000Z"),
+      sourceTimestamp: Date.parse("2026-11-11T11:48:00.000Z"),
     });
   });
 
   it("drops invalid metal entries and keeps the rest", () => {
-    const prices = parseLatestMetalPrices({
-      ...payload,
-      silver: { eur: "47" },
-      platinum: { eur: -1 },
-      palladium: null,
-    });
+    const prices = parseLatestMetalPrices(
+      { ...payload, silver: { eur: "47" }, platinum: { eur: -1 }, palladium: null },
+      NOW,
+    );
     expect(prices.map((p) => p.metalType)).toEqual(["gold"]);
   });
 
   it("rejects payloads without a valid timestamp or object shape", () => {
-    expect(parseLatestMetalPrices({ ...payload, timestamp: "nope" })).toEqual([]);
-    expect(parseLatestMetalPrices(null)).toEqual([]);
-    expect(parseLatestMetalPrices("x")).toEqual([]);
+    expect(parseLatestMetalPrices({ ...payload, timestamp: "nope" }, NOW)).toEqual([]);
+    expect(parseLatestMetalPrices(null, NOW)).toEqual([]);
+    expect(parseLatestMetalPrices("x", NOW)).toEqual([]);
+  });
+
+  it("rejects a timestamp beyond the allowed future skew", () => {
+    const future = new Date(NOW + SPOT_PRICE_MAX_FUTURE_SKEW_MS + 1).toISOString();
+    expect(parseLatestMetalPrices({ ...payload, timestamp: future }, NOW)).toEqual([]);
   });
 });

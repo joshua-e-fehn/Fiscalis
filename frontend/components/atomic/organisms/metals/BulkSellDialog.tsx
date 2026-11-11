@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "convex/react";
+import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -29,6 +30,10 @@ import {
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
+import {
+  saleProfitLoss,
+  sumSaleProfitLoss,
+} from "@/../services/finance/metalsLedger";
 import {
   Loader2,
   TrendingUp,
@@ -70,7 +75,7 @@ export function BulkSellDialog({
   // Track each item's sell data
   const [sellEntries, setSellEntries] = useState<SellItemEntry[]>([]);
 
-  const addTransaction = useMutation(api.vault.addTransaction);
+  const sellItems = useMutation(api.vault.sellItems);
 
   // Initialize sell entries when dialog opens
   useEffect(() => {
@@ -88,41 +93,32 @@ export function BulkSellDialog({
     }
   }, [isOpen, items, currency]);
 
-  // Calculate totals
+  // P/L of each sale against its item's average cost (EUR), as the ledger
+  // will realize it; not comparable with a price in another currency
+  const previews = useMemo(
+    () =>
+      sellEntries.map((entry) => {
+        const sale = saleProfitLoss(
+          entry.item.averageCost,
+          entry.quantity,
+          parseFloat(entry.pricePerUnit) || 0,
+        );
+        return saleCurrency === "EUR"
+          ? sale
+          : { ...sale, costBasis: null, profitLoss: null, profitLossPercent: null };
+      }),
+    [sellEntries, saleCurrency],
+  );
+
   const totals = useMemo(() => {
-    let totalSaleValue = 0;
-    let totalCostBasis = 0;
-    let hasCompleteCostData = true;
-    let itemCount = 0;
-
-    for (const entry of sellEntries) {
-      const price = parseFloat(entry.pricePerUnit) || 0;
-      const saleValue = price * entry.quantity;
-      totalSaleValue += saleValue;
-      itemCount += entry.quantity;
-
-      if (entry.item.purchasePricePerUnit) {
-        totalCostBasis += entry.item.purchasePricePerUnit * entry.quantity;
-      } else {
-        hasCompleteCostData = false;
-      }
-    }
-
-    const profit = hasCompleteCostData ? totalSaleValue - totalCostBasis : null;
-    const profitPercent =
-      hasCompleteCostData && totalCostBasis > 0
-        ? ((totalSaleValue - totalCostBasis) / totalCostBasis) * 100
-        : null;
-
+    const sum = sumSaleProfitLoss(previews);
     return {
-      totalSaleValue,
-      totalCostBasis,
-      profit,
-      profitPercent,
-      itemCount,
-      hasCompleteCostData,
+      totalSaleValue: sum.proceeds,
+      profit: sum.profitLoss,
+      profitPercent: sum.profitLossPercent,
+      itemCount: sellEntries.reduce((n, e) => n + e.quantity, 0),
     };
-  }, [sellEntries]);
+  }, [previews, sellEntries]);
 
   // Update a specific entry
   const updateEntry = (index: number, updates: Partial<SellItemEntry>) => {
@@ -152,23 +148,26 @@ export function BulkSellDialog({
 
     setIsSubmitting(true);
     try {
-      // Process each sale
-      for (const entry of sellEntries) {
-        await addTransaction({
+      // One mutation: every sale is recorded, or none is
+      await sellItems({
+        sales: sellEntries.map((entry) => ({
           vaultItemId: entry.item._id as Id<"vaultItems">,
-          transactionType: "sell",
           quantity: entry.quantity,
           pricePerUnit: parseFloat(entry.pricePerUnit),
-          currency: saleCurrency,
-          transactionDate: saleDate,
           notes: `Bulk sale of ${entry.quantity} × ${entry.item.displayName}`,
-        });
-      }
+        })),
+        currency: saleCurrency,
+        transactionDate: saleDate,
+      });
       onSuccess?.();
       onClose();
     } catch (err) {
       console.error("Failed to record sales:", err);
-      setError("Failed to record sales. Please try again.");
+      setError(
+        err instanceof ConvexError
+          ? String(err.data)
+          : "Failed to record sales. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -224,13 +223,8 @@ export function BulkSellDialog({
           <div className="flex-1 min-h-0 py-4 overflow-y-auto">
             <div className="space-y-4 pr-4">
               {sellEntries.map((entry, index) => {
-                const price = parseFloat(entry.pricePerUnit) || 0;
-                const saleValue = price * entry.quantity;
-                const costBasis = entry.item.purchasePricePerUnit
-                  ? entry.item.purchasePricePerUnit * entry.quantity
-                  : null;
-                const profit =
-                  costBasis !== null ? saleValue - costBasis : null;
+                const saleValue = previews[index]?.proceeds ?? 0;
+                const profit = previews[index]?.profitLoss ?? null;
 
                 return (
                   <div

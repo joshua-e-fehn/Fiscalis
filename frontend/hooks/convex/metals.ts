@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -5,7 +6,6 @@ import { useMetalsPrices, getSpotPrice } from "@/hooks/metals";
 import {
   MetalsPrices,
   MetalItemWithValuation,
-  MetalsSummary,
   MetalsType,
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
@@ -13,6 +13,7 @@ import {
   resolvePremiums,
   summarizeMetalItems,
   valueMetalItem,
+  type MetalsPortfolioSummary,
 } from "@/../services/finance/metals";
 
 // ═══════════════════════════════════════════════════════════════
@@ -31,10 +32,13 @@ interface UseMetalsReturn {
 
 /** Return type for useMetalsSummary hook */
 interface UseMetalsSummaryReturn {
-  summary: MetalsSummary | undefined;
+  /** Unrealized, realized and total P/L; undefined until prices load */
+  summary: MetalsPortfolioSummary | undefined;
   isLoading: boolean;
   isError: boolean;
   pricesLoading: boolean;
+  /** When the spot prices were observed (ms); null without prices */
+  pricesAsOf: number | null;
 }
 
 /** Return type for useMetalItem hook */
@@ -75,13 +79,21 @@ function enrichItemWithValuation(
     sell: [item.sellPremium],
   });
 
+  // Quantity and average cost from the item's replayed ledger; the cached
+  // item fields only when the ledger cannot be replayed
+  const { ledger } = item;
+  const quantity = ledger ? ledger.quantity : item.quantity;
+  const averageCost = ledger
+    ? ledger.averageCost
+    : (item.purchasePricePerUnit ?? null);
+
   const valuation = valueMetalItem(
     {
       fineWeightGrams: item.fineWeightGrams,
-      quantity: item.quantity,
+      quantity,
       buyPremium,
       sellPremium,
-      purchasePricePerUnit: item.purchasePricePerUnit ?? undefined,
+      purchasePricePerUnit: averageCost ?? undefined,
     },
     { pricePerOunce: spotPrice, sourceTimestamp: spotTimestamp },
     Date.now(),
@@ -97,12 +109,13 @@ function enrichItemWithValuation(
     purity: item.purity,
     weightGrams: item.weightGrams,
     fineWeightGrams: item.fineWeightGrams,
-    quantity: item.quantity,
+    quantity,
     buyPremium,
     sellPremium,
-    purchasePricePerUnit: item.purchasePricePerUnit ?? undefined,
+    purchasePricePerUnit: averageCost ?? undefined,
     purchaseDate: item.purchaseDate ?? undefined,
-    purchaseCurrency: item.purchaseCurrency ?? undefined,
+    // The ledger's average cost is in EUR whatever the purchases were paid in
+    purchaseCurrency: ledger ? "EUR" : (item.purchaseCurrency ?? undefined),
     storageLocation: item.storageLocation ?? undefined,
     notes: item.notes ?? undefined,
     createdAt: item.createdAt,
@@ -117,6 +130,13 @@ function enrichItemWithValuation(
         }
       : undefined,
     ...valuation,
+    averageCost,
+    realizedProfitLoss: ledger
+      ? ledger.realizedComplete
+        ? ledger.realizedProfitLoss
+        : null
+      : 0,
+    soldCost: ledger?.soldCost ?? 0,
   };
 }
 
@@ -143,8 +163,10 @@ export function useMetals(currency: MetalsCurrency = "eur"): UseMetalsReturn {
   } = useMetalsPrices();
 
   // Enrich items with valuations
-  const enrichedItems = metalItems?.map((item) =>
-    enrichItemWithValuation(item, prices, currency),
+  const enrichedItems = useMemo(
+    () =>
+      metalItems?.map((item) => enrichItemWithValuation(item, prices, currency)),
+    [metalItems, prices, currency],
   );
 
   return {
@@ -167,19 +189,24 @@ export function useMetalsSummary(
   currency: MetalsCurrency = "eur",
 ): UseMetalsSummaryReturn {
   // Get all items with valuations
-  const { items, isLoading, isError, pricesLoading } = useMetals(currency);
+  const { items, isLoading, isError, pricesLoading, prices } =
+    useMetals(currency);
 
-  // Per-metal and total summary; cost and P/L cover only items with a
-  // purchase price (see summarizeMetalItems).
-  const summary: MetalsSummary | undefined = items
-    ? summarizeMetalItems(items)
-    : undefined;
+  // Per-metal and total summary; unrealized cost and P/L cover only items
+  // with a cost (see summarizeMetalItems), total P/L adds realized sales.
+  // Gated on the prices: before they load every item would sit at cost.
+  const summary = useMemo(
+    () => (items && !pricesLoading ? summarizeMetalItems(items) : undefined),
+    [items, pricesLoading],
+  );
+  const asOf = prices?.all?.timestamp ? Date.parse(prices.all.timestamp) : NaN;
 
   return {
     summary,
-    isLoading,
+    isLoading: isLoading || pricesLoading,
     isError,
     pricesLoading,
+    pricesAsOf: Number.isFinite(asOf) ? asOf : null,
   };
 }
 

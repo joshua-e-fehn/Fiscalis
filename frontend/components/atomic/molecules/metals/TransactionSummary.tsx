@@ -13,9 +13,16 @@ import {
 } from "lucide-react";
 
 interface TransactionSummaryProps {
+  /** The listed transactions: the bought / sold / cash-flow totals */
   transactions: Transaction[];
   displayCurrency?: "eur" | "usd" | "chf";
+  /**
+   * P/L of the whole vault, independent of the list's filters: realized
+   * per item from its unfiltered ledger at average cost (MetalsSummary)
+   */
+  realizedPL?: number | null;
   unrealizedPL?: number | null;
+  totalPL?: number | null;
   className?: string;
 }
 
@@ -38,7 +45,9 @@ function formatCurrency(value: number, currency: string): string {
 export function TransactionSummary({
   transactions,
   displayCurrency = "eur",
+  realizedPL = null,
   unrealizedPL = null,
+  totalPL = null,
   className,
 }: TransactionSummaryProps) {
   const summary = useMemo(() => {
@@ -46,8 +55,6 @@ export function TransactionSummary({
     let totalSold = 0;
     let buyCount = 0;
     let sellCount = 0;
-    let totalUnitsBought = 0;
-    let totalUnitsSold = 0;
 
     for (const tx of transactions) {
       const total = tx.pricePerUnit * tx.quantity;
@@ -56,26 +63,11 @@ export function TransactionSummary({
         tx.transactionType === "gift_received"
       ) {
         totalBought += total;
-        totalUnitsBought += tx.quantity;
         buyCount++;
       } else {
         totalSold += total;
-        totalUnitsSold += tx.quantity;
         sellCount++;
       }
-    }
-
-    // Calculate Realized P/L using average cost basis method
-    // Average cost = Total spent on buys / Total units bought
-    // Realized P/L = Sales proceeds - (Average cost × units sold)
-    let realizedPL: number | null = null;
-    if (totalUnitsBought > 0 && totalUnitsSold > 0) {
-      const averageCostPerUnit = totalBought / totalUnitsBought;
-      const costBasisOfSoldItems = averageCostPerUnit * totalUnitsSold;
-      realizedPL = totalSold - costBasisOfSoldItems;
-    } else if (totalUnitsSold === 0) {
-      // No sales yet, so realized P/L is 0
-      realizedPL = 0;
     }
 
     return {
@@ -87,14 +79,10 @@ export function TransactionSummary({
       totalCount: buyCount + sellCount,
       realizedPL,
     };
-  }, [transactions]);
+  }, [transactions, realizedPL]);
 
   const isNetOutflow = summary.cashFlow >= 0;
   const hasUnrealizedPL = unrealizedPL !== null;
-  const totalPL =
-    summary.realizedPL !== null && hasUnrealizedPL
-      ? summary.realizedPL + unrealizedPL
-      : null;
 
   return (
     <Card className={cn(className)}>
@@ -171,7 +159,7 @@ export function TransactionSummary({
                   {formatCurrency(summary.realizedPL, displayCurrency)}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  From sales (avg. cost)
+                  From sales (avg. cost per item)
                 </div>
               </>
             ) : (

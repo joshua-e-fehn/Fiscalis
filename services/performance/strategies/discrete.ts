@@ -149,10 +149,9 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     const timestamps = this.generateTimestampSeries(context);
 
     // Snapshots are stamped at sync time, never exactly on the grid. A grid
-    // point counts as backed by a real snapshot when one lies within half an
-    // interval of it.
-    const matchToleranceMs =
-      getTimeIntervalInMilliseconds(context.interval) / 2;
+    // point counts as backed by a real snapshot when the latest one at or
+    // before it lies within one interval (see getValueAtTimestamp).
+    const intervalMs = getTimeIntervalInMilliseconds(context.interval);
 
     // Build data points by mapping timestamps to values
     const dataPoints: PerformanceDataPoint[] = [];
@@ -162,7 +161,7 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       const point = this.getValueAtTimestamp(
         snapshotValues,
         ts,
-        matchToleranceMs,
+        intervalMs,
       );
       if (point) {
         dataPoints.push(point);
@@ -234,23 +233,31 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
   }
 
   /**
-   * Get value at a grid timestamp.
-   * Uses the nearest real snapshot within `toleranceMs` (source "snapshot",
-   * kept on the grid timestamp); otherwise interpolates between neighbours.
+   * Get value at a grid timestamp, without looking ahead:
+   * - the latest real snapshot at or before the grid point, when it lies
+   *   within one interval, is the value as known at that time (source
+   *   "snapshot", kept on the grid timestamp);
+   * - with no snapshot at or before the grid point at all (start of history),
+   *   the first one after it counts when it lies within half an interval;
+   * - otherwise the value is interpolated between neighbours.
    */
   private getValueAtTimestamp(
     snapshotValues: SnapshotValue[],
     timestamp: number,
-    toleranceMs: number,
+    intervalMs: number,
   ): PerformanceDataPoint | null {
     if (snapshotValues.length === 0) return null;
 
-    const nearest = this.findNearestSnapshot(snapshotValues, timestamp);
-    if (nearest && Math.abs(nearest.timestamp - timestamp) <= toleranceMs) {
+    const matched = this.findMatchingSnapshot(
+      snapshotValues,
+      timestamp,
+      intervalMs,
+    );
+    if (matched) {
       return this.createSnapshotPoint(
         timestamp,
-        nearest.value,
-        nearest.costBasis,
+        matched.value,
+        matched.costBasis,
       );
     }
 
@@ -297,22 +304,22 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
   }
 
   /**
-   * Find the snapshot closest in time to a timestamp (ties go to the later one,
-   * which carries the newer value).
+   * The snapshot that backs a grid point (see getValueAtTimestamp), or null.
    */
-  private findNearestSnapshot(
+  private findMatchingSnapshot(
     snapshotValues: SnapshotValue[],
     timestamp: number,
+    intervalMs: number,
   ): SnapshotValue | null {
     const { before, after } = this.findSurroundingSnapshots(
       snapshotValues,
       timestamp,
     );
-    if (!before) return after;
-    if (!after) return before;
-    return timestamp - before.timestamp < after.timestamp - timestamp
-      ? before
-      : after;
+    if (before) {
+      return timestamp - before.timestamp <= intervalMs ? before : null;
+    }
+    if (after && after.timestamp - timestamp <= intervalMs / 2) return after;
+    return null;
   }
 
   /**

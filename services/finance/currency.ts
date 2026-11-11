@@ -5,10 +5,12 @@
  * queries) and the backfill migration.
  *
  * Rates come from the Convex `fxRates` table, a daily mirror of the SQL
- * `currency_exchange_rates` store (convex/fxRates.ts). A currency the mirror
- * does not cover falls back to FALLBACK_EUR_PER_UNIT, flagged
- * `source: "fallback"`. A currency in neither is an explicit
- * `unknown_currency` result: it never converts at 1.0.
+ * `currency_exchange_rates` store (USD, CHF) and the ECB euro reference
+ * rates (every other ECB currency, GBP included) - see convex/fxRates.ts.
+ * A mirrored rate older than FX_MAX_AGE_DAYS is still used but flagged
+ * `source: "stale"`. A currency the mirror does not cover falls back to
+ * FALLBACK_EUR_PER_UNIT, flagged `source: "fallback"`. A currency in none
+ * is an explicit `unknown_currency` result: it never converts at 1.0.
  *
  * Framework-free so the Convex bundle, Next.js and vitest can all import it.
  */
@@ -22,8 +24,16 @@ export const NO_CURRENCY = "XXX";
 // Rates
 // ═══════════════════════════════════════════════════════════════
 
-/** "market": mirrored or live quote; "fallback": static last-resort table */
-export type FxRateSource = "market" | "fallback";
+/**
+ * "market": mirrored or live quote; "stale": a mirrored quote older than
+ * FX_MAX_AGE_DAYS (the mirror stopped updating); "fallback": static
+ * last-resort table
+ */
+export type FxRateSource = "market" | "stale" | "fallback";
+
+/** A mirrored rate older than this is flagged "stale". */
+export const FX_MAX_AGE_DAYS = 7;
+const DAY_MS = 86_400_000;
 
 export interface FxRate {
   /** EUR for one unit of the currency */
@@ -89,10 +99,33 @@ export const FALLBACK_FX_RATES: FxRates = Object.fromEntries(
 );
 
 /**
- * Rate table from daily rows: the latest row per currency as a market rate,
- * over the fallback table for every currency the rows do not cover.
+ * Currencies the ECB publishes euro reference rates for (the daily EXR
+ * series); the mirror fills them from the ECB data API.
  */
-export function fxRatesFromDaily(rows: readonly FxDailyRate[]): FxRates {
+export const ECB_CURRENCIES: readonly string[] = [
+  "AUD", "BGN", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "GBP", "HKD",
+  "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR", "NOK",
+  "NZD", "PHP", "PLN", "RON", "SEK", "SGD", "THB", "TRY", "USD", "ZAR",
+];
+
+/** Every currency the mirror may hold a rate for (latest row read per code). */
+export const MIRRORED_CURRENCIES: readonly string[] = [
+  ...new Set([...ECB_CURRENCIES, ...Object.keys(FALLBACK_EUR_PER_UNIT)]),
+].sort();
+
+/**
+ * Rate table from daily rows: the latest row per currency as a market rate,
+ * over the fallback table for every currency the rows do not cover. Given
+ * `now`, a latest row older than FX_MAX_AGE_DAYS is flagged "stale".
+ */
+export function fxRatesFromDaily(
+  rows: readonly FxDailyRate[],
+  now?: number,
+): FxRates {
+  const staleBefore =
+    now === undefined
+      ? undefined
+      : new Date(now - FX_MAX_AGE_DAYS * DAY_MS).toISOString().slice(0, 10);
   const latest = new Map<string, FxDailyRate>();
   for (const row of rows) {
     const code = normalizeCurrency(row.currency)?.code;
@@ -105,7 +138,10 @@ export function fxRatesFromDaily(rows: readonly FxDailyRate[]): FxRates {
     rates[code] = {
       eurPerUnit: 1 / row.unitsPerEur,
       date: row.date,
-      source: "market",
+      source:
+        staleBefore !== undefined && row.date < staleBefore
+          ? "stale"
+          : "market",
     };
   }
   return rates;
@@ -153,6 +189,105 @@ export function parseFxDailyRates(payload: unknown): FxDailyRate[] {
     }
   }
   return rows;
+}
+
+/**
+ * Rows from an ECB data API CSV response (`/service/data/EXR/D..EUR.SP00.A
+ * ?format=csvdata`): one row per currency and day, OBS_VALUE being units of
+ * the currency per 1 EUR. Columns are found by header name; malformed rows
+ * and missing observations are dropped.
+ */
+export function parseEcbCsv(csv: string): FxDailyRate[] {
+  const lines = csv.split(/\r?\n/).filter((line) => line.trim() !== "");
+  if (lines.length === 0) return [];
+  const header = splitCsvLine(lines[0]);
+  const col = (name: string) => header.indexOf(name);
+  const iCurrency = col("CURRENCY");
+  const iDenom = col("CURRENCY_DENOM");
+  const iDate = col("TIME_PERIOD");
+  const iValue = col("OBS_VALUE");
+  if (iCurrency < 0 || iDate < 0 || iValue < 0) return [];
+
+  return parseFxDailyRates({
+    rates: lines.slice(1).flatMap((line) => {
+      const cells = splitCsvLine(line);
+      if (iDenom >= 0 && cells[iDenom] !== BASE_CURRENCY) return [];
+      return [
+        {
+          date: cells[iDate],
+          currency: cells[iCurrency],
+          unitsPerEur: cells[iValue],
+        },
+      ];
+    }),
+  });
+}
+
+/** One CSV line into cells, honouring double-quoted cells ("" escapes). */
+function splitCsvLine(line: string): string[] {
+  const cells: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch === '"' && line[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else if (ch === '"') {
+        quoted = false;
+      } else {
+        cell += ch;
+      }
+    } else if (ch === '"') {
+      quoted = true;
+    } else if (ch === ",") {
+      cells.push(cell);
+      cell = "";
+    } else {
+      cell += ch;
+    }
+  }
+  cells.push(cell);
+  return cells;
+}
+
+/**
+ * Daily rows from two sources: every `primary` row, plus the `secondary`
+ * rows for (day, currency) pairs the primary does not have. The SQL store
+ * is primary for USD/CHF; the ECB fills every other currency and any day
+ * the SQL store missed.
+ */
+export function mergeFxDailyRates(
+  primary: readonly FxDailyRate[],
+  secondary: readonly FxDailyRate[],
+): FxDailyRate[] {
+  const seen = new Set(primary.map((r) => `${r.date}|${r.currency}`));
+  return [
+    ...primary,
+    ...secondary.filter((r) => !seen.has(`${r.date}|${r.currency}`)),
+  ];
+}
+
+/**
+ * [from, to] (YYYY-MM-DD, inclusive) as consecutive windows of at most
+ * `maxDays` days, so a long backfill is fetched in requests the source
+ * accepts.
+ */
+export function dayWindows(
+  from: string,
+  to: string,
+  maxDays: number,
+): Array<{ from: string; to: string }> {
+  const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  const end = Date.parse(to);
+  const windows: Array<{ from: string; to: string }> = [];
+  for (let start = Date.parse(from); start <= end; ) {
+    const stop = Math.min(start + (maxDays - 1) * DAY_MS, end);
+    windows.push({ from: iso(start), to: iso(stop) });
+    start = stop + DAY_MS;
+  }
+  return windows;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -306,6 +441,8 @@ export function positionBaseFields(
         ? valueInBaseCurrency - costBasisInBaseCurrency
         : undefined,
     exchangeRateUsed: rate,
+    // Deprecated; cleared so a restamped row carries no stale timestamp
+    exchangeRateTimestamp: undefined,
     ...stamp,
   };
 }
@@ -319,21 +456,86 @@ export function bankAccountBaseFields(
   return {
     valueInBaseCurrency: times(account.currentBalance, rate),
     exchangeRateUsed: rate,
+    // Deprecated; cleared so a restamped row carries no stale timestamp
+    exchangeRateTimestamp: undefined,
     ...stamp,
   };
 }
 
-/** Base-currency fields of a broker account's total balance and cash. */
+/**
+ * Base-currency fields of a broker account's total balance and cash, in
+ * `balanceCurrency` when the provider reported one, else `currency`.
+ * `balanceIsMixed`: the balance is a sum over holdings in several
+ * currencies (no provider total), so it gets no base value.
+ */
 export function brokerAccountBaseFields(
-  account: { balance?: number; cash?: number; currency: string },
+  account: {
+    balance?: number;
+    cash?: number;
+    currency: string;
+    balanceCurrency?: string;
+  },
   rates: FxRates,
+  options: { balanceIsMixed?: boolean } = {},
 ) {
-  const { rate, stamp } = rateOf(account.currency, rates);
+  const { rate, stamp } = rateOf(
+    account.balanceCurrency ?? account.currency,
+    rates,
+  );
   return {
-    balanceInBaseCurrency: times(account.balance, rate),
+    balanceInBaseCurrency: options.balanceIsMixed
+      ? undefined
+      : times(account.balance, rate),
     cashValueInBaseCurrency: times(account.cash, rate),
     cashExchangeRateUsed: rate,
     exchangeRateDate: stamp.exchangeRateDate,
     exchangeRateSource: stamp.exchangeRateSource,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Rows written before the base-currency fields existed
+// ═══════════════════════════════════════════════════════════════
+
+/*
+ * A row without `exchangeRateSource` was stored before sync-time stamping
+ * (or before migrations:backfillBaseCurrencyFields ran). Its base fields are
+ * missing or come from the retired hardcoded table, so readers stamp it at
+ * read time with the current rates instead of counting it as 0. A row with
+ * a source - "unknown" included - is returned as stored.
+ */
+
+type Stamped = { exchangeRateSource?: ExchangeRateSource };
+
+export function positionWithBaseFields<
+  T extends Stamped & {
+    marketValue?: number;
+    totalCostBasis?: number;
+    currency: string;
+  },
+>(position: T, rates: FxRates): T {
+  return position.exchangeRateSource !== undefined
+    ? position
+    : { ...position, ...positionBaseFields(position, rates) };
+}
+
+export function bankAccountWithBaseFields<
+  T extends Stamped & { currentBalance?: number; currency: string },
+>(account: T, rates: FxRates): T {
+  return account.exchangeRateSource !== undefined
+    ? account
+    : { ...account, ...bankAccountBaseFields(account, rates) };
+}
+
+export function brokerAccountWithBaseFields<
+  T extends Stamped & {
+    balance?: number;
+    cash?: number;
+    currency: string;
+    balanceCurrency?: string;
+  },
+>(account: T, rates: FxRates): T {
+  return account.exchangeRateSource !== undefined
+    ? account
+    : { ...account, ...brokerAccountBaseFields(account, rates) };
 }

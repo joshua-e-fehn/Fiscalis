@@ -445,9 +445,15 @@ export const reclassifyNftsToCollectibles = internalMutation({
  * Plaid accounts stored with the old "USD" default cannot be told apart from
  * real USD accounts; the next Plaid sync rewrites their currency.
  *
+ * Until it runs, the readers stamp rows without `exchangeRateSource` at
+ * read time (services/finance/currency.ts positionWithBaseFields and
+ * siblings), so totals are right from deploy; the backfill persists those
+ * values (and clears the deprecated exchangeRateTimestamp).
+ *
  * Idempotent; the next provider sync re-stamps the same fields.
- * Run once after deploy, and again after the first successful
- * fxRates.refreshFxRates so the rows carry market rates:
+ * Run after the first successful fxRates.refreshFxRates so the rows carry
+ * market rates:
+ *   npx convex run fxRates:refreshFxRates '{"from":"2015-01-01"}'
  *   npx convex run migrations:backfillBaseCurrencyFields
  */
 export const backfillBaseCurrencyFields = internalMutation({
@@ -465,14 +471,7 @@ export const backfillBaseCurrencyFields = internalMutation({
 
     const brokerAccounts = await ctx.db.query("brokerAccounts").collect();
     for (const account of brokerAccounts) {
-      const fields = brokerAccountBaseFields(
-        {
-          balance: account.balance,
-          cash: account.cash,
-          currency: account.balanceCurrency ?? account.currency,
-        },
-        rates,
-      );
+      const fields = brokerAccountBaseFields(account, rates);
       if (fields.exchangeRateSource === "unknown") unknown.push(account._id);
       await ctx.db.patch(account._id, fields);
     }

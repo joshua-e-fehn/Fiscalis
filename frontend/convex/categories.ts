@@ -11,6 +11,12 @@ import {
   positionToHolding,
   positionValue,
 } from "../../services/portfolio/categorySummary";
+import {
+  bankAccountWithBaseFields,
+  brokerAccountWithBaseFields,
+  positionWithBaseFields,
+  type FxRates,
+} from "../../services/finance/currency";
 import { loadFxRates } from "./fxRates";
 
 // ═══════════════════════════════════════════════════════════════
@@ -30,10 +36,15 @@ export type CategoryPosition =
       unrealizedPL?: undefined;
     });
 
+/**
+ * Broker positions in a category; rows stored before sync-time stamping get
+ * their base-currency fields at read time (positionWithBaseFields).
+ */
 async function getBrokerPositionsForCategory(
   ctx: QueryCtx,
   userId: string,
   category: InvestmentCategory,
+  rates: FxRates,
 ): Promise<CategoryPosition[]> {
   const positions = await ctx.db
     .query("brokerPositions")
@@ -41,7 +52,10 @@ async function getBrokerPositionsForCategory(
       q.eq("userId", userId).eq("investmentCategory", category),
     )
     .collect();
-  return positions.map((p) => ({ ...p, provider: "snaptrade" as const }));
+  return positions.map((p) => ({
+    ...positionWithBaseFields(p, rates),
+    provider: "snaptrade" as const,
+  }));
 }
 
 async function getBitpandaPositionsForCategory(
@@ -70,9 +84,10 @@ async function getCategoryPositions(
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
   const userId = identity.subject;
+  const rates = await loadFxRates(ctx);
 
   const positions = [
-    ...(await getBrokerPositionsForCategory(ctx, userId, category)),
+    ...(await getBrokerPositionsForCategory(ctx, userId, category, rates)),
     ...(await getBitpandaPositionsForCategory(ctx, userId, category)),
   ];
 
@@ -97,6 +112,8 @@ export const getCashHoldings = query({
     if (!identity) return null;
 
     const userId = identity.subject;
+    // Rows stored before sync-time stamping are stamped at read time
+    const rates = await loadFxRates(ctx);
 
     // Get all Plaid accounts classified as cash
     const bankAccountsRaw = await ctx.db
@@ -119,13 +136,13 @@ export const getCashHoldings = query({
 
     // Enrich bank accounts with institution name
     const bankAccounts = bankAccountsRaw.map((acc) => ({
-      ...acc,
+      ...bankAccountWithBaseFields(acc, rates),
       institutionName: itemToInstitution.get(acc.itemId) ?? undefined,
     }));
 
     // Get all broker positions classified as cash, plus Bitpanda fiat cash
     const brokerCashPositions = [
-      ...(await getBrokerPositionsForCategory(ctx, userId, "cash")),
+      ...(await getBrokerPositionsForCategory(ctx, userId, "cash", rates)),
       ...(await getBitpandaPositionsForCategory(ctx, userId, "cash")),
     ];
 
@@ -136,10 +153,12 @@ export const getCashHoldings = query({
       .collect();
 
     // Get broker accounts with cash balances (uninvested cash)
-    const brokerAccounts = await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const brokerAccounts = (
+      await ctx.db
+        .query("brokerAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).map((acc) => brokerAccountWithBaseFields(acc, rates));
 
     // Build a map of accounts that have positions
     const accountsWithPositions = new Set(
@@ -147,12 +166,17 @@ export const getCashHoldings = query({
     );
 
     // Broker account cash in EUR: the cash balance, or the whole balance of
-    // an account without positions (brokerAccountCash)
-    const getEffectiveCash = (acc: (typeof brokerAccounts)[0]) =>
-      brokerAccountCash(acc, accountsWithPositions.has(acc._id));
-    const brokerAccountsWithCash = brokerAccounts.filter(
-      (acc) => getEffectiveCash(acc) > 0,
-    );
+    // an account without positions (brokerAccountCash); each row carries
+    // it as cashInBaseCurrency for the per-row display
+    const brokerAccountsWithCash = brokerAccounts
+      .map((acc) => ({
+        ...acc,
+        cashInBaseCurrency: brokerAccountCash(
+          acc,
+          accountsWithPositions.has(acc._id),
+        ),
+      }))
+      .filter((acc) => acc.cashInBaseCurrency > 0);
 
     // Calculate totals (base currency only)
     const bankTotal = bankAccounts.reduce(
@@ -166,7 +190,7 @@ export const getCashHoldings = query({
     );
 
     const brokerAccountCashTotal = brokerAccountsWithCash.reduce(
-      (sum, acc) => sum + getEffectiveCash(acc),
+      (sum, acc) => sum + acc.cashInBaseCurrency,
       0,
     );
 
@@ -234,34 +258,45 @@ export const getLiabilities = query({
     if (!identity) return null;
 
     const userId = identity.subject;
+    // Rows stored before sync-time stamping are stamped at read time; loans
+    // are converted here by their own currency
+    const rates = await loadFxRates(ctx);
 
     // Get all Plaid accounts classified as liabilities
-    const plaidLiabilities = await ctx.db
-      .query("plaidAccounts")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "liabilities"),
-      )
-      .collect();
+    const plaidLiabilities = (
+      await ctx.db
+        .query("plaidAccounts")
+        .withIndex("by_category", (q) =>
+          q.eq("userId", userId).eq("investmentCategory", "liabilities"),
+        )
+        .collect()
+    ).map((acc) => bankAccountWithBaseFields(acc, rates));
 
     // Get broker positions classified as liabilities (margin loans)
-    const brokerLiabilities = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_category", (q) =>
-        q.eq("userId", userId).eq("investmentCategory", "liabilities"),
-      )
-      .collect();
+    const brokerLiabilities = (
+      await ctx.db
+        .query("brokerPositions")
+        .withIndex("by_category", (q) =>
+          q.eq("userId", userId).eq("investmentCategory", "liabilities"),
+        )
+        .collect()
+    ).map((pos) => positionWithBaseFields(pos, rates));
 
-    // Manual loans that count as liabilities: active and defaulted
+    // Manual loans that count as liabilities (active and defaulted), each
+    // with its outstanding balance in EUR for the per-row display
     const manualLoans = (
       await ctx.db
         .query("loans")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect()
-    ).filter((loan) => loanCountsAsLiability(loan.status));
+    )
+      .filter((loan) => loanCountsAsLiability(loan.status))
+      .map((loan) => ({
+        ...loan,
+        valueInBaseCurrency: loanBalanceInBase(loan, rates),
+      }));
 
-    // Calculate totals in the base currency (liabilities as positive amounts);
-    // loans are converted here by their own currency
-    const rates = await loadFxRates(ctx);
+    // Calculate totals in the base currency (liabilities as positive amounts)
 
     const plaidTotal = plaidLiabilities.reduce(
       (sum, acc) => sum + Math.abs(bankAccountValue(acc)),
@@ -274,7 +309,7 @@ export const getLiabilities = query({
     );
 
     const manualLoansTotal = manualLoans.reduce(
-      (sum, loan) => sum + loanBalanceInBase(loan, rates),
+      (sum, loan) => sum + loan.valueInBaseCurrency,
       0,
     );
 

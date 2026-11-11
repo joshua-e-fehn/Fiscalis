@@ -56,10 +56,11 @@ export default defineSchema({
 			v.union(
 				v.literal("identity"),
 				v.literal("market"),
+				v.literal("stale"),
 				v.literal("fallback"),
 				v.literal("unknown"),
 			),
-		), // "unknown": currency missing or without a rate
+		), // "stale": mirrored rate older than 7 days; "unknown": currency missing or without a rate
 		baseCurrency: v.optional(v.string()), // "EUR"
 	})
 		.index("by_user", ["userId"])
@@ -156,6 +157,7 @@ export default defineSchema({
 			v.union(
 				v.literal("identity"),
 				v.literal("market"),
+				v.literal("stale"),
 				v.literal("fallback"),
 				v.literal("unknown"),
 			),
@@ -208,6 +210,7 @@ export default defineSchema({
 			v.union(
 				v.literal("identity"),
 				v.literal("market"),
+				v.literal("stale"),
 				v.literal("fallback"),
 				v.literal("unknown"),
 			),

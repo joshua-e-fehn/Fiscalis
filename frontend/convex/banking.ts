@@ -12,7 +12,12 @@ import {
 } from "./lib/classification";
 import { getUserId } from "./lib/auth";
 import { loadFxRates } from "./fxRates";
-import { bankAccountBaseFields } from "../../services/finance/currency";
+import {
+  bankAccountBaseFields,
+  bankAccountWithBaseFields,
+  toBase,
+} from "../../services/finance/currency";
+import { bankAccountValue } from "../../services/portfolio/categorySummary";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES (Public - called from frontend)
@@ -179,6 +184,9 @@ export const getBalancesSummary = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
+    // Totals in the base currency (EUR); an amount without a rate is left
+    // out rather than counted 1:1
+    const rates = await loadFxRates(ctx);
     const summary = {
       totalBalance: 0,
       totalAvailable: 0,
@@ -187,8 +195,13 @@ export const getBalancesSummary = query({
     };
 
     for (const account of accounts) {
-      const balance = account.currentBalance ?? 0;
-      const available = account.availableBalance ?? 0;
+      const balance = bankAccountValue(bankAccountWithBaseFields(account, rates));
+      const availableInBase = toBase(
+        account.availableBalance ?? 0,
+        account.currency,
+        rates,
+      );
+      const available = availableInBase.ok ? availableInBase.value : 0;
 
       summary.totalBalance += balance;
       summary.totalAvailable += available;

@@ -540,6 +540,45 @@ export function netWorthApiBreakdown(
   });
 }
 
+/** The 200 body of GET /api/v1/net-worth */
+export interface NetWorthApiBody {
+  object: "net_worth";
+  netWorth: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  currency: "EUR";
+  /** When the request was served, ISO 8601 */
+  asOf: string;
+  /** How fresh the data is, ISO 8601; null when no holding carries a time */
+  dataAsOf: string | null;
+  categories: NetWorthApiCategory[];
+}
+
+/**
+ * The public API's response body for a net worth served at `now` (epoch ms).
+ * `asOf` is the serving time; the aggregate's own asOf (the oldest pricedAt)
+ * goes out as `dataAsOf`. Amounts are rounded to cents.
+ */
+export function netWorthApiBody(
+  netWorth: Pick<
+    NetWorthAggregate,
+    "netWorth" | "totalAssets" | "totalLiabilities" | "asOf" | "byCategory"
+  >,
+  now: number,
+): NetWorthApiBody {
+  return {
+    object: "net_worth",
+    netWorth: roundMoney(netWorth.netWorth),
+    totalAssets: roundMoney(netWorth.totalAssets),
+    totalLiabilities: roundMoney(netWorth.totalLiabilities),
+    currency: "EUR",
+    asOf: new Date(now).toISOString(),
+    dataAsOf:
+      netWorth.asOf === null ? null : new Date(netWorth.asOf).toISOString(),
+    categories: netWorthApiBreakdown(netWorth),
+  };
+}
+
 /**
  * The `partial` flag of today's snapshot row after an upsert.
  *

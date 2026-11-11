@@ -5,6 +5,7 @@ import {
   buildSnapshotBreakdown,
   isFlowAdjustedCategory,
   liabilityCountsLabel,
+  netWorthApiBody,
   netWorthApiBreakdown,
   categoryFlowFromHoldings,
   holdingNetFlow,
@@ -403,6 +404,56 @@ describe("netWorthApiBreakdown", () => {
       { source: "bank", value: 50 },
       { source: "brokerAccount", value: 50 },
     ]);
+  });
+});
+
+describe("netWorthApiBody", () => {
+  const now = Date.UTC(2026, 0, 1, 12);
+
+  it("keeps the six original fields and adds dataAsOf and categories", () => {
+    const a = aggregateNetWorth([
+      ...holdings,
+      holding({ source: "bank", category: "cash", valueBase: 0.005, pricedAt: 2_000 }),
+    ]);
+    const body = netWorthApiBody(a, now);
+    expect(Object.keys(body)).toEqual([
+      "object",
+      "netWorth",
+      "totalAssets",
+      "totalLiabilities",
+      "currency",
+      "asOf",
+      "dataAsOf",
+      "categories",
+    ]);
+    expect(body).toMatchObject({
+      object: "net_worth",
+      netWorth: 9_142.01,
+      totalAssets: 19_712.01,
+      totalLiabilities: 10_570,
+      currency: "EUR",
+      asOf: "2026-01-01T12:00:00.000Z",
+    });
+    expect(body.categories).toEqual(netWorthApiBreakdown(a));
+  });
+
+  it("reports the oldest price time as dataAsOf, not the serving time", () => {
+    // The fixture's oldest pricedAt is 900 ms after the epoch
+    expect(netWorthApiBody(aggregateNetWorth(holdings), now).dataAsOf).toBe(
+      "1970-01-01T00:00:00.900Z",
+    );
+  });
+
+  it("reports dataAsOf null when no holding carries a time", () => {
+    const body = netWorthApiBody(
+      aggregateNetWorth([
+        holding({ source: "loan", category: "liabilities", subcategory: "loans", valueBase: 100 }),
+      ]),
+      now,
+    );
+    expect(body.dataAsOf).toBeNull();
+    expect(body.asOf).toBe("2026-01-01T12:00:00.000Z");
+    expect(body.netWorth).toBe(-100);
   });
 });
 

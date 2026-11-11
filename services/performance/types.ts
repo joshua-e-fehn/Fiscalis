@@ -143,11 +143,13 @@ export interface PerformanceDataPoint {
  * Performance metrics calculated for a time period
  */
 export interface PerformanceMetrics {
-  // Core values
-  startValue: number;
+  // Core values. The start is the value at the range start; without one
+  // (history starts later) it is null and so are the changes.
+  startValue: number | null;
   endValue: number;
-  absoluteChange: number;
-  percentChange: number;
+  absoluteChange: number | null;
+  /** Change relative to |startValue|; null when the start is unknown or 0 */
+  percentChange: number | null;
 
   // Range statistics
   highValue: number;
@@ -158,15 +160,21 @@ export interface PerformanceMetrics {
   dataPointCount: number;
   interpolatedPointCount: number;
 
+  /**
+   * No value is known at the range start: the series starts at
+   * `firstPointTimestamp` instead (never carried backward to the start).
+   */
+  insufficientHistory: boolean;
+  /** Timestamp of the first point in the series, null without points */
+  firstPointTimestamp: number | null;
+  /** Some held assets had no price series and are missing from the values */
+  partial: boolean;
+
   // Time context
   timeRange: TimeRange;
   startTimestamp: number;
   endTimestamp: number;
   calculatedAt: number;
-
-  // Optional advanced metrics (future enhancement)
-  annualizedReturn?: number;
-  volatility?: number;
 }
 
 /**
@@ -175,7 +183,7 @@ export interface PerformanceMetrics {
 export interface PerformanceResult {
   metrics: PerformanceMetrics;
   dataPoints: PerformanceDataPoint[];
-  valueType: ValueType;
+  valueType: ValueType | "hybrid";
   /**
    * Discrete strategy only: timestamps of the real snapshots at or before the
    * range end, ascending (including ones before the range start). Consumers
@@ -190,29 +198,33 @@ export interface PerformanceResult {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Price provider identifiers
- * - metals: Precious metals price API (minutely data)
- * - crypto: Crypto price API (future)
- * - stocks: Stock price API (future)
+ * How a holding's value history is known (docs/VALUATION_RESOLUTION_PLAN.md):
+ * - continuous: a price feed values it at any time (vault metals);
+ * - semi-continuous: periodic prices (fund NAV, NFT floor), computed like
+ *   discrete;
+ * - discrete: known only at syncs or manual updates (snapshots).
  */
-export type PriceProvider = "metals" | "crypto" | "stocks";
+export type ValuationMethod = "continuous" | "semi-continuous" | "discrete";
 
-/**
- * Configuration for an asset category
- */
-export interface AssetCategoryConfig {
-  /** Unique identifier */
-  id: string;
-  /** Display name */
-  name: string;
-  /** How values are calculated */
-  valueType: ValueType;
-  /** For discrete: field in snapshot categoryBreakdown */
-  snapshotCategory?: string;
-  /** For continuous: which price provider to use */
+/** Where a holding's prices come from */
+export type PriceProvider =
+  | "market-data"
+  | "crypto-exchange"
+  | "metals"
+  | "nft-floor"
+  | "manual";
+
+export interface ValuationConfig {
+  method: ValuationMethod;
   priceProvider?: PriceProvider;
-  /** Whether this category can be upgraded to continuous in the future */
-  canUpgradeToContinuous: boolean;
+  /** Interpolation gap limit, in grid intervals (default MAX_INTERPOLATION_GAP_MULTIPLIER) */
+  maxInterpolationGap?: number;
+}
+
+/** A holding source valued continuously, and the category snapshots store it under */
+export interface ContinuousSource {
+  source: string;
+  category: string;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -229,6 +241,8 @@ export interface SnapshotCategoryBreakdown {
   costBasis?: number;
   /** Value of the holdings costBasis covers; absent on old snapshots */
   coveredValue?: number;
+  /** Value per holding source (e.g. vault vs bitpanda); absent on old snapshots */
+  sources?: { source: string; value: number }[];
 }
 
 /**
@@ -267,8 +281,11 @@ export interface HoldingData {
   fineWeightGrams?: number;
   /** For metals: sell premium as a decimal (-0.02 = 2% below spot), as stored on vault items */
   sellPremium?: number;
-  /** Timestamp when acquired */
-  purchaseDate: number;
+  /**
+   * Timestamp when acquired. Unknown (undefined) means held since before
+   * any range start: an item is never dated at record creation.
+   */
+  purchaseDate?: number;
   /** Cost per unit at purchase */
   purchasePricePerUnit?: number;
 }

@@ -4,7 +4,7 @@
  * Tests for price-based performance calculation (precious metals, etc.)
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ContinuousPerformanceStrategy,
   calculateContinuousPerformance,
@@ -22,6 +22,16 @@ import { TROY_OUNCE_GRAMS, valueVaultItem } from "../finance/metals";
 // ═══════════════════════════════════════════════════════════════
 
 const MS_PER_DAY = 86400000;
+
+// Pinned clock: fixtures and calculations all read this time
+const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(NOW);
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 const MS_PER_HOUR = 3600000;
 
 /**
@@ -131,7 +141,7 @@ describe("ContinuousPerformanceStrategy", () => {
 
       const result = strategy.calculate(input, options);
 
-      expect(result.metrics.startValue).toBe(0);
+      expect(result.metrics.startValue).toBeNull();
       expect(result.metrics.endValue).toBe(0);
       expect(result.metrics.dataQuality).toBe("low");
       expect(result.valueType).toBe("continuous");
@@ -262,50 +272,6 @@ describe("ContinuousPerformanceStrategy", () => {
       // The second holding appears mid-range
       expect(result.metrics).toBeDefined();
       expect(result.metrics.startValue).toBeGreaterThan(0);
-    });
-  });
-
-  describe("assessDataQuality", () => {
-    it("should return low for empty holdings", () => {
-      const input: ContinuousPerformanceInput = {
-        holdings: [],
-        prices: {},
-      };
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      expect(quality).toBe("low");
-    });
-
-    it("should return high for complete price data", () => {
-      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1)];
-
-      // Hourly price data for a month = high coverage
-      const prices: PriceData = {
-        gold: createPriceHistory(30, perOz(60), perOz(66), 1), // hourly data
-      };
-
-      const input: ContinuousPerformanceInput = { holdings, prices };
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      expect(quality).toBe("high");
-    });
-
-    it("should return low for missing price data", () => {
-      const holdings = [createMetalHolding("gold-1", "gold", 1000, 1)];
-
-      // No gold prices!
-      const prices: PriceData = {};
-
-      const input: ContinuousPerformanceInput = { holdings, prices };
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      expect(quality).toBe("low");
     });
   });
 

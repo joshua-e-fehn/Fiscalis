@@ -4,7 +4,7 @@
  * Tests for discrete, continuous, and hybrid performance calculation strategies.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DiscretePerformanceStrategy,
   calculateDiscretePerformance,
@@ -21,6 +21,17 @@ import type { SnapshotData } from "./types";
 // ═══════════════════════════════════════════════════════════════
 
 const MS_PER_DAY = 86400000;
+const TOTAL = { kind: "totalAssets" } as const;
+
+// Pinned clock: fixtures and calculations all read this time
+const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(NOW);
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 /**
  * Create a mock snapshot at a given timestamp
@@ -90,6 +101,7 @@ describe("DiscretePerformanceStrategy", () => {
     it("should return empty metrics for empty snapshots", () => {
       const input: DiscretePerformanceInput = {
         snapshots: [],
+        metric: TOTAL,
       };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
@@ -98,17 +110,18 @@ describe("DiscretePerformanceStrategy", () => {
 
       const result = strategy.calculate(input, options);
 
-      expect(result.metrics.startValue).toBe(0);
+      expect(result.metrics.startValue).toBeNull();
       expect(result.metrics.endValue).toBe(0);
-      expect(result.metrics.absoluteChange).toBe(0);
-      expect(result.metrics.percentChange).toBe(0);
+      expect(result.metrics.absoluteChange).toBeNull();
+      expect(result.metrics.percentChange).toBeNull();
+      expect(result.metrics.insufficientHistory).toBe(true);
       expect(result.metrics.dataQuality).toBe("low");
       expect(result.valueType).toBe("discrete");
     });
 
     it("should calculate positive growth correctly", () => {
       const snapshots = createLinearGrowthSnapshots(10, 10000, 12000, 30);
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: true,
@@ -124,7 +137,7 @@ describe("DiscretePerformanceStrategy", () => {
 
     it("should calculate negative growth (loss) correctly", () => {
       const snapshots = createLinearGrowthSnapshots(10, 10000, 8000, 30);
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: true,
@@ -138,7 +151,7 @@ describe("DiscretePerformanceStrategy", () => {
 
     it("should handle single snapshot", () => {
       const snapshots = [createSnapshot(15, 10000)];
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: true,
@@ -146,8 +159,12 @@ describe("DiscretePerformanceStrategy", () => {
 
       const result = strategy.calculate(input, options);
 
-      // With only one snapshot, start and end should be the same
-      expect(result.metrics.startValue).toBeGreaterThan(0);
+      // History starts mid-range: no value at the range start, so no change
+      // (never carried backward), and the series is held flat from it
+      expect(result.metrics.startValue).toBeNull();
+      expect(result.metrics.insufficientHistory).toBe(true);
+      expect(result.metrics.firstPointTimestamp).toBe(snapshots[0].timestamp);
+      expect(result.metrics.endValue).toBe(10000);
       expect(result.metrics.highValue).toBe(result.metrics.lowValue);
     });
 
@@ -169,7 +186,7 @@ describe("DiscretePerformanceStrategy", () => {
 
       const input: DiscretePerformanceInput = {
         snapshots,
-        categoryFilter: "equities",
+        metric: { kind: "category", category: "equities" },
       };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
@@ -190,7 +207,7 @@ describe("DiscretePerformanceStrategy", () => {
         createSnapshot(10, 9000), // low
         createSnapshot(0, 11000),
       ];
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: true,
@@ -203,43 +220,10 @@ describe("DiscretePerformanceStrategy", () => {
     });
   });
 
-  describe("assessDataQuality", () => {
-    it("should return low for empty snapshots", () => {
-      const input: DiscretePerformanceInput = { snapshots: [] };
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      expect(quality).toBe("low");
-    });
-
-    it("should return high quality for dense snapshot coverage", () => {
-      // Create daily snapshots for a month - high coverage
-      const snapshots = createLinearGrowthSnapshots(30, 10000, 11000, 30);
-      const input: DiscretePerformanceInput = { snapshots };
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      expect(quality).toBe("high");
-    });
-
-    it("should return medium or low quality for sparse snapshots", () => {
-      // Only 2 snapshots for a month - sparse
-      const snapshots = [createSnapshot(30, 10000), createSnapshot(0, 11000)];
-      const input: DiscretePerformanceInput = { snapshots };
-      const options: PerformanceCalculationOptions = { timeRange: "Month" };
-
-      const quality = strategy.assessDataQuality(input, options);
-
-      expect(["low", "medium"]).toContain(quality);
-    });
-  });
-
   describe("generateDataPoints", () => {
     it("should generate data points for the requested time range", () => {
       const snapshots = createLinearGrowthSnapshots(10, 10000, 12000, 30);
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: true,
@@ -255,7 +239,7 @@ describe("DiscretePerformanceStrategy", () => {
 
     it("should include interpolated points when gaps exist", () => {
       const snapshots = [createSnapshot(30, 10000), createSnapshot(0, 12000)];
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: true,
@@ -271,7 +255,7 @@ describe("DiscretePerformanceStrategy", () => {
 
     it("should mark snapshot-derived points with source=snapshot", () => {
       const snapshots = createLinearGrowthSnapshots(30, 10000, 11000, 30);
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: true,
@@ -296,7 +280,7 @@ describe("DiscretePerformanceStrategy", () => {
   describe("calculateDiscretePerformance convenience function", () => {
     it("should work correctly", () => {
       const snapshots = createLinearGrowthSnapshots(10, 10000, 12000, 30);
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "Month",
         includeDataPoints: false,
@@ -323,7 +307,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
   it("should handle snapshots outside the requested time range", () => {
     // Snapshots from 60-90 days ago, but requesting Month (30 days)
     const snapshots = [createSnapshot(90, 10000), createSnapshot(60, 11000)];
-    const input: DiscretePerformanceInput = { snapshots };
+    const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
     const options: PerformanceCalculationOptions = {
       timeRange: "Month",
       includeDataPoints: true,
@@ -337,7 +321,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
 
   it("should handle zero value snapshots", () => {
     const snapshots = [createSnapshot(30, 0), createSnapshot(0, 10000)];
-    const input: DiscretePerformanceInput = { snapshots };
+    const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
     const options: PerformanceCalculationOptions = {
       timeRange: "Month",
       includeDataPoints: true,
@@ -345,15 +329,15 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
 
     const result = strategy.calculate(input, options);
 
-    // When starting from 0, percent change should be 0 (avoid division by zero)
-    // But we still show the absolute change since there's no category filter
-    expect(result.metrics.percentChange).toBe(0);
-    expect(result.metrics.absoluteChange).toBeCloseTo(10000, -1);
+    // A start of 0 has no percentage; the change in value is still known
+    expect(result.metrics.startValue).toBe(0);
+    expect(result.metrics.percentChange).toBeNull();
+    expect(result.metrics.absoluteChange).toBe(10000);
   });
 
   it("should handle very short time ranges (Week)", () => {
     const snapshots = createLinearGrowthSnapshots(7, 10000, 10500, 7);
-    const input: DiscretePerformanceInput = { snapshots };
+    const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
     const options: PerformanceCalculationOptions = {
       timeRange: "Week",
       includeDataPoints: true,
@@ -367,7 +351,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
 
   it("should handle long time ranges (Year)", () => {
     const snapshots = createLinearGrowthSnapshots(52, 10000, 15000, 365);
-    const input: DiscretePerformanceInput = { snapshots };
+    const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
     const options: PerformanceCalculationOptions = {
       timeRange: "Year",
       includeDataPoints: true,
@@ -395,7 +379,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
         11000,
         Math.min(daysSinceYearStart, 30),
       );
-      const input: DiscretePerformanceInput = { snapshots };
+      const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
       const options: PerformanceCalculationOptions = {
         timeRange: "YTD",
         includeDataPoints: true,
@@ -426,7 +410,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
         netWorth: 10500,
       },
     ];
-    const input: DiscretePerformanceInput = { snapshots };
+    const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
     const options: PerformanceCalculationOptions = {
       timeRange: "Month",
       includeDataPoints: true,
@@ -445,7 +429,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
       createSnapshot(0, 12000),
       createSnapshot(20, 10500),
     ];
-    const input: DiscretePerformanceInput = { snapshots };
+    const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
     const options: PerformanceCalculationOptions = {
       timeRange: "Month",
       includeDataPoints: true,
@@ -458,7 +442,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
     expect(result.metrics.percentChange).toBeCloseTo(20, 0);
   });
 
-  it("should use current value as baseline when only 1 snapshot exists in YTD range for category", () => {
+  it("reports insufficient history when the only snapshot is from today", () => {
     // Simulate crypto scenario: only one snapshot with crypto value exists
     // No historical crypto data before Jan 1
     const now = Date.now();
@@ -477,7 +461,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
 
     const input: DiscretePerformanceInput = {
       snapshots,
-      categoryFilter: "crypto",
+      metric: { kind: "category", category: "crypto" },
     };
     const options: PerformanceCalculationOptions = {
       timeRange: "YTD",
@@ -486,15 +470,15 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
 
     const result = strategy.calculate(input, options);
 
-    // Should show 0% change because there's no meaningful baseline
-    // The single snapshot is both the start and end value
-    expect(result.metrics.percentChange).toBe(0);
-    expect(result.metrics.absoluteChange).toBe(0);
-    expect(result.metrics.startValue).toBe(5000);
+    // No value at 1 Jan: no change is reported (not a fake 0%)
+    expect(result.metrics.insufficientHistory).toBe(true);
+    expect(result.metrics.percentChange).toBeNull();
+    expect(result.metrics.absoluteChange).toBeNull();
+    expect(result.metrics.startValue).toBeNull();
     expect(result.metrics.endValue).toBe(5000);
   });
 
-  it("should use current value as baseline when historical snapshots had 0 value for category", () => {
+  it("starts from 0 when the category was empty at the range start", () => {
     // Scenario: Crypto was added in 2026, but snapshots from 2025 exist with 0 crypto value
     // This happens when user had other assets synced in 2025, but crypto was added later
     const now = Date.now();
@@ -529,7 +513,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
     // Filter by crypto category
     const input: DiscretePerformanceInput = {
       snapshots,
-      categoryFilter: "crypto",
+      metric: { kind: "category", category: "crypto" },
     };
     const options: PerformanceCalculationOptions = {
       timeRange: "YTD",
@@ -538,12 +522,12 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
 
     const result = strategy.calculate(input, options);
 
-    // Should show 0% change because the crypto category had 0 value historically
-    // (no meaningful baseline for this category - it didn't exist before)
-    expect(result.metrics.percentChange).toBe(0);
-    expect(result.metrics.absoluteChange).toBe(0);
-    expect(result.metrics.startValue).toBeCloseTo(161.61, 1);
-    expect(result.metrics.endValue).toBeCloseTo(161.61, 1);
+    // The category held 0 on 1 Jan: the change is the whole value and the
+    // percentage is undefined (no flattening to 0%)
+    expect(result.metrics.startValue).toBe(0);
+    expect(result.metrics.absoluteChange).toBeCloseTo(161.61, 2);
+    expect(result.metrics.percentChange).toBeNull();
+    expect(result.metrics.endValue).toBeCloseTo(161.61, 2);
   });
 
   it("should show actual change when historical snapshot exists before range start", () => {
@@ -568,7 +552,7 @@ describe("DiscretePerformanceStrategy - Edge Cases", () => {
       },
     ];
 
-    const input: DiscretePerformanceInput = { snapshots };
+    const input: DiscretePerformanceInput = { snapshots, metric: TOTAL };
     const options: PerformanceCalculationOptions = {
       timeRange: "YTD",
       includeDataPoints: true,
@@ -620,7 +604,7 @@ describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
 
   it("marks grid points with a snapshot within half an interval as 'snapshot'", () => {
     const snapshots = dailySnapshots(42); // through 2026-11-11 06:00
-    const result = calculateDiscretePerformance({ snapshots }, options);
+    const result = calculateDiscretePerformance({ snapshots, metric: TOTAL }, options);
 
     const snapshotPoints = result.dataPoints.filter(
       (p) => p.source === "snapshot",
@@ -635,7 +619,7 @@ describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
   it("interpolates grid points with no snapshot nearby", () => {
     // Only two snapshots 20 days apart: points in the middle are interpolated.
     const snapshots = [dailySnapshots(42)[10], dailySnapshots(42)[30]];
-    const result = calculateDiscretePerformance({ snapshots }, options);
+    const result = calculateDiscretePerformance({ snapshots, metric: TOTAL }, options);
 
     const snapshotPoints = result.dataPoints.filter(
       (p) => p.source === "snapshot",
@@ -648,7 +632,7 @@ describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
     const snapshots = dailySnapshots(42).reverse();
     const future = { ...snapshots[0], timestamp: END + MS_PER_HOUR };
     const result = calculateDiscretePerformance(
-      { snapshots: [future, ...snapshots] },
+      { snapshots: [future, ...snapshots], metric: TOTAL },
       options,
     );
 
@@ -659,7 +643,7 @@ describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
 
   it("anchors the range start to endTimestamp", () => {
     const result = calculateDiscretePerformance(
-      { snapshots: dailySnapshots(42) },
+      { snapshots: dailySnapshots(42), metric: TOTAL },
       options,
     );
     expect(result.metrics.startTimestamp).toBe(END - 30 * MS_PER_DAY);
@@ -667,7 +651,7 @@ describe("DiscretePerformanceStrategy - snapshots off the grid", () => {
   });
 
   it("reports no snapshot timestamps for empty input", () => {
-    const result = calculateDiscretePerformance({ snapshots: [] }, options);
+    const result = calculateDiscretePerformance({ snapshots: [], metric: TOTAL }, options);
     expect(result.actualSnapshotTimestamps).toEqual([]);
   });
 });
@@ -700,7 +684,7 @@ describe("DiscretePerformanceStrategy - no look-ahead", () => {
   });
 
   it("uses the latest snapshot at or before each grid point, not a nearer later one", () => {
-    const result = calculateDiscretePerformance({ snapshots }, options);
+    const result = calculateDiscretePerformance({ snapshots, metric: TOTAL }, options);
     const points = result.dataPoints;
     expect(points.every((p) => p.source === "snapshot")).toBe(true);
 
@@ -719,7 +703,7 @@ describe("DiscretePerformanceStrategy - no look-ahead", () => {
       { ...snapshots[1], timestamp: start + 26 * 3_600_000, totalAssets: 600 },
     ];
     const result = calculateDiscretePerformance(
-      { snapshots: later },
+      { snapshots: later, metric: TOTAL },
       options,
     );
     expect(result.dataPoints[0].source).toBe("snapshot");
@@ -770,7 +754,7 @@ describe("DiscretePerformanceStrategy - cost line", () => {
 
   it("never counts value without a cost basis as profit", () => {
     const category = calculateDiscretePerformance(
-      { snapshots: snapshots(true), categoryFilter: "commodities" },
+      { snapshots: snapshots(true), metric: { kind: "category", category: "commodities" } },
       options,
     );
     for (const p of category.dataPoints) {
@@ -778,7 +762,7 @@ describe("DiscretePerformanceStrategy - cost line", () => {
     }
 
     const total = calculateDiscretePerformance(
-      { snapshots: snapshots(true) },
+      { snapshots: snapshots(true), metric: TOTAL },
       options,
     );
     for (const p of total.dataPoints) {
@@ -788,7 +772,7 @@ describe("DiscretePerformanceStrategy - cost line", () => {
 
   it("keeps the stored cost basis for snapshots without coveredValue", () => {
     const category = calculateDiscretePerformance(
-      { snapshots: snapshots(false), categoryFilter: "commodities" },
+      { snapshots: snapshots(false), metric: { kind: "category", category: "commodities" } },
       options,
     );
     expect(category.dataPoints.every((p) => p.costBasis === 1_000)).toBe(true);

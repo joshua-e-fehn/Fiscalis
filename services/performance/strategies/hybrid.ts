@@ -1,26 +1,23 @@
 /**
  * Hybrid Performance Strategy
  *
- * Combines discrete (snapshot-based) and continuous (price-based) strategies
- * to calculate unified portfolio performance across all asset types.
+ * The one combiner of discrete (snapshot) and continuous (price) values:
  *
- * Aggregates:
- * - Discrete assets: cash, equities, bonds, crypto, real estate, etc.
- * - Continuous assets: precious metals (commodities)
- *
- * The hybrid result merges data points at matching timestamps and provides
- * a unified view of total portfolio performance.
+ * - both parts are calculated on one context (one `now`, one grid);
+ * - the discrete part leaves out the continuously valued sources (vault
+ *   metals), using the snapshots' per-source values, so nothing is counted
+ *   twice;
+ * - a grid point is kept only where every part present has a value, so a
+ *   series of one scope is never spliced onto a series of another;
+ * - metrics, including high and low, come from the merged series.
  */
 
 import type {
   PerformanceDataPoint,
-  PerformanceMetrics,
   PerformanceResult,
-  DataQuality,
-  ValueType,
 } from "../types";
 
-import { BasePerformanceStrategy } from "./base";
+import { BasePerformanceStrategy, assessDataQuality } from "./base";
 import { DiscretePerformanceStrategy, getDiscreteStrategy } from "./discrete";
 import {
   ContinuousPerformanceStrategy,
@@ -28,8 +25,6 @@ import {
 } from "./continuous";
 import type {
   HybridPerformanceInput,
-  DiscretePerformanceInput,
-  ContinuousPerformanceInput,
   PerformanceCalculationOptions,
   CalculationContext,
   DataPointGenerationResult,
@@ -58,18 +53,6 @@ export interface HybridPerformanceResult extends PerformanceResult {
 // Hybrid Performance Strategy
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Hybrid Performance Strategy
- *
- * Combines discrete and continuous strategies to provide unified
- * portfolio performance metrics. Handles:
- *
- * 1. Discrete-only portfolios (no metals)
- * 2. Continuous-only portfolios (metals only)
- * 3. Mixed portfolios (most common)
- *
- * Data points are merged by timestamp, with values summed.
- */
 export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPerformanceInput> {
   readonly strategyType = "hybrid" as const;
 
@@ -85,367 +68,126 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
     this.continuousStrategy = continuousStrategy ?? getContinuousStrategy();
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // Public Interface
-  // ═══════════════════════════════════════════════════════════════
-
-  /**
-   * Calculate hybrid performance with breakdown
-   */
   calculate(
     input: HybridPerformanceInput,
     options: PerformanceCalculationOptions,
   ): HybridPerformanceResult {
-    const context = this.createContext(options);
-    // Both sub-strategies must share one end (and so one grid); otherwise each
-    // reads Date.now() separately and merge-by-timestamp misses points.
-    const subOptions: PerformanceCalculationOptions = {
-      ...options,
-      endTimestamp: context.endTimestamp,
-    };
-
-    // Calculate discrete and continuous separately
-    const discreteResult = this.calculateDiscreteIfPresent(
-      input.discrete,
-      subOptions,
+    return this.calculateInContext(
+      input,
+      this.createContext(options),
+      options.includeDataPoints,
     );
-    const continuousResult = this.calculateContinuousIfPresent(
-      input.continuous,
-      subOptions,
-    );
-
-    // Merge results
-    const mergedDataPoints = this.mergeDataPoints(
-      discreteResult?.dataPoints ?? [],
-      continuousResult?.dataPoints ?? [],
-      context,
-    );
-
-    // Calculate combined metrics
-    const combinedMetrics = this.calculateCombinedMetrics(
-      discreteResult?.metrics,
-      continuousResult?.metrics,
-      mergedDataPoints,
-      context,
-    );
-
-    return {
-      metrics: combinedMetrics,
-      dataPoints: options.includeDataPoints ? mergedDataPoints : [],
-      valueType: this.determineValueType(discreteResult, continuousResult),
-      breakdown: {
-        discrete: discreteResult ?? undefined,
-        continuous: continuousResult ?? undefined,
-      },
-    };
   }
 
-  /**
-   * Assess overall data quality
-   */
-  assessDataQuality(
+  calculateInContext(
     input: HybridPerformanceInput,
-    options: PerformanceCalculationOptions,
-  ): DataQuality {
-    const discreteQuality = input.discrete
-      ? this.discreteStrategy.assessDataQuality(input.discrete, options)
-      : null;
-
-    const continuousQuality = input.continuous
-      ? this.continuousStrategy.assessDataQuality(input.continuous, options)
-      : null;
-
-    // If both exist, use the lower quality
-    if (discreteQuality && continuousQuality) {
-      return this.combineQuality(discreteQuality, continuousQuality);
-    }
-
-    // Return whichever exists, or low if neither
-    return discreteQuality ?? continuousQuality ?? "low";
+    context: CalculationContext,
+    includeDataPoints = false,
+  ): HybridPerformanceResult {
+    const { generation, breakdown } = this.combine(input, context);
+    return {
+      metrics: this.calculateMetrics(
+        generation.dataPoints,
+        context,
+        generation.dataQuality,
+        generation.partial,
+      ),
+      dataPoints: includeDataPoints ? generation.dataPoints : [],
+      valueType: "hybrid",
+      breakdown,
+      ...(generation.actualSnapshotTimestamps && {
+        actualSnapshotTimestamps: generation.actualSnapshotTimestamps,
+      }),
+    };
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // Protected Implementation
-  // ═══════════════════════════════════════════════════════════════
-
-  /**
-   * Generate merged data points
-   */
   protected generateDataPointsInternal(
     input: HybridPerformanceInput,
     context: CalculationContext,
   ): DataPointGenerationResult {
-    const options: PerformanceCalculationOptions = {
-      timeRange: context.timeRange,
-      interval: context.interval,
-      endTimestamp: context.endTimestamp,
-      includeDataPoints: true,
-    };
-
-    const discreteResult = this.calculateDiscreteIfPresent(
-      input.discrete,
-      options,
-    );
-    const continuousResult = this.calculateContinuousIfPresent(
-      input.continuous,
-      options,
-    );
-
-    const mergedPoints = this.mergeDataPoints(
-      discreteResult?.dataPoints ?? [],
-      continuousResult?.dataPoints ?? [],
-      context,
-    );
-
-    const interpolatedCount = mergedPoints.filter(
-      (p) => p.source === "interpolated",
-    ).length;
-
-    const quality = this.assessQuality(
-      mergedPoints.length,
-      context.expectedDataPoints,
-      interpolatedCount,
-    );
-
-    return {
-      dataPoints: mergedPoints,
-      actualDataPoints: mergedPoints.length - interpolatedCount,
-      interpolatedDataPoints: interpolatedCount,
-      dataQuality: quality,
-    };
+    return this.combine(input, context).generation;
   }
 
-  // ═══════════════════════════════════════════════════════════════
-  // Private Helpers
-  // ═══════════════════════════════════════════════════════════════
+  private combine(
+    input: HybridPerformanceInput,
+    context: CalculationContext,
+  ): { generation: DataPointGenerationResult; breakdown: PerformanceBreakdown } {
+    const discrete = input.discrete
+      ? this.discreteStrategy.calculateInContext(
+          {
+            ...input.discrete,
+            excludeSources: input.continuous ? input.continuousSources : [],
+          },
+          context,
+          true,
+        )
+      : undefined;
+    const continuous = input.continuous
+      ? this.continuousStrategy.calculateInContext(input.continuous, context, true)
+      : undefined;
 
-  /**
-   * Calculate discrete performance if input is present
-   */
-  private calculateDiscreteIfPresent(
-    input: DiscretePerformanceInput | undefined,
-    options: PerformanceCalculationOptions,
-  ): PerformanceResult | null {
-    if (!input || !input.snapshots || input.snapshots.length === 0) {
-      return null;
-    }
+    // A part with no points at all (no snapshots yet) has no history to
+    // add; it is left out rather than blanking the other part.
+    const parts = [discrete, continuous].filter(
+      (r): r is PerformanceResult => r !== undefined && r.dataPoints.length > 0,
+    );
+    const dataPoints = mergeOnGrid(
+      parts.map((r) => r.dataPoints),
+      parts[0] !== undefined && parts[0] === discrete,
+    );
+    const observed = dataPoints.filter((p) => p.source !== "interpolated").length;
 
-    return this.discreteStrategy.calculate(input, {
-      ...options,
-      includeDataPoints: true,
+    return {
+      generation: {
+        dataPoints,
+        actualDataPoints: observed,
+        interpolatedDataPoints: dataPoints.length - observed,
+        dataQuality: assessDataQuality(observed, context.expectedDataPoints),
+        partial: [discrete, continuous].some((r) => r?.metrics.partial),
+        actualSnapshotTimestamps: discrete?.actualSnapshotTimestamps,
+      },
+      breakdown: { discrete, continuous },
+    };
+  }
+}
+
+/**
+ * Sum the parts at each grid timestamp where all of them have a point. The
+ * cost line is the first part's when it is the discrete one (the snapshot's
+ * cost line already covers the continuously valued holdings), else the sum.
+ */
+function mergeOnGrid(
+  parts: PerformanceDataPoint[][],
+  firstIsDiscrete: boolean,
+): PerformanceDataPoint[] {
+  if (parts.length === 0) return [];
+  if (parts.length === 1) return parts[0];
+  const maps = parts.map((points) => new Map(points.map((p) => [p.timestamp, p])));
+  const merged: PerformanceDataPoint[] = [];
+  for (const point of parts[0]) {
+    const atTs = maps.map((m) => m.get(point.timestamp));
+    if (atTs.some((p) => p === undefined)) continue;
+    const present = atTs as PerformanceDataPoint[];
+    const costs = present.map((p) => p.costBasis);
+    const costBasis = firstIsDiscrete
+      ? costs[0]
+      : costs.every((c) => c === null)
+        ? null
+        : costs.reduce<number>((sum, c) => sum + (c ?? 0), 0);
+    merged.push({
+      timestamp: point.timestamp,
+      date: point.date,
+      value: present.reduce((sum, p) => sum + p.value, 0),
+      costBasis,
+      source: present.some((p) => p.source === "interpolated")
+        ? "interpolated"
+        : present.some((p) => p.source === "calculated")
+          ? "calculated"
+          : "snapshot",
+      confidence: Math.min(...present.map((p) => p.confidence)),
     });
   }
-
-  /**
-   * Calculate continuous performance if input is present
-   */
-  private calculateContinuousIfPresent(
-    input: ContinuousPerformanceInput | undefined,
-    options: PerformanceCalculationOptions,
-  ): PerformanceResult | null {
-    if (!input || !input.holdings || input.holdings.length === 0) {
-      return null;
-    }
-
-    // Check if there's any price data
-    const hasPrices = Object.values(input.prices).some(
-      (prices) => prices && prices.length > 0,
-    );
-    if (!hasPrices) {
-      return null;
-    }
-
-    return this.continuousStrategy.calculate(input, {
-      ...options,
-      includeDataPoints: true,
-    });
-  }
-
-  /**
-   * Merge data points from discrete and continuous results
-   * Points at the same timestamp are combined (values summed)
-   */
-  private mergeDataPoints(
-    discretePoints: PerformanceDataPoint[],
-    continuousPoints: PerformanceDataPoint[],
-    context: CalculationContext,
-  ): PerformanceDataPoint[] {
-    // If only one has points, return that
-    if (discretePoints.length === 0) return continuousPoints;
-    if (continuousPoints.length === 0) return discretePoints;
-
-    // Build a map of timestamp -> points
-    const pointMap = new Map<number, PerformanceDataPoint[]>();
-
-    for (const point of discretePoints) {
-      const existing = pointMap.get(point.timestamp) ?? [];
-      existing.push(point);
-      pointMap.set(point.timestamp, existing);
-    }
-
-    for (const point of continuousPoints) {
-      const existing = pointMap.get(point.timestamp) ?? [];
-      existing.push(point);
-      pointMap.set(point.timestamp, existing);
-    }
-
-    // Merge points at each timestamp
-    const mergedPoints: PerformanceDataPoint[] = [];
-
-    for (const [timestamp, points] of pointMap) {
-      const merged = this.mergePointsAtTimestamp(timestamp, points);
-      mergedPoints.push(merged);
-    }
-
-    // Sort by timestamp
-    mergedPoints.sort((a, b) => a.timestamp - b.timestamp);
-
-    return mergedPoints;
-  }
-
-  /**
-   * Merge multiple points at the same timestamp
-   */
-  private mergePointsAtTimestamp(
-    timestamp: number,
-    points: PerformanceDataPoint[],
-  ): PerformanceDataPoint {
-    if (points.length === 1) return points[0];
-
-    // Sum values and cost basis
-    let totalValue = 0;
-    let totalCostBasis: number | null = null;
-    let hasAnyInterpolation = false;
-    let lowestConfidence = 1;
-
-    for (const point of points) {
-      totalValue += point.value;
-
-      if (point.costBasis !== null) {
-        totalCostBasis = (totalCostBasis ?? 0) + point.costBasis;
-      }
-
-      if (point.source === "interpolated") {
-        hasAnyInterpolation = true;
-      }
-
-      lowestConfidence = Math.min(lowestConfidence, point.confidence);
-    }
-
-    // Determine combined source
-    const sources = points.map((p) => p.source);
-    let combinedSource: "snapshot" | "calculated" | "interpolated";
-    if (hasAnyInterpolation) {
-      combinedSource = "interpolated";
-    } else if (sources.includes("calculated")) {
-      combinedSource = "calculated";
-    } else {
-      combinedSource = "snapshot";
-    }
-
-    return {
-      timestamp,
-      date: new Date(timestamp).toISOString(),
-      value: totalValue,
-      costBasis: totalCostBasis,
-      source: combinedSource,
-      confidence: lowestConfidence,
-    };
-  }
-
-  /**
-   * Calculate combined metrics from individual results
-   */
-  private calculateCombinedMetrics(
-    discreteMetrics: PerformanceMetrics | undefined,
-    continuousMetrics: PerformanceMetrics | undefined,
-    mergedPoints: PerformanceDataPoint[],
-    context: CalculationContext,
-  ): PerformanceMetrics {
-    // If we have merged points, calculate from those
-    if (mergedPoints.length > 0) {
-      const interpolatedCount = mergedPoints.filter(
-        (p) => p.source === "interpolated",
-      ).length;
-
-      const quality = this.assessQuality(
-        mergedPoints.length,
-        context.expectedDataPoints,
-        interpolatedCount,
-      );
-
-      return this.calculateMetrics(mergedPoints, context, quality);
-    }
-
-    // Fallback: combine metrics directly
-    const hasDiscrete = !!discreteMetrics;
-    const hasContinuous = !!continuousMetrics;
-
-    if (!hasDiscrete && !hasContinuous) {
-      return this.createEmptyMetrics(context, "low");
-    }
-
-    if (hasDiscrete && !hasContinuous) {
-      return discreteMetrics!;
-    }
-
-    if (!hasDiscrete && hasContinuous) {
-      return continuousMetrics!;
-    }
-
-    // Both exist - combine them
-    const d = discreteMetrics!;
-    const c = continuousMetrics!;
-
-    const startValue = d.startValue + c.startValue;
-    const endValue = d.endValue + c.endValue;
-    const absoluteChange = endValue - startValue;
-    const percentChange =
-      startValue !== 0 ? (absoluteChange / startValue) * 100 : 0;
-
-    return {
-      startValue,
-      endValue,
-      absoluteChange,
-      percentChange,
-      highValue: d.highValue + c.highValue,
-      lowValue: d.lowValue + c.lowValue,
-      dataQuality: this.combineQuality(d.dataQuality, c.dataQuality),
-      dataPointCount: Math.max(d.dataPointCount, c.dataPointCount),
-      interpolatedPointCount:
-        d.interpolatedPointCount + c.interpolatedPointCount,
-      timeRange: context.timeRange,
-      startTimestamp: context.startTimestamp,
-      endTimestamp: context.endTimestamp,
-      calculatedAt: Date.now(),
-    };
-  }
-
-  /**
-   * Determine the effective value type of the result
-   */
-  private determineValueType(
-    discrete: PerformanceResult | null,
-    continuous: PerformanceResult | null,
-  ): ValueType {
-    if (discrete && continuous) {
-      return "discrete"; // Hybrid treated as discrete for simplicity
-    }
-    if (continuous) {
-      return "continuous";
-    }
-    return "discrete";
-  }
-
-  /**
-   * Combine two quality ratings (returns the lower one)
-   */
-  private combineQuality(q1: DataQuality, q2: DataQuality): DataQuality {
-    const qualityOrder: DataQuality[] = ["low", "medium", "high"];
-    const i1 = qualityOrder.indexOf(q1);
-    const i2 = qualityOrder.indexOf(q2);
-    return qualityOrder[Math.min(i1, i2)];
-  }
+  return merged;
 }
 
 // ═══════════════════════════════════════════════════════════════

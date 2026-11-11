@@ -8,6 +8,7 @@
  */
 
 import { getTimeIntervalInMilliseconds } from "../../finance/financeService";
+import { calculateSellPrice } from "../../finance/metals";
 
 import type {
   PerformanceDataPoint,
@@ -25,19 +26,6 @@ import type {
   CalculationContext,
   DataPointGenerationResult,
 } from "./types";
-
-// ═══════════════════════════════════════════════════════════════
-// Types for Precious Metals Calculation
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Metals-specific holding with fine weight and premium
- */
-interface MetalHolding extends HoldingData {
-  metalType: string;
-  fineWeightGrams: number;
-  sellPremium: number;
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Continuous Performance Strategy
@@ -279,42 +267,23 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
   }
 
   /**
-   * Calculate the value of a single holding at a given price
-   * Handles metals-specific calculation with fine weight and premium
+   * Value of a single holding at a given price.
+   *
+   * Metal holdings (with `fineWeightGrams`) take the price per troy ounce, as
+   * the metals API quotes it, and are valued with the shared
+   * `calculateSellPrice` (services/finance/metals.ts) that the vault and the
+   * server-side net worth use. Other holdings are quantity × price.
    */
-  private calculateItemValue(holding: HoldingData, spotPrice: number): number {
-    // For precious metals: use fine weight and sell premium
+  private calculateItemValue(holding: HoldingData, price: number): number {
     if (holding.fineWeightGrams !== undefined) {
-      return this.calculateMetalValue(
-        spotPrice,
+      return calculateSellPrice(
+        price,
         holding.fineWeightGrams,
         holding.sellPremium ?? 0,
         holding.quantity,
       );
     }
-
-    // For simple holdings: quantity × price
-    return holding.quantity * spotPrice;
-  }
-
-  /**
-   * Calculate precious metal value with sell premium
-   *
-   * Formula (same as calculateSellPrice / valueVaultItem in
-   * frontend/convex/lib/priceCalculations.ts, per gram instead of per oz):
-   * - Spot value = spotPrice (per gram) × fineWeightGrams × quantity
-   * - Sell value = spotValue × (1 + sellPremium)
-   *
-   * `sellPremium` is a decimal, as stored on vault items (-0.02 = 2% below spot).
-   */
-  private calculateMetalValue(
-    spotPricePerGram: number,
-    fineWeightGrams: number,
-    sellPremium: number,
-    quantity: number,
-  ): number {
-    const spotValue = spotPricePerGram * fineWeightGrams * quantity;
-    return spotValue * (1 + sellPremium);
+    return holding.quantity * price;
   }
 }
 

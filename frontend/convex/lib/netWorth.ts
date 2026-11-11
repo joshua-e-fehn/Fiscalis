@@ -1,5 +1,5 @@
 import { QueryCtx } from "../_generated/server";
-import { valueVaultItem } from "./priceCalculations";
+import { valueVaultItem } from "../../../services/finance/metals";
 
 /**
  * Server-side net worth for one user, computed from the stored documents.
@@ -140,7 +140,7 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
       spotByMetal.get(item.metalType),
       now,
     );
-    commoditiesCost += cost;
+    commoditiesCost += cost ?? 0;
     commoditiesValue += value;
   }
 

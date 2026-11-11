@@ -109,18 +109,12 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
     // Calculate totals
     const totalValue = subcategories.reduce((sum, s) => sum + s.totalValue, 0);
 
-    // Only include cost if all subcategories with value have cost data
-    const subcatsWithValue = subcategories.filter((s) => s.totalValue > 0);
-    const allHaveCost = subcatsWithValue.every((s) => s.costBasis !== null);
-    const totalCost = allHaveCost
-      ? subcatsWithValue.reduce((sum, s) => sum + (s.costBasis ?? 0), 0)
-      : null;
-
-    const profitLoss = totalCost !== null ? totalValue - totalCost : null;
-    const profitLossPercent =
-      totalCost !== null && totalCost > 0
-        ? (profitLoss! / totalCost) * 100
-        : null;
+    // Only precious metals carry data. Their cost and P/L cover just the
+    // items with a purchase price (summarizeMetalItems), so the P/L is taken
+    // from the summary rather than recomputed against the full value.
+    const totalCost = metalsSummary?.totalCost ?? null;
+    const profitLoss = metalsSummary?.totalProfitLoss ?? null;
+    const profitLossPercent = metalsSummary?.totalProfitLossPercent ?? null;
 
     // Convert historical data points to the expected format
     const historyDataPoints: PortfolioDataPoint[] = historicalDataPoints.map(
@@ -146,9 +140,9 @@ export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
     if (valueAtYearStart !== null && valueAtYearStart > 0) {
       ytdProfitLoss = totalValue - valueAtYearStart;
       ytdProfitLossPercent = (ytdProfitLoss / valueAtYearStart) * 100;
-    } else if (totalCost !== null && totalCost > 0) {
-      ytdProfitLoss = totalValue - totalCost;
-      ytdProfitLossPercent = (ytdProfitLoss / totalCost) * 100;
+    } else if (profitLoss !== null) {
+      ytdProfitLoss = profitLoss;
+      ytdProfitLossPercent = profitLossPercent;
     }
 
     return {

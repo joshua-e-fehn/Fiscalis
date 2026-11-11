@@ -29,7 +29,6 @@ import {
 } from "@/../services/finance/financeService";
 
 import { useMetalPricesRange } from "@/hooks/metals";
-import { TROY_OUNCE_GRAMS } from "@/convex/lib/priceCalculations";
 import type { MetalCurrency, MetalType } from "@/lib/types/metals";
 import type { MetalsCurrency, MetalsType } from "@/lib/types/metals-extended";
 
@@ -202,8 +201,8 @@ export function useContinuousPerformance(
     }));
   }, [vaultItems]);
 
-  // Transform price data to PriceData format
-  // Note: API prices are per troy ounce, but calculations need per gram
+  // Transform price data to PriceData format. Prices stay per troy ounce,
+  // the unit the continuous strategy values metal holdings in.
   const prices = useMemo<PriceData>(() => {
     const result: PriceData = {};
 
@@ -214,17 +213,12 @@ export function useContinuousPerformance(
       return date.getTime();
     };
 
-    // Helper to convert price per ounce to price per gram
-    const toPerGram = (pricePerOunce: number): number => {
-      return pricePerOunce / TROY_OUNCE_GRAMS;
-    };
-
     if (goldPrices.data) {
       result.gold = goldPrices.data
         .filter((p) => p.price !== null)
         .map((p) => ({
           timestamp: toTimestamp(p.date),
-          price: toPerGram(p.price!),
+          price: p.price!,
         }));
     }
 
@@ -233,7 +227,7 @@ export function useContinuousPerformance(
         .filter((p) => p.price !== null)
         .map((p) => ({
           timestamp: toTimestamp(p.date),
-          price: toPerGram(p.price!),
+          price: p.price!,
         }));
     }
 
@@ -242,7 +236,7 @@ export function useContinuousPerformance(
         .filter((p) => p.price !== null)
         .map((p) => ({
           timestamp: toTimestamp(p.date),
-          price: toPerGram(p.price!),
+          price: p.price!,
         }));
     }
 
@@ -251,7 +245,7 @@ export function useContinuousPerformance(
         .filter((p) => p.price !== null)
         .map((p) => ({
           timestamp: toTimestamp(p.date),
-          price: toPerGram(p.price!),
+          price: p.price!,
         }));
     }
 

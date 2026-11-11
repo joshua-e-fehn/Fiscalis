@@ -20,6 +20,7 @@ import {
 } from "./aggregate";
 import { loanMonthlyPaymentInBase } from "./categorySummary";
 import { fxRatesFromDaily } from "../finance/currency";
+import { roundMoney } from "../finance/financeService";
 import { snapshotCostLine } from "./unrealizedProfitLoss";
 
 let seq = 0;
@@ -261,11 +262,42 @@ describe("netWorthApiBreakdown", () => {
     expect(of("collectibles")).toEqual({ category: "collectibles", value: 0, subcategories: [], sources: [] });
   });
 
-  it("has asset categories that sum to total assets", () => {
-    const assets = breakdown
+  it("has asset categories that sum to total assets, up to rounding", () => {
+    const assets = breakdown.filter((c) => c.category !== "liabilities");
+    const sum = assets.reduce((total, c) => total + c.value, 0);
+    // Half a cent per rounded part; exact here only because the fixture is whole
+    expect(Math.abs(sum - roundMoney(a.totalAssets))).toBeLessThanOrEqual(
+      0.005 * assets.length + 1e-9,
+    );
+  });
+
+  it("lets rounded parts drift from their rounded total by more than a cent", () => {
+    const five = ["cash", "equities", "bonds", "crypto", "commodities"] as const;
+    const drifted = aggregateNetWorth(
+      five.map((category) => holding({ source: "bank", category, valueBase: 10.004 })),
+    );
+    const sum = netWorthApiBreakdown(drifted)
       .filter((c) => c.category !== "liabilities")
-      .reduce((sum, c) => sum + c.value, 0);
-    expect(assets).toBe(a.totalAssets);
+      .reduce((total, c) => total + c.value, 0);
+    expect(sum).toBe(50);
+    expect(roundMoney(drifted.totalAssets)).toBe(50.02);
+  });
+
+  it("can leave a non-zero category without subcategories", () => {
+    const names = ["savings-accounts", "checking-accounts", "money-market", "cds", "forex"];
+    const cash = netWorthApiBreakdown(
+      aggregateNetWorth(
+        names.map((subcategory) =>
+          holding({ source: "bank", category: "cash", subcategory, valueBase: 0.004 }),
+        ),
+      ),
+    ).find((c) => c.category === "cash");
+    expect(cash).toEqual({
+      category: "cash",
+      value: 0.02,
+      subcategories: [],
+      sources: [{ source: "bank", value: 0.02 }],
+    });
   });
 
   it("reports liabilities as the amount owed, equal to total liabilities", () => {

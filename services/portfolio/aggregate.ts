@@ -511,9 +511,10 @@ function byValueThenName<T extends { value: number }>(
 /**
  * The public API's category breakdown: every category in HOLDING_CATEGORIES
  * order, including empty ones, each with its value per subcategory and per
- * source. Values are rounded to cents, so the parts can differ from their
- * rounded total by a cent. A subcategory or source worth nothing is left
- * out. Unlike the snapshot breakdown it includes liabilities (as the amount
+ * source. Every value is rounded to cents on its own, so a sum of parts can
+ * differ from its rounded total by up to half a cent per part. A subcategory
+ * or source that rounds to zero is left out, so a non-zero category can list
+ * fewer parts than it has. Unlike the snapshot breakdown it includes liabilities (as the amount
  * owed) and carries no cost basis or holdings.
  */
 export function netWorthApiBreakdown(

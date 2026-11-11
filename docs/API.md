@@ -122,9 +122,13 @@ Each entry of `categories`:
 | `sources`       | array  | `{ source, value }` per source, largest first (ties by name) |
 
 - **Sign convention.** `liabilities.value` is the amount owed and equals
-  `totalLiabilities`. The eight asset categories sum to `totalAssets`.
+  `totalLiabilities` exactly. The eight asset categories sum to `totalAssets`
+  up to rounding.
 - **Rounding.** Every amount is rounded to cents on its own, so a sum of parts
-  can differ from its total by a cent.
+  can differ from its total by up to half a cent per part: a few cents in
+  practice, not at most one. A part that rounds to zero is left out, so a
+  non-zero category can list fewer parts than it has, or none. Compare sums
+  with a tolerance, not for equality.
 - **Credit balances.** A liability account that is in credit (an overpaid card
   or loan) is money owed to you. It appears under `cash` with the subcategory
   `credit-balance`, never as negative debt.

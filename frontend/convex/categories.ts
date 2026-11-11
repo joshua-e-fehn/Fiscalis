@@ -526,26 +526,10 @@ export const getCryptoTransactions = query({
       });
     }
 
-    // Deduplicate the same economic event reported by multiple Bitpanda
-    // endpoints (e.g. a buy appears in both /trades and /wallets/transactions
-    // with different IDs). Collapse by a signature of the event itself.
-    const seen = new Set<string>();
-    const deduped = unified.filter((tx) => {
-      const key = [
-        tx.provider,
-        tx.type,
-        tx.symbol.toUpperCase(),
-        tx.quantity.toFixed(8),
-        tx.value.toFixed(2),
-        tx.date.slice(0, 10), // day granularity (endpoints may differ by seconds)
-      ].join("|");
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-
-    // Most recent first
-    deduped.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-    return deduped.slice(0, limit);
+    // Bitpanda's cross-endpoint copies are removed once, at sync time
+    // (lib/bitpanda.ts dedupeAcrossEndpoints); every stored row is a
+    // transaction of its own. Most recent first.
+    unified.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    return unified.slice(0, limit);
   },
 });

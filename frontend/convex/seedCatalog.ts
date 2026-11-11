@@ -1,17 +1,18 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
+import { catalogPremiums } from "./lib/metalPremiums";
 import { TROY_OUNCE_GRAMS } from "./lib/priceCalculations";
 
 /**
  * Seed the metal catalog with popular coins and bars
  *
- * ⚠️ PLACEHOLDER PREMIUMS: The premiums listed are estimates based on typical
- * market ranges. They will be refined with real dealer data in a future update.
- * Users can override these per-item when adding to their vault.
+ * Default buy/sell premiums come from the calibrated table in
+ * lib/metalPremiums.ts (see docs/METAL_PREMIUMS.md). Users can override them
+ * per item.
  *
- * Run this mutation once to populate the catalog:
- * In Convex dashboard or via code: await ctx.runMutation(api.seedCatalog.seedMetalCatalog)
+ * Internal (admin-only). Run once to populate the catalog:
+ *   npx convex run seedCatalog:seedMetalCatalog
  */
-export const seedMetalCatalog = mutation({
+export const seedMetalCatalog = internalMutation({
   args: {},
   handler: async (ctx) => {
     // Check if catalog already has data
@@ -35,8 +36,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 33.93,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.035,
-        defaultSellPremium: 0.0, // buy: 3.5%
         country: "South Africa",
         mint: "South African Mint",
         year: "various",
@@ -52,8 +51,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 16.965,
         fineWeightGrams: 15.5517,
         fineWeightOz: 0.5,
-        defaultBuyPremium: 0.05,
-        defaultSellPremium: 0.0, // buy: 5%
         country: "South Africa",
         mint: "South African Mint",
         year: "various",
@@ -69,8 +66,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 8.482,
         fineWeightGrams: 7.7758,
         fineWeightOz: 0.25,
-        defaultBuyPremium: 0.06,
-        defaultSellPremium: 0.0, // buy: 6%
         country: "South Africa",
         mint: "South African Mint",
         year: "various",
@@ -86,8 +81,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 3.393,
         fineWeightGrams: 3.1103,
         fineWeightOz: 0.1,
-        defaultBuyPremium: 0.08,
-        defaultSellPremium: 0.0, // buy: 8%
         country: "South Africa",
         mint: "South African Mint",
         year: "various",
@@ -105,8 +98,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.03,
-        defaultSellPremium: 0.0, // buy: 3%
         country: "Canada",
         mint: "Royal Canadian Mint",
         year: "various",
@@ -122,8 +113,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 15.5517,
         fineWeightGrams: 15.5517,
         fineWeightOz: 0.5,
-        defaultBuyPremium: 0.045,
-        defaultSellPremium: 0.0, // buy: 4.5%
         country: "Canada",
         mint: "Royal Canadian Mint",
         year: "various",
@@ -139,8 +128,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 7.7758,
         fineWeightGrams: 7.7758,
         fineWeightOz: 0.25,
-        defaultBuyPremium: 0.055,
-        defaultSellPremium: 0.0, // buy: 5.5%
         country: "Canada",
         mint: "Royal Canadian Mint",
         year: "various",
@@ -156,8 +143,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 3.1103,
         fineWeightGrams: 3.1103,
         fineWeightOz: 0.1,
-        defaultBuyPremium: 0.07,
-        defaultSellPremium: 0.0, // buy: 7%
         country: "Canada",
         mint: "Royal Canadian Mint",
         year: "various",
@@ -175,8 +160,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 33.93,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.04,
-        defaultSellPremium: 0.0, // buy: 4%
         country: "USA",
         mint: "US Mint",
         year: "various",
@@ -192,8 +175,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 16.965,
         fineWeightGrams: 15.5517,
         fineWeightOz: 0.5,
-        defaultBuyPremium: 0.055,
-        defaultSellPremium: 0.0, // buy: 5.5%
         country: "USA",
         mint: "US Mint",
         year: "various",
@@ -209,8 +190,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 8.483,
         fineWeightGrams: 7.7758,
         fineWeightOz: 0.25,
-        defaultBuyPremium: 0.065,
-        defaultSellPremium: 0.0, // buy: 6.5%
         country: "USA",
         mint: "US Mint",
         year: "various",
@@ -226,8 +205,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 3.393,
         fineWeightGrams: 3.1103,
         fineWeightOz: 0.1,
-        defaultBuyPremium: 0.085,
-        defaultSellPremium: 0.0, // buy: 8.5%
         country: "USA",
         mint: "US Mint",
         year: "various",
@@ -245,8 +222,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.03,
-        defaultSellPremium: 0.0, // buy: 3%
         country: "Austria",
         mint: "Austrian Mint",
         year: "various",
@@ -262,8 +237,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 15.5517,
         fineWeightGrams: 15.5517,
         fineWeightOz: 0.5,
-        defaultBuyPremium: 0.045,
-        defaultSellPremium: 0.0, // buy: 4.5%
         country: "Austria",
         mint: "Austrian Mint",
         year: "various",
@@ -279,8 +252,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 7.7758,
         fineWeightGrams: 7.7758,
         fineWeightOz: 0.25,
-        defaultBuyPremium: 0.055,
-        defaultSellPremium: 0.0, // buy: 5.5%
         country: "Austria",
         mint: "Austrian Mint",
         year: "various",
@@ -296,8 +267,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 3.1103,
         fineWeightGrams: 3.1103,
         fineWeightOz: 0.1,
-        defaultBuyPremium: 0.07,
-        defaultSellPremium: 0.0, // buy: 7%
         country: "Austria",
         mint: "Austrian Mint",
         year: "various",
@@ -315,8 +284,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.035,
-        defaultSellPremium: 0.0, // buy: 3.5%
         country: "United Kingdom",
         mint: "Royal Mint",
         year: "various",
@@ -334,8 +301,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.035,
-        defaultSellPremium: 0.0, // buy: 3.5%
         country: "Australia",
         mint: "Perth Mint",
         year: "various",
@@ -353,8 +318,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 30.0,
         fineWeightGrams: 30.0,
         fineWeightOz: 0.9646,
-        defaultBuyPremium: 0.08,
-        defaultSellPremium: 0.0, // buy: 8% - higher collector premium
         country: "China",
         mint: "China Mint",
         year: "various",
@@ -375,8 +338,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 1.0,
         fineWeightGrams: 1.0,
         fineWeightOz: 1.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.2,
-        defaultSellPremium: 0.0, // buy: 20%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -392,8 +353,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 2.0,
         fineWeightGrams: 2.0,
         fineWeightOz: 2.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.15,
-        defaultSellPremium: 0.0, // buy: 15%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -409,8 +368,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 5.0,
         fineWeightGrams: 5.0,
         fineWeightOz: 5.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.1,
-        defaultSellPremium: 0.0, // buy: 10%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -426,8 +383,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 10.0,
         fineWeightGrams: 10.0,
         fineWeightOz: 10.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.06,
-        defaultSellPremium: 0.0, // buy: 6%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -443,8 +398,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 20.0,
         fineWeightGrams: 20.0,
         fineWeightOz: 20.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.04,
-        defaultSellPremium: 0.0, // buy: 4%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -460,8 +413,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.03,
-        defaultSellPremium: 0.0, // buy: 3%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -477,8 +428,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 50.0,
         fineWeightGrams: 50.0,
         fineWeightOz: 50.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.025,
-        defaultSellPremium: 0.0, // buy: 2.5%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -494,8 +443,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 100.0,
         fineWeightGrams: 100.0,
         fineWeightOz: 100.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.015,
-        defaultSellPremium: 0.0, // buy: 1.5%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -511,8 +458,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 250.0,
         fineWeightGrams: 250.0,
         fineWeightOz: 250.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.012,
-        defaultSellPremium: 0.0, // buy: 1.2%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -528,8 +473,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 500.0,
         fineWeightGrams: 500.0,
         fineWeightOz: 500.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.01,
-        defaultSellPremium: 0.0, // buy: 1%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -545,8 +488,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 1000.0,
         fineWeightGrams: 1000.0,
         fineWeightOz: 1000.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.008,
-        defaultSellPremium: 0.0, // buy: 0.8%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -567,8 +508,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.15,
-        defaultSellPremium: 0.0, // buy: 15% - silver typically has higher premiums
         country: "Canada",
         mint: "Royal Canadian Mint",
         year: "various",
@@ -584,8 +523,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.18,
-        defaultSellPremium: 0.0, // buy: 18%
         country: "USA",
         mint: "US Mint",
         year: "various",
@@ -601,8 +538,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.14,
-        defaultSellPremium: 0.0, // buy: 14%
         country: "Austria",
         mint: "Austrian Mint",
         year: "various",
@@ -618,8 +553,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.15,
-        defaultSellPremium: 0.0, // buy: 15%
         country: "United Kingdom",
         mint: "Royal Mint",
         year: "various",
@@ -635,8 +568,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.15,
-        defaultSellPremium: 0.0, // buy: 15%
         country: "Australia",
         mint: "Perth Mint",
         year: "various",
@@ -657,8 +588,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.12,
-        defaultSellPremium: 0.0, // buy: 12%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -674,8 +603,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 100.0,
         fineWeightGrams: 100.0,
         fineWeightOz: 100.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.1,
-        defaultSellPremium: 0.0, // buy: 10%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -691,8 +618,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 250.0,
         fineWeightGrams: 250.0,
         fineWeightOz: 250.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.08,
-        defaultSellPremium: 0.0, // buy: 8%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -708,8 +633,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 500.0,
         fineWeightGrams: 500.0,
         fineWeightOz: 500.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.06,
-        defaultSellPremium: 0.0, // buy: 6%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -725,8 +648,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 1000.0,
         fineWeightGrams: 1000.0,
         fineWeightOz: 1000.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.05,
-        defaultSellPremium: 0.0, // buy: 5%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -742,8 +663,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 5000.0,
         fineWeightGrams: 5000.0,
         fineWeightOz: 5000.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.04,
-        defaultSellPremium: 0.0, // buy: 4%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -764,8 +683,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.05,
-        defaultSellPremium: 0.0, // buy: 5%
         country: "Canada",
         mint: "Royal Canadian Mint",
         year: "various",
@@ -781,8 +698,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.06,
-        defaultSellPremium: 0.0, // buy: 6%
         country: "USA",
         mint: "US Mint",
         year: "various",
@@ -798,8 +713,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.05,
-        defaultSellPremium: 0.0, // buy: 5%
         country: "Austria",
         mint: "Austrian Mint",
         year: "various",
@@ -820,8 +733,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.04,
-        defaultSellPremium: 0.0, // buy: 4%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -837,8 +748,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 10.0,
         fineWeightGrams: 10.0,
         fineWeightOz: 10.0 / TROY_OUNCE_GRAMS,
-        defaultBuyPremium: 0.07,
-        defaultSellPremium: 0.0, // buy: 7%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -859,8 +768,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.06,
-        defaultSellPremium: 0.0, // buy: 6%
         country: "Canada",
         mint: "Royal Canadian Mint",
         year: "various",
@@ -876,8 +783,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.07,
-        defaultSellPremium: 0.0, // buy: 7%
         country: "USA",
         mint: "US Mint",
         year: "various",
@@ -898,8 +803,6 @@ export const seedMetalCatalog = mutation({
         weightGrams: 31.1035,
         fineWeightGrams: 31.1035,
         fineWeightOz: 1.0,
-        defaultBuyPremium: 0.05,
-        defaultSellPremium: 0.0, // buy: 5%
         country: undefined,
         mint: undefined,
         year: undefined,
@@ -912,7 +815,12 @@ export const seedMetalCatalog = mutation({
     // Insert all catalog items
     let insertedCount = 0;
     for (const item of catalogItems) {
-      await ctx.db.insert("metalCatalog", item);
+      const { buy, sell } = catalogPremiums(item.name);
+      await ctx.db.insert("metalCatalog", {
+        ...item,
+        defaultBuyPremium: buy,
+        defaultSellPremium: sell,
+      });
       insertedCount++;
     }
 
@@ -922,9 +830,10 @@ export const seedMetalCatalog = mutation({
 });
 
 /**
- * Clear the catalog (for development/testing only)
+ * Clear the catalog (for development/testing only). Internal: never callable
+ * from a client.
  */
-export const clearMetalCatalog = mutation({
+export const clearMetalCatalog = internalMutation({
   args: {},
   handler: async (ctx) => {
     const items = await ctx.db.query("metalCatalog").collect();

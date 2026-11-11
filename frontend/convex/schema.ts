@@ -736,4 +736,27 @@ export default defineSchema({
 		.index("by_user", ["userId"])
 		.index("by_user_date", ["userId", "date"])
 		.index("by_user_timestamp", ["userId", "timestamp"]),
+
+	// ═══════════════════════════════════════════════════════════════
+	// API KEYS
+	// ═══════════════════════════════════════════════════════════════
+	// User-scoped keys for the public REST API (convex/http.ts).
+	// Only the SHA-256 hash of a key is stored; the plaintext is shown once.
+
+	apiKeys: defineTable({
+		userId: v.string(), // Clerk user ID that owns the key
+		name: v.string(), // User-chosen label
+		keyHash: v.string(), // Hex SHA-256 of the full key
+		keyPrefix: v.string(), // Non-secret display prefix, e.g. "fis_AbC123"
+		scopes: v.array(v.literal("networth:read")),
+		createdAt: v.number(),
+		expiresAt: v.optional(v.number()),
+		revokedAt: v.optional(v.number()),
+		lastUsedAt: v.optional(v.number()),
+		// Fixed-window rate limiter state
+		rateWindowStart: v.optional(v.number()),
+		rateWindowCount: v.optional(v.number()),
+	})
+		.index("by_user", ["userId"])
+		.index("by_key_hash", ["keyHash"]),
 });

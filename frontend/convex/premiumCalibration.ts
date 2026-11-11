@@ -31,7 +31,11 @@ export const applyPremiumCalibration = internalMutation({
     const previousDefaults = new Map(
       catalog.map((c) => [
         c._id,
-        { buy: c.defaultBuyPremium, sell: c.defaultSellPremium ?? 0 },
+        {
+          // Effective values, read the same way vault.ts / the dashboard do.
+          buy: c.defaultBuyPremium ?? (c as { defaultPremium?: number }).defaultPremium,
+          sell: c.defaultSellPremium ?? 0,
+        },
       ]),
     );
 
@@ -71,8 +75,12 @@ export const applyPremiumCalibration = internalMutation({
         item.buyPremium === premium.buy && item.sellPremium === premium.sell;
       if (alreadyCalibrated) continue;
 
+      const itemBuy =
+        item.buyPremium ?? (item as { premium?: number }).premium;
       const untouched =
-        item.buyPremium === previous.buy && (item.sellPremium ?? 0) === previous.sell;
+        itemBuy !== undefined &&
+        itemBuy === previous.buy &&
+        (item.sellPremium ?? 0) === previous.sell;
       if (!untouched) {
         vaultItemsKeptCustom++;
         continue;

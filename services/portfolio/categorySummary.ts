@@ -18,6 +18,10 @@ import {
   type HoldingValuation,
 } from "./unrealizedProfitLoss";
 import { toBase, type FxRates } from "../finance/currency";
+import {
+  getPaymentsPerYear,
+  type LoanPaymentFrequency,
+} from "../finance/loanScheduleService";
 
 export type { HoldingValuation };
 
@@ -175,15 +179,38 @@ export function loanCountsAsLiability(status: string): boolean {
 
 /**
  * Outstanding loan balance in EUR, converted at read time by the loan's
- * currency. 0 for a loan that does not count (loanCountsAsLiability) or
- * whose currency has no rate (never read 1:1 as EUR).
+ * currency: positive = owed (a negative balance is an overpayment, which
+ * the aggregator counts as a small asset). 0 for a loan that does not count
+ * (loanCountsAsLiability) or whose currency has no rate (never read 1:1 as
+ * EUR).
  */
 export function loanBalanceInBase(
   loan: { currentBalance: number; currency: string; status: string },
   rates: FxRates,
 ): number {
   if (!loanCountsAsLiability(loan.status)) return 0;
-  const converted = toBase(Math.abs(loan.currentBalance), loan.currency, rates);
+  const converted = toBase(loan.currentBalance, loan.currency, rates);
+  return converted.ok ? converted.value : 0;
+}
+
+/**
+ * A loan's scheduled payment as a monthly equivalent in EUR: the payment
+ * times its payments per year, divided by 12 (a quarterly 300 is 100 a
+ * month). 0 for a loan that does not count or has no rate.
+ */
+export function loanMonthlyPaymentInBase(
+  loan: {
+    scheduledPayment: number;
+    paymentFrequency: LoanPaymentFrequency;
+    currency: string;
+    status: string;
+  },
+  rates: FxRates,
+): number {
+  if (!loanCountsAsLiability(loan.status)) return 0;
+  const monthly =
+    (loan.scheduledPayment * getPaymentsPerYear(loan.paymentFrequency)) / 12;
+  const converted = toBase(monthly, loan.currency, rates);
   return converted.ok ? converted.value : 0;
 }
 

@@ -7,12 +7,16 @@ import {
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useCashSummary } from "@/hooks/convex/cash";
-import { usePortfolioOverview } from "@/hooks/convex/portfolio";
+import {
+  useBaseCurrency,
+  usePortfolioOverview,
+} from "@/hooks/convex/portfolio";
 import { cashCategoryCards } from "@/lib/config/categoryUI";
 
 export default function CashPage() {
   const { summary, isLoading } = useCashSummary();
-  const { summary: portfolioSummary } = usePortfolioOverview("eur");
+  const { summary: portfolioSummary } = usePortfolioOverview();
+  const currency = useBaseCurrency();
 
   return (
     <div className="container mx-auto py-6 space-y-8">
@@ -33,7 +37,7 @@ export default function CashPage() {
       <InvestmentDashboardSection
         category="cash"
         summary={summary}
-        currency="eur"
+        currency={currency}
         isLoading={isLoading}
         kpiCards={CASH_KPI_CARDS}
         totalPortfolioAssets={portfolioSummary?.totalAssets ?? 0}

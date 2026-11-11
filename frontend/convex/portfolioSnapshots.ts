@@ -1,8 +1,11 @@
 /**
  * Portfolio Snapshots
  *
- * Functions to record and retrieve portfolio value snapshots.
- * Snapshots are taken after each sync operation to track portfolio value over time.
+ * One canonical snapshot per user per day: every trigger (the daily cron,
+ * a provider sync, a manual vault or loan change) upserts today's row with
+ * the current net worth (lib/netWorth.ts computeNetWorth), so the series has
+ * one point per day however often the data changed. Manual changes schedule
+ * the snapshot through scheduleSnapshot, debounced.
  */
 
 import { v } from "convex/values";
@@ -10,26 +13,72 @@ import {
   query,
   internalMutation,
   internalQuery,
+  type MutationCtx,
 } from "./_generated/server";
-import { Doc } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import { computeNetWorth } from "./lib/netWorth";
 import { getUserId } from "./lib/auth";
 
+/** Delay before a snapshot requested by a manual change is taken. */
+export const SNAPSHOT_DEBOUNCE_MS = 60_000;
+
 /**
- * Internal mutation to take a portfolio snapshot
- * Called after sync operations complete
+ * Schedule today's snapshot after a manual change (vault item, loan).
+ * Several changes within SNAPSHOT_DEBOUNCE_MS collapse into one write: a
+ * scheduled run skips when today's row was written after it was requested.
+ */
+export async function scheduleSnapshot(
+  ctx: MutationCtx,
+  userId: string,
+  source: string,
+): Promise<void> {
+  await ctx.scheduler.runAfter(
+    SNAPSHOT_DEBOUNCE_MS,
+    internal.portfolioSnapshots.takeSnapshot,
+    { userId, source, requestedAt: Date.now() },
+  );
+}
+
+/**
+ * Upsert today's portfolio snapshot for a user.
  */
 export const takeSnapshot = internalMutation({
   args: {
     userId: v.string(),
-    source: v.string(), // "plaid", "snaptrade", "manual", "vault", "scheduled"
+    source: v.string(), // "plaid", "snaptrade", "bitpanda", "vault", "loan", "scheduled-daily", ...
     // A provider sync before this snapshot failed: that provider's holdings
     // are the ones stored by its last successful sync
     partial: v.optional(v.boolean()),
+    // Debounced request (scheduleSnapshot): skip when today's row was
+    // written at or after this time
+    requestedAt: v.optional(v.number()),
+    // Fallback run (daily cron): only write when today has no row yet
+    onlyIfMissing: v.optional(v.boolean()),
   },
-  handler: async (ctx, { userId, source, partial }) => {
+  handler: async (ctx, { userId, source, partial, requestedAt, onlyIfMissing }) => {
     const now = Date.now();
     const today = new Date(now).toISOString().split("T")[0];
+
+    // Newest row of today (days before this policy may hold several)
+    const existing = await ctx.db
+      .query("portfolioSnapshots")
+      .withIndex("by_user_date", (q) =>
+        q.eq("userId", userId).eq("date", today),
+      )
+      .order("desc")
+      .first();
+
+    if (
+      existing &&
+      (onlyIfMissing ||
+        (requestedAt !== undefined && existing.timestamp >= requestedAt))
+    ) {
+      return {
+        totalAssets: existing.totalAssets,
+        totalLiabilities: existing.totalLiabilities,
+        netWorth: existing.netWorth,
+      };
+    }
 
     const {
       totalAssets,
@@ -38,45 +87,11 @@ export const takeSnapshot = internalMutation({
       totalCostBasis,
       totalCoveredValue,
       categoryBreakdown,
+      asOf,
     } = await computeNetWorth(ctx, userId);
 
-    // Determine if we should create a new snapshot or update existing
-    // - "scheduled-daily" updates existing snapshot for the day (one per day)
-    // - All other sources (sync-all, manual, etc.) always create new snapshots
-    //   to build an irregular time series for tracking changes
-    const shouldUpdateExisting = source === "scheduled-daily";
-
-    if (shouldUpdateExisting) {
-      // Check if we already have a snapshot for today from scheduled sync
-      const existingSnapshot = await ctx.db
-        .query("portfolioSnapshots")
-        .withIndex("by_user_date", (q) =>
-          q.eq("userId", userId).eq("date", today),
-        )
-        .first();
-
-      if (existingSnapshot && existingSnapshot.source === "scheduled-daily") {
-        // Update existing scheduled snapshot for today
-        await ctx.db.patch(existingSnapshot._id, {
-          timestamp: now,
-          totalAssets,
-          totalLiabilities,
-          netWorth,
-          totalCostBasis,
-          totalCoveredValue,
-          categoryBreakdown,
-          source,
-          partial: partial || undefined,
-        });
-        return { totalAssets, totalLiabilities, netWorth };
-      }
-    }
-
-    // Create new snapshot (default behavior for manual syncs)
-    await ctx.db.insert("portfolioSnapshots", {
-      userId,
+    const fields = {
       timestamp: now,
-      date: today,
       totalAssets,
       totalLiabilities,
       netWorth,
@@ -84,8 +99,19 @@ export const takeSnapshot = internalMutation({
       totalCoveredValue,
       categoryBreakdown,
       source,
-      ...(partial ? { partial: true } : {}),
-    });
+      partial: partial || undefined,
+      asOf: asOf ?? undefined,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, fields);
+    } else {
+      await ctx.db.insert("portfolioSnapshots", {
+        userId,
+        date: today,
+        ...fields,
+      });
+    }
 
     return { totalAssets, totalLiabilities, netWorth };
   },

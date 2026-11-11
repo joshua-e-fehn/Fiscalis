@@ -18,6 +18,7 @@ import {
 } from "../../services/finance/loanScheduleService";
 import { roundMoney } from "../../services/finance/financeService";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
+import { scheduleSnapshot } from "./portfolioSnapshots";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -422,6 +423,7 @@ export const createLoan = mutation({
       updatedAt: now,
     });
 
+    await scheduleSnapshot(ctx, userId, "loan");
     return loanId;
   },
 });
@@ -471,6 +473,7 @@ export const updateLoan = mutation({
       }),
       updatedAt: Date.now(),
     });
+    await scheduleSnapshot(ctx, loan.userId, "loan");
   },
 });
 
@@ -480,7 +483,7 @@ export const deleteLoan = mutation({
     loanId: v.id("loans"),
   },
   handler: async (ctx, args) => {
-    await requireOwnedLoan(ctx, args.loanId);
+    const { userId } = await requireOwnedLoan(ctx, args.loanId);
 
     // Delete all related payments
     const payments = await ctx.db
@@ -504,6 +507,7 @@ export const deleteLoan = mutation({
 
     // Delete the loan
     await ctx.db.delete(args.loanId);
+    await scheduleSnapshot(ctx, userId, "loan");
   },
 });
 
@@ -577,6 +581,7 @@ export const recordPayment = mutation({
       updatedAt: Date.now(),
     });
 
+    await scheduleSnapshot(ctx, userId, "loan");
     return paymentId;
   },
 });
@@ -646,6 +651,7 @@ export const updatePayment = mutation({
           : undefined,
       updatedAt: Date.now(),
     });
+    await scheduleSnapshot(ctx, loan.userId, "loan");
   },
 });
 
@@ -684,6 +690,7 @@ export const deletePayment = mutation({
       actualEndDate: status === "paid_off" ? loan.actualEndDate : undefined,
       updatedAt: Date.now(),
     });
+    await scheduleSnapshot(ctx, loan.userId, "loan");
   },
 });
 

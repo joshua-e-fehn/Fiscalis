@@ -85,12 +85,14 @@ export interface RetirementNetWorth {
 }
 
 /**
- * Net worth used as the retirement funding basis. Reuses the dashboard's
- * usePortfolioOverview so both always agree (incl. vault metals and manual
- * loans). Returns `undefined` while loading.
+ * Net worth used as the retirement funding basis: the dashboard's overview,
+ * which is the server-side net worth (portfolio.getOverview, the same
+ * aggregator as the snapshots), so the planner, the dashboard and the
+ * history always agree: liabilities in EUR, loans by the D1 status rule.
+ * Returns `undefined` while loading.
  */
 export function useRetirementNetWorth(): RetirementNetWorth | undefined {
-	const { summary, isLoading } = usePortfolioOverview("eur");
+	const { summary, isLoading } = usePortfolioOverview();
 
 	return useMemo(() => {
 		if (isLoading || !summary) return undefined;

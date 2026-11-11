@@ -4,7 +4,9 @@
  * Aggregates data from all liability subcategories (mortgages, loans, credit cards, margin loans)
  * to provide a unified summary for the category dashboard.
  *
- * Uses real data from Plaid accounts and broker positions via classification.
+ * Rows and totals come from categories.getLiabilities, which reads the shared
+ * net-worth aggregator, so the totals equal the dashboard's and the
+ * snapshots' liabilities.
  */
 
 import { useMemo } from "react";
@@ -43,101 +45,32 @@ export function useLiabilitiesSummary(): {
     // Return null if not authenticated or still loading
     if (liabilitiesData === undefined || liabilitiesData === null) return null;
 
-    const {
-      plaidLiabilities,
-      brokerLiabilities,
-      manualLoans,
-      summary: dataSummary,
-    } = liabilitiesData;
+    const { rows, summary: dataSummary } = liabilitiesData;
     const bySubcategory = dataSummary.bySubcategory;
 
-    // Helper to get top holdings for a subcategory
+    // The largest liabilities of a subcategory, by amount owed in EUR (the
+    // server's rows: Plaid accounts, margin debits, Bitpanda, manual loans)
     const getTopHoldingsForSubcategory = (
       subcategory: string,
       limit: number = 3,
-    ): Holding[] => {
-      const holdings: Holding[] = [];
-
-      // Add Plaid liabilities matching this subcategory
-      plaidLiabilities
-        .filter((acc) => acc.investmentSubcategory === subcategory)
-        .sort(
-          (a, b) =>
-            Math.abs(b.currentBalance ?? 0) - Math.abs(a.currentBalance ?? 0),
-        )
+    ): Holding[] =>
+      rows
+        .filter((row) => row.subcategory === subcategory)
+        .sort((a, b) => b.owedInBaseCurrency - a.owedInBaseCurrency)
         .slice(0, limit)
-        .forEach((acc) => {
-          const value = Math.abs(acc.currentBalance ?? 0);
-          holdings.push({
-            id: acc._id,
-            name: acc.name || acc.officialName || "Account",
-            subcategoryId: subcategory,
-            value,
-            costBasis: null,
-            profitLoss: null,
-            profitLossPercent: null,
-            allocationPercent:
-              dataSummary.totalLiabilities > 0
-                ? (value / dataSummary.totalLiabilities) * 100
-                : 0,
-          });
-        });
-
-      // Add broker liabilities (margin loans) matching this subcategory
-      brokerLiabilities
-        .filter((pos) => pos.investmentSubcategory === subcategory)
-        .sort(
-          (a, b) =>
-            Math.abs(b.valueInBaseCurrency ?? b.marketValue ?? 0) -
-            Math.abs(a.valueInBaseCurrency ?? a.marketValue ?? 0),
-        )
-        .slice(0, limit - holdings.length)
-        .forEach((pos) => {
-          const value = Math.abs(
-            pos.valueInBaseCurrency ?? pos.marketValue ?? 0,
-          );
-          holdings.push({
-            id: pos._id,
-            name: pos.symbol ?? pos.name ?? "Margin Loan",
-            subcategoryId: subcategory,
-            value,
-            costBasis: null,
-            profitLoss: null,
-            profitLossPercent: null,
-            allocationPercent:
-              dataSummary.totalLiabilities > 0
-                ? (value / dataSummary.totalLiabilities) * 100
-                : 0,
-          });
-        });
-
-      // Add manual loans for the "loans" subcategory
-      if (subcategory === "loans" && manualLoans) {
-        manualLoans
-          .sort(
-            (a, b) => Math.abs(b.currentBalance) - Math.abs(a.currentBalance),
-          )
-          .slice(0, limit - holdings.length)
-          .forEach((loan) => {
-            const value = Math.abs(loan.currentBalance);
-            holdings.push({
-              id: loan._id,
-              name: loan.name,
-              subcategoryId: subcategory,
-              value,
-              costBasis: loan.originalPrincipal,
-              profitLoss: null,
-              profitLossPercent: null,
-              allocationPercent:
-                dataSummary.totalLiabilities > 0
-                  ? (value / dataSummary.totalLiabilities) * 100
-                  : 0,
-            });
-          });
-      }
-
-      return holdings.slice(0, limit);
-    };
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          subcategoryId: subcategory,
+          value: row.owedInBaseCurrency,
+          costBasis: null,
+          profitLoss: null,
+          profitLossPercent: null,
+          allocationPercent:
+            dataSummary.totalLiabilities > 0
+              ? (row.owedInBaseCurrency / dataSummary.totalLiabilities) * 100
+              : 0,
+        }));
 
     // Build subcategories array from centralized config
     const subcategories: SubcategoryData[] = [];

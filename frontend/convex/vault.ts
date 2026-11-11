@@ -3,6 +3,7 @@ import { query, mutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { resolvePremiums } from "../../services/finance/metals";
+import { scheduleSnapshot } from "./portfolioSnapshots";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES - Metal Catalog
@@ -326,6 +327,7 @@ export const addVaultItemFromCatalog = mutation({
       });
     }
 
+    await scheduleSnapshot(ctx, userId, "vault");
     return vaultItemId;
   },
 });
@@ -401,6 +403,7 @@ export const addCustomVaultItem = mutation({
       });
     }
 
+    await scheduleSnapshot(ctx, userId, "vault");
     return vaultItemId;
   },
 });
@@ -443,6 +446,7 @@ export const updateVaultItem = mutation({
       updatedAt: Date.now(),
     });
 
+    await scheduleSnapshot(ctx, userId, "vault");
     return vaultItemId;
   },
 });
@@ -471,6 +475,7 @@ export const deleteVaultItem = mutation({
     // Delete the vault item
     await ctx.db.delete(args.vaultItemId);
 
+    await scheduleSnapshot(ctx, userId, "vault");
     return { success: true };
   },
 });
@@ -540,6 +545,7 @@ export const addTransaction = mutation({
       updatedAt: Date.now(),
     });
 
+    await scheduleSnapshot(ctx, userId, "vault");
     return transactionId;
   },
 });
@@ -582,6 +588,7 @@ export const deleteTransaction = mutation({
 
     await ctx.db.delete(args.transactionId);
 
+    await scheduleSnapshot(ctx, userId, "vault");
     return { success: true };
   },
 });

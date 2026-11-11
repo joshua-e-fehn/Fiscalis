@@ -9,9 +9,9 @@ import {
   PaymentType,
 } from "@/hooks/convex/loans";
 import {
-  balanceBeforePayment,
   buildLoanSchedule,
   isExtraPaymentType,
+  paymentSplitBasis,
   splitLoanPayment,
   type LoanKpis,
   type LoanScheduleRow,
@@ -174,11 +174,9 @@ export function LoanPaymentsScheduleTab({
   const nextScheduledPayment = kpis.nextPayment?.amount ?? 0;
 
   // Interest is one period on the balance owed on the payment date (a
-  // back-dated payment isn't split on today's balance)
-  const splitBasis = () => ({
-    ...loan,
-    balance: balanceBeforePayment(loan, payments, paymentDate),
-  });
+  // back-dated payment isn't split on today's balance), less what partial
+  // payments already booked for that due date. Same basis as the server.
+  const splitBasis = () => paymentSplitBasis(loan, payments, paymentDate);
 
   // Auto-calculate principal/interest split
   const calculateSplit = () => {

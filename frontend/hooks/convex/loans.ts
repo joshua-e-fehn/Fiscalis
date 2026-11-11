@@ -3,6 +3,7 @@ import type { FunctionArgs } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useCallback } from "react";
+import { todayLocalISO } from "@/lib/utils/date";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -31,7 +32,8 @@ export function useLoans() {
  * Get only active loans for the current user
  */
 export function useActiveLoans() {
-  return useQuery(api.loans.getActiveLoans);
+  // The local date, so overdue flags match the detail page
+  return useQuery(api.loans.getActiveLoans, { today: todayLocalISO() });
 }
 
 /**
@@ -59,7 +61,10 @@ export function useLoanPayments(loanId: Id<"loans"> | undefined) {
  * Get upcoming payments for all loans (default 30 days)
  */
 export function useUpcomingPayments(days?: number) {
-  return useQuery(api.loans.getUpcomingPayments, { days });
+  return useQuery(api.loans.getUpcomingPayments, {
+    days,
+    today: todayLocalISO(),
+  });
 }
 
 /**
@@ -73,7 +78,7 @@ export function useLoanScenarios(loanId: Id<"loans"> | undefined) {
  * Get summary statistics for all loans
  */
 export function useLoansSummary() {
-  return useQuery(api.loans.getLoansSummary);
+  return useQuery(api.loans.getLoansSummary, { today: todayLocalISO() });
 }
 
 // ═══════════════════════════════════════════════════════════════

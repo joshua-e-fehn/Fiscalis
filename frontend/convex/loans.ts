@@ -9,13 +9,12 @@ import {
 import { Doc, Id } from "./_generated/dataModel";
 import {
   addMonthsToISODate,
-  balanceBeforePayment,
   computeNextPaymentDate,
   getPaymentsPerYear,
   initialScheduledPayment,
   isExtraPaymentType,
   loanKpis,
-  nextLoanPayment,
+  paymentSplitBasis,
   scheduledPaymentAfterEdit,
   settleLoanBalance,
   splitLoanPayment,
@@ -68,9 +67,13 @@ async function getLoanPaymentDocs(
     .collect();
 }
 
-// Server "today" (UTC) for due-date comparisons; dates are YYYY-MM-DD
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+// "today" for due-date comparisons: the client's local date when it sent
+// one (so the list agrees with the detail page), else the server's UTC date
+const todayValidator = v.optional(v.string());
+function resolveToday(clientToday?: string): string {
+  return clientToday && /^\d{4}-\d{2}-\d{2}$/.test(clientToday)
+    ? clientToday
+    : new Date().toISOString().slice(0, 10);
 }
 
 // Missing and foreign docs get the same error, so IDs can't be probed
@@ -124,14 +127,17 @@ export const getLoans = query({
 });
 
 // Active loans with the KPIs every loan card shows (from the shared schedule)
-async function getActiveLoansWithKpis(ctx: QueryCtx, userId: string) {
+async function getActiveLoansWithKpis(
+  ctx: QueryCtx,
+  userId: string,
+  today: string,
+) {
   const loans = await ctx.db
     .query("loans")
     .withIndex("by_status", (q) =>
       q.eq("userId", userId).eq("status", "active"),
     )
     .collect();
-  const today = todayISO();
   return await Promise.all(
     loans.map(async (loan) => ({
       ...loan,
@@ -142,11 +148,11 @@ async function getActiveLoansWithKpis(ctx: QueryCtx, userId: string) {
 
 // Get active loans for a user
 export const getActiveLoans = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { today: todayValidator },
+  handler: async (ctx, args) => {
     const userId = await getUserId(ctx);
     if (!userId) return [];
-    return await getActiveLoansWithKpis(ctx, userId);
+    return await getActiveLoansWithKpis(ctx, userId, resolveToday(args.today));
   },
 });
 
@@ -215,17 +221,18 @@ export const getLoanPayments = query({
 export const getUpcomingPayments = query({
   args: {
     days: v.optional(v.number()), // Default 30 days
+    today: todayValidator,
   },
   handler: async (ctx, args) => {
     const userId = await getUserId(ctx);
     if (!userId) return [];
-    const today = todayISO();
-    const until = new Date(Date.now() + (args.days ?? 30) * 86_400_000)
+    const today = resolveToday(args.today);
+    const until = new Date(Date.parse(today) + (args.days ?? 30) * 86_400_000)
       .toISOString()
       .slice(0, 10);
 
     const upcomingPayments = [];
-    for (const loan of await getActiveLoansWithKpis(ctx, userId)) {
+    for (const loan of await getActiveLoansWithKpis(ctx, userId, today)) {
       const next = loan.kpis.nextPayment;
       if (!next || next.dueDate > until) continue;
       upcomingPayments.push({
@@ -234,7 +241,7 @@ export const getUpcomingPayments = query({
         paymentDate: next.dueDate,
         amount: next.amount,
         currency: loan.currency,
-        overdue: next.dueDate < today,
+        overdue: next.overdue,
       });
     }
     return upcomingPayments.sort((a, b) =>
@@ -262,10 +269,12 @@ export const getLoanScenarios = query({
 // Get loan summary statistics. Amounts in different currencies aren't added
 // up: totals are per currency (no FX for loans yet)
 export const getLoansSummary = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { today: todayValidator },
+  handler: async (ctx, args) => {
     const userId = await getUserId(ctx);
-    const loans = userId ? await getActiveLoansWithKpis(ctx, userId) : [];
+    const loans = userId
+      ? await getActiveLoansWithKpis(ctx, userId, resolveToday(args.today))
+      : [];
 
     const byCurrency = new Map<
       string,
@@ -285,9 +294,9 @@ export const getLoansSummary = query({
       };
       totals.totalDebt += loan.currentBalance;
       totals.totalOriginalPrincipal += loan.originalPrincipal;
-      // Monthly equivalent of the next scheduled payment
+      // Monthly equivalent of the regular payment (never a final settlement)
       totals.totalMonthlyPayments +=
-        ((loan.kpis.nextPayment?.amount ?? 0) *
+        (loan.kpis.regularPayment *
           getPaymentsPerYear(loan.paymentFrequency)) /
         12;
       byCurrency.set(loan.currency, totals);
@@ -568,10 +577,7 @@ export const recordPayment = mutation({
     const payments = await getLoanPaymentDocs(ctx, loan._id);
 
     const split = splitLoanPayment(
-      {
-        ...loan,
-        balance: balanceBeforePayment(loan, payments, args.paymentDate),
-      },
+      paymentSplitBasis(loan, payments, args.paymentDate),
       args.amount,
       args.paymentType,
       {
@@ -651,33 +657,41 @@ export const updatePayment = mutation({
       Object.entries(updates).filter(([, v]) => v !== undefined),
     );
 
-    // Re-reconcile amount = principal + interest + fees; principal is at
-    // most what was owed before this payment. A changed amount without
-    // portions is split again.
-    const amountOnly =
-      args.amount !== undefined &&
-      args.principalPortion === undefined &&
-      args.interestPortion === undefined;
+    // Re-reconcile amount = principal + interest + fees, split on the
+    // balance owed on the payment date (without this payment). The edited
+    // portion wins; an untouched pair is kept unless the amount changed, in
+    // which case it is split again. Principal is at most what is owed.
+    const otherPayments = (await getLoanPaymentDocs(ctx, loan._id)).filter(
+      (p) => p._id !== paymentId,
+    );
+    const paymentDate = args.paymentDate ?? payment.paymentDate;
+    const editsPortion =
+      args.principalPortion !== undefined || args.interestPortion !== undefined;
+    const keepsPortions = !editsPortion && args.amount === undefined;
     const split = splitLoanPayment(
-      {
-        ...loan,
-        balance: loan.currentBalance + payment.principalPortion,
-      },
+      paymentSplitBasis(
+        { ...loan, currentBalance: loan.currentBalance + payment.principalPortion },
+        otherPayments,
+        paymentDate,
+      ),
       args.amount ?? payment.amount,
       args.paymentType ?? payment.paymentType,
-      amountOnly
-        ? { fees: payment.feesPortion }
-        : {
-            principal: args.principalPortion ?? payment.principalPortion,
-            interest: args.interestPortion ?? payment.interestPortion,
-            fees: payment.feesPortion,
-          },
+      {
+        principal: keepsPortions ? payment.principalPortion : args.principalPortion,
+        interest: keepsPortions ? payment.interestPortion : args.interestPortion,
+        fees: payment.feesPortion,
+      },
     );
-    const principalPortion = split.principalPortion;
+    const principalPortion = Math.min(
+      split.principalPortion,
+      Math.max(0, loan.currentBalance + payment.principalPortion),
+    );
 
     await ctx.db.patch(paymentId, {
       ...filteredUpdates,
-      amount: split.amount,
+      amount: roundMoney(
+        split.amount - (split.principalPortion - principalPortion),
+      ),
       principalPortion,
       interestPortion: split.interestPortion,
     });

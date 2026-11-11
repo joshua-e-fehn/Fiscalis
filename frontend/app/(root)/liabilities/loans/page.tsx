@@ -60,7 +60,8 @@ function formatTotals<T extends { currency: string }>(
   totals: T[],
   pick: (t: T) => number,
 ): string {
-  if (totals.length === 0) return formatCurrency(0);
+  // No loans: no currency to format in
+  if (totals.length === 0) return "—";
   return totals.map((t) => formatCurrency(pick(t), t.currency)).join(" + ");
 }
 

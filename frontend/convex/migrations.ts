@@ -1,6 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
-import { rederiveScheduledPayment } from "../../services/finance/loanScheduleService";
+import {
+  isLegacyFullTermAnnuityPayment,
+  rederiveScheduledPayment,
+} from "../../services/finance/loanScheduleService";
 import {
   classifyPlaidAccount,
   classifySnaptradePosition,
@@ -627,7 +630,10 @@ export const backfillLoanScenarioExtraPerPeriod = internalMutation({
  * `scheduledPayment` (the engine projects with it). The old add-loan dialog
  * stored an annuity over the whole term, ignoring the grace periods, which
  * leaves a balloon at the end. Re-derives the payment from the current
- * balance over the periods left after the grace periods. Idempotent.
+ * balance over the periods left after the grace periods. Only loans whose
+ * stored payment still equals that old computed annuity are rewritten; a
+ * payment the user typed in is returned in `skipped` for manual review.
+ * Idempotent.
  * Dry run first:
  *   npx convex run migrations:backfillInterestOnlyScheduledPayments '{"dryRun": true}'
  */
@@ -636,12 +642,20 @@ export const backfillInterestOnlyScheduledPayments = internalMutation({
   handler: async (ctx, args) => {
     const loans = await ctx.db.query("loans").collect();
     const changed = [];
+    const skipped = [];
     for (const loan of loans) {
       if (
         loan.loanType !== "INTEREST_ONLY_THEN" ||
         loan.status === "paid_off" ||
         loan.currentBalance <= 0
       ) {
+        continue;
+      }
+      if (!isLegacyFullTermAnnuityPayment(loan)) {
+        skipped.push({
+          loanId: loan._id,
+          scheduledPayment: loan.scheduledPayment,
+        });
         continue;
       }
       const payments = await ctx.db
@@ -659,6 +673,6 @@ export const backfillInterestOnlyScheduledPayments = internalMutation({
         await ctx.db.patch(loan._id, { scheduledPayment, updatedAt: Date.now() });
       }
     }
-    return { scanned: loans.length, changed };
+    return { scanned: loans.length, changed, skipped };
   },
 });

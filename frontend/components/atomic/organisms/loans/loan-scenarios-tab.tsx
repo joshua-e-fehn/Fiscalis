@@ -272,6 +272,8 @@ export function LoanScenariosTab({
 
   // Extra principal per payment period (not per month)
   const [extraPayment, setExtraPayment] = useState(0);
+  // First due date the extra applies to ("" = from the next due date)
+  const [extraPerPeriodFrom, setExtraPerPeriodFrom] = useState("");
   const [newRatePercent, setNewRatePercent] = useState("");
   const [prepaymentEffect, setPrepaymentEffect] =
     useState<PrepaymentEffect>("reduce_term");
@@ -300,11 +302,20 @@ export function LoanScenariosTab({
     () =>
       calculateScenario(loan, payments, {
         extraPerPeriod: extraPayment,
+        extraPerPeriodFrom: extraPerPeriodFrom || undefined,
         oneTimePrepayments,
         newRate,
         prepaymentEffect,
       }),
-    [loan, payments, extraPayment, oneTimePrepayments, newRate, prepaymentEffect],
+    [
+      loan,
+      payments,
+      extraPayment,
+      extraPerPeriodFrom,
+      oneTimePrepayments,
+      newRate,
+      prepaymentEffect,
+    ],
   );
 
   const handleAddPrepayment = () => {
@@ -335,6 +346,10 @@ export function LoanScenariosTab({
         loanId: loan._id,
         name: scenarioName,
         extraPerPeriod: extraPayment,
+        extraPerPeriodFrom:
+          extraPayment > 0 && extraPerPeriodFrom
+            ? extraPerPeriodFrom
+            : undefined,
         oneTimePrepayments: oneTimePrepayments.map(({ date, amount }) => ({
           date,
           amount,
@@ -367,6 +382,7 @@ export function LoanScenariosTab({
 
   const handleLoadScenario = (scenario: LoanScenario) => {
     setExtraPayment(scenarioExtraPerPeriod(scenario));
+    setExtraPerPeriodFrom(scenario.extraPerPeriodFrom ?? "");
     setOneTimePrepayments(
       (scenario.oneTimePrepayments ?? []).map((p, i) => ({
         id: `saved-${i}`,
@@ -422,6 +438,23 @@ export function LoanScenariosTab({
               <span>{formatCurrency(0, loan.currency)}</span>
               <span>{formatCurrency(maxExtraPayment, loan.currency)}</span>
             </div>
+            {extraPayment > 0 && (
+              <div className="mt-3 flex items-center gap-2">
+                <Label htmlFor="extra-from" className="text-sm">
+                  Starting from
+                </Label>
+                <Input
+                  id="extra-from"
+                  type="date"
+                  value={extraPerPeriodFrom}
+                  onChange={(e) => setExtraPerPeriodFrom(e.target.value)}
+                  className="w-auto"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {extraPerPeriodFrom ? "" : "Blank: from the next payment"}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Prepayment effect & refinancing rate */}

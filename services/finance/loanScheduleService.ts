@@ -198,6 +198,13 @@ export interface LoanProjection {
    * balance is settled at the final period.
    */
   paymentBelowInterest: boolean;
+  /**
+   * The final row repays more than one regular payment's worth beyond the
+   * regular principal: a fixed ANNUITY / INTEREST_ONLY_THEN payment too small
+   * to amortise within the term. The balance left for that final row; 0 when
+   * the payment amortises.
+   */
+  finalBalloon: number;
   /** Due date of the last row, null when nothing is left to pay. */
   payoffDate: string | null;
 }
@@ -363,6 +370,28 @@ function sortByPaymentDate<T extends SchedulePayment>(payments: T[]): T[] {
 // Payment split
 // ───────────────────────────────────────────────────────────────
 
+/** What a payment is split on (see {@link paymentSplitBasis}). */
+export interface LoanSplitBasis {
+  /** Balance owed just before the payment. */
+  balance: number;
+  annualInterestRate: number;
+  paymentFrequency: LoanPaymentFrequency;
+  /**
+   * A due date already partly paid by earlier partial payments: its period
+   * interest is charged on its opening balance, minus the interest those
+   * payments already booked, so it is charged only once.
+   */
+  openPeriod?: OpenPeriod | null;
+}
+
+/** A due date partly paid by partial payments. */
+export interface OpenPeriod {
+  /** Balance owed before the first partial payment of that due date. */
+  openingBalance: number;
+  /** Interest the partial payments of that due date already booked. */
+  interestBooked: number;
+}
+
 export interface LoanPaymentSplit {
   principalPortion: number;
   interestPortion: number;
@@ -387,16 +416,14 @@ export interface LoanPaymentSplit {
  *   entered pair that doesn't add up.
  * - Without entered portions, extra payments go entirely to principal and
  *   regular ones pay one period of interest on `balance`, the balance the
- *   payment applies to (see {@link balanceBeforePayment}).
+ *   payment applies to (see {@link paymentSplitBasis}). When partial
+ *   payments already booked part of that period's interest, only the rest
+ *   is charged.
  * - Principal is capped at `balance`; what the loan can't absorb is reported
  *   as `overpayment` and left out of the amount.
  */
 export function splitLoanPayment(
-  basis: {
-    balance: number;
-    annualInterestRate: number;
-    paymentFrequency: LoanPaymentFrequency;
-  },
+  basis: LoanSplitBasis,
   amount: number,
   paymentType: LoanPaymentType,
   entered: { principal?: number; interest?: number; fees?: number } = {},
@@ -418,11 +445,15 @@ export function splitLoanPayment(
   } else if (isExtraPaymentType(paymentType)) {
     principal = rest;
   } else {
+    const open = basis.openPeriod;
     const periodInterest = roundMoney(
-      Math.max(0, basis.balance) *
+      Math.max(0, open ? open.openingBalance : basis.balance) *
         getPeriodicRate(basis.annualInterestRate, basis.paymentFrequency),
     );
-    principal = roundMoney(rest - Math.min(periodInterest, rest));
+    const interestDue = roundMoney(
+      Math.max(0, periodInterest - (open?.interestBooked ?? 0)),
+    );
+    principal = roundMoney(rest - Math.min(interestDue, rest));
   }
   const interest = roundMoney(rest - principal);
 
@@ -599,6 +630,7 @@ function amortize(plan: AmortizationPlan): LoanProjection {
 
   const rows: ProjectedRow[] = [];
   let paymentBelowInterest = false;
+  let finalBalloon = 0;
   for (
     let k = fromPeriod;
     k <= lastPeriod && balance > PAID_OFF_THRESHOLD;
@@ -637,6 +669,14 @@ function amortize(plan: AmortizationPlan): LoanProjection {
       }
     }
     principal = capPrincipalPortion(openingBalance, principal);
+    if (
+      k === lastPeriod &&
+      k > grace &&
+      annuityPayment !== null &&
+      principal - (annuityPayment - interest) > annuityPayment
+    ) {
+      finalBalloon = principal;
+    }
 
     const extra =
       extraPerPeriod > 0 &&
@@ -703,6 +743,7 @@ function amortize(plan: AmortizationPlan): LoanProjection {
     totalPenalty,
     prepaymentsCapped,
     paymentBelowInterest,
+    finalBalloon,
     payoffDate: rows.length > 0 ? rows[rows.length - 1].dueDate : null,
   };
 }
@@ -720,6 +761,8 @@ interface RecordedWalk<T extends SchedulePayment> {
   dueDateByIndex: Array<string | undefined>;
   openingBalanceByIndex: number[];
   closingBalanceByIndex: number[];
+  /** The due date left partly paid after each sorted payment, if any. */
+  openPeriodByIndex: Array<OpenPeriod | null>;
   /** Balance before the first payment. */
   initialBalance: number;
   /**
@@ -770,10 +813,12 @@ function walkRecordedPayments<T extends SchedulePayment>(
   let coveredPeriods = 0;
   let pendingPartial = 0;
   let partialThreshold: number | null = null;
+  let openPeriod: OpenPeriod | null = null;
   let balance = initialBalance;
   const dueDateByIndex: Array<string | undefined> = [];
   const openingBalanceByIndex: number[] = [];
   const closingBalanceByIndex: number[] = [];
+  const openPeriodByIndex: Array<OpenPeriod | null> = [];
 
   for (const p of sorted) {
     const openingBalance = balance;
@@ -792,6 +837,15 @@ function walkRecordedPayments<T extends SchedulePayment>(
         coveredPeriods++;
         pendingPartial = 0;
         partialThreshold = null;
+        openPeriod = null;
+      } else {
+        const open = openPeriod as OpenPeriod | null;
+        openPeriod = {
+          openingBalance: open ? open.openingBalance : openingBalance,
+          interestBooked: roundMoney(
+            (open ? open.interestBooked : 0) + p.interestPortion,
+          ),
+        };
       }
     }
     balance = roundMoney(
@@ -799,6 +853,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
     );
     openingBalanceByIndex.push(openingBalance);
     closingBalanceByIndex.push(balance);
+    openPeriodByIndex.push(openPeriod);
   }
 
   return {
@@ -807,6 +862,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
     dueDateByIndex,
     openingBalanceByIndex,
     closingBalanceByIndex,
+    openPeriodByIndex,
     initialBalance,
     historyInconsistent:
       initialBalance - loan.originalPrincipal > PAID_OFF_THRESHOLD,
@@ -814,21 +870,31 @@ function walkRecordedPayments<T extends SchedulePayment>(
 }
 
 /**
- * Balance a new payment made on `paymentDate` applies to: the walked balance
- * after every recorded payment made on or before that date. A back-dated
- * payment is split on the balance owed then, not on today's balance.
+ * What a new payment made on `paymentDate` is split on: the walked balance
+ * after every recorded payment made on or before that date (a back-dated
+ * payment is split on the balance owed then, not on today's balance), and
+ * the due date those payments left partly paid, so its interest isn't
+ * charged twice.
  */
-export function balanceBeforePayment(
+export function paymentSplitBasis(
   loan: ScheduleLoan,
   payments: SchedulePayment[],
   paymentDate: string,
-): number {
+): LoanSplitBasis {
   const walk = walkRecordedPayments(loan, payments);
   let balance = walk.initialBalance;
-  walk.sorted.forEach((p, i) => {
-    if (p.paymentDate <= paymentDate) balance = walk.closingBalanceByIndex[i];
-  });
-  return balance;
+  let openPeriod: OpenPeriod | null = null;
+  for (let i = 0; i < walk.sorted.length; i++) {
+    if (walk.sorted[i].paymentDate > paymentDate) break;
+    balance = walk.closingBalanceByIndex[i];
+    openPeriod = walk.openPeriodByIndex[i];
+  }
+  return {
+    balance,
+    annualInterestRate: loan.annualInterestRate,
+    paymentFrequency: loan.paymentFrequency,
+    openPeriod,
+  };
 }
 
 /**
@@ -906,18 +972,29 @@ export function nextLoanPayment(
   payments: SchedulePayment[],
   today: string,
 ): NextLoanPayment | null {
-  const row = projectLoan(loan, payments, {}, today).rows[0];
+  return firstPaymentOf(projectLoan(loan, payments, {}, today));
+}
+
+function regularPaymentOf(
+  loan: ScheduleLoan,
+  projection: LoanProjection,
+): number {
+  const [first, second] = projection.rows;
+  if (!first) return 0;
+  if (second) return first.payment;
+  // Only the final row is left: count what recurs, not the settlement
+  if (loan.loanType === "BULLET") return first.interest;
+  if (projection.finalBalloon > 0) {
+    return Math.min(first.payment, loan.scheduledPayment);
+  }
+  return first.payment;
+}
+
+function firstPaymentOf(projection: LoanProjection): NextLoanPayment | null {
+  const row = projection.rows[0];
   return row
     ? { dueDate: row.dueDate, amount: row.payment, overdue: row.overdue }
     : null;
-}
-
-/** Amount of the next scheduled payment (0 once paid off). */
-export function nextPaymentAmount(
-  loan: ScheduleLoan,
-  payments: SchedulePayment[],
-): number {
-  return nextLoanPayment(loan, payments, "")?.amount ?? 0;
 }
 
 /**
@@ -1003,6 +1080,34 @@ export function rederiveScheduledPayment(
   });
   const firstAmortising = projection.rows.find((r) => r.period > grace);
   return firstAmortising?.payment ?? loan.scheduledPayment;
+}
+
+/**
+ * The stored payment is what the old add-loan dialog computed for an
+ * INTEREST_ONLY_THEN loan: an annuity of the original principal over the
+ * whole term, ignoring the grace periods. A payment the user typed in
+ * doesn't match it and is left alone by the backfill.
+ */
+export function isLegacyFullTermAnnuityPayment(
+  loan: Pick<
+    ScheduleLoan,
+    | "loanType"
+    | "originalPrincipal"
+    | "annualInterestRate"
+    | "termMonths"
+    | "paymentFrequency"
+    | "scheduledPayment"
+  >,
+): boolean {
+  if (loan.loanType !== "INTEREST_ONLY_THEN") return false;
+  const periods = getTotalPeriods(loan.termMonths, loan.paymentFrequency);
+  if (periods <= 0) return false;
+  const legacy = calculateAnnuityPayment(
+    loan.originalPrincipal,
+    getPeriodicRate(loan.annualInterestRate, loan.paymentFrequency),
+    periods,
+  );
+  return Math.abs(legacy - loan.scheduledPayment) <= PAID_OFF_THRESHOLD;
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -1093,7 +1198,15 @@ export interface LoanKpis {
   /** Last projected due date, or the actual end date once paid off. */
   projectedPayoffDate: string | null;
   nextPayment: NextLoanPayment | null;
+  /**
+   * The recurring payment, for monthly totals: the next payment, but never a
+   * final settlement (a final BULLET row counts only its interest, a final
+   * balloon the agreed payment). 0 once paid off.
+   */
+  regularPayment: number;
   paymentBelowInterest: boolean;
+  /** See {@link LoanProjection.finalBalloon}. */
+  finalBalloon: number;
   historyInconsistent: boolean;
 }
 
@@ -1112,7 +1225,6 @@ export function loanKpis(
     payments.reduce((sum, p) => sum + p.interestPortion, 0),
   );
   const lastPaymentDate = walk.sorted[walk.sorted.length - 1]?.paymentDate;
-  const first = projection.rows[0];
   return {
     principalRepaid,
     progress:
@@ -1130,10 +1242,10 @@ export function loanKpis(
       : 0,
     projectedPayoffDate:
       projection.payoffDate ?? loan.actualEndDate ?? lastPaymentDate ?? null,
-    nextPayment: first
-      ? { dueDate: first.dueDate, amount: first.payment, overdue: first.overdue }
-      : null,
+    nextPayment: firstPaymentOf(projection),
+    regularPayment: regularPaymentOf(loan, projection),
     paymentBelowInterest: projection.paymentBelowInterest,
+    finalBalloon: projection.finalBalloon,
     historyInconsistent: walk.historyInconsistent,
   };
 }

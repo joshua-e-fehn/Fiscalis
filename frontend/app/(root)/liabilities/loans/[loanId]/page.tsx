@@ -383,7 +383,9 @@ export default function LoanDetailPage() {
         </Card>
       </div>
 
-      {(kpis.paymentBelowInterest || kpis.historyInconsistent) && (
+      {(kpis.paymentBelowInterest ||
+        kpis.finalBalloon > 0 ||
+        kpis.historyInconsistent) && (
         <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
           <CardContent className="pt-4 pb-4 space-y-1 text-sm text-amber-700">
             {kpis.paymentBelowInterest && (
@@ -392,6 +394,21 @@ export default function LoanDetailPage() {
                 The payment does not cover the interest: the balance stops
                 falling and is due in full at the end of the term. Edit the
                 loan to update the payment.
+              </p>
+            )}
+            {!kpis.paymentBelowInterest && kpis.finalBalloon > 0 && (
+              <p className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                The payment is too small to repay the loan within its term:
+                a final payment of{" "}
+                {formatCurrencyPrecise(kpis.finalBalloon, loan.currency)} is
+                left at the end. Edit the loan to update the payment.
+              </p>
+            )}
+            {kpis.paymentBelowInterest && kpis.finalBalloon > 0 && (
+              <p className="pl-6">
+                Final payment due:{" "}
+                {formatCurrencyPrecise(kpis.finalBalloon, loan.currency)}.
               </p>
             )}
             {kpis.historyInconsistent && (

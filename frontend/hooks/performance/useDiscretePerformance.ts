@@ -121,10 +121,12 @@ export function useDiscretePerformance(
       totalLiabilities: s.totalLiabilities,
       netWorth: s.netWorth,
       totalCostBasis: s.totalCostBasis,
+      totalCoveredValue: s.totalCoveredValue,
       categoryBreakdown: s.categoryBreakdown?.map((c) => ({
         category: c.category,
         value: c.value,
         costBasis: c.costBasis,
+        coveredValue: c.coveredValue,
       })),
     }));
   }, [rawSnapshots]);

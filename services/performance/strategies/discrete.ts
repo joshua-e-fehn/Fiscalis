@@ -8,6 +8,7 @@
  */
 
 import { getTimeIntervalInMilliseconds } from "../../finance/financeService";
+import { snapshotCostLine } from "../../portfolio/unrealizedProfitLoss";
 
 import type {
   PerformanceDataPoint,
@@ -206,7 +207,8 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
   // ═══════════════════════════════════════════════════════════════
 
   /**
-   * Extract snapshot values, optionally filtering by category
+   * Extract snapshot values, optionally filtering by category. The cost is
+   * the snapshot's cost line: stored cost plus the value it does not cover.
    */
   private extractSnapshotValues(
     snapshots: SnapshotData[],
@@ -220,14 +222,18 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
         return {
           timestamp: s.timestamp,
           value: categoryData?.value ?? 0,
-          costBasis: categoryData?.costBasis ?? null,
+          costBasis: categoryData ? snapshotCostLine(categoryData) : null,
         };
       }
 
       return {
         timestamp: s.timestamp,
         value: s.totalAssets,
-        costBasis: s.totalCostBasis ?? null,
+        costBasis: snapshotCostLine({
+          value: s.totalAssets,
+          costBasis: s.totalCostBasis,
+          coveredValue: s.totalCoveredValue,
+        }),
       };
     });
   }

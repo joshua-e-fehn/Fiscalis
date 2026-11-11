@@ -33,6 +33,7 @@ export const takeSnapshot = internalMutation({
       totalLiabilities,
       netWorth,
       totalCostBasis,
+      totalCoveredValue,
       categoryBreakdown,
     } = await computeNetWorth(ctx, userId);
 
@@ -59,6 +60,7 @@ export const takeSnapshot = internalMutation({
           totalLiabilities,
           netWorth,
           totalCostBasis,
+          totalCoveredValue,
           categoryBreakdown,
           source,
         });
@@ -75,6 +77,7 @@ export const takeSnapshot = internalMutation({
       totalLiabilities,
       netWorth,
       totalCostBasis,
+      totalCoveredValue,
       categoryBreakdown,
       source,
     });

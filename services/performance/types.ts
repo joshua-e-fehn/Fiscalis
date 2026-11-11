@@ -123,7 +123,11 @@ export interface PerformanceDataPoint {
   date: string;
   /** Total value at this point */
   value: number;
-  /** Cost basis if known */
+  /**
+   * Cost line if known: the cost basis plus the value of holdings without
+   * one, so value − costBasis is the P/L of the cost-bearing holdings
+   * (services/portfolio/unrealizedProfitLoss.ts costLine)
+   */
   costBasis: number | null;
   /** How this data point was derived */
   source: DataSource;
@@ -221,7 +225,10 @@ export interface AssetCategoryConfig {
 export interface SnapshotCategoryBreakdown {
   category: string;
   value: number;
+  /** Cost of the holdings that have one */
   costBasis?: number;
+  /** Value of the holdings costBasis covers; absent on old snapshots */
+  coveredValue?: number;
 }
 
 /**
@@ -234,6 +241,8 @@ export interface SnapshotData {
   totalLiabilities: number;
   netWorth: number;
   totalCostBasis?: number;
+  /** Value of the holdings totalCostBasis covers; absent on old snapshots */
+  totalCoveredValue?: number;
   categoryBreakdown?: SnapshotCategoryBreakdown[];
   source?: string;
 }
@@ -251,7 +260,10 @@ export interface HoldingData {
   assetType: string;
   /** Number of units */
   quantity: number;
-  /** For metals: fine weight in grams */
+  /**
+   * For metals: fine weight in grams. A holding with a fine weight is valued
+   * from its PricePoint series as a price per troy ounce (not per gram).
+   */
   fineWeightGrams?: number;
   /** For metals: sell premium as a decimal (-0.02 = 2% below spot), as stored on vault items */
   sellPremium?: number;
@@ -266,11 +278,17 @@ export interface HoldingData {
  */
 export interface PricePoint {
   timestamp: number;
+  /**
+   * Price in the base currency. For metals (holdings with fineWeightGrams)
+   * this is the spot price per TROY OUNCE, as served by the price store;
+   * passing a per-gram price values metals about 31x too low.
+   */
   price: number;
 }
 
 /**
- * Price data for multiple assets
+ * Price data for multiple assets. Metal series are priced per troy ounce
+ * (see PricePoint.price).
  */
 export interface PriceData {
   [assetType: string]: PricePoint[];

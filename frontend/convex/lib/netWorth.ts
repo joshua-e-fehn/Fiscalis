@@ -1,11 +1,9 @@
 import { QueryCtx } from "../_generated/server";
 import { valueVaultItem } from "../../../services/finance/metals";
 import {
-  positionCostBasis,
-  positionValue,
-  summarizeHoldings,
-  type HoldingValuation,
-} from "../../../services/portfolio/categorySummary";
+  bucketProviderHoldings,
+  buildSnapshotBreakdown,
+} from "../../../services/portfolio/netWorthBreakdown";
 
 /**
  * Server-side net worth for one user, computed from the stored documents.
@@ -20,17 +18,13 @@ import {
  * purchase price when its metal has no spot price fresher than
  * SPOT_PRICE_MAX_AGE_MS.
  *
- * A category's costBasis sums only the holdings that have one, converted to
- * the base currency (services/portfolio/categorySummary.ts); holdings
- * without a cost basis add value only.
+ * Provider holdings are routed to categories by
+ * services/portfolio/netWorthBreakdown.ts: a category's costBasis sums only
+ * the holdings that have one, converted to the base currency, and
+ * coveredValue records the value that cost covers; holdings without a cost
+ * basis add value only.
  */
 export async function computeNetWorth(ctx: QueryCtx, userId: string) {
-  const categoryBreakdown: Array<{
-    category: string;
-    value: number;
-    costBasis?: number;
-  }> = [];
-
   // 1. Bank accounts (Plaid)
   const bankAccounts = await ctx.db
     .query("plaidAccounts")
@@ -65,39 +59,7 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     brokerPositions.map((p) => p.accountId),
   );
 
-  // Holdings of the cost-bearing categories, from every provider
-  const equities: HoldingValuation[] = [];
-  const bonds: HoldingValuation[] = [];
-  const crypto: HoldingValuation[] = [];
-  const commodities: HoldingValuation[] = [];
   let brokerCashValue = 0;
-  let brokerLiabilitiesValue = 0;
-
-  // Process broker positions
-  for (const pos of brokerPositions) {
-    const holding = {
-      value: positionValue(pos),
-      costBasis: positionCostBasis(pos),
-    };
-
-    switch (pos.investmentCategory) {
-      case "bonds":
-        bonds.push(holding);
-        break;
-      case "crypto":
-        crypto.push(holding);
-        break;
-      case "cash":
-        brokerCashValue += holding.value;
-        break;
-      case "liabilities":
-        brokerLiabilitiesValue += Math.abs(holding.value);
-        break;
-      default:
-        // Equities, and unclassified positions by default
-        equities.push(holding);
-    }
-  }
 
   // Process broker account cash (uninvested)
   for (const acc of brokerAccounts) {
@@ -129,14 +91,14 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
   );
   const now = Date.now();
 
-  for (const item of vaultItems) {
+  const vaultHoldings = vaultItems.map((item) => {
     const { value, cost } = valueVaultItem(
       item,
       spotByMetal.get(item.metalType),
       now,
     );
-    commodities.push({ value, costBasis: cost });
-  }
+    return { value, costBasis: cost };
+  });
 
   // 4. Bitpanda holdings (mixed: crypto, metals, commodities, stocks, fiat)
   const bitpandaHoldings = await ctx.db
@@ -144,32 +106,11 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
 
-  // Bitpanda reports no cost basis: these count toward value only.
-  let bitpandaCashValue = 0;
-  let bitpandaLiabilitiesValue = 0;
-
-  for (const h of bitpandaHoldings) {
-    const holding = { value: positionValue(h), costBasis: null };
-    switch (h.investmentCategory) {
-      case "cash":
-        bitpandaCashValue += holding.value;
-        break;
-      case "equities":
-        equities.push(holding);
-        break;
-      case "bonds":
-        bonds.push(holding);
-        break;
-      case "commodities":
-        commodities.push(holding);
-        break;
-      case "liabilities":
-        bitpandaLiabilitiesValue += Math.abs(holding.value);
-        break;
-      default:
-        crypto.push(holding);
-    }
-  }
+  const providers = bucketProviderHoldings({
+    brokerPositions,
+    vaultHoldings,
+    bitpandaHoldings,
+  });
 
   // 5. Manual loans (liabilities)
   const loans = await ctx.db
@@ -182,52 +123,17 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     loansValue += loan.currentBalance ?? loan.originalPrincipal ?? 0;
   }
 
-  // Build category breakdown
-  if (cashValue + brokerCashValue + bitpandaCashValue > 0) {
-    categoryBreakdown.push({
-      category: "cash",
-      value: cashValue + brokerCashValue + bitpandaCashValue,
-    });
-  }
-
-  const investments = [
-    { category: "equities", holdings: equities },
-    { category: "bonds", holdings: bonds },
-    { category: "crypto", holdings: crypto },
-    { category: "commodities", holdings: commodities },
-  ].map(({ category, holdings }) => ({
-    category,
-    ...summarizeHoldings(holdings),
-  }));
-
-  for (const c of investments) {
-    if (c.value > 0) {
-      categoryBreakdown.push({
-        category: c.category,
-        value: c.value,
-        costBasis: c.costBasis ?? undefined,
-      });
-    }
-  }
-
-  // Calculate totals
-  const costBearing = investments.filter((c) => c.costBasis !== null);
-  const totalCostBasis =
-    costBearing.length > 0
-      ? costBearing.reduce((sum, c) => sum + (c.costBasis ?? 0), 0)
-      : undefined;
+  const { categoryBreakdown, investmentsValue, totalCostBasis, totalCoveredValue } =
+    buildSnapshotBreakdown(
+      cashValue + brokerCashValue + providers.cash,
+      providers.categories,
+    );
 
   const totalAssets =
-    cashValue +
-    brokerCashValue +
-    bitpandaCashValue +
-    investments.reduce((sum, c) => sum + c.value, 0);
+    cashValue + brokerCashValue + providers.cash + investmentsValue;
 
   const totalLiabilities =
-    liabilitiesValue +
-    brokerLiabilitiesValue +
-    bitpandaLiabilitiesValue +
-    loansValue;
+    liabilitiesValue + providers.liabilities + loansValue;
 
   const netWorth = totalAssets - totalLiabilities;
 
@@ -236,6 +142,7 @@ export async function computeNetWorth(ctx: QueryCtx, userId: string) {
     totalLiabilities,
     netWorth,
     totalCostBasis,
+    totalCoveredValue,
     categoryBreakdown,
   };
 }

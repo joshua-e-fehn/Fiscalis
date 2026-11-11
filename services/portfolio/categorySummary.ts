@@ -13,6 +13,7 @@
  */
 
 import {
+  costLine,
   sumCostCoveredValue,
   type HoldingValuation,
 } from "./unrealizedProfitLoss";
@@ -200,6 +201,12 @@ export type ProfitLossSource = "cost-basis" | "first-snapshot";
 
 export interface ResolvedProfitLoss {
   costBasis: number | null;
+  /**
+   * The cost line a chart draws against the category's full value:
+   * currentValue − profitLoss, so the chart's gap and the KPI agree even when
+   * only some holdings carry a cost basis. Null when there is no P/L.
+   */
+  costLine: number | null;
   profitLoss: number | null;
   profitLossPercent: number | null;
   /** Where the figures come from; null when there is no P/L to show */
@@ -208,7 +215,7 @@ export interface ResolvedProfitLoss {
 
 /**
  * The one precedence chain for a category's P/L, used for both the KPI card
- * and the chart's cost line so they never disagree:
+ * and the chart's cost line (`costLine`) so they never disagree:
  *
  * 1. the holdings' own cost basis (coverage-based, from the summary);
  * 2. otherwise the category's first non-zero snapshot value as an inferred
@@ -227,6 +234,7 @@ export function resolveCategoryProfitLoss(input: {
   if (holdings && holdings.costBasis !== null && holdings.profitLoss !== null) {
     return {
       costBasis: holdings.costBasis,
+      costLine: costLine(currentValue, holdings.profitLoss),
       profitLoss: holdings.profitLoss,
       profitLossPercent:
         holdings.profitLossPercent ??
@@ -243,6 +251,7 @@ export function resolveCategoryProfitLoss(input: {
     const profitLoss = currentValue - firstSnapshotValue;
     return {
       costBasis: firstSnapshotValue,
+      costLine: costLine(currentValue, profitLoss),
       profitLoss,
       profitLossPercent: percentOf(profitLoss, firstSnapshotValue),
       source: "first-snapshot",
@@ -251,6 +260,7 @@ export function resolveCategoryProfitLoss(input: {
 
   return {
     costBasis: null,
+    costLine: null,
     profitLoss: null,
     profitLossPercent: null,
     source: null,

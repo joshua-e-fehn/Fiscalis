@@ -179,6 +179,7 @@ describe("resolveCategoryProfitLoss", () => {
       }),
     ).toEqual({
       costBasis: 1000,
+      costLine: 5000,
       profitLoss: 0,
       profitLossPercent: 0,
       source: "cost-basis",
@@ -198,21 +199,27 @@ describe("resolveCategoryProfitLoss", () => {
       }),
     ).toEqual({
       costBasis: 4000,
+      costLine: 4000,
       profitLoss: 1000,
       profitLossPercent: 25,
       source: "first-snapshot",
     });
   });
 
-  it("returns cost basis and P/L from the same source", () => {
-    const r = resolveCategoryProfitLoss({
-      currentValue: 5000,
-      holdings,
-      firstSnapshotValue: 4000,
-    });
-    // cost line and KPI agree: value-of-covered - costBasis = profitLoss
-    expect(r.source).toBe("cost-basis");
-    expect(r.costBasis).toBe(holdings.costBasis);
+  it("draws a cost line whose gap to the value is the KPI P/L", () => {
+    // 5000 in the category, of which 1200 carry a cost of 1000
+    const partial = { costBasis: 1000, profitLoss: 200, profitLossPercent: 20 };
+    for (const firstSnapshotValue of [4000, null]) {
+      const r = resolveCategoryProfitLoss({
+        currentValue: 5000,
+        holdings: partial,
+        firstSnapshotValue,
+      });
+      expect(r.source).toBe("cost-basis");
+      expect(r.costBasis).toBe(1000);
+      expect(5000 - r.costLine!).toBe(r.profitLoss);
+      expect(r.profitLoss).toBe(200);
+    }
   });
 
   it("reports nothing without a cost basis or snapshot", () => {
@@ -224,6 +231,7 @@ describe("resolveCategoryProfitLoss", () => {
       }),
     ).toEqual({
       costBasis: null,
+      costLine: null,
       profitLoss: null,
       profitLossPercent: null,
       source: null,

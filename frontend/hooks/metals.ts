@@ -556,7 +556,8 @@ export function usePortfolioHistoricalValues(
       }>
     | undefined,
   currentPortfolioValue: number,
-  totalCost: number | null,
+  /** Cost line for the current point: value − P/L (services costLine) */
+  currentCostLine: number | null,
   timeRange: PortfolioTimeRange = "3M",
   currency: MetalsCurrency = "eur",
 ): PortfolioHistoricalValuesResult {
@@ -769,10 +770,12 @@ export function usePortfolioHistoricalValues(
         );
         portfolioValue += itemValue;
 
-        // Track cost basis
-        if (item.purchasePricePerUnit) {
-          portfolioCost += item.purchasePricePerUnit * item.quantity;
-        }
+        // Cost line (see services costLine): the purchase cost of items
+        // with a price, plus the value of items without one, so the gap to
+        // the value is the P/L of the priced items only
+        portfolioCost += item.purchasePricePerUnit
+          ? item.purchasePricePerUnit * item.quantity
+          : itemValue;
       }
 
       if (portfolioValue > 0) {
@@ -780,7 +783,7 @@ export function usePortfolioHistoricalValues(
           timestamp: ts,
           date: new Date(ts).toLocaleDateString("de-DE"),
           value: portfolioValue,
-          cost: portfolioCost > 0 ? portfolioCost : portfolioValue,
+          cost: portfolioCost,
         });
       }
     }
@@ -793,7 +796,7 @@ export function usePortfolioHistoricalValues(
         timestamp: now,
         date: new Date(now).toLocaleDateString("de-DE"),
         value: currentPortfolioValue,
-        cost: totalCost ?? currentPortfolioValue,
+        cost: currentCostLine ?? currentPortfolioValue,
       });
     }
 
@@ -806,7 +809,7 @@ export function usePortfolioHistoricalValues(
     platinumPrices.data,
     palladiumPrices.data,
     currentPortfolioValue,
-    totalCost,
+    currentCostLine,
   ]);
 
   return {

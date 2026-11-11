@@ -632,7 +632,7 @@ export default function DashboardPage() {
             portfolioChart.currentValue || summary?.totalAssets || 0
           }
           totalCost={
-            portfolioChart.totalCost ?? summary?.totalCostBasis ?? null
+            portfolioChart.totalCost ?? summary?.costLine ?? null
           }
           totalLiabilities={summary?.totalLiabilities ?? 0}
           currency={currency}

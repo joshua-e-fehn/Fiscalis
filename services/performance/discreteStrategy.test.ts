@@ -729,3 +729,68 @@ describe("DiscretePerformanceStrategy - no look-ahead", () => {
     expect(result.dataPoints[1].value).toBe(500);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// Cost line from snapshots with a partial cost basis
+// ═══════════════════════════════════════════════════════════════
+
+describe("DiscretePerformanceStrategy - cost line", () => {
+  const END = Date.parse("2026-11-11T15:37:12.345Z");
+  const options: PerformanceCalculationOptions = {
+    timeRange: "Month",
+    endTimestamp: END,
+    includeDataPoints: true,
+  };
+  const day0 = Date.parse("2026-10-01T06:00:00.000Z");
+
+  // Commodities 6200, of which only 1200 carry a cost (1000); 300 cash
+  function snapshots(withCoveredValue: boolean): SnapshotData[] {
+    return Array.from({ length: 42 }, (_, i) => {
+      const timestamp = day0 + i * MS_PER_DAY;
+      return {
+        timestamp,
+        date: new Date(timestamp).toISOString().split("T")[0],
+        totalAssets: 6_500,
+        totalLiabilities: 0,
+        netWorth: 6_500,
+        totalCostBasis: 1_000,
+        ...(withCoveredValue ? { totalCoveredValue: 1_200 } : {}),
+        categoryBreakdown: [
+          { category: "cash", value: 300 },
+          {
+            category: "commodities",
+            value: 6_200,
+            costBasis: 1_000,
+            ...(withCoveredValue ? { coveredValue: 1_200 } : {}),
+          },
+        ],
+      };
+    });
+  }
+
+  it("never counts value without a cost basis as profit", () => {
+    const category = calculateDiscretePerformance(
+      { snapshots: snapshots(true), categoryFilter: "commodities" },
+      options,
+    );
+    for (const p of category.dataPoints) {
+      expect(p.value - p.costBasis!).toBe(200);
+    }
+
+    const total = calculateDiscretePerformance(
+      { snapshots: snapshots(true) },
+      options,
+    );
+    for (const p of total.dataPoints) {
+      expect(p.value - p.costBasis!).toBe(200);
+    }
+  });
+
+  it("keeps the stored cost basis for snapshots without coveredValue", () => {
+    const category = calculateDiscretePerformance(
+      { snapshots: snapshots(false), categoryFilter: "commodities" },
+      options,
+    );
+    expect(category.dataPoints.every((p) => p.costBasis === 1_000)).toBe(true);
+  });
+});

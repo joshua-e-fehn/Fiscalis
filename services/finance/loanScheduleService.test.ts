@@ -580,6 +580,18 @@ describe("splitLoanPayment", () => {
     });
   });
 
+  it("caps fees at an edited amount smaller than them", () => {
+    // updatePayment stores the returned feesPortion, so the stored
+    // components still add up to the amount
+    const split = splitLoanPayment(basis, 5, "scheduled", { fees: 10 });
+    expect(split).toMatchObject({
+      principalPortion: 0,
+      interestPortion: 0,
+      feesPortion: 5,
+      amount: 5,
+    });
+  });
+
   it("never lets an entered portion exceed the amount", () => {
     expect(
       splitLoanPayment(basis, 1250, "scheduled", { principal: 2000 }),

@@ -694,6 +694,8 @@ export const updatePayment = mutation({
       ),
       principalPortion,
       interestPortion: split.interestPortion,
+      // Fees are capped at the edited amount
+      feesPortion: split.feesPortion || undefined,
     });
 
     // Apply the principal change to the loan balance. Only a change that

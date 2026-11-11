@@ -8,11 +8,10 @@ import {
 import { Doc, Id } from "./_generated/dataModel";
 import {
   addMonthsToISODate,
-  calculateLoanAnnuityPayment,
   capPrincipalPortion,
   computeNextPaymentDate,
   getPaymentsPerYear,
-  getTotalPeriods,
+  initialScheduledPayment,
   isExtraPaymentType,
   settleLoanBalance,
 } from "../../services/finance/loanScheduleService";
@@ -366,36 +365,10 @@ export const createLoan = mutation({
     // Calculate expected end date
     const expectedEndDate = addMonthsToISODate(args.startDate, args.termMonths);
 
-    // Calculate scheduled payment if not provided (for annuity loans)
-    let scheduledPayment = args.scheduledPayment;
-    if (!scheduledPayment && args.loanType === "ANNUITY") {
-      scheduledPayment = calculateLoanAnnuityPayment(
-        args.originalPrincipal,
-        args.annualInterestRate,
-        args.termMonths,
-        args.paymentFrequency,
-      );
-    } else if (!scheduledPayment) {
-      // For other loan types, calculate based on type
-      const paymentsPerYear = getPaymentsPerYear(args.paymentFrequency);
-      const totalPayments = getTotalPeriods(
-        args.termMonths,
-        args.paymentFrequency,
-      );
-
-      if (args.loanType === "CONSTANT_PRINCIPAL") {
-        const principalPayment = args.originalPrincipal / totalPayments;
-        const interestPayment =
-          (args.originalPrincipal * args.annualInterestRate) / paymentsPerYear;
-        scheduledPayment = principalPayment + interestPayment;
-      } else if (
-        args.loanType === "BULLET" ||
-        args.loanType === "INTEREST_ONLY_THEN"
-      ) {
-        scheduledPayment =
-          (args.originalPrincipal * args.annualInterestRate) / paymentsPerYear;
-      }
-    }
+    // The regular payment agreed at origination (for INTEREST_ONLY_THEN the
+    // post-grace payment), unless the client sent the actual one
+    const scheduledPayment =
+      args.scheduledPayment || initialScheduledPayment(args);
 
     const loanId = await ctx.db.insert("loans", {
       userId,
@@ -407,7 +380,7 @@ export const createLoan = mutation({
       currency: args.currency,
       termMonths: args.termMonths,
       paymentFrequency: args.paymentFrequency,
-      scheduledPayment: scheduledPayment ?? 0,
+      scheduledPayment,
       startDate: args.startDate,
       expectedEndDate,
       nextPaymentDate: args.nextPaymentDate,

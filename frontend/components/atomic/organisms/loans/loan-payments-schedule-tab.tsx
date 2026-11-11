@@ -9,6 +9,7 @@ import {
   PaymentType,
 } from "@/hooks/convex/loans";
 import {
+  balanceBeforePayment,
   buildLoanSchedule,
   computeNextPaymentDate,
   isExtraPaymentType,
@@ -174,9 +175,20 @@ export function LoanPaymentsScheduleTab({
     fullSchedule.find((r) => r.status === "scheduled")?.payment ??
     loan.scheduledPayment;
 
+  // Interest is one period on the balance owed on the payment date (a
+  // back-dated payment isn't split on today's balance)
+  const splitBasis = () => ({
+    ...loan,
+    balance: balanceBeforePayment(loan, payments, paymentDate),
+  });
+
   // Auto-calculate principal/interest split
   const calculateSplit = () => {
-    const split = splitLoanPayment(loan, parseFloat(amount) || 0, paymentType);
+    const split = splitLoanPayment(
+      splitBasis(),
+      parseFloat(amount) || 0,
+      paymentType,
+    );
     setPrincipalPortion(split.principalPortion.toFixed(2));
     setInterestPortion(split.interestPortion.toFixed(2));
   };
@@ -195,7 +207,7 @@ export function LoanPaymentsScheduleTab({
 
     const totalAmount = parseFloat(amount);
     // Keeps whichever portion was entered; principal is capped at the balance
-    const split = splitLoanPayment(loan, totalAmount, paymentType, {
+    const split = splitLoanPayment(splitBasis(), totalAmount, paymentType, {
       principal: parseFloat(principalPortion),
       interest: parseFloat(interestPortion),
     });
@@ -205,8 +217,11 @@ export function LoanPaymentsScheduleTab({
       await recordPayment({
         loanId: loan._id,
         paymentDate,
-        amount: totalAmount,
-        ...split,
+        // Reconciled: amount = principal + interest (an overpayment past the
+        // balance isn't booked)
+        amount: split.amount,
+        principalPortion: split.principalPortion,
+        interestPortion: split.interestPortion,
         paymentType,
         notes: notes || undefined,
       });

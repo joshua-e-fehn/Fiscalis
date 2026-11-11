@@ -3,10 +3,11 @@ import { describe, it, expect } from "vitest";
 import {
   addMonthsToISODate,
   buildLoanSchedule,
-  calculateLoanAnnuityPayment,
   capPrincipalPortion,
   computeNextPaymentDate,
   getDueDate,
+  initialScheduledPayment,
+  loanKpis,
   settleLoanBalance,
   splitLoanPayment,
   type ScheduleLoan,
@@ -382,12 +383,16 @@ describe("buildLoanSchedule — overpaid final payment", () => {
         (r) => r.status === "scheduled",
       );
       if (!next) break;
-      const amount = amountFor(next.payment);
-      const split = splitLoanPayment(loan, amount, "scheduled");
+      const split = splitLoanPayment(
+        { ...loan, balance: loan.currentBalance },
+        amountFor(next.payment),
+        "scheduled",
+      );
       payments.push({
         paymentDate: next.date,
-        amount,
-        ...split,
+        amount: split.amount,
+        principalPortion: split.principalPortion,
+        interestPortion: split.interestPortion,
         paymentType: "scheduled",
         createdAt: k,
       });
@@ -423,19 +428,30 @@ describe("buildLoanSchedule — overpaid final payment", () => {
     expect(computeNextPaymentDate(loan, payments)).toBeNull();
   });
 
-  it("doesn't inflate the history for an overshooting payment already stored", () => {
+  it("flags, instead of clamping, a history that repaid more than was borrowed", () => {
     const { payments } = replay(() => 1250);
     // Stored before principal was capped: 1250 − 1.14 interest
     const stored = payments.map((p, i) =>
       i === 9 ? { ...p, principalPortion: 1248.86 } : p,
     );
     const rows = buildLoanSchedule(paidOff, stored, "2034-11-02");
-    expect(rows[0].openingBalance).toBe(10000);
-    expect(rows[9]).toMatchObject({
-      openingBalance: 45.49,
-      principal: 45.49,
-      closingBalance: 0,
-    });
+    expect(rows[0].openingBalance).toBe(11203.37);
+    expect(rows[rows.length - 1].closingBalance).toBe(0);
+    expect(loanKpis(paidOff, stored, "2034-11-02").historyInconsistent).toBe(
+      true,
+    );
+    expect(loanKpis(paidOff, payments, "2034-11-02").historyInconsistent).toBe(
+      false,
+    );
+  });
+
+  it("shows a balance raised above the original principal as it is", () => {
+    const raised = { ...realLoan, currentBalance: 9900 };
+    const rows = buildLoanSchedule(raised, realPayments, TODAY);
+    expect(rows[0].openingBalance).toBe(11925);
+    expect(loanKpis(raised, realPayments, TODAY).historyInconsistent).toBe(
+      true,
+    );
   });
 });
 
@@ -456,12 +472,13 @@ describe("settleLoanBalance", () => {
       currentBalance: 300000,
       annualInterestRate: 0.035,
       termMonths,
-      scheduledPayment: calculateLoanAnnuityPayment(
-        300000,
-        0.035,
+      scheduledPayment: initialScheduledPayment({
+        loanType: "ANNUITY",
+        originalPrincipal: 300000,
+        annualInterestRate: 0.035,
         termMonths,
-        "MONTHLY",
-      ),
+        paymentFrequency: "MONTHLY",
+      }),
       startDate: "2026-01-01",
       status: "active",
     };
@@ -469,7 +486,11 @@ describe("settleLoanBalance", () => {
     expect(projected).toHaveLength(termMonths);
 
     for (const row of projected) {
-      const split = splitLoanPayment(loan, row.payment, "scheduled");
+      const split = splitLoanPayment(
+        { ...loan, balance: loan.currentBalance },
+        row.payment,
+        "scheduled",
+      );
       loan = {
         ...loan,
         currentBalance: settleLoanBalance(
@@ -482,67 +503,90 @@ describe("settleLoanBalance", () => {
 });
 
 describe("splitLoanPayment", () => {
-  it("charges one period of interest on the current balance", () => {
-    expect(splitLoanPayment(realLoan, 1250, "scheduled")).toEqual({
+  const basis = { ...realLoan, balance: realLoan.currentBalance };
+
+  it("charges one period of interest on the balance the payment applies to", () => {
+    expect(splitLoanPayment(basis, 1250, "scheduled")).toEqual({
       principalPortion: 1050.62,
       interestPortion: 199.38,
+      feesPortion: 0,
+      overpayment: 0,
+      amount: 1250,
     });
   });
 
   it("puts extra payments entirely on principal", () => {
-    expect(splitLoanPayment(realLoan, 500, "prepayment")).toEqual({
+    expect(splitLoanPayment(basis, 500, "prepayment")).toMatchObject({
       principalPortion: 500,
       interestPortion: 0,
     });
   });
 
   it("never splits more interest than was paid", () => {
-    expect(splitLoanPayment(realLoan, 100, "partial")).toEqual({
+    expect(splitLoanPayment(basis, 100, "partial")).toMatchObject({
       principalPortion: 0,
       interestPortion: 100,
     });
   });
 
-  it("caps principal at the remaining balance", () => {
-    const lastPeriod = { ...realLoan, currentBalance: 45.49 };
+  it("caps principal at the balance and leaves the overpayment out of the amount", () => {
+    const lastPeriod = { ...basis, balance: 45.49 };
     expect(splitLoanPayment(lastPeriod, 1250, "scheduled")).toEqual({
       principalPortion: 45.49,
       interestPortion: 1.14,
+      feesPortion: 0,
+      overpayment: 1203.37,
+      amount: 46.63,
     });
-    expect(splitLoanPayment(lastPeriod, 500, "prepayment")).toEqual({
+    expect(splitLoanPayment(lastPeriod, 500, "prepayment")).toMatchObject({
       principalPortion: 45.49,
       interestPortion: 0,
+      amount: 45.49,
     });
   });
 
   it("keeps an entered portion and puts the rest of the amount in the other", () => {
     expect(
-      splitLoanPayment(realLoan, 1250, "scheduled", { principal: 1000 }),
-    ).toEqual({ principalPortion: 1000, interestPortion: 250 });
+      splitLoanPayment(basis, 1250, "scheduled", { principal: 1000 }),
+    ).toMatchObject({ principalPortion: 1000, interestPortion: 250 });
     expect(
-      splitLoanPayment(realLoan, 1250, "scheduled", { interest: 100 }),
-    ).toEqual({ principalPortion: 1150, interestPortion: 100 });
+      splitLoanPayment(basis, 1250, "scheduled", { interest: 100 }),
+    ).toMatchObject({ principalPortion: 1150, interestPortion: 100 });
     expect(
-      splitLoanPayment(realLoan, 1250, "scheduled", {
-        principal: 1000,
-        interest: 200,
-      }),
-    ).toEqual({ principalPortion: 1000, interestPortion: 200 });
-    expect(
-      splitLoanPayment(realLoan, 1250, "scheduled", {
+      splitLoanPayment(basis, 1250, "scheduled", {
         principal: NaN,
         interest: NaN,
       }),
-    ).toEqual({ principalPortion: 1050.62, interestPortion: 199.38 });
+    ).toMatchObject({ principalPortion: 1050.62, interestPortion: 199.38 });
+  });
+
+  it("reconciles an entered pair that doesn't add up to the amount", () => {
+    expect(
+      splitLoanPayment(basis, 1250, "scheduled", {
+        principal: 1000,
+        interest: 200,
+      }),
+    ).toMatchObject({ principalPortion: 1000, interestPortion: 250, amount: 1250 });
+  });
+
+  it("takes fees off the amount first", () => {
+    expect(
+      splitLoanPayment(basis, 1260, "scheduled", { fees: 10 }),
+    ).toMatchObject({
+      principalPortion: 1050.62,
+      interestPortion: 199.38,
+      feesPortion: 10,
+      amount: 1260,
+    });
   });
 
   it("never lets an entered portion exceed the amount", () => {
     expect(
-      splitLoanPayment(realLoan, 1250, "scheduled", { principal: 2000 }),
-    ).toEqual({ principalPortion: 1250, interestPortion: 0 });
+      splitLoanPayment(basis, 1250, "scheduled", { principal: 2000 }),
+    ).toMatchObject({ principalPortion: 1250, interestPortion: 0 });
     expect(
-      splitLoanPayment(realLoan, 1250, "scheduled", { interest: 2000 }),
-    ).toEqual({ principalPortion: 0, interestPortion: 1250 });
+      splitLoanPayment(basis, 1250, "scheduled", { interest: 2000 }),
+    ).toMatchObject({ principalPortion: 0, interestPortion: 1250 });
   });
 });
 
@@ -555,11 +599,41 @@ describe("capPrincipalPortion", () => {
   });
 });
 
-describe("calculateLoanAnnuityPayment", () => {
-  it("matches the PMT formula over the whole term", () => {
-    // 10000 at 2.5% over 10 annual periods
-    expect(calculateLoanAnnuityPayment(10000, 0.025, 120, "ANNUAL")).toBe(
+describe("initialScheduledPayment", () => {
+  const terms = {
+    originalPrincipal: 10000,
+    annualInterestRate: 0.025,
+    termMonths: 120,
+    paymentFrequency: "ANNUAL" as const,
+  };
+
+  it("ANNUITY matches the PMT formula over the whole term", () => {
+    expect(initialScheduledPayment({ ...terms, loanType: "ANNUITY" })).toBe(
       1142.59,
     );
+  });
+
+  it("CONSTANT_PRINCIPAL is the first (largest) payment", () => {
+    expect(
+      initialScheduledPayment({ ...terms, loanType: "CONSTANT_PRINCIPAL" }),
+    ).toBe(1000 + 250);
+  });
+
+  it("BULLET is the interest payment", () => {
+    expect(initialScheduledPayment({ ...terms, loanType: "BULLET" })).toBe(250);
+  });
+
+  it("INTEREST_ONLY_THEN is the annuity after the grace periods", () => {
+    expect(
+      initialScheduledPayment({
+        ...terms,
+        loanType: "INTEREST_ONLY_THEN",
+        gracePeriods: 2,
+      }),
+    ).toBe(1394.67);
+    // Without grace periods it's a plain annuity
+    expect(
+      initialScheduledPayment({ ...terms, loanType: "INTEREST_ONLY_THEN" }),
+    ).toBe(1142.59);
   });
 });

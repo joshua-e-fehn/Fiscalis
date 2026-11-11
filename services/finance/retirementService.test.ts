@@ -629,6 +629,17 @@ describe("primary residence mortgage", () => {
     expect(r.targetPortfolio).toBeCloseTo(r.gapAnnual / 0.04 + owed, 6);
   });
 
+  it("grosses the mortgage payoff up for withdrawal tax", () => {
+    const r = at({ ...owns, withdrawalTaxRate: 0.2 }, base);
+    const owed = mortgageBalanceOn(mortgage, "2031-01-15");
+    expect(r.residenceMortgage?.balanceAtRetirement).toBeCloseTo(owed, 6);
+    // €X owed at 20% tax needs €X / 0.8 of portfolio withdrawals.
+    expect(r.targetPortfolio).toBeCloseTo(
+      r.gapAnnual / 0.8 / 0.04 + owed / 0.8,
+      6,
+    );
+  });
+
   it("adds nothing once the mortgage is repaid before retirement", () => {
     const r = at({ ...owns, retirementAge: 67 }, base);
     expect(r.residenceMortgage?.balanceAtRetirement).toBe(0);

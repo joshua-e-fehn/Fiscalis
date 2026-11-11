@@ -330,7 +330,10 @@ export interface RetirementResults {
   residenceMortgage: {
     balance: number;
     monthlyPayment: number;
-    /** Still owed at retirement; added to targetPortfolio. */
+    /**
+     * Still owed at retirement (net). targetPortfolio adds it grossed up for
+     * withdrawal tax, since the payoff is withdrawn from the portfolio.
+     */
     balanceAtRetirement: number;
   } | null;
 
@@ -776,9 +779,12 @@ export function computeRetirementResults(
       ? Math.min(mortgage.balance, Math.max(0, fundingBase.totalLiabilities))
       : 0;
 
+  // The payoff is withdrawn from the portfolio too, so it is grossed up for
+  // withdrawal tax like the living-expense need.
+  const mortgagePayoff = residenceMortgage?.balanceAtRetirement ?? 0;
   const targetPortfolio =
     portfolioTargetFromAnnualGap(grossUp(gapAnnual), inputs.withdrawalRate) +
-    (residenceMortgage?.balanceAtRetirement ?? 0);
+    (mortgagePayoff > 0 ? grossUp(mortgagePayoff) : 0);
   // Nothing left to fund: pensions cover the expenses and no mortgage remains.
   const pensionsCoverAll = gapMonthly <= 0 && targetPortfolio <= 0;
 

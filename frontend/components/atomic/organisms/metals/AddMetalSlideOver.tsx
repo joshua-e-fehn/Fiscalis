@@ -164,7 +164,7 @@ export function AddMetalSlideOver({
           purchasePricePerUnit: purchasePrice
             ? parseFloat(purchasePrice)
             : undefined,
-          purchaseDate: purchaseDate || undefined,
+          purchaseDate,
           purchaseCurrency: purchaseCurrency.toUpperCase(),
           storageLocation: storageLocation || undefined,
           notes: notes || undefined,
@@ -182,7 +182,7 @@ export function AddMetalSlideOver({
           purchasePricePerUnit: purchasePrice
             ? parseFloat(purchasePrice)
             : undefined,
-          purchaseDate: purchaseDate || undefined,
+          purchaseDate,
           purchaseCurrency: purchaseCurrency.toUpperCase(),
           storageLocation: storageLocation || undefined,
           notes: notes || undefined,
@@ -199,10 +199,16 @@ export function AddMetalSlideOver({
     }
   };
 
+  // The purchase date dates the item's opening transaction: without it the
+  // item would count as held since before every range (D3), so a new entry
+  // must give it. A negative price is never valid.
+  const priceValid = purchasePrice === "" || parseFloat(purchasePrice) >= 0;
   const canSubmit =
-    mode === "catalog"
+    !!purchaseDate &&
+    priceValid &&
+    (mode === "catalog"
       ? !!selectedCatalogItem && parseInt(quantity) > 0
-      : !!customName && parseFloat(customWeight) > 0 && parseInt(quantity) > 0;
+      : !!customName && parseFloat(customWeight) > 0 && parseInt(quantity) > 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -484,13 +490,19 @@ export function AddMetalSlideOver({
           </div>
 
           <div>
-            <Label htmlFor="purchaseDate">Purchase Date</Label>
+            <Label htmlFor="purchaseDate">Purchase Date *</Label>
             <Input
               id="purchaseDate"
               type="date"
+              required
+              max={new Date().toISOString().split("T")[0]}
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              When you acquired it. Performance counts the purchase as money
+              invested on that day, not as a gain.
+            </p>
           </div>
 
           <div>

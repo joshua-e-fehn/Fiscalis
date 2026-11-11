@@ -38,7 +38,7 @@ function activePlanSummary(
 		return `You're on track for your ${target} target.`;
 	}
 	if (results.optimistic.onTrack) {
-		return `On track at the expected ${formatRate(results.optimistic.annualReturn)} return; saving ${formatCurrency(results.conservative.monthlyContribution, "eur")}/mo covers the conservative case.`;
+		return `On track at the expected ${formatRate(results.optimistic.baseReturn)} return; saving ${formatCurrency(results.conservative.monthlyContribution, "eur")}/mo covers the conservative case.`;
 	}
 	return `You're ${(results.progressPct * 100).toFixed(0)}% of the way to your ${target} target.`;
 }

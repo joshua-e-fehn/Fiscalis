@@ -123,6 +123,9 @@ export function FourPercentRuleExplainer({
 										})}
 									</span>
 									. The difference is inflation
+									{results.hasFixedPensions
+										? ", which your fixed-euro pensions don't keep up with"
+										: ""}
 									{results.residenceMortgage?.balanceAtRetirement
 										? ", plus the mortgage still owed when you retire"
 										: ""}

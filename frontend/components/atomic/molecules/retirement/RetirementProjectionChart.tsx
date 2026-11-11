@@ -90,6 +90,9 @@ export function RetirementProjectionChart({ results, className }: Props) {
 							/>
 							<XAxis
 								dataKey="age"
+								type="number"
+								domain={["dataMin", "dataMax"]}
+								allowDecimals={false}
 								tickLine={false}
 								axisLine={false}
 								tickMargin={8}

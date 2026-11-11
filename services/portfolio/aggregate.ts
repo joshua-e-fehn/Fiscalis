@@ -428,6 +428,23 @@ export function buildSnapshotBreakdown(
   return { categoryBreakdown, totalCostBasis, totalCoveredValue };
 }
 
+/**
+ * The `partial` flag of today's snapshot row after an upsert.
+ *
+ * Only a full sync of every provider knows whether the day's provider data
+ * is complete, so it passes `requested` (true when a provider failed) and
+ * that verdict replaces the row's. Any other write (a vault or loan change,
+ * a single provider's sync) passes undefined and keeps the row's flag: a
+ * provider that failed earlier today still holds its last successful sync's
+ * values until a full sync refreshes it.
+ */
+export function snapshotPartial(
+  existing: boolean | undefined,
+  requested: boolean | undefined,
+): true | undefined {
+  return (requested ?? existing) ? true : undefined;
+}
+
 /** A breakdown without the holdings kept for the next day's flows. */
 export function withoutSnapshotHoldings(
   breakdown: readonly SnapshotCategoryEntry[],

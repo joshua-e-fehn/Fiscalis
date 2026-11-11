@@ -7,6 +7,7 @@ import {
   categoryFlowFromHoldings,
   holdingNetFlow,
   snapshotCategoryFlow,
+  snapshotPartial,
   withoutSnapshotHoldings,
   HOLDING_CATEGORIES,
   placeHolding,
@@ -431,5 +432,22 @@ describe("loanMonthlyPaymentInBase", () => {
     expect(
       loanMonthlyPaymentInBase({ ...loan, status: "paid_off", paymentFrequency: "MONTHLY" }, rates),
     ).toBe(0);
+  });
+});
+
+describe("snapshotPartial", () => {
+  it("keeps a partial row partial on a manual or single-provider write", () => {
+    expect(snapshotPartial(true, undefined)).toBe(true);
+  });
+
+  it("lets a full sync set or clear the flag", () => {
+    expect(snapshotPartial(true, false)).toBeUndefined();
+    expect(snapshotPartial(undefined, true)).toBe(true);
+    expect(snapshotPartial(false, true)).toBe(true);
+  });
+
+  it("leaves a complete or new row unflagged on a manual write", () => {
+    expect(snapshotPartial(undefined, undefined)).toBeUndefined();
+    expect(snapshotPartial(false, undefined)).toBeUndefined();
   });
 });

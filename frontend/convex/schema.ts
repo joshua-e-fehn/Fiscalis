@@ -336,7 +336,9 @@ export default defineSchema({
 
 		// Payment Details
 		paymentDate: v.string(), // When payment was made (ISO)
-		scheduledDate: v.optional(v.string()), // When it was supposed to be paid
+		// Deprecated, informational only: the schedule derives the due date a
+		// payment covers. Kept for existing documents.
+		scheduledDate: v.optional(v.string()),
 
 		amount: v.number(), // Total payment amount
 		principalPortion: v.number(), // Amount applied to principal
@@ -348,8 +350,9 @@ export default defineSchema({
 		// final (payoff), partial (less than scheduled), late
 		paymentType: loanPaymentTypeValidator,
 
-		// Balance Tracking
-		balanceAfterPayment: v.number(), // Remaining balance after this payment
+		// Deprecated, informational only: no longer written or read. The
+		// schedule derives balances from the recorded payments.
+		balanceAfterPayment: v.optional(v.number()),
 
 		// Notes
 		notes: v.optional(v.string()),
@@ -369,6 +372,14 @@ export default defineSchema({
 		description: v.optional(v.string()),
 
 		// Scenario Configuration
+		// Extra principal paid with every regular payment (per payment period)
+		extraPerPeriod: v.optional(v.number()),
+		// First due date the extra applies to (YYYY-MM-DD); from now when unset
+		extraPerPeriodFrom: v.optional(v.string()),
+		prepaymentEffect: v.optional(prepaymentEffectValidator),
+		// Deprecated: misnamed, it always held the extra per period. Read as a
+		// fallback for extraPerPeriod; backfilled by
+		// migrations:backfillLoanScenarioExtraPerPeriod.
 		extraMonthlyPayment: v.optional(v.number()),
 		oneTimePrepayments: v.optional(
 			v.array(

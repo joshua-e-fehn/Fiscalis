@@ -12,6 +12,7 @@ import {
   nextLoanPayment,
   nextPaymentAmount,
   projectLoan,
+  rederiveScheduledPayment,
   resolveGracePeriods,
   scheduledPaymentAfterEdit,
   type LoanInput,
@@ -438,6 +439,17 @@ describe("scheduledPaymentAfterEdit", () => {
       cp.scheduledPayment,
     );
     expect(scheduledPaymentAfterEdit(base, [], {})).toBe(base.scheduledPayment);
+  });
+});
+
+describe("rederiveScheduledPayment", () => {
+  it("turns a legacy INTEREST_ONLY_THEN full-term annuity into the post-grace payment", () => {
+    // Stored by the old dialog: an annuity over all 4 periods, ignoring grace
+    const legacy = {
+      ...loanOf("INTEREST_ONLY_THEN", { gracePeriods: 2 }),
+      scheduledPayment: 315.47,
+    };
+    expect(rederiveScheduledPayment(legacy, [])).toBe(576.19);
   });
 });
 

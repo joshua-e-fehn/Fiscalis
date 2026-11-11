@@ -978,11 +978,25 @@ export function scheduledPaymentAfterEdit(
     return loan.scheduledPayment;
   }
 
+  return rederiveScheduledPayment(loan, payments, balance, rate);
+}
+
+/**
+ * The ANNUITY / INTEREST_ONLY_THEN payment that repays `balance` over the
+ * periods left after the recorded payments (for INTEREST_ONLY_THEN, over
+ * the periods after the grace periods).
+ */
+export function rederiveScheduledPayment(
+  loan: ScheduleLoan,
+  payments: SchedulePayment[],
+  balance: number = loan.currentBalance,
+  annualInterestRate: number = loan.annualInterestRate,
+): number {
   const { coveredPeriods } = walkRecordedPayments(loan, payments);
   const grace = resolveGracePeriods(loan);
   const projection = amortize({
     terms: loan,
-    annualInterestRate: rate,
+    annualInterestRate,
     fromPeriod: coveredPeriods + 1,
     openingBalance: balance,
     maxRows: Math.max(1, grace - coveredPeriods + 1),

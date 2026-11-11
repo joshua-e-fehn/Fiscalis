@@ -214,23 +214,6 @@ export const syncAllProviders = action({
 // SCHEDULED DAILY SYNC (INTERNAL ACTIONS)
 // ═══════════════════════════════════════════════════════════════
 
-export interface ScheduledSyncResult {
-  usersProcessed: number;
-  usersSuccessful: number;
-  usersFailed: number;
-  snapshotsCreated: number;
-  timestamp: number;
-  results: Array<{
-    userId: string;
-    success: boolean;
-    plaidSuccess: boolean;
-    snaptradeSuccess: boolean;
-    bitpandaSuccess: boolean;
-    snapshotSuccess: boolean;
-    error?: string;
-  }>;
-}
-
 /**
  * Internal action to sync all providers for a specific user
  * Called by the scheduled daily sync
@@ -345,114 +328,62 @@ export const syncAllForUserInternal = internalAction({
   },
 });
 
+/** Spacing between users' scheduled syncs, to be gentle on provider APIs. */
+const USER_SYNC_STAGGER_MS = 1_000;
+
 /**
- * Scheduled daily sync action
- * Called by the cron job to sync all users' financial data and create snapshots
+ * Delay of the fallback snapshot after a user's sync is scheduled: longer
+ * than an action may run, so it only fires once that sync has finished or
+ * timed out.
+ */
+const FALLBACK_SNAPSHOT_DELAY_MS = 15 * 60 * 1_000;
+
+/**
+ * Scheduled daily sync action, called by the cron job.
  *
- * This runs automatically every day without user interaction.
- * Each user's data is synced and a portfolio snapshot is created.
- * The snapshot is used to track portfolio performance over time.
+ * Fans out: each user's providers sync in their own scheduled action
+ * (syncAllForUserInternal, which upserts the day's snapshot), so one slow
+ * provider or user cannot time out the others. A fallback snapshot per user
+ * runs later and writes the day's row only when the sync left none (it
+ * failed or timed out), so every user keeps one snapshot per day.
  */
 export const scheduledDailySync = internalAction({
   args: {},
   returns: v.object({
-    usersProcessed: v.number(),
-    usersSuccessful: v.number(),
-    usersFailed: v.number(),
-    snapshotsCreated: v.number(),
+    usersScheduled: v.number(),
     timestamp: v.number(),
   }),
   handler: async (
     ctx,
-  ): Promise<{
-    usersProcessed: number;
-    usersSuccessful: number;
-    usersFailed: number;
-    snapshotsCreated: number;
-    timestamp: number;
-  }> => {
+  ): Promise<{ usersScheduled: number; timestamp: number }> => {
     const timestamp = Date.now();
     if (!scheduledSyncEnabled()) {
       console.log(
         "[SCHEDULED DAILY SYNC] Skipped: SCHEDULED_SYNC_ENABLED is not true on this deployment",
       );
-      return {
-        usersProcessed: 0,
-        usersSuccessful: 0,
-        usersFailed: 0,
-        snapshotsCreated: 0,
-        timestamp,
-      };
+      return { usersScheduled: 0, timestamp };
     }
-    console.log(
-      `[SCHEDULED DAILY SYNC] Starting at ${new Date(timestamp).toISOString()}`,
-    );
-
-    // Get all unique users who have any financial connections
-    const usersWithConnections: string[] = await ctx.runQuery(
+    const users: string[] = await ctx.runQuery(
       internal.portfolioSnapshots.getUsersWithConnections,
     );
 
-    if (!usersWithConnections || usersWithConnections.length === 0) {
-      console.log("[SCHEDULED DAILY SYNC] No users with connections found");
-      return {
-        usersProcessed: 0,
-        usersSuccessful: 0,
-        usersFailed: 0,
-        snapshotsCreated: 0,
-        timestamp,
-      };
+    for (const [i, userId] of users.entries()) {
+      const delay = i * USER_SYNC_STAGGER_MS;
+      await ctx.scheduler.runAfter(
+        delay,
+        internal.actions.syncAll.syncAllForUserInternal,
+        { userId },
+      );
+      await ctx.scheduler.runAfter(
+        delay + FALLBACK_SNAPSHOT_DELAY_MS,
+        internal.portfolioSnapshots.takeSnapshot,
+        { userId, source: "scheduled-daily", onlyIfMissing: true },
+      );
     }
 
     console.log(
-      `[SCHEDULED DAILY SYNC] Found ${usersWithConnections.length} users to sync`,
+      `[SCHEDULED DAILY SYNC] Scheduled ${users.length} user syncs at ${new Date(timestamp).toISOString()}`,
     );
-
-    let usersSuccessful = 0;
-    let usersFailed = 0;
-    let snapshotsCreated = 0;
-
-    // Process each user sequentially to avoid overwhelming external APIs
-    for (const userId of usersWithConnections) {
-      try {
-        const result = await ctx.runAction(
-          internal.actions.syncAll.syncAllForUserInternal,
-          { userId },
-        );
-
-        if (result.success) {
-          usersSuccessful++;
-        } else {
-          usersFailed++;
-        }
-
-        if (result.snapshotSuccess) {
-          snapshotsCreated++;
-        }
-      } catch (error) {
-        console.error(
-          `[SCHEDULED DAILY SYNC] Failed to sync user ${userId}:`,
-          error,
-        );
-        usersFailed++;
-      }
-
-      // Small delay between users to be nice to external APIs
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-
-    console.log(
-      `[SCHEDULED DAILY SYNC] Completed. Users: ${usersWithConnections.length}, ` +
-        `Successful: ${usersSuccessful}, Failed: ${usersFailed}, ` +
-        `Snapshots: ${snapshotsCreated}`,
-    );
-
-    return {
-      usersProcessed: usersWithConnections.length,
-      usersSuccessful,
-      usersFailed,
-      snapshotsCreated,
-      timestamp,
-    };
+    return { usersScheduled: users.length, timestamp };
   },
 });

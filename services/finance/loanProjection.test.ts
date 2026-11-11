@@ -226,6 +226,21 @@ describe("calculateLoanSchedule — prepayments", () => {
     expect(result.totalPenalty).toBe(2);
   });
 
+  it("treats a zero annual prepayment cap as no prepayments, an absent one as no cap", () => {
+    const prepayments = [{ date: "2026-06-01", amount: 100 }];
+    const none = calculateLoanSchedule({
+      ...calcInput,
+      prepayments,
+      extraPerPeriod: 50,
+      maxAnnualPrepaymentRate: 0,
+    });
+    expect(none.totalPrepayments).toBe(0);
+    expect(none.schedule.every((r) => r.prepaymentAmount === 0)).toBe(true);
+    expect(
+      calculateLoanSchedule({ ...calcInput, prepayments }).totalPrepayments,
+    ).toBe(100);
+  });
+
   it("counts prepayment penalties in what is paid", () => {
     const plain = calculateLoanSchedule({
       ...calcInput,

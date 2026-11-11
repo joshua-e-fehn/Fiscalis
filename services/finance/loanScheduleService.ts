@@ -496,13 +496,16 @@ interface AmortizationPlan {
   maxRows?: number;
 }
 
-/** Caps prepayments by maxAnnualPrepaymentRate per calendar year. */
+/**
+ * Caps prepayments by maxAnnualPrepaymentRate per calendar year. An absent
+ * rate means no cap; 0 means no prepayments are allowed.
+ */
 function createPrepaymentCap(terms: LoanTerms) {
   const rate = terms.maxAnnualPrepaymentRate;
   const maxPerYear =
-    rate !== undefined && rate > 0
-      ? roundMoney(terms.originalPrincipal * rate)
-      : Infinity;
+    rate === undefined || !Number.isFinite(rate)
+      ? Infinity
+      : roundMoney(terms.originalPrincipal * Math.max(0, rate));
   const usedByYear = new Map<string, number>();
   return (isoDate: string, requested: number): number => {
     const year = isoDate.slice(0, 4);

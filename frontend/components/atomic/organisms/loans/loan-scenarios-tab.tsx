@@ -495,13 +495,17 @@ export function LoanScenariosTab({
               />
             </div>
           </div>
-          {(loan.maxAnnualPrepaymentRate || loan.prepaymentPenaltyRate) && (
+          {(loan.maxAnnualPrepaymentRate !== undefined ||
+            !!loan.prepaymentPenaltyRate) && (
             <p className="text-xs text-muted-foreground">
               Your contract
-              {loan.maxAnnualPrepaymentRate
-                ? ` allows prepaying ${(loan.maxAnnualPrepaymentRate * 100).toFixed(1)}% of the original principal per year`
+              {loan.maxAnnualPrepaymentRate !== undefined
+                ? loan.maxAnnualPrepaymentRate > 0
+                  ? ` allows prepaying ${(loan.maxAnnualPrepaymentRate * 100).toFixed(1)}% of the original principal per year`
+                  : " allows no prepayments"
                 : ""}
-              {loan.maxAnnualPrepaymentRate && loan.prepaymentPenaltyRate
+              {loan.maxAnnualPrepaymentRate !== undefined &&
+              loan.prepaymentPenaltyRate
                 ? " and"
                 : ""}
               {loan.prepaymentPenaltyRate

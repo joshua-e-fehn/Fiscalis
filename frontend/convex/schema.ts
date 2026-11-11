@@ -773,15 +773,24 @@ export default defineSchema({
 					// Value of the holdings costBasis covers (absent on old
 					// snapshots; readers fall back to value)
 					coveredValue: v.optional(v.number()),
+					// Value per source (services/portfolio/aggregate.ts
+					// HoldingSource), e.g. vault vs bitpanda metals in
+					// commodities; absent on old snapshots
+					sources: v.optional(
+						v.array(v.object({ source: v.string(), value: v.number() })),
+					),
 				}),
 			),
 		),
 
-		// Sync source that triggered this snapshot
-		source: v.string(), // "plaid", "snaptrade", "manual", "vault", "scheduled"
+		// Sync source that last wrote this snapshot (one row per user per
+		// day, upserted; older days may hold several intraday rows)
+		source: v.string(), // "plaid", "snaptrade", "loan", "vault", "scheduled-daily", ...
 		// true when a provider sync before the snapshot failed, so that
 		// provider's holdings are from its last successful sync
 		partial: v.optional(v.boolean()),
+		// Data freshness: oldest provider sync / spot price behind the values
+		asOf: v.optional(v.number()),
 	})
 		.index("by_user", ["userId"])
 		.index("by_user_date", ["userId", "date"])

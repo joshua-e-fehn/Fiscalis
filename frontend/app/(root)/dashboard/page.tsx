@@ -201,6 +201,8 @@ interface NetWorthCardProps {
   netWorth: number;
   profitLoss: number | null;
   profitLossPercent: number | null;
+  /** Share of assets (0..1) the unrealised P/L is computed over */
+  profitLossCoverage: number | null;
   currency: InvestmentCurrency;
   isLoading?: boolean;
 }
@@ -209,10 +211,16 @@ function NetWorthCard({
   netWorth,
   profitLoss,
   profitLossPercent,
+  profitLossCoverage,
   currency,
   isLoading = false,
 }: NetWorthCardProps) {
   const isProfit = (profitLoss ?? 0) >= 0;
+  // Only call out coverage when part of the assets has no cost basis.
+  const coverageLabel =
+    profitLossCoverage !== null && profitLossCoverage < 0.995
+      ? ` on ${Math.round(profitLossCoverage * 100)}% of assets`
+      : "";
 
   return (
     <Card>
@@ -247,6 +255,7 @@ function NetWorthCard({
                 </span>
                 <span className="text-muted-foreground">
                   ({formatPercent(profitLossPercent)}) unrealized
+                  {coverageLabel}
                 </span>
               </div>
             )}
@@ -560,6 +569,7 @@ export default function DashboardPage() {
             netWorth={summary?.netWorth ?? 0}
             profitLoss={summary?.unrealizedProfitLoss ?? null}
             profitLossPercent={summary?.unrealizedProfitLossPercent ?? null}
+            profitLossCoverage={summary?.unrealizedProfitLossCoverage ?? null}
             currency={currency}
             isLoading={isLoading}
           />

@@ -23,6 +23,7 @@ import { useRealEstateSummary } from "./realEstate";
 import { useCashSummary } from "./cash";
 import { useCollectiblesSummary } from "./collectibles";
 import { useLiabilitiesSummary } from "./liabilities";
+import { summarizeUnrealizedProfitLoss } from "@/../services/portfolio/unrealizedProfitLoss";
 import {
   Briefcase,
   Coins,
@@ -72,10 +73,12 @@ export interface PortfolioSummary {
   totalLiabilities: number;
   netWorth: number;
 
-  // Overall performance
+  // Overall performance, over cost-bearing categories only
   totalCostBasis: number | null;
   unrealizedProfitLoss: number | null;
   unrealizedProfitLossPercent: number | null;
+  /** Share of total assets (0..1) that the unrealised P/L covers */
+  unrealizedProfitLossCoverage: number | null;
 
   // YTD performance
   ytdProfitLoss: number | null;
@@ -289,24 +292,18 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       0,
     );
 
-    // Calculate total cost basis (only if all have cost basis, otherwise null)
-    const categoriesWithCost = assetCategories.filter(
-      (cat) => cat.costBasis !== null && cat.totalValue > 0,
+    // Unrealised P/L over cost-bearing categories only (value and cost of
+    // the same holdings); cash and other cost-less assets are not profit.
+    const unrealized = summarizeUnrealizedProfitLoss(
+      assetCategories.map((cat) => ({
+        value: cat.totalValue,
+        costBasis: cat.costBasis,
+      })),
     );
-    const totalCostBasis =
-      categoriesWithCost.length > 0
-        ? categoriesWithCost.reduce((sum, cat) => sum + (cat.costBasis ?? 0), 0)
-        : null;
-
-    // Calculate unrealized P/L
-    const unrealizedProfitLoss =
-      totalCostBasis !== null ? totalAssets - totalCostBasis : null;
-    const unrealizedProfitLossPercent =
-      unrealizedProfitLoss !== null &&
-      totalCostBasis !== null &&
-      totalCostBasis > 0
-        ? (unrealizedProfitLoss / totalCostBasis) * 100
-        : null;
+    const totalCostBasis = unrealized.costBasis;
+    const unrealizedProfitLoss = unrealized.profitLoss;
+    const unrealizedProfitLossPercent = unrealized.profitLossPercent;
+    const unrealizedProfitLossCoverage = unrealized.coverage;
 
     // Liabilities summary from classified Plaid accounts + broker positions
     const totalLiabilities = liabilitiesSummary?.totalValue ?? 0;
@@ -383,6 +380,7 @@ export function usePortfolioOverview(currency: MetalsCurrency = "eur"): {
       totalCostBasis,
       unrealizedProfitLoss,
       unrealizedProfitLossPercent,
+      unrealizedProfitLossCoverage,
       ytdProfitLoss,
       ytdProfitLossPercent,
       assetCategories,

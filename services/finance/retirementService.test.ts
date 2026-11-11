@@ -17,13 +17,14 @@ import {
   DEFAULT_CONSERVATIVE_RETURN,
   futureValueOfMonthlyContributions,
   monthlyRateFromAnnual,
-  mortgageBalanceAfterMonths,
+  mortgageBalanceOn,
   residenceMortgageFromLoan,
   retirementTimeline,
   type RetirementFundingBase,
   type RetirementInputs,
 } from "./retirementService";
 import { calculateEndCapitalValueWithCompoundInterest } from "./financeService";
+import type { ScheduleLoan } from "./loanScheduleService";
 
 /** A funding base equal to `netWorth`, all of it growing at the scenario return. */
 function nw(netWorth: number): RetirementFundingBase {
@@ -76,6 +77,10 @@ describe("helpers", () => {
 
 describe("worked example (inflation-adjusted)", () => {
   const r = computeRetirementResults(baseInputs, nw(100000));
+
+  it("flags no fixed-euro pension when every source is indexed", () => {
+    expect(r.hasFixedPensions).toBe(false);
+  });
 
   it("passes through today's expenses unchanged", () => {
     expect(r.expenseTodayMonthly).toBe(4000);
@@ -350,6 +355,7 @@ describe("horizon from the date of birth (fractional years)", () => {
     );
     expect(t.yearsToRetirement).toBeCloseTo(27.056, 2);
     expect(t.currentAgeExact).toBeCloseTo(39.95, 2);
+    expect(t.retirementDate).toBe("2053-12-01");
   });
 
   it("falls back to whole years without a (valid) date of birth", () => {
@@ -358,7 +364,11 @@ describe("horizon from the date of birth (fractional years)", () => {
         { birthDate, currentAge: 39, retirementAge: 67 },
         today,
       );
-      expect(t).toEqual({ currentAgeExact: 39, yearsToRetirement: 28 });
+      expect(t).toEqual({
+        currentAgeExact: 39,
+        yearsToRetirement: 28,
+        retirementDate: "2054-11-11",
+      });
     }
   });
 
@@ -538,6 +548,7 @@ describe("pension sources: gross/net and indexed/nominal", () => {
       nw(0),
     );
     expect(r.pensionFutureMonthly).toBeCloseTo(1000 * 1.02 ** 5 + 500, 6);
+    expect(r.hasFixedPensions).toBe(true);
   });
 });
 
@@ -559,66 +570,155 @@ describe("withdrawal tax gross-up", () => {
 });
 
 describe("primary residence mortgage", () => {
-  const mortgage = { balance: 250000, monthlyPayment: 1500, annualInterestRate: 0.03 };
+  const today = new Date(2026, 0, 15);
+  const at = (inputs: RetirementInputs, base: RetirementFundingBase) =>
+    computeRetirementResults(inputs, base, today);
+  // A 25-year annuity mortgage starting today: €250k at 3%, monthly.
+  const loan: ScheduleLoan = {
+    loanType: "ANNUITY",
+    originalPrincipal: 250000,
+    currentBalance: 250000,
+    annualInterestRate: 0.03,
+    termMonths: 300,
+    paymentFrequency: "MONTHLY",
+    scheduledPayment: 1185.53,
+    startDate: "2026-01-15",
+    status: "active",
+  };
+  const mortgage = residenceMortgageFromLoan(loan, [], "2026-01-15");
   const base: RetirementFundingBase = {
     assetsByCategory: { equities: 100000 },
     totalLiabilities: 260000, // mortgage + a €10k car loan
     primaryResidenceMortgage: mortgage,
   };
+  const owns = { ...baseInputs, ownsPrimaryResidence: true };
 
   it("takes the residence mortgage out of the funding base", () => {
-    const r = computeRetirementResults(
-      { ...baseInputs, ownsPrimaryResidence: true },
-      base,
-    );
+    const r = at(owns, base);
     expect(r.liabilitiesCounted).toBe(10000);
     expect(r.fundableNow).toBe(90000);
     expect(r.hasNetDebt).toBe(false);
-    expect(r.residenceMortgage?.monthlyPayment).toBe(1500);
+    expect(r.residenceMortgage?.monthlyPayment).toBeCloseTo(1185.53, 2);
   });
 
-  it("adds what is still owed at retirement to the target", () => {
-    const r = computeRetirementResults(
-      { ...baseInputs, ownsPrimaryResidence: true },
-      base,
-    );
-    const owed = mortgageBalanceAfterMonths(mortgage, 60);
+  it("keeps other debts when the mortgage is not in the liabilities", () => {
+    // e.g. a defaulted loan the dashboard's liabilities don't count
+    const r = at(owns, {
+      assetsByCategory: { equities: 100000 },
+      totalLiabilities: 20000,
+      primaryResidenceMortgage: { ...mortgage, countedInLiabilities: false },
+    });
+    expect(r.liabilitiesCounted).toBe(20000);
+    expect(r.fundableNow).toBe(80000);
+  });
+
+  it("marks only loans the liabilities count", () => {
+    expect(mortgage.countedInLiabilities).toBe(true);
+    expect(
+      residenceMortgageFromLoan({ ...loan, status: "defaulted" }, [], "2026-01-15")
+        .countedInLiabilities,
+    ).toBe(false);
+  });
+
+  it("adds what the schedule still shows owed at retirement to the target", () => {
+    const r = at(owns, base); // retires in 5 years (2031-01-15)
+    const owed = mortgageBalanceOn(mortgage, "2031-01-15");
     expect(owed).toBeGreaterThan(0);
+    expect(owed).toBeLessThan(250000);
     expect(r.residenceMortgage?.balanceAtRetirement).toBeCloseTo(owed, 6);
     expect(r.targetPortfolio).toBeCloseTo(r.gapAnnual / 0.04 + owed, 6);
   });
 
   it("adds nothing once the mortgage is repaid before retirement", () => {
-    const r = computeRetirementResults(
-      { ...baseInputs, retirementAge: 67, ownsPrimaryResidence: true },
-      base,
-    );
+    const r = at({ ...owns, retirementAge: 67 }, base);
     expect(r.residenceMortgage?.balanceAtRetirement).toBe(0);
     expect(r.targetPortfolio).toBeCloseTo(r.gapAnnual / 0.04, 6);
   });
 
   it("is ignored when the user doesn't own the home they live in", () => {
-    const r = computeRetirementResults(baseInputs, base);
+    const r = at(baseInputs, base);
     expect(r.residenceMortgage).toBeNull();
     expect(r.fundableNow).toBe(-160000);
   });
 
-  it("amortises like an annuity loan", () => {
-    // 3% / 12 monthly; one payment: 250000 · 1.0025 − 1500.
-    expect(mortgageBalanceAfterMonths(mortgage, 1)).toBeCloseTo(249125, 6);
-    expect(mortgageBalanceAfterMonths({ ...mortgage, annualInterestRate: 0 }, 12)).toBe(232000);
-    expect(mortgageBalanceAfterMonths(mortgage, 10_000)).toBe(0);
+  it("projects a constant-principal loan by its own schedule", () => {
+    const cp = residenceMortgageFromLoan(
+      { ...loan, loanType: "CONSTANT_PRINCIPAL", scheduledPayment: 1458.33 },
+      [],
+      "2026-01-15",
+    );
+    // €250k / 300 = €833.33 principal a month; 60 payments repay €50k.
+    expect(mortgageBalanceOn(cp, "2031-01-15")).toBeCloseTo(200000, 0);
+    // First payment: €833.33 principal + €625 interest.
+    expect(cp.monthlyPayment).toBeCloseTo(1458.33, 2);
   });
 
-  it("normalises a tracked loan's payment to monthly", () => {
-    expect(
-      residenceMortgageFromLoan({
+  it("settles a bullet loan at maturity, not before", () => {
+    const bullet = residenceMortgageFromLoan(
+      { ...loan, loanType: "BULLET", termMonths: 36, scheduledPayment: 625 },
+      [],
+      "2026-01-15",
+    );
+    expect(mortgageBalanceOn(bullet, "2028-12-31")).toBe(250000);
+    expect(mortgageBalanceOn(bullet, "2029-01-15")).toBe(0);
+    expect(bullet.monthlyPayment).toBeCloseTo(625, 2); // interest only
+    // Matures before retirement: nothing is added to the target.
+    const r = at(owns, { ...base, primaryResidenceMortgage: bullet });
+    expect(r.residenceMortgage?.balanceAtRetirement).toBe(0);
+  });
+
+  it("continues from the recorded payments", () => {
+    const paid = residenceMortgageFromLoan(
+      { ...loan, startDate: "2025-01-15", currentBalance: 244000 },
+      [],
+      "2026-01-15",
+    );
+    const withPayments = residenceMortgageFromLoan(
+      { ...loan, startDate: "2025-01-15", currentBalance: 244000 },
+      Array.from({ length: 12 }, (_, i) => ({
+        paymentDate: `2025-${String(i + 2).padStart(2, "0")}-15`.replace("2025-13", "2026-01"),
+        amount: 1185.53,
+        principalPortion: 500,
+        interestPortion: 685.53,
+        paymentType: "scheduled" as const,
+      })),
+      "2026-01-15",
+    );
+    // The projection continues after the 12 covered due dates; without the
+    // recorded payments it would restart at the first one.
+    expect(withPayments.balanceSchedule[0].date).toBe("2026-02-15");
+    expect(paid.balanceSchedule[0].date).toBe("2025-02-15");
+    expect(withPayments.balanceSchedule.at(-1)?.date).toBe("2050-01-15");
+  });
+
+  it("normalises the next payment to monthly", () => {
+    const quarterly = residenceMortgageFromLoan(
+      {
+        ...loan,
         currentBalance: 100000,
+        originalPrincipal: 100000,
         annualInterestRate: 0.04,
-        scheduledPayment: 3000,
         paymentFrequency: "QUARTERLY",
-      }),
-    ).toEqual({ balance: 100000, monthlyPayment: 1000, annualInterestRate: 0.04 });
+        scheduledPayment: 3000,
+      },
+      [],
+      "2026-01-15",
+    );
+    expect(quarterly.monthlyPayment).toBeCloseTo(1000, 6);
+  });
+
+  it("does not report pensions covering everything while a mortgage remains", () => {
+    const r = at(
+      {
+        ...owns,
+        pensionSources: [{ label: "Pension", monthlyAmount: 10000, gross: false }],
+      },
+      base,
+    );
+    expect(r.gapMonthly).toBe(0);
+    expect(r.targetPortfolio).toBeGreaterThan(0);
+    expect(r.pensionsCoverAll).toBe(false);
+    expect(r.optimistic.monthlyContribution).toBeGreaterThanOrEqual(0);
   });
 });
 

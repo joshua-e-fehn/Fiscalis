@@ -149,8 +149,6 @@ export {
   useResetRetirementPlan,
   useRetirementResults,
   useRetirementPreview,
-  useRetirementNetWorth,
-  type RetirementNetWorth,
 } from "./retirement";
 
 // Re-export public API key hooks

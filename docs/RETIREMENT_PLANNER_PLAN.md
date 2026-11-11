@@ -17,7 +17,7 @@
 - **Funding base** is per asset category (`RetirementFundingBase.assetsByCategory`, from the dashboard's category breakdown) with a growth treatment each (`FUNDING_CATEGORIES`, user-overridable via `fundingTreatments`): equities/REITs/crypto grow at the scenario return, bonds halfway between it and inflation, cash/metals/collectibles/sellable property at inflation, and any category can be excluded (e.g. an emergency fund). The base grows at the value-weighted return; new savings at the scenario return.
 - **Pensions** are gross by default (a flat `pensionDeductionRate`, default 17%, for tax + health insurance) and indexed by default; each source can be marked net and/or fixed in nominal euros.
 - **Withdrawal tax**: `withdrawalTaxRate` grosses the need up by 1/(1 − t). At the default 0 the target is a pre-tax figure (stated in the explainer).
-- **Primary residence**: `primaryResidenceLoanId` links the tracked mortgage on the home. Its balance is taken out of the liabilities (the repayments are a pre-retirement expense paid from income), and the balance still owed at retirement is added to the target. `primaryResidenceExcluded` is deprecated (optional, no longer written).
+- **Primary residence**: `primaryResidenceLoanId` links the tracked mortgage on the home. Its balance is taken out of the liabilities (the repayments are a pre-retirement expense paid from income), and the balance its own loan schedule (loan type + recorded payments) still shows owed at retirement is added to the target. Only a mortgage the liabilities contain (status active) is taken back out of them. `primaryResidenceExcluded` is deprecated (optional, no longer written).
 - **Progress** is per scenario (`projectedFromCurrent / target`); the headline `progressPct` is the conservative one, matching `isOnTrack`.
 
 Notable deviations from the original plan (all intentional):
@@ -25,7 +25,7 @@ Notable deviations from the original plan (all intentional):
 - **No server-side `getRetirementResults` query.** The math is composed **client-side** in `useRetirementResults` (equally live via reactive `useQuery`), because the funding basis is the dashboard net worth, which is itself composed client-side (`usePortfolioOverview`). Convex persists the plan and validates it with the same pure service: `convex/retirement.ts` imports defaults and validators from `services/finance/retirementService.ts` by relative path (`../../services/...`; the `@/` alias is not configured for Convex).
 - **Age comes from date of birth and is always derived fresh.** `userSettings.birthDate` (collected in onboarding ProfileStep and the wizard's PersonalStep) is canonical. Everywhere results are computed (wizard, dashboard, teaser) the age is `currentAgeForPlan`: profile date of birth → `plan.birthDate` snapshot → stored `plan.currentAge` as last fallback.
 - **Pensions are entered in today's money** (like expenses; a German *Renteninformation* quotes roughly today's value) and inflated to the retirement date before being subtracted. Results expose `pensionTodayMonthly` and `pensionFutureMonthly`.
-- **Funding basis = the dashboard net worth** (`useRetirementNetWorth`, built on `usePortfolioOverview("eur")`), not `getTotalNetWorth`. It includes vault metals, collectibles and manual loans, so the planner and the dashboard always show the same number. See §1 for mortgages and negative net worth.
+- **Funding basis = the dashboard net worth** (`useRetirementFundingBase`, built on `usePortfolioOverview("eur")`), not `getTotalNetWorth`. It includes vault metals, collectibles and manual loans, so the planner and the dashboard always show the same number. See §1 for mortgages and negative net worth.
 - **Validation is shared.** `validateRetirementInputs` / `validateRetirementAssumptions` / `validateRetirementAges` / `validatePensionSources` (service) block the wizard inline and are re-run by `saveRetirementPlan` on the merged plan (`firstRetirementInputError`: every field when the save activates the plan (`status: "active"`); otherwise only the fields being saved (the retirement-after-current-age rule applies once the plan is active), so a value stored under older rules can't strand a draft). A complete plan also needs expenses above zero and, in the wizard, a valid date of birth. `retirementPlanProblem` decides when the plan page and the dashboard teaser show "Check your …" instead of results; dates of birth use `validateBirthDate` (`lib/utils/date.ts`) in the wizard, onboarding and the Convex mutations `saveUserSettings` and `setBirthDate` (`saveRetirementPlan` also uses it, but drops an invalid snapshot instead of throwing).
 - **Editing an active plan does not autosave.** Changes stay local until "Save my plan"; "Discard changes" returns to the dashboard. Drafts still autosave on each Continue (only the fields confirmed so far). Save failures are shown inline (the app has no toast library) and "Saved" only appears after a successful save.
 - **No `/retirement/layout.tsx`** — the parent `(root)/layout.tsx` already supplies the sidebar/auth chrome; a sub-layout would be redundant (retirement has no tabs).
@@ -92,7 +92,7 @@ Run steps 7–11 for **two return assumptions**:
 - ❌ inflation adjustment, 4%-rule target, required-contribution-with-existing-portfolio → **add in §5**
 
 **Portfolio value** — [`frontend/hooks/convex/portfolio.ts`](../frontend/hooks/convex/portfolio.ts):
-- ✅ `usePortfolioOverview(currency)` → `{ totalAssets, totalLiabilities, netWorth, … }` — the dashboard's net worth (all categories incl. vault metals and collectibles, minus linked and manual liabilities). The planner reuses it via `useRetirementNetWorth`.
+- ✅ `usePortfolioOverview(currency)` → `{ totalAssets, totalLiabilities, netWorth, … }` — the dashboard's net worth (all categories incl. vault metals and collectibles, minus linked and manual liabilities). The planner reuses it via `useRetirementFundingBase`.
 - ⚠️ [`frontend/convex/portfolio.ts`](../frontend/convex/portfolio.ts) `getTotalNetWorth()` covers only Plaid, SnapTrade and Bitpanda (no vault, no manual loans) — originally planned as the basis, replaced so the planner matches the dashboard.
 - ✅ Auth pattern: `const identity = await ctx.auth.getUserIdentity(); const userId = identity.subject;`
 
@@ -249,8 +249,8 @@ Retire in 5 years, want €4,000/mo (today's money), €2,000/mo from pensions (
 ## 7. Hooks — `frontend/hooks/convex/retirement.ts`
 
 - [x] `useRetirementPlan()` → `useQuery(api.retirement.getRetirementPlan)`
-- [x] `useRetirementResults()` — composes plan + profile date of birth + `useRetirementNetWorth()` via `computeRetirementResults` (client-side, reactive; age from `currentAgeForPlan`)
-- [x] `useRetirementNetWorth()` — dashboard net worth (`usePortfolioOverview("eur")`) plus `totalAssets`, `totalLiabilities`
+- [x] `useRetirementResults()` — composes plan + profile date of birth + `useRetirementFundingBase()` via `computeRetirementResults` (client-side, reactive; age from `currentAgeForPlan`)
+- [x] `useRetirementFundingBase()` — the dashboard's assets per category and `totalLiabilities` (`usePortfolioOverview("eur")`), plus the linked residence mortgage projected by its loan schedule
 - [x] `planToInputs(plan, profileBirthDate)` / `currentAgeForPlan(...)` — shared by the hooks and the wizard
 - [x] `useSaveRetirementPlan()` → `useMutation(api.retirement.saveRetirementPlan)`
 - [x] `useUpdateRetirementStep()`, `useResetRetirementPlan()`
@@ -279,7 +279,7 @@ Mirror `OnboardingFlow.tsx`: `currentStep` state, `direction` for framer-motion,
   - Make double-counting impossible: net worth doesn't include property, so only what the user enters here counts.
   - *Not built:* the "rental income as a pension source" path (see Known limitations).
 - [x] **PensionsStep** (`PensionsStep.tsx`) — flexible add/remove list (`label` + `monthlyAmount` in **today's money**, e.g. from the Renteninformation) with live sum; negative amounts are blocked.
-- [x] **PortfolioStep** — shows the dashboard net worth (`useRetirementNetWorth`) as the funding base plus `fundableRealEstateEquity`; read-only, with notes for a negative basis and for tracked loans (incl. a home mortgage).
+- [x] **PortfolioStep** — shows the dashboard net worth (`useRetirementFundingBase`) as the funding base plus `fundableRealEstateEquity`; read-only, with notes for a negative basis and for tracked loans (incl. a home mortgage).
 - [x] **AssumptionsStep** — editable defaults (**7.18%**/5% returns, 2% inflation, 4% withdrawal) with explanatory hints + "reset to defaults"; invalid rates are shown inline and block "See my plan".
 - [x] **ResultsStep** — renders the dashboard (§9) inline; "Save my plan" persists `status="active"`.
 

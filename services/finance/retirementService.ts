@@ -32,10 +32,11 @@
 //      inflation (growing annuity, g = inflation; the figure is the first one).
 //
 // A primary residence the user lives in is never funding: its equity is not in
-// the net worth, and its mortgage is taken OUT of the liabilities here. The
-// mortgage repayments are a pre-retirement expense paid from income (reported,
-// not part of the savings figure); what is still owed at retirement is added
-// to the target, as it must then be paid off from the portfolio.
+// the net worth, and its mortgage is taken OUT of the liabilities here (when
+// the liabilities contain it). The mortgage repayments are a pre-retirement
+// expense paid from income (reported, not part of the savings figure); what
+// the loan's own schedule still shows owed at retirement is added to the
+// target, as it must then be paid off from the portfolio.
 //
 // Why no double-counting of inflation: pre-retirement we inflate the expense
 // target and grow assets nominally; post-retirement the 4% withdrawal rate
@@ -44,10 +45,14 @@
 import {
   calculateEndCapitalValueWithCompoundInterest,
   calculateCapitalGainDurationWithCompoundInterest,
+  MS_PER_YEAR,
 } from "./financeService";
 import {
+  addMonthsToISODate,
+  buildLoanSchedule,
   getPaymentsPerYear,
-  type LoanPaymentFrequency,
+  type ScheduleLoan,
+  type SchedulePayment,
 } from "./loanScheduleService";
 
 // ───────────────────────────────────────────────────────────────
@@ -209,12 +214,21 @@ export interface RetirementInputs {
 
 /** A tracked mortgage on the home the user lives in. */
 export interface ResidenceMortgage {
-  /** Outstanding balance today (part of the tracked liabilities). */
+  /** Outstanding balance today. */
   balance: number;
-  /** Repayment per month (scheduled payment normalised to monthly). */
+  /** Next scheduled repayment, normalised to monthly. */
   monthlyPayment: number;
-  /** Nominal annual interest rate (0.035 = 3.5%), compounded monthly. */
-  annualInterestRate: number;
+  /**
+   * Balance after each projected due date (ascending), from the loan's own
+   * schedule (loanScheduleService.buildLoanSchedule), so every loan type —
+   * annuity, constant principal, bullet, interest-only — amortises correctly.
+   */
+  balanceSchedule: Array<{ date: string; closingBalance: number }>;
+  /**
+   * Whether `balance` is part of `RetirementFundingBase.totalLiabilities`.
+   * Only then is it taken back out of the liabilities.
+   */
+  countedInLiabilities: boolean;
 }
 
 /** What the plan is funded from: today's assets per category and the debts. */
@@ -331,7 +345,16 @@ export interface RetirementResults {
    * target is infinite. Never negative; may exceed 1.
    */
   progressPct: number;
-  /** True when pensions already cover the inflation-adjusted expenses. */
+  /**
+   * True when a pension is fixed in nominal euros (indexed: false), so it loses
+   * real value until retirement — part of why the target exceeds
+   * simpleTargetPortfolio.
+   */
+  hasFixedPensions: boolean;
+  /**
+   * True when pensions already cover the inflation-adjusted expenses and no
+   * residence mortgage is still owed at retirement (target ≤ 0).
+   */
   pensionsCoverAll: boolean;
   /** True when the monthly saving rises with inflation. */
   contributionsIndexed: boolean;
@@ -436,7 +459,12 @@ export function yearsToTargetWithoutSaving(
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
-const MS_PER_YEAR = 365.2425 * 24 * 60 * 60 * 1000;
+
+/** `YYYY-MM-DD` of a date's local calendar fields. */
+function toISODate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
 /**
  * Exact age today and fractional years until the retirement date
@@ -446,12 +474,19 @@ const MS_PER_YEAR = 365.2425 * 24 * 60 * 60 * 1000;
 export function retirementTimeline(
   inputs: Pick<RetirementInputs, "birthDate" | "currentAge" | "retirementAge">,
   today: Date = new Date(),
-): { currentAgeExact: number; yearsToRetirement: number } {
+): {
+  currentAgeExact: number;
+  yearsToRetirement: number;
+  /** `YYYY-MM-DD` the plan holder retires on. */
+  retirementDate: string;
+} {
   const match = inputs.birthDate ? ISO_DATE.exec(inputs.birthDate.trim()) : null;
   if (!match) {
+    const years = inputs.retirementAge - inputs.currentAge;
     return {
       currentAgeExact: inputs.currentAge,
-      yearsToRetirement: inputs.retirementAge - inputs.currentAge,
+      yearsToRetirement: years,
+      retirementDate: addMonthsToISODate(toISODate(today), years * 12),
     };
   }
   const [y, m, d] = [Number(match[1]), Number(match[2]) - 1, Number(match[3])];
@@ -461,38 +496,56 @@ export function retirementTimeline(
   return {
     currentAgeExact: (now - Date.UTC(y, m, d)) / MS_PER_YEAR,
     yearsToRetirement: (retirementDate - now) / MS_PER_YEAR,
-  };
-}
-
-/** Normalise a tracked loan to the residence-mortgage input (monthly payment). */
-export function residenceMortgageFromLoan(loan: {
-  currentBalance: number;
-  annualInterestRate: number;
-  scheduledPayment: number;
-  paymentFrequency: LoanPaymentFrequency;
-}): ResidenceMortgage {
-  return {
-    balance: Math.max(0, loan.currentBalance),
-    monthlyPayment:
-      (loan.scheduledPayment * getPaymentsPerYear(loan.paymentFrequency)) / 12,
-    annualInterestRate: loan.annualInterestRate,
+    retirementDate: new Date(retirementDate).toISOString().slice(0, 10),
   };
 }
 
 /**
- * Outstanding balance of an annuity loan after `months` repayments of
- * `monthlyPayment` at `annualInterestRate` / 12 per month (never negative).
+ * Loan statuses the dashboard's liabilities (convex/categories.ts
+ * getLiabilities) count. Keep in sync with that query.
  */
-export function mortgageBalanceAfterMonths(
+const LIABILITY_LOAN_STATUSES: ReadonlySet<string> = new Set(["active"]);
+
+/**
+ * A tracked loan as the residence-mortgage input: its schedule (recorded
+ * payments + projection, the same one the loan page shows) reduced to the
+ * projected balances, and the next repayment normalised to monthly.
+ */
+export function residenceMortgageFromLoan(
+  loan: ScheduleLoan,
+  payments: SchedulePayment[],
+  today: string,
+): ResidenceMortgage {
+  const projected = buildLoanSchedule(loan, payments, today).filter(
+    (row) => row.status === "scheduled",
+  );
+  const nextPayment = projected[0]?.payment ?? 0;
+  return {
+    balance: Math.max(0, loan.currentBalance),
+    monthlyPayment:
+      (nextPayment * getPaymentsPerYear(loan.paymentFrequency)) / 12,
+    balanceSchedule: projected.map((row) => ({
+      date: row.date,
+      closingBalance: row.closingBalance,
+    })),
+    countedInLiabilities: LIABILITY_LOAN_STATUSES.has(loan.status ?? "active"),
+  };
+}
+
+/**
+ * Outstanding balance on `date` (`YYYY-MM-DD`): the closing balance of the
+ * last projected payment due on or before it; today's balance if none is.
+ */
+export function mortgageBalanceOn(
   mortgage: ResidenceMortgage,
-  months: number,
+  date: string,
 ): number {
-  const { balance, monthlyPayment, annualInterestRate } = mortgage;
-  if (months <= 0) return balance;
-  const i = annualInterestRate / 12;
-  if (i === 0) return Math.max(0, balance - monthlyPayment * months);
-  const factor = Math.pow(1 + i, months);
-  return Math.max(0, balance * factor - (monthlyPayment * (factor - 1)) / i);
+  let balance = mortgage.balance;
+  for (const row of mortgage.balanceSchedule) {
+    if (row.date > date) break;
+    balance = row.closingBalance;
+  }
+  return Math.max(0, balance);
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -700,7 +753,6 @@ export function computeRetirementResults(
 
   const gapMonthly = Math.max(0, expenseFutureMonthly - pensionFutureMonthly);
   const gapAnnual = gapMonthly * 12;
-  const pensionsCoverAll = gapMonthly <= 0;
 
   // Primary residence: the mortgage leaves the funding base; what is still
   // owed at retirement is added to the target.
@@ -709,15 +761,25 @@ export function computeRetirementResults(
     : null;
   const residenceMortgage = mortgage
     ? {
-        balance: Math.min(mortgage.balance, Math.max(0, fundingBase.totalLiabilities)),
+        balance: mortgage.balance,
         monthlyPayment: mortgage.monthlyPayment,
-        balanceAtRetirement: mortgageBalanceAfterMonths(mortgage, years * 12),
+        balanceAtRetirement: mortgageBalanceOn(
+          mortgage,
+          timeline.retirementDate,
+        ),
       }
     : null;
+  // Only a mortgage the liabilities contain is taken back out of them.
+  const mortgageInLiabilities =
+    mortgage && mortgage.countedInLiabilities
+      ? Math.min(mortgage.balance, Math.max(0, fundingBase.totalLiabilities))
+      : 0;
 
   const targetPortfolio =
     portfolioTargetFromAnnualGap(grossUp(gapAnnual), inputs.withdrawalRate) +
     (residenceMortgage?.balanceAtRetirement ?? 0);
+  // Nothing left to fund: pensions cover the expenses and no mortgage remains.
+  const pensionsCoverAll = gapMonthly <= 0 && targetPortfolio <= 0;
 
   // Simplified target in today's money (same basis on both sides) for the explainer.
   const simpleGapMonthly = Math.max(
@@ -737,7 +799,7 @@ export function computeRetirementResults(
     .reduce((s, l) => s + l.value, 0);
   const liabilitiesCounted = Math.max(
     0,
-    fundingBase.totalLiabilities - (residenceMortgage?.balance ?? 0),
+    fundingBase.totalLiabilities - mortgageInLiabilities,
   );
 
   const fundableNow = includedAssets - liabilitiesCounted;
@@ -783,6 +845,9 @@ export function computeRetirementResults(
     hasNetDebt: fundableNow < 0,
     progressPct: conservative.progressPct,
     pensionsCoverAll,
+    hasFixedPensions: inputs.pensionSources.some(
+      (s) => s.indexed === false && netPensionMonthly(s, deductionRate) > 0,
+    ),
     contributionsIndexed,
     optimistic,
     conservative,

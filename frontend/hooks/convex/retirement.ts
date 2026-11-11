@@ -8,8 +8,8 @@ import {
 	residenceMortgageFromLoan,
 } from "@/../services/finance/retirementService";
 import { api } from "@/convex/_generated/api";
-import { getAgeFromBirthDate } from "@/lib/utils/date";
-import { useLoans } from "./loans";
+import { getAgeFromBirthDate, todayLocalISO } from "@/lib/utils/date";
+import { useLoanPayments, useLoans } from "./loans";
 import { useUserSettings } from "./onboarding";
 import { usePortfolioOverview } from "./portfolio";
 
@@ -80,44 +80,6 @@ export function planToInputs(
 	};
 }
 
-/** The planner's funding basis: the same figures as the dashboard's net worth. */
-export interface RetirementNetWorth {
-	/** Dashboard net worth: totalAssets − totalLiabilities (EUR). */
-	netWorth: number;
-	totalAssets: number;
-	/**
-	 * Every loan tracked in Fiscalis (linked and manual), incl. a mortgage on the
-	 * primary residence. The planner takes a linked residence mortgage back out
-	 * (computeRetirementResults), as its repayments are a pre-retirement expense.
-	 */
-	totalLiabilities: number;
-	/** Asset value per category id — the dashboard's category breakdown. */
-	assetsByCategory: Record<string, number>;
-}
-
-/**
- * Net worth used as the retirement funding basis: the dashboard's overview,
- * which is the server-side net worth (portfolio.getOverview, the same
- * aggregator as the snapshots), so the planner, the dashboard and the
- * history always agree: liabilities in EUR, loans by the D1 status rule.
- * Returns `undefined` while loading.
- */
-export function useRetirementNetWorth(): RetirementNetWorth | undefined {
-	const { summary, isLoading } = usePortfolioOverview();
-
-	return useMemo(() => {
-		if (isLoading || !summary) return undefined;
-		return {
-			netWorth: summary.netWorth,
-			totalAssets: summary.totalAssets,
-			totalLiabilities: summary.totalLiabilities,
-			assetsByCategory: Object.fromEntries(
-				summary.assetCategories.map((c) => [c.id, c.totalValue]),
-			),
-		};
-	}, [isLoading, summary]);
-}
-
 /** Loans that count as liabilities (D1): active or defaulted. */
 export function useRetirementMortgageCandidates() {
 	const loans = useLoans();
@@ -129,27 +91,37 @@ export function useRetirementMortgageCandidates() {
 }
 
 /**
- * The funding base for `inputs`: the dashboard's per-category assets and
- * liabilities, plus the linked primary-residence mortgage (resolved from the
- * tracked loans). Returns `undefined` while loading.
+ * The funding base for a plan: the dashboard's per-category assets and
+ * liabilities (usePortfolioOverview, so both always agree, incl. vault metals
+ * and manual loans), plus the linked primary-residence mortgage projected by
+ * its own schedule (recorded payments + loan type). Whether that mortgage is
+ * part of the liabilities is decided by residenceMortgageFromLoan, so a loan
+ * the liabilities don't count never removes other debts. Returns `undefined`
+ * while loading.
  */
 export function useRetirementFundingBase(
 	primaryResidenceLoanId: string | undefined,
 ): RetirementFundingBase | undefined {
-	const netWorth = useRetirementNetWorth();
+	const { summary, isLoading } = usePortfolioOverview("eur");
 	const loans = useRetirementMortgageCandidates();
+	const loan = primaryResidenceLoanId
+		? loans?.find((l) => l._id === primaryResidenceLoanId)
+		: undefined;
+	const payments = useLoanPayments(loan?._id);
 
 	return useMemo(() => {
-		if (netWorth === undefined || loans === undefined) return undefined;
-		const loan = primaryResidenceLoanId
-			? loans.find((l) => l._id === primaryResidenceLoanId)
-			: undefined;
+		if (isLoading || !summary || loans === undefined) return undefined;
+		if (loan && payments === undefined) return undefined;
 		return {
-			assetsByCategory: netWorth.assetsByCategory,
-			totalLiabilities: netWorth.totalLiabilities,
-			primaryResidenceMortgage: loan ? residenceMortgageFromLoan(loan) : null,
+			assetsByCategory: Object.fromEntries(
+				summary.assetCategories.map((c) => [c.id, c.totalValue]),
+			),
+			totalLiabilities: summary.totalLiabilities,
+			primaryResidenceMortgage: loan
+				? residenceMortgageFromLoan(loan, payments ?? [], todayLocalISO())
+				: null,
 		};
-	}, [netWorth, loans, primaryResidenceLoanId]);
+	}, [isLoading, summary, loans, loan, payments]);
 }
 
 /**

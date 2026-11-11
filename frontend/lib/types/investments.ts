@@ -66,6 +66,11 @@ export interface CategorySummary {
   totalCost: number | null;
   profitLoss: number | null;
   profitLossPercent: number | null;
+  /**
+   * Share of totalValue (0..1) that totalCost and profitLoss cover: holdings
+   * without a cost basis are left out of them. Absent or null when unknown.
+   */
+  profitLossCoverage?: number | null;
   ytdProfitLoss: number | null;
   ytdProfitLossPercent: number | null;
   valueAtYearStart: number | null; // Value on Jan 1 of current year

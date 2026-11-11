@@ -37,6 +37,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useNetWorthYTD, usePortfolioChartData } from "@/hooks/performance";
+import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
 
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
@@ -218,10 +219,9 @@ function NetWorthCard({
 }: NetWorthCardProps) {
   const isProfit = (profitLoss ?? 0) >= 0;
   // Only call out coverage when part of the assets has no cost basis.
+  const coveredPercent = partialCoveragePercent(profitLossCoverage);
   const coverageLabel =
-    profitLossCoverage !== null && profitLossCoverage < 0.995
-      ? ` on ${Math.round(profitLossCoverage * 100)}% of assets`
-      : "";
+    coveredPercent !== null ? ` on ${coveredPercent}% of assets` : "";
 
   return (
     <Card>

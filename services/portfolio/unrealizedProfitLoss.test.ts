@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   costLine,
   coveredValueOf,
+  partialCoveragePercent,
   snapshotCostLine,
   summarizeUnrealizedProfitLoss,
   sumCostCoveredValue,
@@ -198,5 +199,20 @@ describe("sumCostCoveredValue", () => {
         { value: 40, costBasis: 5 },
       ]),
     ).toBe(50);
+  });
+});
+
+describe("partialCoveragePercent", () => {
+  it("is the rounded covered share when the P/L covers part of the value", () => {
+    // 1,200 covered of 6,200
+    expect(partialCoveragePercent(1_200 / 6_200)).toBe(19);
+    expect(partialCoveragePercent(0)).toBe(0);
+  });
+
+  it("is null for (nearly) full or unknown coverage", () => {
+    expect(partialCoveragePercent(1)).toBeNull();
+    expect(partialCoveragePercent(0.996)).toBeNull();
+    expect(partialCoveragePercent(null)).toBeNull();
+    expect(partialCoveragePercent(undefined)).toBeNull();
   });
 });

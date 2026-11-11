@@ -44,6 +44,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { MetalsCurrency } from "@/lib/types/metals-extended";
+import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
 
 /** A short date for "since …" notes on the KPI cards */
 function formatSince(timestamp: number): string {
@@ -595,12 +596,19 @@ export function InvestmentDashboardSection({
       : sinceTrackingProfit
         ? "Profit / Loss since tracking started"
         : "Change since tracking started";
+  // A cost-basis P/L covers only the holdings that have a cost basis
+  const coveredPercent =
+    plData.source === "cost-basis"
+      ? partialCoveragePercent(summary?.profitLossCoverage)
+      : null;
   const plNote =
     plData.since !== null
       ? `Since ${formatSince(plData.since)}${
           sinceTrackingProfit ? ", net of purchases and deposits" : ""
         }`
-      : null;
+      : coveredPercent !== null
+        ? `On ${coveredPercent}% of the value: holdings without a cost basis are left out`
+        : null;
 
   // YTD values for custom cards
   const ytd = needsContinuousYTD ? continuousYTD : discreteYTD;

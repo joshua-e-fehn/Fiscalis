@@ -85,6 +85,7 @@ export function toCategorySummary(
     totalCost: total.costBasis,
     profitLoss: total.profitLoss,
     profitLossPercent: total.profitLossPercent,
+    profitLossCoverage: total.coverage,
     ytdProfitLoss: null,
     ytdProfitLossPercent: null,
     valueAtYearStart: null,

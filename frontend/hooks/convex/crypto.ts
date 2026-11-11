@@ -71,10 +71,10 @@ export function useCryptoData() {
   return useQuery(api.categories.getCrypto);
 }
 
-/** All crypto positions across providers. */
-export function useCryptoPositions(): CryptoPosition[] {
+/** All crypto positions across providers; undefined while loading. */
+export function useCryptoPositions(): CryptoPosition[] | undefined {
   const data = useCryptoData();
-  return (data?.positions as CryptoPosition[] | undefined) ?? [];
+  return data?.positions as CryptoPosition[] | undefined;
 }
 
 /** Whether the user holds any crypto. */

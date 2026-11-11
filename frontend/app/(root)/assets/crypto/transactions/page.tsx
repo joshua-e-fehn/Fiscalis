@@ -26,7 +26,8 @@ import {
   History,
 } from "lucide-react";
 import Link from "next/link";
-import { formatCurrency } from "@/lib/utils/currency";
+import { currencyCodes, formatCurrency } from "@/lib/utils/currency";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 
 // Simple time ago function from an ISO date string
 function formatTimeAgo(dateIso: string): string {
@@ -50,10 +51,26 @@ export default function CryptoAssetsTransactionsPage() {
   const transactions = useCryptoTransactions(100);
   const hasConnections = useHasCryptoHoldings();
 
-  // Format currency
-  const formatValue = (value: number | null | undefined) => {
+  // Format a value in the transaction's own currency (broker
+  // transactions are often USD, so a fixed EUR would mislabel them)
+  const formatValue = (
+    value: number | null | undefined,
+    currency: string | null | undefined,
+  ) => {
     if (value === null || value === undefined) return "-";
-    return formatCurrency(value, "eur");
+    const code = (currency ?? "").toLowerCase();
+    if (code in currencyCodes) {
+      return formatCurrency(value, code as InvestmentCurrency);
+    }
+    try {
+      return new Intl.NumberFormat("de-CH", {
+        style: "currency",
+        currency: code.toUpperCase(),
+      }).format(value);
+    } catch {
+      // Not an ISO 4217 code (or none given): show the bare amount
+      return `${value.toLocaleString("de-CH")} ${currency ?? ""}`.trim();
+    }
   };
 
   // Get transaction icon
@@ -145,7 +162,7 @@ export default function CryptoAssetsTransactionsPage() {
                       {tx.quantity?.toFixed(6)} {tx.symbol}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {formatValue(tx.value)}
+                      {formatValue(tx.value, tx.currency)}
                     </div>
                   </div>
                 </div>

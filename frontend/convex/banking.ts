@@ -10,6 +10,7 @@ import {
   classifyPlaidAccount,
   getClassificationFields,
 } from "./lib/classification";
+import { getUserId } from "./lib/auth";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES (Public - called from frontend)
@@ -72,13 +73,15 @@ export const getAccounts = query({
 export const getAccountsByItem = query({
   args: { itemId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    const userId = await getUserId(ctx);
+    if (!userId) return null;
 
-    return await ctx.db
+    // Only the caller's own accounts: a foreign itemId returns nothing.
+    const accounts = await ctx.db
       .query("plaidAccounts")
       .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
       .collect();
+    return accounts.filter((account) => account.userId === userId);
   },
 });
 

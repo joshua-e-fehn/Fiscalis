@@ -1,9 +1,4 @@
 // Investment Category Dashboard Components
-export {
-  CategoryValueCard,
-  CategoryProfitLossCard,
-  CategoryYTDCard,
-} from "./CategoryKPICards";
 export { CategoryAllocationChart } from "./CategoryAllocationChart";
 export { CategoryPerformanceChart } from "./CategoryPerformanceChart";
 export type { ChartTimeRange, ChartViewMode } from "./CategoryPerformanceChart";
@@ -26,5 +21,4 @@ export {
 export { PageHeader, type PageHeaderAction } from "./PageHeader";
 
 // Provider Aggregation Components
-export { ProviderAllocationChart } from "./ProviderAllocationChart";
 export { UnifiedPositionsTable } from "./UnifiedPositionsTable";

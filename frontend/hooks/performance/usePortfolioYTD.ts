@@ -1,23 +1,16 @@
 /**
- * Portfolio YTD Performance Hook (Backward Compatible)
- *
- * This hook provides a backward-compatible interface to the new unified
- * performance service. It returns YTD metrics in the same format as the
- * old portfolio.ts hook, making migration straightforward.
- *
- * @deprecated This is a bridge hook for migration. New code should use
- * usePerformance({ timeRange: "YTD" }) directly.
+ * YTD hooks for net worth (snapshot totals) and single categories
+ * (snapshot category breakdowns).
  */
 
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
-import { useAuth } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { useDiscretePerformance } from "./useDiscretePerformance";
 import { getTimeRangeStartTimestamp } from "@/../services/finance/financeService";
 
 // ═══════════════════════════════════════════════════════════════
-// Types (matching old PortfolioSummary interface)
+// Types
 // ═══════════════════════════════════════════════════════════════
 
 export interface PortfolioYTDResult {
@@ -25,65 +18,6 @@ export interface PortfolioYTDResult {
   ytdProfitLossPercent: number | null;
   valueAtYearStart: number | null;
   isLoading: boolean;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Hook Implementation
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Calculate YTD performance from portfolio snapshots
- *
- * This is a bridge hook that provides the same interface as the old
- * YTD calculation in portfolio.ts, but uses the new unified performance
- * service under the hood.
- *
- * @example
- * ```tsx
- * // Old way (deprecated)
- * const { summary } = usePortfolioOverview();
- * const { ytdProfitLoss, ytdProfitLossPercent } = summary;
- *
- * // New way (using this bridge)
- * const ytd = usePortfolioYTD();
- * const { ytdProfitLoss, ytdProfitLossPercent } = ytd;
- *
- * // Best way (using unified service directly)
- * const { metrics } = usePerformance({ timeRange: "YTD" });
- * const ytdProfitLossPercent = metrics?.percentChange;
- * ```
- */
-export function usePortfolioYTD(options?: {
-  enabled?: boolean;
-}): PortfolioYTDResult {
-  const { enabled = true } = options ?? {};
-
-  // Use the new discrete performance hook with YTD range
-  const { metrics, isLoading, snapshots } = useDiscretePerformance({
-    timeRange: "YTD",
-    enabled,
-  });
-
-  // Transform to old interface format
-  const result = useMemo<PortfolioYTDResult>(() => {
-    if (!metrics) {
-      return {
-        ytdProfitLoss: null,
-        ytdProfitLossPercent: null,
-        valueAtYearStart: null,
-        isLoading,
-      };
-    }
-
-    return {
-      ytdProfitLoss: metrics.absoluteChange,
-      ytdProfitLossPercent: metrics.percentChange,
-      valueAtYearStart: metrics.startValue,
-      isLoading,
-    };
-  }, [metrics, isLoading]);
-
-  return result;
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -1,12 +1,8 @@
 /**
- * Metals/Commodities YTD Performance Hook (Backward Compatible)
+ * Metals YTD Performance Hook
  *
- * This hook provides a backward-compatible interface to the new unified
- * performance service for metals and other commodities. It returns YTD
- * metrics in the same format as the old useYTDPortfolioPerformance hook.
- *
- * @deprecated This is a bridge hook for migration. New code should use
- * useContinuousPerformance({ timeRange: "YTD" }) directly.
+ * YTD metrics for the vault, computed by the continuous (price-based)
+ * performance strategy.
  */
 
 import { useMemo } from "react";
@@ -14,7 +10,7 @@ import { useContinuousPerformance } from "./useContinuousPerformance";
 import type { MetalsCurrency } from "@/lib/types/metals-extended";
 
 // ═══════════════════════════════════════════════════════════════
-// Types (matching old YTDPerformanceResult interface)
+// Types
 // ═══════════════════════════════════════════════════════════════
 
 export interface MetalsYTDResult {
@@ -83,33 +79,4 @@ export function useMetalsYTD(
   }, [metrics, isLoading]);
 
   return result;
-}
-
-/**
- * Calculate performance for precious metals over any time range
- *
- * @example
- * ```tsx
- * const { metrics } = useMetalsPerformance("3Month", "eur");
- * ```
- */
-export function useMetalsPerformance(
-  timeRange: import("@/lib/performance").TimeRange,
-  currency: MetalsCurrency = "eur",
-  options?: { enabled?: boolean; includeDataPoints?: boolean },
-): {
-  metrics: import("@/lib/performance").PerformanceMetrics | null;
-  dataPoints: import("@/lib/performance").PerformanceDataPoint[];
-  isLoading: boolean;
-} {
-  const { enabled = true, includeDataPoints = false } = options ?? {};
-
-  const { metrics, dataPoints, isLoading } = useContinuousPerformance({
-    timeRange,
-    currency,
-    includeDataPoints,
-    enabled,
-  });
-
-  return { metrics, dataPoints, isLoading };
 }

@@ -95,10 +95,3 @@ export function interpolateMissingData(
 export function hasInterpolatedData(data: MetalChartData[]): boolean {
   return data.some((d) => d.isInterpolated);
 }
-
-/**
- * Gets the count of interpolated data points
- */
-export function getInterpolatedCount(data: MetalChartData[]): number {
-  return data.filter((d) => d.isInterpolated).length;
-}

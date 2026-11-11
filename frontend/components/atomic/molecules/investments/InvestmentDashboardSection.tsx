@@ -553,10 +553,11 @@ export function InvestmentDashboardSection({
   const hasHoldings = (summary?.totalValue ?? 0) > 0;
   const isPLLoading = isLoading || (hasHoldings && plData.isLoading);
 
-  // Count accounts for cash category
+  // Count accounts for cash category. topHoldings is capped per
+  // subcategory, so sum the full holdingsCount instead.
   const accountsCount =
     summary?.subcategories.reduce(
-      (count, sub) => count + sub.topHoldings.length,
+      (count, sub) => count + sub.holdingsCount,
       0,
     ) ?? 0;
 

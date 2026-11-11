@@ -534,7 +534,10 @@ export default defineSchema({
 		weightGrams: v.number(), // Total weight in grams
 		fineWeightGrams: v.number(), // Pure metal weight in grams
 
-		// Holdings
+		// Holdings. quantity and purchasePricePerUnit are cached projections
+		// of the vaultTransactions ledger (services/finance/metalsLedger.ts):
+		// quantity held and average cost in EUR, written by the mutation
+		// that changes the ledger.
 		quantity: v.number(),
 		buyPremium: v.optional(v.number()), // Premium applied when buying (e.g., 0.03 = 3% above spot)
 		sellPremium: v.optional(v.number()), // Premium/discount when selling (e.g., -0.02 = 2% below spot)
@@ -572,10 +575,17 @@ export default defineSchema({
 			v.literal("gift_received"),
 			v.literal("gift_given"),
 		),
-		quantity: v.number(),
-		pricePerUnit: v.number(),
+		quantity: v.number(), // always > 0; the type gives the direction
+		// Absent only on an opening balance whose cost is unknown
+		pricePerUnit: v.optional(v.number()),
 		currency: v.string(), // "EUR" | "USD" | "CHF"
-		transactionDate: v.string(), // ISO date string - can be any past date
+		// ISO date string - can be any past date. Absent only on an opening
+		// balance whose date is unknown: held before any range (D3)
+		transactionDate: v.optional(v.string()),
+		// The item's opening balance (written with the item, or backfilled by
+		// migrations.backfillVaultLedger). Absent on older documents, where
+		// the opening is the one noted "Initial purchase".
+		isOpening: v.optional(v.boolean()),
 
 		// Spot price at transaction time (for accurate P/L calculation)
 		spotPriceAtTransaction: v.optional(v.number()),

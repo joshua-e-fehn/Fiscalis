@@ -230,8 +230,8 @@ export default defineSchema({
 		// P&L
 		unrealizedPL: v.optional(v.number()), // Unrealized profit/loss
 		unrealizedPLPercent: v.optional(v.number()), // Unrealized P&L percentage
-		dayPL: v.optional(v.number()), // Today's P&L
-		dayPLPercent: v.optional(v.number()), // Today's P&L percentage
+		dayPL: v.optional(v.number()), // DEPRECATED - never written or read; kept so stored docs validate
+		dayPLPercent: v.optional(v.number()), // DEPRECATED - never written or read; kept so stored docs validate
 		// Classification fields
 		investmentCategory: v.optional(v.string()), // "equities", "cash", "bonds", etc.
 		investmentSubcategory: v.optional(v.string()), // "stocks", "etfs", "broker-cash", etc.

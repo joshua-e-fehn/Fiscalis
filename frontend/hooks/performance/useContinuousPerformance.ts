@@ -1,8 +1,9 @@
 /**
  * Continuous (price-based) performance of the vault: the one history engine
- * for the vault. The metals page chart (useVaultPerformance) and metals YTD
- * (useMetalsYTD) run it alone; every measure that includes the vault, such
- * as the commodities category, gets it through useCategoryPerformance.
+ * for the vault. The metals page chart (useVaultPerformance) runs it alone;
+ * every other measure that includes the vault, such as the commodities
+ * category or the vault source alone (useMetalsYTD), gets it through
+ * useCategoryPerformance.
  *
  * useVaultPerformanceInput loads what the continuous strategy values the
  * vault from: each item's ledger lots as holdings (quantity held at t, sales

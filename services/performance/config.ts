@@ -125,15 +125,21 @@ export function getValueTypeForConfig(config: ValuationConfig): ValueType {
 
 /**
  * Holding sources valued continuously within a category (or the whole
- * portfolio for "all"), each with the category its value is stored under in
- * snapshots. The discrete part of a hybrid calculation leaves them out of
- * the snapshot values, so they are not counted twice.
+ * portfolio for "all", or one source alone), each with the category its
+ * value is stored under in snapshots. The discrete part of a hybrid
+ * calculation leaves them out of the snapshot values, so they are not
+ * counted twice.
  */
 export function continuousSourcesFor(
-  category: HoldingCategory | "all",
+  scope: HoldingCategory | "all" | { source: string },
 ): ContinuousSource[] {
   return Object.entries(PRICE_FEEDS).flatMap(([provider, feed]) => {
-    if (!feed || (category !== "all" && feed.category !== category)) return [];
+    if (!feed) return [];
+    const inScope =
+      typeof scope === "object"
+        ? feed.source === scope.source
+        : scope === "all" || feed.category === scope;
+    if (!inScope) return [];
     const config = resolveValuationConfig(feed.category, feed.subcategory);
     return config.priceProvider === provider &&
       getValueTypeForConfig(config) === "continuous"

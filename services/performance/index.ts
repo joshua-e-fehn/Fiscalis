@@ -126,6 +126,6 @@ export {
   type HybridPerformanceResult,
 } from "./strategies";
 
-export type { SnapshotMetric, LiveEnd } from "./strategies/types";
+export type { SnapshotMetric, PerformanceMeasure, LiveEnd } from "./strategies/types";
 export { snapshotMetricValue, netWorthCostLine } from "./strategies/discrete";
 export { type ChartPoint, toChartPoints } from "./chartSeries";

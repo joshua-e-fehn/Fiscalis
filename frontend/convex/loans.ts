@@ -9,10 +9,13 @@ import {
 import { Doc, Id } from "./_generated/dataModel";
 import {
   addMonthsToISODate,
+  adjustmentForBalance,
   computeNextPaymentDate,
+  deriveLoanBalance,
   getPaymentsPerYear,
   initialScheduledPayment,
   isExtraPaymentType,
+  loanBalanceAdjustment,
   loanKpis,
   paymentSplitBasis,
   scheduledPaymentAfterEdit,
@@ -416,10 +419,25 @@ export const createLoan = mutation({
         return { paymentDate: p.paymentDate, split };
       });
 
+    // A balance entered by hand is kept as an adjustment on the payments
+    const historicalSplits = splits.map(({ split }) => split);
+    const balanceAdjustment =
+      terms.currentBalance === undefined
+        ? 0
+        : adjustmentForBalance(
+            terms.originalPrincipal,
+            historicalSplits,
+            terms.currentBalance,
+          );
     const loan = {
       userId,
       ...terms,
-      currentBalance: settleLoanBalance(terms.currentBalance ?? balance),
+      balanceAdjustment,
+      currentBalance: deriveLoanBalance(
+        terms,
+        historicalSplits,
+        balanceAdjustment,
+      ),
       scheduledPayment,
       expectedEndDate: addMonthsToISODate(terms.startDate, terms.termMonths),
       status: "active" as const,
@@ -501,11 +519,28 @@ export const updateLoan = mutation({
       Object.entries(updates).filter(([, v]) => v !== undefined),
     ) as Partial<Loan>;
 
+    const payments = await getLoanPaymentDocs(ctx, loanId);
+
+    // A balance edit is stored as the difference from the balance the
+    // payments leave, so later payment edits keep it
+    if (updates.currentBalance !== undefined) {
+      filteredUpdates.balanceAdjustment = adjustmentForBalance(
+        loan.originalPrincipal,
+        payments,
+        updates.currentBalance,
+      );
+      filteredUpdates.currentBalance = deriveLoanBalance(
+        loan,
+        payments,
+        filteredUpdates.balanceAdjustment,
+      );
+    }
+
     // A rate or balance edit re-derives the regular payment over the
     // remaining periods, unless the user changed the payment too
     filteredUpdates.scheduledPayment = scheduledPaymentAfterEdit(
       loan,
-      await getLoanPaymentDocs(ctx, loanId),
+      payments,
       updates,
     );
 
@@ -587,13 +622,14 @@ export const recordPayment = mutation({
       },
     );
 
-    // Calculate new balance (snapped to 0 once paid off)
-    const principalPortion = Math.min(
-      split.principalPortion,
-      Math.max(0, loan.currentBalance),
-    );
-    const newBalance = settleLoanBalance(
-      loan.currentBalance - principalPortion,
+    // The balance is derived from the payments (snapped to 0 once paid off)
+    const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+    const balanceBefore = deriveLoanBalance(loan, payments, balanceAdjustment);
+    const principalPortion = Math.min(split.principalPortion, balanceBefore);
+    const newBalance = deriveLoanBalance(
+      loan,
+      [...payments, { principalPortion }],
+      balanceAdjustment,
     );
 
     // Determine if loan is paid off
@@ -622,6 +658,7 @@ export const recordPayment = mutation({
     // Update loan (extra payments don't move the next due date)
     await ctx.db.patch(args.loanId, {
       currentBalance: newBalance,
+      balanceAdjustment,
       nextPaymentDate: await recomputeNextPaymentDate(ctx, {
         ...loan,
         currentBalance: newBalance,
@@ -661,8 +698,13 @@ export const updatePayment = mutation({
     // balance owed on the payment date (without this payment). The edited
     // portion wins; an untouched pair is kept unless the amount changed, in
     // which case it is split again. Principal is at most what is owed.
-    const otherPayments = (await getLoanPaymentDocs(ctx, loan._id)).filter(
-      (p) => p._id !== paymentId,
+    const payments = await getLoanPaymentDocs(ctx, loan._id);
+    const otherPayments = payments.filter((p) => p._id !== paymentId);
+    const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+    const balanceWithout = deriveLoanBalance(
+      loan,
+      otherPayments,
+      balanceAdjustment,
     );
     const paymentDate = args.paymentDate ?? payment.paymentDate;
     const editsPortion =
@@ -670,7 +712,7 @@ export const updatePayment = mutation({
     const keepsPortions = !editsPortion && args.amount === undefined;
     const split = splitLoanPayment(
       paymentSplitBasis(
-        { ...loan, currentBalance: loan.currentBalance + payment.principalPortion },
+        { ...loan, currentBalance: balanceWithout },
         otherPayments,
         paymentDate,
       ),
@@ -682,10 +724,7 @@ export const updatePayment = mutation({
         fees: payment.feesPortion,
       },
     );
-    const principalPortion = Math.min(
-      split.principalPortion,
-      Math.max(0, loan.currentBalance + payment.principalPortion),
-    );
+    const principalPortion = Math.min(split.principalPortion, balanceWithout);
 
     await ctx.db.patch(paymentId, {
       ...filteredUpdates,
@@ -702,7 +741,11 @@ export const updatePayment = mutation({
     // raises the balance reopens a paid-off loan (it may have been marked
     // paid off by hand with a balance left).
     const principalDelta = principalPortion - payment.principalPortion;
-    const newBalance = settleLoanBalance(loan.currentBalance - principalDelta);
+    const newBalance = deriveLoanBalance(
+      loan,
+      [...otherPayments, { principalPortion }],
+      balanceAdjustment,
+    );
     const status: LoanStatus =
       principalDelta === 0
         ? loan.status
@@ -714,6 +757,7 @@ export const updatePayment = mutation({
 
     await ctx.db.patch(loan._id, {
       currentBalance: newBalance,
+      balanceAdjustment,
       nextPaymentDate: await recomputeNextPaymentDate(ctx, {
         ...loan,
         currentBalance: newBalance,
@@ -738,9 +782,13 @@ export const deletePayment = mutation({
   handler: async (ctx, args) => {
     const { payment, loan } = await requireOwnedPayment(ctx, args.paymentId);
 
-    // Restore the balance
-    const restoredBalance = settleLoanBalance(
-      loan.currentBalance + payment.principalPortion,
+    // Re-derive the balance without this payment
+    const payments = await getLoanPaymentDocs(ctx, loan._id);
+    const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+    const restoredBalance = deriveLoanBalance(
+      loan,
+      payments.filter((p) => p._id !== payment._id),
+      balanceAdjustment,
     );
 
     // Only a delete that raises the balance reopens a paid-off loan (it may
@@ -756,6 +804,7 @@ export const deletePayment = mutation({
     // Update loan balance
     await ctx.db.patch(payment.loanId, {
       currentBalance: restoredBalance,
+      balanceAdjustment,
       nextPaymentDate: await recomputeNextPaymentDate(ctx, {
         ...loan,
         currentBalance: restoredBalance,
@@ -853,6 +902,12 @@ export const repairLoans = internalMutation({
       if (!args.dryRun) {
         await ctx.db.patch(loan._id, {
           ...to,
+          // The repaired balance becomes the one the payments derive
+          balanceAdjustment: adjustmentForBalance(
+            loan.originalPrincipal,
+            payments,
+            currentBalance,
+          ),
           actualEndDate: isPaidOff ? latestPaymentDate : loan.actualEndDate,
           updatedAt: Date.now(),
         });

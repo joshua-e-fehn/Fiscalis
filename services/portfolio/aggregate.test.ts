@@ -429,6 +429,94 @@ describe("snapshot flows", () => {
     expect(categoryFlowFromHoldings(prev, cur)).toBeNull();
   });
 
+  describe("exact flows from trade logs", () => {
+    const writeExact = (
+      hs: NormalizedHolding[],
+      previous: SnapshotCategoryEntry[],
+      exact: Map<string, number>,
+    ) => buildSnapshotBreakdown(aggregateNetWorth(hs), hs, previous, exact).categoryBreakdown;
+    const coin = (value: number, cost: number) =>
+      holding({ key: "coin", source: "vault", category: "commodities", valueBase: value, costBase: cost });
+    const commodities = (b: SnapshotCategoryEntry[]) => b.find((e) => e.category === "commodities")!;
+
+    it("takes a sale's actual proceeds instead of the previous value", () => {
+      // Half of a coin holding worth 2 000 (cost 1 600) sold for 1 100
+      const previous = write([coin(2_000, 1_600)]);
+      expect(commodities(write([coin(1_050, 800)], previous)).netFlow).toBe(-1_000);
+      const cur = commodities(writeExact([coin(1_050, 800)], previous, new Map([["coin", -1_100]])));
+      expect(cur.netFlow).toBe(-1_100);
+      expect(cur).not.toHaveProperty("netFlowEstimated");
+      expect(cur.sources![0]).toMatchObject({ source: "vault", netFlow: -1_100 });
+    });
+
+    it("makes a traded holding without cost basis exact, others keep the proxy", () => {
+      const previous = write([position("aapl", 5_000, 4_000), position("bp-btc", 1_000, null)]);
+      const cur = equitiesOf(
+        writeExact(
+          [position("aapl", 5_600, 4_500), position("bp-btc", 1_450, null)],
+          previous,
+          new Map([["bp-btc", 400]]),
+        ),
+      )!;
+      // aapl: cost +500 (proxy); bp-btc: 400 bought (exact), 50 gained
+      expect(cur.netFlow).toBe(900);
+      expect(cur).not.toHaveProperty("netFlowEstimated");
+      // Without the trade log, bp-btc's flow is assumed 0 and flagged
+      const proxy = equitiesOf(
+        write([position("aapl", 5_600, 4_500), position("bp-btc", 1_450, null)], previous),
+      )!;
+      expect(proxy).toMatchObject({ netFlow: 500, netFlowEstimated: true });
+    });
+
+    it("counts a holding sold out at its proceeds and a new one at its value", () => {
+      const previous = write([position("aapl", 5_000, 4_000)]);
+      const cur = equitiesOf(
+        writeExact(
+          [position("msft", 3_050, 3_000)],
+          previous,
+          new Map([["aapl", -5_200], ["msft", 3_000]]),
+        ),
+      )!;
+      // aapl: -5 200 (exact proceeds); msft: +3 050 (appeared, full value)
+      expect(cur.netFlow).toBe(-2_150);
+    });
+
+    it("counts a new holding at its full value despite a smaller exact buy", () => {
+      // A newly connected account: a BTC position worth 20 000 whose trade
+      // log in the interval holds only a 50 savings-plan buy
+      const previous = write([position("aapl", 5_000, 4_000)]);
+      const cur = equitiesOf(
+        writeExact(
+          [position("aapl", 5_000, 4_000), position("btc", 20_000, null)],
+          previous,
+          new Map([["btc", 50]]),
+        ),
+      )!;
+      expect(cur.netFlow).toBe(20_000);
+      expect(cur).not.toHaveProperty("netFlowEstimated");
+    });
+
+    it("ignores flows of keys held in neither snapshot", () => {
+      const previous = write([position("aapl", 5_000, 4_000)]);
+      const cur = equitiesOf(
+        writeExact([position("aapl", 5_100, 4_000)], previous, new Map([["gone", 700]])),
+      )!;
+      expect(cur.netFlow).toBe(0);
+    });
+
+    it("keeps the proxy for a holding that changed category", () => {
+      const previous = write([position("aapl", 5_000, 4_000), position("msft", 1_000, 900)]);
+      const breakdown = writeExact(
+        [position("aapl", 5_500, 4_500, { category: "bonds" }), position("msft", 1_000, 900)],
+        previous,
+        new Map([["aapl", 500]]),
+      );
+      // Out of equities at its last value, into bonds at its value now
+      expect(equitiesOf(breakdown)!.netFlow).toBe(-5_000);
+      expect(breakdown.find((e) => e.category === "bonds")!.netFlow).toBe(5_500);
+    });
+  });
+
   it("flow-adjusts the investment categories only", () => {
     expect(["equities", "crypto", "commodities", "collectibles"].every(isFlowAdjustedCategory)).toBe(true);
     expect(["cash", "liabilities", "unclassified"].some(isFlowAdjustedCategory)).toBe(false);

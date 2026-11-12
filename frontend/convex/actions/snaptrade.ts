@@ -17,6 +17,13 @@ import {
   mapSnaptradeHoldings,
   snaptradeHoldingsCurrency,
 } from "../../../services/brokers/snaptradePosition";
+import {
+  ACTIVITY_PAGE_SIZE,
+  activitiesStartDate,
+  mapSnaptradeActivity,
+  nextActivitiesOffset,
+  type StoredSnaptradeActivity,
+} from "../../../services/brokers/snaptradeActivity";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
@@ -563,6 +570,10 @@ async function refreshConnectionLogo(
  *   mutation (brokers.replaceAccountHoldings). A failed fetch leaves that
  *   account's stored positions, balance and cash as they were and is
  *   reported in `errors`.
+ * - After its holdings, each account's new activities are fetched
+ *   incrementally (syncAccountActivities) for exact snapshot flows. A
+ *   failure there is logged, not reported: the holdings are current and
+ *   the snapshot falls back to the cost proxy.
  *
  * Returns null when the user is not registered with SnapTrade.
  */
@@ -729,6 +740,25 @@ async function syncSnaptrade(
             ...mapped,
           });
 
+          // The account's trade log, for exact snapshot flows. Holdings
+          // are already stored: a failure here keeps the cost proxy
+          try {
+            await syncAccountActivities(
+              ctx,
+              snaptrade,
+              credentials,
+              userId,
+              stored.accountId,
+              apiAccount.id,
+              stored.currency,
+            );
+          } catch (activityError) {
+            console.warn(
+              `[SNAPTRADE SYNC] Activities of account ${apiAccount.id} not synced:`,
+              parseSnapTradeError(activityError).userMessage,
+            );
+          }
+
           result.accountsProcessed++;
           result.positionsProcessed += mapped.positions.length;
         } catch (accountError) {
@@ -788,6 +818,58 @@ async function syncSnaptrade(
   }
 
   return result;
+}
+
+/**
+ * Fetch an account's activities (its transaction history) since a week
+ * before the newest one stored, or the whole history the first time, page
+ * by page, and store the new ones (brokers.upsertTransactions). Each page
+ * is stored as it arrives, so a later failed page (a rate limit) keeps the
+ * earlier ones and the next sync resumes from them.
+ */
+async function syncAccountActivities(
+  ctx: ActionCtx,
+  snaptrade: ReturnType<typeof getSnaptradeClient>,
+  credentials: { userId: string; userSecret: string },
+  userId: string,
+  accountId: Id<"brokerAccounts">,
+  snaptradeAccountId: string,
+  accountCurrency: string,
+): Promise<void> {
+  const newest: string | null = await ctx.runQuery(
+    internal.brokers.getNewestTransactionDate,
+    { accountId },
+  );
+  const startDate = activitiesStartDate(newest);
+  let offset: number | null = 0;
+  while (offset !== null) {
+    const page = (
+      await snaptrade.accountInformation.getAccountActivities({
+        ...credentials,
+        accountId: snaptradeAccountId,
+        ...(startDate ? { startDate } : {}),
+        offset,
+        limit: ACTIVITY_PAGE_SIZE,
+      })
+    ).data;
+    const rows = page.data ?? [];
+    const activities = rows
+      .map((a) => mapSnaptradeActivity(a, accountCurrency))
+      .filter((a): a is StoredSnaptradeActivity => a !== null);
+    if (activities.length > 0) {
+      await ctx.runMutation(internal.brokers.upsertTransactions, {
+        userId,
+        accountId,
+        activities,
+      });
+    }
+    offset = nextActivitiesOffset(
+      offset,
+      rows.length,
+      ACTIVITY_PAGE_SIZE,
+      page.pagination?.total,
+    );
+  }
 }
 
 /**

@@ -421,12 +421,17 @@ function snapshotHoldings(
  * With the previous day's breakdown (`previous`; an empty array when that
  * snapshot held nothing), each flow-adjusted entry and its sources also
  * record their net external flow since then (categoryFlowFromHoldings),
- * unless the previous row has no holdings to compare with.
+ * unless the previous row has no holdings to compare with. `exactFlows`
+ * (flows.ts tradeFlowsBetween) holds the flow per holding key from the
+ * providers' trade logs over the same interval; a holding that changed
+ * category since then keeps the cost proxy, since its trades cannot be
+ * split between the two.
  */
 export function buildSnapshotBreakdown(
   aggregate: NetWorthAggregate,
   holdings: readonly NormalizedHolding[],
   previous?: readonly SnapshotCategoryEntry[],
+  exactFlows?: ReadonlyMap<string, number>,
 ): {
   categoryBreakdown: SnapshotCategoryEntry[];
   totalCostBasis: number | undefined;
@@ -437,6 +442,10 @@ export function buildSnapshotBreakdown(
   let totalCoveredValue: number | undefined;
   const holdingsByCategory = snapshotHoldings(holdings);
   const costsByCategory = sourceCosts(holdings);
+  const exact =
+    previous && exactFlows
+      ? sameCategoryFlows(exactFlows, previous, holdingsByCategory)
+      : undefined;
 
   for (const category of ASSET_CATEGORIES) {
     const c = aggregate.byCategory[category];
@@ -473,6 +482,7 @@ export function buildSnapshotBreakdown(
       const flow = categoryFlowFromHoldings(
         previous.find((p) => p.category === category),
         entry,
+        exact,
       );
       if (flow) {
         entry.netFlow = flow.total.amount;
@@ -488,6 +498,30 @@ export function buildSnapshotBreakdown(
   }
 
   return { categoryBreakdown, totalCostBasis, totalCoveredValue };
+}
+
+/** The exact flows of the holdings held in the same category at both snapshots. */
+function sameCategoryFlows(
+  exactFlows: ReadonlyMap<string, number>,
+  previous: readonly SnapshotCategoryEntry[],
+  current: ReadonlyMap<string, ReadonlyMap<string, SnapshotHoldingEntry[]>>,
+): Map<string, number> {
+  const categoryOf = new Map<string, string>();
+  for (const e of previous) {
+    for (const s of e.sources ?? []) {
+      for (const h of s.holdings ?? []) categoryOf.set(h.key, e.category);
+    }
+  }
+  const moved = new Set<string>();
+  for (const [category, bySource] of current) {
+    for (const list of bySource.values()) {
+      for (const h of list) {
+        const before = categoryOf.get(h.key);
+        if (before !== undefined && before !== category) moved.add(h.key);
+      }
+    }
+  }
+  return new Map([...exactFlows].filter(([key]) => !moved.has(key)));
 }
 
 /**
@@ -569,10 +603,11 @@ export function withoutSnapshotHoldings(
 // External flows between snapshots
 // ═══════════════════════════════════════════════════════════════
 // Investment categories report performance net of money moved in and out
-// (D2): P/L = change in value − net flows. Provider data carries no cash
-// ledger, so the flow between two snapshots is derived holding by holding
-// from what the snapshot writer stores; readers use the stored flows and
-// only estimate where a row has none.
+// (D2): P/L = change in value − net flows. A holding traded in between takes
+// its exact flow from its provider's trade log (flows.ts); every other
+// holding's flow is derived from what the snapshot writer stores (values
+// and costs). Readers use the stored flows and only estimate where a row
+// has none. Rows written before the trade logs keep their proxy flows.
 
 /**
  * Categories whose performance is flow-adjusted (D2). Net worth, cash and
@@ -648,10 +683,19 @@ export function holdingNetFlow(
   };
 }
 
-/** Sum of the holdings' flows of one source, null without holdings at an end. */
+/**
+ * Sum of the holdings' flows of one source, null without holdings at an
+ * end. A holding held with a value at the previous snapshot and with an
+ * exact flow from its trade log (flows.ts) takes it; the others are derived
+ * from their values and costs (holdingNetFlow). A holding that appears
+ * always counts its whole value as money in: its trade log may cover only
+ * the latest trades of a position held long before (a newly connected
+ * account with a savings plan), never its full cost.
+ */
 function sourceFlowFromHoldings(
   prev: SnapshotSourceEntry | undefined,
   cur: SnapshotSourceEntry | undefined,
+  exact?: ReadonlyMap<string, number>,
 ): NetFlow | null {
   if ((prev && !prev.holdings) || (cur && !cur.holdings)) return null;
   const keys = new Set(
@@ -660,10 +704,16 @@ function sourceFlowFromHoldings(
   let amount = 0;
   let estimated = false;
   for (const key of keys) {
-    const flow = holdingNetFlow(
-      prev?.holdings?.find((h) => h.key === key),
-      cur?.holdings?.find((h) => h.key === key),
-    );
+    const before = prev?.holdings?.find((h) => h.key === key);
+    const traded =
+      before && before.value !== 0 ? exact?.get(key) : undefined;
+    const flow =
+      traded !== undefined
+        ? { amount: traded, estimated: false }
+        : holdingNetFlow(
+            before,
+            cur?.holdings?.find((h) => h.key === key),
+          );
     amount += flow.amount;
     estimated ||= flow.estimated;
   }
@@ -672,13 +722,17 @@ function sourceFlowFromHoldings(
 
 /**
  * Net external flow into a category between two snapshots, in total and per
- * source, from the holdings both rows store. Null when the previous row
- * (or a source in it) stores none: a row written before flows existed is
- * never compared with a new one, whose cost coverage it cannot match.
+ * source, from the holdings both rows store and, where a holding was
+ * traded in between, its exact flow by key (`exact`). Null when the
+ * previous row (or a source in it) stores none: a row written before flows
+ * existed is never compared with a new one, whose cost coverage it cannot
+ * match. A flow is flagged estimated only where a holding without an exact
+ * flow had its flow assumed (holdingNetFlow).
  */
 export function categoryFlowFromHoldings(
   prev: SnapshotCategoryEntry | undefined,
   cur: SnapshotCategoryEntry | undefined,
+  exact?: ReadonlyMap<string, number>,
 ): { total: NetFlow; bySource: Map<string, NetFlow> } | null {
   if ((prev && !prev.sources) || (cur && !cur.sources)) return null;
   const names = new Set(
@@ -690,6 +744,7 @@ export function categoryFlowFromHoldings(
     const flow = sourceFlowFromHoldings(
       prev?.sources?.find((s) => s.source === name),
       cur?.sources?.find((s) => s.source === name),
+      exact,
     );
     if (!flow) return null;
     bySource.set(name, flow);

@@ -4,7 +4,7 @@ import {
   normalizeHoldings,
   normalizeTransactions,
 } from "../../frontend/convex/lib/bitpanda";
-import { getBitpandaHoldingIdentityKeys } from "../../frontend/convex/lib/bitpandaIdentity";
+import { getBitpandaHoldingIdentityKeys } from "./identity";
 import { classifyBitpandaPosition } from "../classification/engine";
 
 describe("normalizeHoldings", () => {

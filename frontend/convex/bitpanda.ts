@@ -5,7 +5,7 @@ import {
   internalQuery,
   internalMutation,
 } from "./_generated/server";
-import { getBitpandaHoldingIdentityKeys } from "./lib/bitpandaIdentity";
+import { getBitpandaHoldingIdentityKeys } from "../../services/bitpanda/identity";
 import {
   resolveHoldingPrice,
   type PreviousHoldingPrice,

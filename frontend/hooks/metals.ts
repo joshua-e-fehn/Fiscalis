@@ -1,4 +1,4 @@
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
 import {
@@ -137,49 +137,6 @@ export function useMetalPriceHistory(
   });
 }
 
-/**
- * Helper hook to fetch both latest price and historical data for a metal
- */
-export function useMetalComplete(
-  metal: MetalType,
-  timeRange: TimeRange = "Day",
-  currency: MetalCurrency = "usd",
-) {
-  const latestPrice = useMetalPriceLatest(metal, currency);
-  const historicalPrices = useMetalPrices(metal, timeRange, currency);
-
-  return {
-    latest: latestPrice.data,
-    historical: historicalPrices.data,
-    isLoading: latestPrice.isLoading || historicalPrices.isLoading,
-    isError: latestPrice.isError || historicalPrices.isError,
-    error: latestPrice.error || historicalPrices.error,
-    refetch: () => {
-      latestPrice.refetch();
-      historicalPrices.refetch();
-    },
-  };
-}
-
-/**
- * Hook to get the latest prices for multiple metals at once
- */
-export function useMultipleMetalPrices(
-  metals: MetalType[],
-  currency: MetalCurrency = "usd",
-) {
-  // Create individual queries for each metal
-  const queries = metals.map((metal) => ({
-    queryKey: metalKeys.latest(metal, currency),
-    queryFn: () => metalsApi.getMetalPriceLatest(metal, currency),
-    staleTime: 1000 * 60, // 1 minute
-    refetchInterval: 1000 * 60, // Refresh every minute
-  }));
-
-  // Return the results in an object keyed by metal type
-  return useQueries({ queries });
-}
-
 // ═══════════════════════════════════════════════════════════════
 // All Metals Price Hooks (Supabase)
 // ═══════════════════════════════════════════════════════════════
@@ -282,17 +239,4 @@ export function getSpotPrice(
   const price = metalPrices[currency];
 
   return price ?? null;
-}
-
-/**
- * Get gold purity price per gram for specified purity and currency
- */
-export function getGoldPurityPrice(
-  prices: MetalsPrices | undefined,
-  purity: 333 | 585 | 750 | 833 | 900 | 916 | 999,
-  currency: MetalsCurrency,
-): number | null {
-  if (!prices?.goldExtended) return null;
-
-  return prices.goldExtended.purity[currency][purity] ?? null;
 }

@@ -295,29 +295,6 @@ export const getMetalCatalog = query({
   },
 });
 
-/**
- * Get popular catalog items for quick-add
- */
-export const getPopularCatalogItems = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("metalCatalog")
-      .withIndex("by_popular", (q) => q.eq("isPopular", true))
-      .collect();
-  },
-});
-
-/**
- * Get a single catalog item by ID
- */
-export const getCatalogItem = query({
-  args: { catalogItemId: v.id("metalCatalog") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.catalogItemId);
-  },
-});
-
 // ═══════════════════════════════════════════════════════════════
 // QUERIES - Vault Items
 // ═══════════════════════════════════════════════════════════════
@@ -350,30 +327,6 @@ export const getUserVaultItems = query({
 });
 
 /**
- * Get vault items filtered by metal type
- */
-export const getUserVaultItemsByMetal = query({
-  args: {
-    metalType: v.union(
-      v.literal("gold"),
-      v.literal("silver"),
-      v.literal("platinum"),
-      v.literal("palladium"),
-    ),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getUserId(ctx);
-    if (!userId) return [];
-    return await ctx.db
-      .query("vaultItems")
-      .withIndex("by_user_metal", (q) =>
-        q.eq("userId", userId).eq("metalType", args.metalType),
-      )
-      .collect();
-  },
-});
-
-/**
  * Get a single vault item by ID
  */
 export const getVaultItem = query({
@@ -390,40 +343,6 @@ export const getVaultItem = query({
       await loadSpotPrices(ctx),
       Date.now(),
     );
-  },
-});
-
-/**
- * Get aggregated summary by metal type for a user
- */
-export const getUserVaultSummary = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getUserId(ctx);
-    const items = userId
-      ? await ctx.db
-          .query("vaultItems")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .collect()
-      : [];
-
-    // Aggregate by metal type
-    const summary = {
-      gold: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-      silver: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-      platinum: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-      palladium: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-    };
-
-    for (const item of items) {
-      const metal = item.metalType as keyof typeof summary;
-      summary[metal].totalFineWeightGrams +=
-        item.fineWeightGrams * item.quantity;
-      summary[metal].totalItems += item.quantity;
-      summary[metal].itemCount += 1;
-    }
-
-    return summary;
   },
 });
 

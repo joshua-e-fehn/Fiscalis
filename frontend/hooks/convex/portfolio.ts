@@ -202,12 +202,11 @@ export function usePortfolioOverview(): {
       date: snapshot.date,
       timestamp: snapshot.timestamp,
       value: snapshot.totalAssets,
-      cost:
-        snapshotCostLine({
-          value: snapshot.totalAssets,
-          costBasis: snapshot.totalCostBasis,
-          coveredValue: snapshot.totalCoveredValue,
-        }) ?? 0,
+      cost: snapshotCostLine({
+        value: snapshot.totalAssets,
+        costBasis: snapshot.totalCostBasis,
+        coveredValue: snapshot.totalCoveredValue,
+      }),
     }));
 
     // Without a snapshot for today, add today's live point
@@ -218,7 +217,7 @@ export function usePortfolioOverview(): {
         date: todayStr,
         timestamp: today.getTime(),
         value: totalAssets,
-        cost: totalCostLine ?? 0,
+        cost: totalCostLine,
       });
     }
 

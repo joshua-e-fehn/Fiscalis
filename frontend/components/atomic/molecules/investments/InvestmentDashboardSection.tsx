@@ -560,7 +560,7 @@ export function InvestmentDashboardSection({
   });
 
   // One P/L resolution (holdings cost basis, else the performance since
-  // tracking started) shared by the KPI card and the chart's cost line
+  // tracking started) for the KPI card
   const holdingsPL = useMemo(
     () =>
       summary
@@ -578,7 +578,7 @@ export function InvestmentDashboardSection({
     holdings: holdingsPL,
     enabled: !isLoading && (summary?.totalValue ?? 0) > 0,
   });
-  const { profitLoss, profitLossPercent, costBasis, costLine } = plData;
+  const { profitLoss, profitLossPercent, costBasis } = plData;
 
   // Without a holdings cost basis the card shows the performance since
   // tracking started: a profit only when it is net of known flows
@@ -749,8 +749,6 @@ export function InvestmentDashboardSection({
         {customPerformanceChart ?? (
           <CategoryPerformanceChart
             dataPoints={summary?.historyDataPoints ?? []}
-            currentValue={summary?.totalValue ?? 0}
-            totalCost={costLine}
             currency={currency}
             isLoading={isLoading}
             title={performanceChartTitle}

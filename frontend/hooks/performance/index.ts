@@ -9,6 +9,8 @@ export {
   useSnapshots,
   useCategoryPerformance,
   toPeriodChange,
+  portfolioLiveEnd,
+  type LivePortfolioTotals,
   type UseSnapshotsResult,
   type CategoryPerformanceResult,
   type PeriodChange,
@@ -36,6 +38,7 @@ export { useMetalsYTD, type MetalsYTDResult } from "./useMetalsYTD";
 export {
   usePortfolioChartData,
   type PortfolioChartPoint,
+  type PortfolioChartMetric,
   type UsePortfolioChartDataOptions,
   type UsePortfolioChartDataResult,
 } from "./usePortfolioChartData";

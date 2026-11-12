@@ -1,7 +1,7 @@
 // Investment Category Dashboard Components
 export { CategoryAllocationChart } from "./CategoryAllocationChart";
 export { CategoryPerformanceChart } from "./CategoryPerformanceChart";
-export type { ChartTimeRange, ChartViewMode } from "./CategoryPerformanceChart";
+export type { ChartViewMode } from "./CategoryPerformanceChart";
 export { TopHoldingsList } from "./TopHoldingsList";
 export {
   InvestmentDashboardSection,

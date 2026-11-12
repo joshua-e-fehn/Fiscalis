@@ -16,6 +16,8 @@ import { api } from "@/convex/_generated/api";
 import {
   continuousSourcesFor,
   getHybridStrategy,
+  netWorthCostLine,
+  type LiveEnd,
   type PerformanceCalculationOptions,
   type PerformanceDataPoint,
   type PerformanceMetrics,
@@ -105,6 +107,8 @@ export interface UseCategoryPerformanceOptions {
   enabled?: boolean;
   /** "firstPoint": measure since tracking started when that is later */
   baseline?: PerformanceCalculationOptions["baseline"];
+  /** End the series at this live value (portfolioLiveEnd) */
+  liveEnd?: LiveEnd;
 }
 
 export interface CategoryPerformanceResult {
@@ -125,6 +129,7 @@ export function useCategoryPerformance(
     currency = "eur",
     enabled = true,
     baseline,
+    liveEnd,
   } = options;
 
   const scope =
@@ -143,6 +148,8 @@ export function useCategoryPerformance(
   const isLoading = snapshotsLoading || (needsVault && vault.isLoading);
 
   const measureKey = JSON.stringify(measure);
+  const liveValue = liveEnd?.value;
+  const liveCost = liveEnd?.costBasis;
   const result = useMemo(() => {
     if (!enabled || isLoading) return null;
     const metric = JSON.parse(measureKey) as SnapshotMetric;
@@ -154,7 +161,15 @@ export function useCategoryPerformance(
         continuous: needsVault ? vault.input : undefined,
         continuousSources,
       },
-      { timeRange, includeDataPoints, baseline },
+      {
+        timeRange,
+        includeDataPoints,
+        baseline,
+        liveEnd:
+          liveValue === undefined
+            ? undefined
+            : { value: liveValue, costBasis: liveCost ?? null },
+      },
     );
   }, [
     enabled,
@@ -167,6 +182,8 @@ export function useCategoryPerformance(
     timeRange,
     includeDataPoints,
     baseline,
+    liveValue,
+    liveCost,
   ]);
 
   return {
@@ -175,6 +192,31 @@ export function useCategoryPerformance(
     actualSnapshotTimestamps: result?.actualSnapshotTimestamps ?? [],
     isLoading,
   };
+}
+
+/** The overview's live totals (usePortfolioOverview's summary) */
+export interface LivePortfolioTotals {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+  /** Cost line of the assets; null when unknown */
+  costLine: number | null;
+}
+
+/**
+ * The live end of a total-assets or net-worth series (PF-05): the figure
+ * the headline cards show, so a card or chart over the series ends there.
+ */
+export function portfolioLiveEnd(
+  kind: "totalAssets" | "netWorth",
+  live: LivePortfolioTotals,
+): LiveEnd {
+  return kind === "netWorth"
+    ? {
+        value: live.netWorth,
+        costBasis: netWorthCostLine(live.costLine, live.totalLiabilities),
+      }
+    : { value: live.totalAssets, costBasis: live.costLine };
 }
 
 /**

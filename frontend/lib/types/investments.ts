@@ -55,7 +55,8 @@ export interface PortfolioDataPoint {
   date: string;
   timestamp: number;
   value: number;
-  cost: number;
+  /** Cost line (cost basis plus uncovered value); null where unknown */
+  cost: number | null;
 }
 
 /**

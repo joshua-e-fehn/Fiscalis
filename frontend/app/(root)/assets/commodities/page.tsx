@@ -2,7 +2,6 @@
 
 import {
   InvestmentDashboardSection,
-  COMMODITIES_KPI_CARDS,
   SubcategoryCategoryCard,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
@@ -10,7 +9,7 @@ import { useCommoditiesSummary } from "@/hooks/convex/commodities";
 import { commoditiesCategoryCards } from "@/lib/config/categoryUI";
 
 export default function CommoditiesPage() {
-  const { summary, isLoading } = useCommoditiesSummary("eur");
+  const { summary, isLoading } = useCommoditiesSummary();
 
   // Check if there are any holdings
   const hasHoldings = summary && summary.totalValue > 0;
@@ -37,7 +36,6 @@ export default function CommoditiesPage() {
           summary={summary}
           currency="eur"
           isLoading={isLoading}
-          kpiCards={COMMODITIES_KPI_CARDS}
           showTopHoldings={hasHoldings ?? false}
         />
       </div>

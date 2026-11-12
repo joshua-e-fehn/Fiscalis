@@ -12,6 +12,7 @@ import {
   type HoldingSource,
   type NetWorthAggregate,
 } from "../../services/portfolio/aggregate";
+import type { CategoryHolding } from "../../services/portfolio/categorySummary";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -70,6 +71,37 @@ function toCategoryPositions(holdings: LoadedHolding[]): CategoryPosition[] {
   return positions;
 }
 
+/**
+ * The vault items among some holdings as top-holding rows: EUR value at the
+ * spot mirror and cost, as the aggregate counts them (lib/netWorth.ts), named
+ * like the vault pages (custom name, else the catalog name).
+ */
+async function toVaultHoldings(
+  ctx: QueryCtx,
+  holdings: LoadedHolding[],
+): Promise<CategoryHolding[]> {
+  return await Promise.all(
+    holdings.flatMap((h) =>
+      h.source === "vault"
+        ? [
+            (async () => {
+              const catalog = h.doc.catalogItemId
+                ? await ctx.db.get(h.doc.catalogItemId)
+                : null;
+              return {
+                id: h.id,
+                name: h.doc.customName || catalog?.name || h.name,
+                subcategory: h.subcategory,
+                value: h.valueBase,
+                costBasis: h.costBase,
+              };
+            })(),
+          ]
+        : [],
+    ),
+  );
+}
+
 /** Per-subcategory count and total of a category aggregate. */
 function subcategoryTotals(
   category: CategoryAggregate,
@@ -92,10 +124,11 @@ function sourceTotal(
 /**
  * All positions in a category across providers, with the category summary
  * (value, cost-covered P&L and coverage, per subcategory too) from the
- * shared aggregator. The summary also counts account-level holdings that
- * have no position row (a Plaid investment account classified into the
- * category); accountLevelValue is their total, so the rows sum to
- * summary.value − accountLevelValue.
+ * shared aggregator. Vault items (manual metals, commodities only) have no
+ * position row and come as vaultHoldings. The summary also counts
+ * account-level holdings that have no row (a Plaid investment account
+ * classified into the category); accountLevelValue is their total, so the
+ * positions and vaultHoldings sum to summary.value − accountLevelValue.
  */
 async function getCategoryPositions(
   ctx: QueryCtx,
@@ -103,9 +136,11 @@ async function getCategoryPositions(
 ) {
   const loaded = await loadAggregate(ctx);
   if (!loaded) return null;
+  const holdings = inCategory(loaded.holdings, category);
   const summary = loaded.aggregate.byCategory[category];
   return {
-    positions: toCategoryPositions(inCategory(loaded.holdings, category)),
+    positions: toCategoryPositions(holdings),
+    vaultHoldings: await toVaultHoldings(ctx, holdings),
     summary,
     accountLevelValue: sourceTotal(summary, ["bank"]),
   };
@@ -276,6 +311,20 @@ export const getBonds = query({
 export const getCrypto = query({
   args: {},
   handler: (ctx) => getCategoryPositions(ctx, "crypto"),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// COMMODITIES
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Get all commodity holdings: vault metals valued at the spot mirror, plus
+ * Bitpanda and broker metals and other commodities, so the commodities page
+ * covers the same holdings as the dashboard and the snapshots (M-A1)
+ */
+export const getCommodities = query({
+  args: {},
+  handler: (ctx) => getCategoryPositions(ctx, "commodities"),
 });
 
 // ═══════════════════════════════════════════════════════════════

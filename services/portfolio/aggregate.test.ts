@@ -15,6 +15,7 @@ import {
   HOLDING_CATEGORIES,
   placeHolding,
   positionOwed,
+  profitLossCostBase,
   toHoldingCategory,
   type NormalizedHolding,
   type SnapshotCategoryEntry,
@@ -247,6 +248,65 @@ describe("buildSnapshotBreakdown", () => {
       categoryBreakdown: [],
       totalCostBasis: undefined,
       totalCoveredValue: undefined,
+    });
+  });
+});
+
+describe("a vault item valued at cost (no fresh spot)", () => {
+  const atCost = holding({
+    key: "vault:gold",
+    source: "vault",
+    category: "commodities",
+    subcategory: "metals",
+    valueBase: 4_000,
+    costBase: 4_000,
+    valuedAtCost: true,
+  });
+  const atSpot = holding({
+    source: "vault",
+    category: "commodities",
+    subcategory: "metals",
+    valueBase: 1_200,
+    costBase: 1_000,
+  });
+
+  it("has no P/L cost basis, unlike one priced at spot", () => {
+    expect(profitLossCostBase(atCost)).toBeNull();
+    expect(profitLossCostBase(atSpot)).toBe(1_000);
+  });
+
+  it("counts in the value but not in the P/L or its coverage", () => {
+    const c = aggregateNetWorth([atCost, atSpot]).byCategory.commodities;
+    expect(c.value).toBe(5_200);
+    expect(c.costBasis).toBe(1_000);
+    expect(c.coveredValue).toBe(1_200);
+    expect(c.profitLoss).toBe(200);
+  });
+
+  it("leaves a vault-only category's P/L unknown, not break-even", () => {
+    const a = aggregateNetWorth([atCost]);
+    expect(a.byCategory.commodities).toMatchObject({
+      value: 4_000,
+      costBasis: null,
+      coveredValue: 0,
+      profitLoss: null,
+    });
+    expect(a.unrealized.profitLoss).toBeNull();
+  });
+
+  it("keeps its cost out of the snapshot cost line but in its holding entry", () => {
+    const b = buildSnapshotBreakdown(aggregateNetWorth([atCost, atSpot]), [atCost, atSpot]);
+    const vault = b.categoryBreakdown
+      .find((c) => c.category === "commodities")!
+      .sources!.find((s) => s.source === "vault")!;
+    expect(vault).toMatchObject({ value: 5_200, costBasis: 1_000, coveredValue: 1_200 });
+    expect(b.totalCostBasis).toBe(1_000);
+    expect(b.totalCoveredValue).toBe(1_200);
+    // The flow still reads the cost, so the outage is not taken for a sale
+    expect(vault.holdings!.find((h) => h.key === "vault:gold")).toEqual({
+      key: "vault:gold",
+      value: 4_000,
+      cost: 4_000,
     });
   });
 });

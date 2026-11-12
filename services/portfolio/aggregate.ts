@@ -84,6 +84,14 @@ export interface NormalizedHolding {
   /** Cost basis in the base currency; null when unknown (never 0 for that) */
   costBase: number | null;
   /**
+   * The value is the cost fallback, not a market price (a vault item
+   * without a fresh spot price, metals.ts valueVaultItem): it counts in the
+   * totals, but its P/L is unknown, so it is left out of the cost-covered
+   * P/L (profitLossCostBase). Its costBase still feeds the snapshot flows,
+   * so a price outage is not taken for a sale.
+   */
+  valuedAtCost?: boolean;
+  /**
    * The cost basis in the currency it was paid in, when that is not the
    * base currency (a USD broker position). Its base value moves with the
    * exchange rate; a flow is derived from the native cost so an FX move is
@@ -99,6 +107,15 @@ export interface NormalizedHolding {
   pricedAt: number | null;
   /** Monthly-equivalent scheduled payment of a loan, in the base currency */
   monthlyPaymentBase?: number;
+}
+
+/**
+ * The cost basis a holding's P/L is measured against: its costBase, but
+ * none when its value is the cost fallback (valuedAtCost), whose P/L is
+ * unknown rather than break-even.
+ */
+export function profitLossCostBase(h: NormalizedHolding): number | null {
+  return h.valuedAtCost ? null : h.costBase;
 }
 
 /** Map a stored investmentCategory to a category; unknown → unclassified. */
@@ -195,7 +212,7 @@ export function aggregateNetWorth(
         subcategory: at.subcategory,
         value: at.value,
         // A loan's principal is not a cost basis
-        costBasis: isLiability ? null : h.costBase,
+        costBasis: isLiability ? null : profitLossCostBase(h),
       })),
     );
     const bySource: Partial<Record<HoldingSource, number>> = {};
@@ -326,7 +343,10 @@ export interface SnapshotCategoryEntry {
   netFlowEstimated?: boolean;
 }
 
-/** A holding's snapshot entry at its placed value. */
+/**
+ * A holding's snapshot entry at its placed value. Its cost is the costBase
+ * even when the value is the cost fallback: the flow reads cost changes.
+ */
 function toHoldingEntry(h: NormalizedHolding, value: number): SnapshotHoldingEntry {
   if (h.costBase === null) return { key: h.key ?? h.id, value };
   return {
@@ -370,7 +390,7 @@ function sourceCosts(
     grouped.set(at.category, bySource);
     const list = bySource.get(h.source) ?? [];
     bySource.set(h.source, list);
-    list.push({ value: at.value, costBasis: h.costBase });
+    list.push({ value: at.value, costBasis: profitLossCostBase(h) });
   }
   return new Map(
     [...grouped].map(([category, bySource]) => [

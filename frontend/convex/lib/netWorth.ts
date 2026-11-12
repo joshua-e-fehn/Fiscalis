@@ -256,7 +256,7 @@ export async function loadHoldings(
       const spot = spotByMetal.get(doc.metalType);
       // The cached quantity and cost (rewritten from the ledger on every
       // change, vault.ts syncProjection)
-      const { value, cost } = vaultItemValuation(
+      const { value, cost, pricedAtSpot } = vaultItemValuation(
         doc,
         undefined,
         spot,
@@ -272,6 +272,9 @@ export async function loadHoldings(
         name: doc.customName ?? doc.metalType,
         valueBase: value ?? 0,
         costBase: cost,
+        // Valued at cost without a fresh spot: its P/L is unknown, not
+        // break-even (aggregate.ts profitLossCostBase)
+        ...(!pricedAtSpot && value !== null ? { valuedAtCost: true } : {}),
         // The spot row's timestamp even when it is stale and the item fell
         // back to cost, so a stale price pulls asOf back; null only without
         // any spot row

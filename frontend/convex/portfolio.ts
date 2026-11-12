@@ -6,6 +6,7 @@ import {
   aggregateNetWorth,
   HOLDING_CATEGORIES,
   placeHolding,
+  profitLossCostBase,
 } from "../../services/portfolio/aggregate";
 import { holdingProfitLoss } from "../../services/portfolio/categorySummary";
 
@@ -151,9 +152,10 @@ export const getUnifiedPositions = query({
       const placed = placeHolding(h);
       const isLiability = placed.category === "liabilities";
       const valueInBaseCurrency = isLiability ? -placed.value : placed.value;
+      const plCost = isLiability ? null : profitLossCostBase(h);
       const pl =
-        !isLiability && h.costBase !== null
-          ? holdingProfitLoss({ value: placed.value, costBasis: h.costBase })
+        plCost !== null
+          ? holdingProfitLoss({ value: placed.value, costBasis: plCost })
           : null;
       const base = {
         _id: h.id,

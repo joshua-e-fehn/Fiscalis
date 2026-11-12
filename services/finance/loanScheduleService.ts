@@ -349,6 +349,65 @@ export function settleLoanBalance(balance: number): number {
   return rounded <= PAID_OFF_THRESHOLD ? 0 : rounded;
 }
 
+/** The stored loan fields the balance is derived from. */
+export interface LoanBalanceBasis {
+  originalPrincipal: number;
+  currentBalance: number;
+  /**
+   * Manual balance edits on top of the recorded payments. Unset on loans
+   * stored before it existed (until migrations:backfillLoanBalanceAdjustment).
+   */
+  balanceAdjustment?: number;
+}
+
+/** originalPrincipal minus the principal the payments repaid. */
+function balanceFromPayments(
+  originalPrincipal: number,
+  payments: Pick<SchedulePayment, "principalPortion">[],
+): number {
+  return roundMoney(
+    payments.reduce((rest, p) => rest - p.principalPortion, originalPrincipal),
+  );
+}
+
+/** The adjustment that makes the derived balance equal `balance`. */
+export function adjustmentForBalance(
+  originalPrincipal: number,
+  payments: Pick<SchedulePayment, "principalPortion">[],
+  balance: number,
+): number {
+  return roundMoney(balance - balanceFromPayments(originalPrincipal, payments));
+}
+
+/**
+ * A loan's balance adjustment. A loan without a stored one (pre-backfill)
+ * gets the gap between its stored balance and the payments, so deriving
+ * keeps its stored balance instead of snapping back.
+ */
+export function loanBalanceAdjustment(
+  loan: LoanBalanceBasis,
+  payments: Pick<SchedulePayment, "principalPortion">[],
+): number {
+  return (
+    loan.balanceAdjustment ??
+    adjustmentForBalance(loan.originalPrincipal, payments, loan.currentBalance)
+  );
+}
+
+/**
+ * The outstanding balance: originalPrincipal minus the principal repaid plus
+ * the manual adjustment, settled (never negative, dust snapped to 0).
+ */
+export function deriveLoanBalance(
+  loan: Pick<LoanBalanceBasis, "originalPrincipal">,
+  payments: Pick<SchedulePayment, "principalPortion">[],
+  adjustment: number,
+): number {
+  return settleLoanBalance(
+    balanceFromPayments(loan.originalPrincipal, payments) + adjustment,
+  );
+}
+
 /** Principal can never exceed what is still owed. */
 export function capPrincipalPortion(
   balanceBefore: number,

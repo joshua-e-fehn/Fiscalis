@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import {
   isLegacyInterestOnlyThenPayment,
+  loanBalanceAdjustment,
   rederiveScheduledPayment,
 } from "../../services/finance/loanScheduleService";
 import {
@@ -677,6 +678,41 @@ export const backfillInterestOnlyScheduledPayments = internalMutation({
       }
     }
     return { scanned: loans.length, changed, skipped };
+  },
+});
+
+/**
+ * Migration: loans now derive currentBalance from originalPrincipal, the
+ * principal repaid and `balanceAdjustment` (deriveLoanBalance). Stores
+ * stored balance minus the derived one as the adjustment of every loan
+ * without one, so the derived balance equals today's stored balance.
+ * Leaves currentBalance unchanged. Payment mutations already use the same
+ * fallback (loanBalanceAdjustment), so this only makes it explicit.
+ * Idempotent. NOT RUN. Dry run first:
+ *   npx convex run migrations:backfillLoanBalanceAdjustment '{"dryRun": true}'
+ */
+export const backfillLoanBalanceAdjustment = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const loans = await ctx.db.query("loans").collect();
+    const changed = [];
+    for (const loan of loans) {
+      if (loan.balanceAdjustment !== undefined) continue;
+      const payments = await ctx.db
+        .query("loanPayments")
+        .withIndex("by_loan", (q) => q.eq("loanId", loan._id))
+        .collect();
+      const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+      changed.push({
+        loanId: loan._id,
+        currentBalance: loan.currentBalance,
+        balanceAdjustment,
+      });
+      if (!args.dryRun) {
+        await ctx.db.patch(loan._id, { balanceAdjustment });
+      }
+    }
+    return { scanned: loans.length, changed };
   },
 });
 

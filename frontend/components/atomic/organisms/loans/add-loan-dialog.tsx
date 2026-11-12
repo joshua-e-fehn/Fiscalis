@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/shadcn/select";
 import { Input } from "@/components/ui/shadcn/input";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { currencyCodes } from "@/lib/utils/currency";
 import { Label } from "@/components/ui/shadcn/label";
 import { Button } from "@/components/ui/shadcn/button";
 import { Textarea } from "@/components/ui/shadcn/textarea";
@@ -294,7 +296,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   const [originalPrincipal, setOriginalPrincipal] = useState("");
   const [currentBalance, setCurrentBalance] = useState("");
   const [annualInterestRate, setAnnualInterestRate] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  // New loans default to the user's base currency
+  const defaultCurrency = currencyCodes[useBaseCurrency()];
+  const [currency, setCurrency] = useState(defaultCurrency);
   const [termPeriods, setTermPeriods] = useState("");
   const [paymentFrequency, setPaymentFrequency] =
     useState<PaymentFrequency>("MONTHLY");
@@ -446,7 +450,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     setOriginalPrincipal("");
     setCurrentBalance("");
     setAnnualInterestRate("");
-    setCurrency("USD");
+    setCurrency(defaultCurrency);
     setTermPeriods("");
     setPaymentFrequency("MONTHLY");
     setGracePeriods("");

@@ -307,7 +307,11 @@ export default defineSchema({
 
 		// Financial Details
 		originalPrincipal: v.number(), // Original loan amount
-		currentBalance: v.number(), // Current outstanding balance
+		currentBalance: v.number(), // Current outstanding balance (derived, see balanceAdjustment)
+		// Manual balance edits on top of the recorded payments:
+		// currentBalance = originalPrincipal - Σ principal repaid + balanceAdjustment
+		// (deriveLoanBalance). Unset until migrations:backfillLoanBalanceAdjustment.
+		balanceAdjustment: v.optional(v.number()),
 		annualInterestRate: v.number(), // Interest rate as decimal (e.g., 0.05 for 5%)
 		currency: v.string(), // ISO currency code
 

@@ -2,11 +2,14 @@ import { describe, it, expect } from "vitest";
 
 import {
   addMonthsToISODate,
+  adjustmentForBalance,
   buildLoanSchedule,
   capPrincipalPortion,
   computeNextPaymentDate,
+  deriveLoanBalance,
   getDueDate,
   initialScheduledPayment,
+  loanBalanceAdjustment,
   loanKpis,
   projectOutstandingPayments,
   settleLoanBalance,
@@ -600,6 +603,57 @@ describe("splitLoanPayment", () => {
     expect(
       splitLoanPayment(basis, 1250, "scheduled", { interest: 2000 }),
     ).toMatchObject({ principalPortion: 0, interestPortion: 1250 });
+  });
+});
+
+describe("deriveLoanBalance", () => {
+  const paid = [{ principalPortion: 1000.1 }, { principalPortion: 1024.9 }];
+
+  it("is the original principal minus the principal repaid plus the adjustment", () => {
+    expect(deriveLoanBalance({ originalPrincipal: 10000 }, paid, 0)).toBe(7975);
+    expect(deriveLoanBalance({ originalPrincipal: 10000 }, paid, -475)).toBe(7500);
+    expect(deriveLoanBalance({ originalPrincipal: 10000 }, [], 250.5)).toBe(10250.5);
+  });
+
+  it("settles to zero, never negative", () => {
+    expect(deriveLoanBalance({ originalPrincipal: 2025 }, paid, 0)).toBe(0);
+    expect(deriveLoanBalance({ originalPrincipal: 2000 }, paid, 0)).toBe(0);
+  });
+});
+
+describe("loanBalanceAdjustment", () => {
+  const paid = [{ principalPortion: 1000.1 }, { principalPortion: 1024.9 }];
+
+  it("uses the stored adjustment", () => {
+    expect(
+      loanBalanceAdjustment(
+        { originalPrincipal: 10000, currentBalance: 1, balanceAdjustment: -475 },
+        paid,
+      ),
+    ).toBe(-475);
+  });
+
+  it("falls back to stored balance minus the derived one before a backfill", () => {
+    const loan = { originalPrincipal: 10000, currentBalance: 7500 };
+    const adjustment = loanBalanceAdjustment(loan, paid);
+    expect(adjustment).toBe(-475);
+    // A later payment moves the balance by its principal only
+    expect(
+      deriveLoanBalance(loan, [...paid, { principalPortion: 500 }], adjustment),
+    ).toBe(7000);
+  });
+
+  it("is zero for a balance that matches the payments", () => {
+    expect(
+      loanBalanceAdjustment({ originalPrincipal: 10000, currentBalance: 7975 }, paid),
+    ).toBe(0);
+  });
+});
+
+describe("adjustmentForBalance", () => {
+  it("is the gap between an entered balance and the payments", () => {
+    expect(adjustmentForBalance(10000, [{ principalPortion: 2025 }], 8000)).toBe(25);
+    expect(adjustmentForBalance(10000, [], 9999.99)).toBe(-0.01);
   });
 });
 

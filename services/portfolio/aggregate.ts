@@ -495,16 +495,34 @@ export function buildSnapshotBreakdown(
  *
  * Only a full sync of every provider knows whether the day's provider data
  * is complete, so it passes `requested` (true when a provider failed) and
- * that verdict replaces the row's. Any other write (a vault or loan change,
- * a single provider's sync) passes undefined and keeps the row's flag: a
- * provider that failed earlier today still holds its last successful sync's
- * values until a full sync refreshes it.
+ * that verdict replaces the row's. A single provider's sync passes true
+ * when only some of its items failed (providerSyncSnapshot) and otherwise
+ * undefined; any other write (a vault or loan change) passes undefined.
+ * Undefined keeps the row's flag: a provider that failed earlier today
+ * still holds its last successful sync's values until a full sync
+ * refreshes it.
  */
 export function snapshotPartial(
   existing: boolean | undefined,
   requested: boolean | undefined,
 ): true | undefined {
   return (requested ?? existing) ? true : undefined;
+}
+
+/**
+ * Whether one provider's sync takes today's snapshot, and its `partial`
+ * request (snapshotPartial). A sync where nothing failed takes it; one
+ * where only some items (bank items, connections, accounts) failed takes
+ * it tagged partial; one where everything failed takes none, since the
+ * provider's stored data is still the last successful sync's.
+ */
+export function providerSyncSnapshot(
+  synced: number,
+  failed: number,
+): { take: boolean; partial: true | undefined } {
+  if (failed === 0) return { take: true, partial: undefined };
+  if (synced > 0) return { take: true, partial: true };
+  return { take: false, partial: undefined };
 }
 
 /** A breakdown without the holdings kept for the next day's flows. */

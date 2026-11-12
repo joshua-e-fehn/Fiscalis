@@ -8,6 +8,7 @@ import {
   categoryFlowFromHoldings,
   holdingNetFlow,
   snapshotCategoryFlow,
+  providerSyncSnapshot,
   snapshotPartial,
   withoutSnapshotHoldings,
   HOLDING_CATEGORIES,
@@ -453,6 +454,30 @@ describe("loanMonthlyPaymentInBase", () => {
     expect(
       loanMonthlyPaymentInBase({ ...loan, status: "paid_off", paymentFrequency: "MONTHLY" }, rates),
     ).toBe(0);
+  });
+});
+
+describe("providerSyncSnapshot", () => {
+  it("takes an untagged snapshot when nothing failed", () => {
+    expect(providerSyncSnapshot(3, 0)).toEqual({
+      take: true,
+      partial: undefined,
+    });
+    expect(providerSyncSnapshot(0, 0)).toEqual({
+      take: true,
+      partial: undefined,
+    });
+  });
+
+  it("tags the snapshot partial when only some items failed", () => {
+    expect(providerSyncSnapshot(2, 1)).toEqual({ take: true, partial: true });
+  });
+
+  it("takes no snapshot when every item failed", () => {
+    expect(providerSyncSnapshot(0, 2)).toEqual({
+      take: false,
+      partial: undefined,
+    });
   });
 });
 

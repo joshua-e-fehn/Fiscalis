@@ -134,8 +134,9 @@ function signedBase(
 /**
  * The flow of one Bitpanda transaction (bitpandaTransactions row) into the
  * holding `keys` resolves it to (bitpandaTradeKeys); null when it moves no
- * holding of a flow-adjusted kind it can be matched to, or carries no flow
- * information (a transfer between own wallets, "other").
+ * holding it can be matched to. A transfer, and any type not known here
+ * ("other", a raw type such as a refund), may move units by an amount that
+ * is not known: its amount is null, so the holding keeps the cost proxy.
  */
 export function bitpandaTradeFlow(
   tx: {
@@ -169,7 +170,7 @@ export function bitpandaTradeFlow(
       // Units received for nothing: performance, not money put in
       return at(0);
     default:
-      return null;
+      return at(null);
   }
 }
 
@@ -204,21 +205,26 @@ export function vaultTradeFlow(tx: {
 
 /** SnapTrade activity types that change a position without money moving in or out. */
 const SNAPTRADE_NO_FLOW_TYPES = new Set(["REI", "STOCK_DIVIDEND", "SPLIT"]);
-/** SnapTrade activity types that move a position by an amount that is not known. */
-const SNAPTRADE_UNKNOWN_FLOW_TYPES = new Set([
-  "TRANSFER",
-  "EXTERNAL_ASSET_TRANSFER_IN",
-  "EXTERNAL_ASSET_TRANSFER_OUT",
-  "ADJUSTMENT",
+/** SnapTrade activity types that move cash only, never the units of a position. */
+const SNAPTRADE_CASH_TYPES = new Set([
+  "DIVIDEND",
+  "INTEREST",
+  "FEE",
+  "TAX",
+  "CONTRIBUTION",
+  "WITHDRAWAL",
 ]);
 
 /**
  * The flow of one SnapTrade account activity (brokerTransactions row) into
  * its position: a BUY is money in at its amount, a SELL money out, at the
  * rate of the trade date; a reinvested dividend, stock dividend or split is
- * no flow; a transfer of units has no known amount. Null for an activity
- * without a symbol (cash: contributions, withdrawals, dividends, fees),
- * since cash is not flow-adjusted, and for any other type.
+ * no flow. Null for an activity without a symbol and for a cash-only type
+ * (dividends, interest, fees, taxes, contributions, withdrawals), since cash
+ * is not flow-adjusted. Any other type (a transfer of units, an option
+ * assignment, exercise or expiration, a type not known here) may move units
+ * by an amount that is not known: its amount is null, so the position keeps
+ * the cost proxy.
  */
 export function snaptradeActivityFlow(
   tx: {
@@ -233,8 +239,8 @@ export function snaptradeActivityFlow(
   },
   toBaseOn: ToBaseOn,
 ): TradeFlow | null {
-  if (!tx.symbol) return null;
   const type = tx.type.toUpperCase();
+  if (!tx.symbol || SNAPTRADE_CASH_TYPES.has(type)) return null;
   const at = (amount: number | null): TradeFlow => ({
     key: brokerPositionKey(tx.accountId, tx.symbol!),
     date: tx.tradeDate,
@@ -253,6 +259,5 @@ export function snaptradeActivityFlow(
     );
   }
   if (SNAPTRADE_NO_FLOW_TYPES.has(type)) return at(0);
-  if (SNAPTRADE_UNKNOWN_FLOW_TYPES.has(type)) return at(null);
-  return null;
+  return at(null);
 }

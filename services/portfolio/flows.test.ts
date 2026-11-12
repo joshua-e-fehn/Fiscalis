@@ -127,8 +127,24 @@ describe("bitpandaTradeFlow", () => {
     expect(bitpandaTradeFlow(tx("sell", 0), keys, toBaseOn)!.amount).toBeNull();
   });
 
-  it("ignores transfers and trades of a symbol without a matching holding", () => {
-    expect(bitpandaTradeFlow(tx("transfer", 100), keys, toBaseOn)).toBeNull();
+  it("gives transfers and unknown types an unknown amount", () => {
+    const unknown = { key: "bitpanda:con1:crypto:BTC", date: "2026-11-11T08:00:00Z", amount: null };
+    expect(bitpandaTradeFlow(tx("transfer", 100), keys, toBaseOn)).toEqual(unknown);
+    expect(bitpandaTradeFlow(tx("other", 100), keys, toBaseOn)).toEqual(unknown);
+    expect(bitpandaTradeFlow(tx("refund", 100), keys, toBaseOn)).toEqual(unknown);
+  });
+
+  it("drops a key traded and transferred in one interval", () => {
+    const flows = [
+      bitpandaTradeFlow(tx("buy", 1_000), keys, toBaseOn)!,
+      bitpandaTradeFlow(tx("transfer", 0), keys, toBaseOn)!,
+    ];
+    expect(
+      tradeFlowsBetween(flows, Date.parse("2026-11-10T00:00:00Z"), Date.parse("2026-11-12T00:00:00Z")),
+    ).toEqual(new Map());
+  });
+
+  it("ignores trades of a symbol without a matching holding", () => {
     expect(bitpandaTradeFlow(tx("buy", 100, "EUR", "ETH"), keys, toBaseOn)).toBeNull();
   });
 });
@@ -196,8 +212,20 @@ describe("snaptradeActivityFlow", () => {
     ).toBeNull();
   });
 
+  it("gives option assignments, exercises, expirations and unknown types an unknown amount", () => {
+    for (const type of ["OPTIONASSIGNMENT", "OPTIONEXERCISE", "OPTIONEXPIRATION", "SOMETHING_NEW"]) {
+      expect(snaptradeActivityFlow(activity(type), toBaseOn)).toEqual({
+        key: "brokerPosition:acc1:AAPL",
+        date: "2026-11-10T00:00:00Z",
+        amount: null,
+      });
+    }
+  });
+
   it("ignores cash activities and activities without a symbol", () => {
-    expect(snaptradeActivityFlow(activity("DIVIDEND"), toBaseOn)).toBeNull();
+    for (const type of ["DIVIDEND", "INTEREST", "FEE", "TAX", "CONTRIBUTION", "WITHDRAWAL"]) {
+      expect(snaptradeActivityFlow(activity(type), toBaseOn)).toBeNull();
+    }
     expect(
       snaptradeActivityFlow(activity("CONTRIBUTION", { symbol: undefined }), toBaseOn),
     ).toBeNull();

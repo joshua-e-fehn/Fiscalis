@@ -77,6 +77,16 @@ export type SnapshotMetric =
   | { kind: "category"; category: string };
 
 /**
+ * What a performance widget measures: a snapshot metric, or one
+ * continuously valued holding source alone (`{ kind: "source", source:
+ * "vault" }`: the vault items without the rest of their category), which
+ * has no snapshot part.
+ */
+export type PerformanceMeasure =
+  | SnapshotMetric
+  | { kind: "source"; source: string };
+
+/**
  * Input for discrete (snapshot-based) performance calculation
  */
 export interface DiscretePerformanceInput {

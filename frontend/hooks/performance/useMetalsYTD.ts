@@ -1,16 +1,15 @@
 /**
  * Vault YTD for the metals pages (vault items only, unlike the commodities
- * category): the continuous strategy over the vault performance input,
- * ending at live spot. Net of purchases made this year (D2): a coin bought
- * in March is a flow at its cost, not a gain. Null without a value at
- * 1 Jan.
+ * category): the one entry point (useCategoryPerformance) measuring the
+ * vault source alone, which the continuous strategy values, ending at live
+ * spot. Net of purchases made this year (D2): a coin bought in March is a
+ * flow at its cost, not a gain. Null without a value at 1 Jan.
  */
 
-import { useMemo } from "react";
-import { getContinuousStrategy } from "@/lib/performance";
 import type { MetalsCurrency } from "@/lib/types/metals-extended";
-import { toPeriodChange } from "./useCategoryPerformance";
-import { useVaultPerformanceInput } from "./useContinuousPerformance";
+import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance";
+
+const VAULT = { kind: "source", source: "vault" } as const;
 
 export interface MetalsYTDResult {
   /** P/L since 1 Jan net of this year's purchases */
@@ -29,24 +28,17 @@ export function useMetalsYTD(
   currency: MetalsCurrency = "eur",
   options?: { enabled?: boolean },
 ): MetalsYTDResult {
-  const { input, isLoading } = useVaultPerformanceInput({
-    timeRange: "YTD",
+  const { metrics, isLoading } = useCategoryPerformance(VAULT, "YTD", {
     currency,
     enabled: options?.enabled ?? true,
   });
-
-  return useMemo<MetalsYTDResult>(() => {
-    const metrics = input
-      ? getContinuousStrategy().calculate(input, { timeRange: "YTD" }).metrics
-      : null;
-    const ytd = toPeriodChange(metrics);
-    return {
-      ytdProfitLoss: ytd.change,
-      ytdProfitLossPercent: ytd.changePercent,
-      valueAtStartOfYear: ytd.valueAtStart,
-      flowAdjusted: ytd.flowAdjusted,
-      flowsEstimated: ytd.flowsEstimated,
-      isLoading,
-    };
-  }, [input, isLoading]);
+  const ytd = toPeriodChange(metrics);
+  return {
+    ytdProfitLoss: ytd.change,
+    ytdProfitLossPercent: ytd.changePercent,
+    valueAtStartOfYear: ytd.valueAtStart,
+    flowAdjusted: ytd.flowAdjusted,
+    flowsEstimated: ytd.flowsEstimated,
+    isLoading,
+  };
 }

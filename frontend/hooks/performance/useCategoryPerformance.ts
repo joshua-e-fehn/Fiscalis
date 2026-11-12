@@ -20,6 +20,7 @@ import {
   type LiveEnd,
   type PerformanceCalculationOptions,
   type PerformanceDataPoint,
+  type PerformanceMeasure,
   type PerformanceMetrics,
   type SnapshotData,
   type SnapshotMetric,
@@ -121,7 +122,7 @@ export interface CategoryPerformanceResult {
 }
 
 export function useCategoryPerformance(
-  measure: SnapshotMetric,
+  measure: PerformanceMeasure,
   timeRange: TimeRange,
   options: UseCategoryPerformanceOptions = {},
 ): CategoryPerformanceResult {
@@ -133,13 +134,23 @@ export function useCategoryPerformance(
     liveEnd,
   } = options;
 
-  const scope =
-    measure.kind === "category" ? (measure.category as HoldingCategory) : "all";
-  const continuousSources = useMemo(() => continuousSourcesFor(scope), [scope]);
+  // A source measure (the vault alone) has no snapshot part
+  const measureKey = JSON.stringify(measure);
+  const needsSnapshots = measure.kind !== "source";
+  const continuousSources = useMemo(() => {
+    const m = JSON.parse(measureKey) as PerformanceMeasure;
+    return continuousSourcesFor(
+      m.kind === "category"
+        ? (m.category as HoldingCategory)
+        : m.kind === "source"
+          ? { source: m.source }
+          : "all",
+    );
+  }, [measureKey]);
   const needsVault = continuousSources.some((s) => s.source === "vault");
 
   const { snapshots, isLoading: snapshotsLoading } = useSnapshots(timeRange, {
-    enabled,
+    enabled: enabled && needsSnapshots,
   });
   const vault = useVaultPerformanceInput({
     timeRange,
@@ -148,17 +159,19 @@ export function useCategoryPerformance(
   });
   const isLoading = snapshotsLoading || (needsVault && vault.isLoading);
 
-  const measureKey = JSON.stringify(measure);
   const liveValue = liveEnd?.value;
   const liveCost = liveEnd?.costBasis;
   const result = useMemo(() => {
     if (!enabled || isLoading) return null;
-    const metric = JSON.parse(measureKey) as SnapshotMetric;
+    const measured = JSON.parse(measureKey) as PerformanceMeasure;
+    const metric: SnapshotMetric | null =
+      measured.kind === "source" ? null : measured;
     return getHybridStrategy().calculate(
       {
-        // Always given, even empty: the hybrid strategy then decides whether
-        // the vault alone covers the measure (it does not for net worth)
-        discrete: { snapshots, metric },
+        // Always given for a snapshot metric, even empty: the hybrid
+        // strategy then decides whether the vault alone covers the measure
+        // (it does not for net worth)
+        discrete: metric ? { snapshots, metric } : undefined,
         continuous: needsVault ? vault.input : undefined,
         continuousSources,
       },

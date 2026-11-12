@@ -23,7 +23,7 @@ import {
 } from "./strategies/discrete";
 import { calculateContinuousPerformance } from "./strategies/continuous";
 import { calculateHybridPerformance } from "./strategies/hybrid";
-import { calculateSellPrice, valueVaultItem } from "../finance/metals";
+import { TROY_OUNCE_GRAMS, calculateSellPrice, valueVaultItem } from "../finance/metals";
 import type { HoldingData, SnapshotData } from "./types";
 
 const DAY = 86_400_000;
@@ -163,6 +163,46 @@ describe("valuation resolution", () => {
     expect(continuousSourcesFor("commodities")).toEqual(VAULT);
     expect(continuousSourcesFor("all")).toEqual(VAULT);
     expect(continuousSourcesFor("equities")).toEqual([]);
+    expect(continuousSourcesFor({ source: "vault" })).toEqual(VAULT);
+    expect(continuousSourcesFor({ source: "bitpanda" })).toEqual([]);
+  });
+
+  it("measures a source alone exactly as the continuous strategy does", () => {
+    // 1 oz held since last year, 1 oz bought on 1 Mar at 120; spot 100 on
+    // 1 Jan, 150 from 1 Mar
+    const oz = { assetType: "gold", fineWeightGrams: TROY_OUNCE_GRAMS, sellPremium: 0 };
+    const holdings: HoldingData[] = [
+      { id: "a", quantity: 1, ...oz },
+      {
+        id: "b",
+        quantity: 1,
+        ...oz,
+        purchaseDate: Date.UTC(2026, 2, 1),
+        purchasePricePerUnit: 120,
+        purchaseCurrency: "EUR",
+      },
+    ];
+    const prices = {
+      gold: Array.from({ length: 200 }, (_, i) => {
+        const timestamp = NOW - (199 - i) * DAY;
+        return { timestamp, price: timestamp < Date.UTC(2026, 2, 1) ? 100 : 150 };
+      }),
+    };
+    const continuous = { holdings, prices, currency: "eur" };
+    const alone = calculateContinuousPerformance(continuous, { timeRange: "YTD" });
+    const viaHybrid = calculateHybridPerformance(
+      { continuous, continuousSources: continuousSourcesFor({ source: "vault" }) },
+      { timeRange: "YTD" },
+    );
+    expect(viaHybrid.metrics.startValue).toBe(100);
+    expect(viaHybrid.metrics.endValue).toBe(300);
+    expect(viaHybrid.metrics.netFlows).toBe(120);
+    expect(viaHybrid.metrics.profitLoss).toBe(80);
+    expect(viaHybrid.metrics.profitLoss).toBe(alone.metrics.profitLoss);
+    expect(viaHybrid.metrics.timeWeightedPercent).toBe(
+      alone.metrics.timeWeightedPercent,
+    );
+    expect(viaHybrid.metrics.flowCoverage).toBe(alone.metrics.flowCoverage);
   });
 });
 

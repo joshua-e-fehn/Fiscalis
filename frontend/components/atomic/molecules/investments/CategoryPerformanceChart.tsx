@@ -95,10 +95,14 @@ export function CategoryPerformanceChart({
   const timeRange = controlledRange ?? ownRange;
   const setTimeRange = onTimeRangeChange ?? setOwnRange;
 
-  // The points within the range, in time order
+  // The points within the range, in time order. A caller that owns the
+  // range passes the engine's series for it, which starts exactly at the
+  // range start: shown unchanged, since filtering again with a later
+  // Date.now() would cut that baseline point (services toChartPoints).
+  const controlled = onTimeRangeChange !== undefined;
   const chartData = useMemo(() => {
     const start =
-      timeRange === "ALL"
+      controlled || timeRange === "ALL"
         ? -Infinity
         : getTimeRangeStartTimestamp(
             TIME_RANGE_LABEL_MAP[timeRange],
@@ -108,7 +112,7 @@ export function CategoryPerformanceChart({
       .filter((dp) => dp.timestamp >= start)
       .sort((a, b) => a.timestamp - b.timestamp)
       .map((dp) => ({ ...dp, date: formatDate(dp.timestamp, timeRange) }));
-  }, [dataPoints, timeRange]);
+  }, [dataPoints, timeRange, controlled]);
 
   const hasCost = chartData.some((d) => d.cost !== null);
 

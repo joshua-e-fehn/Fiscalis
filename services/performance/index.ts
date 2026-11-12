@@ -128,3 +128,4 @@ export {
 
 export type { SnapshotMetric, LiveEnd } from "./strategies/types";
 export { snapshotMetricValue, netWorthCostLine } from "./strategies/discrete";
+export { type ChartPoint, toChartPoints } from "./chartSeries";

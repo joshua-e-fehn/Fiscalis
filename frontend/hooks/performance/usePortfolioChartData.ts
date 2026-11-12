@@ -8,7 +8,7 @@
 
 import { useMemo } from "react";
 
-import type { TimeRange } from "@/lib/performance";
+import { toChartPoints, type TimeRange } from "@/lib/performance";
 import type { PortfolioDataPoint } from "@/lib/types/investments";
 
 import {
@@ -65,12 +65,7 @@ export function usePortfolioChartData(
   return useMemo(() => {
     const last = dataPoints.at(-1);
     return {
-      dataPoints: dataPoints.map((p) => ({
-        date: new Date(p.timestamp).toISOString().slice(0, 10),
-        timestamp: p.timestamp,
-        value: p.value,
-        cost: p.costBasis,
-      })),
+      dataPoints: toChartPoints(dataPoints),
       currentValue: metrics?.endValue ?? 0,
       totalCost: last?.costBasis ?? null,
       trackingSince: toPeriodChange(metrics).trackingSince,

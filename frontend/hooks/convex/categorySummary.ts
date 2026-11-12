@@ -91,7 +91,7 @@ export function summaryProfitLoss(s: HoldingsSummary) {
   };
 }
 
-/** A CategorySummary with no YTD or history (filled elsewhere). */
+/** A CategorySummary with no YTD (filled elsewhere). */
 export function toCategorySummary(
   total: HoldingsSummary,
   subcategories: SubcategoryData[],
@@ -106,7 +106,6 @@ export function toCategorySummary(
     ytdProfitLossPercent: null,
     valueAtYearStart: null,
     subcategories,
-    historyDataPoints: [],
   };
 }
 

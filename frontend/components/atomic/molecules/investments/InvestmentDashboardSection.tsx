@@ -12,7 +12,7 @@
  * - Row 3: Largest Holdings (optional, only shown when there are holdings)
  */
 
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Card,
@@ -26,7 +26,13 @@ import {
   InvestmentCategory,
 } from "@/lib/types/investments";
 import { currencySymbols } from "@/lib/utils/currency";
-import { useCategoryYTD, useCategoryProfitLoss } from "@/hooks/performance";
+import {
+  useCategoryChartData,
+  useCategoryYTD,
+  useCategoryProfitLoss,
+} from "@/hooks/performance";
+import { TIME_RANGE_LABEL_MAP } from "@/lib/performance";
+import type { ChartTimeRange } from "@/components/atomic/molecules/metals/PortfolioChart";
 import { CategoryAllocationChart } from "./CategoryAllocationChart";
 import { CategoryPerformanceChart } from "./CategoryPerformanceChart";
 import { TopHoldingsList } from "./TopHoldingsList";
@@ -606,6 +612,15 @@ export function InvestmentDashboardSection({
         ? `On ${coveredPercent}% of the value: holdings without a cost basis are left out`
         : null;
 
+  // The chart: the engine's series for the category over the selected
+  // range (snapshot categoryBreakdown, the vault at spot), with its cost line
+  const [chartRange, setChartRange] = useState<ChartTimeRange>("3M");
+  const chart = useCategoryChartData(
+    category,
+    TIME_RANGE_LABEL_MAP[chartRange],
+    { enabled: !isLoading && customPerformanceChart === undefined },
+  );
+
   // YTD values for custom cards
   const ytdProfitLoss = categoryYTD.ytdProfitLoss;
   const ytdProfitLossPercent = categoryYTD.ytdProfitLossPercent;
@@ -748,10 +763,18 @@ export function InvestmentDashboardSection({
         )}
         {customPerformanceChart ?? (
           <CategoryPerformanceChart
-            dataPoints={summary?.historyDataPoints ?? []}
+            dataPoints={chart.dataPoints}
+            timeRange={chartRange}
+            onTimeRangeChange={setChartRange}
+            partial={chart.partial}
             currency={currency}
-            isLoading={isLoading}
+            isLoading={isLoading || chart.isLoading}
             title={performanceChartTitle}
+            emptyHint={
+              hasHoldings
+                ? "History appears after the next daily snapshot"
+                : undefined
+            }
           />
         )}
       </div>

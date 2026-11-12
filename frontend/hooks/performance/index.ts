@@ -37,6 +37,8 @@ export { useMetalsYTD, type MetalsYTDResult } from "./useMetalsYTD";
 // Portfolio chart data (adapts the engine's series)
 export {
   usePortfolioChartData,
+  useCategoryChartData,
+  type CategoryChartDataResult,
   type PortfolioChartPoint,
   type PortfolioChartMetric,
   type UsePortfolioChartDataOptions,

@@ -8,7 +8,8 @@ import {
   positionWithBaseFields,
   toBase,
 } from "../../../services/finance/currency";
-import { valueVaultItem } from "../../../services/finance/metals";
+import { vaultItemValuation } from "../../../services/finance/metals";
+import type { ToBaseAmount } from "../../../services/finance/metalsLedger";
 import {
   averageCostPerUnit,
   bankAccountValue,
@@ -50,7 +51,10 @@ import {
  *   credit/loan balance as reported, a provider position's absolute value
  *   (positionOwed), a broker account's margin debit, a loan's balance.
  * - Vault items are valued at live spot (metalSpotPrices) with the shared
- *   metals valuation, falling back to cost when no fresh spot price exists.
+ *   metals valuation (vaultItemValuation), falling back to cost when no
+ *   fresh spot price exists. An item with neither counts 0 (M-C6: its value
+ *   is unknown); the cost fallback stays so that a price outage does not
+ *   drop the vault from net worth and the snapshots.
  * - A Bitpanda holding's cost basis is the average cost of its symbol from
  *   the synced trades (rewards at no cost) times the quantity held, and
  *   none when more is held than the trades account for (categorySummary.ts
@@ -78,11 +82,27 @@ export type LoadedHolding =
   | (NormalizedHolding & { source: "vault"; doc: Doc<"vaultItems"> })
   | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> });
 
+/** The spot-price mirror (metalPrices.ts), by metal. */
+export async function loadSpotPrices(
+  ctx: QueryCtx,
+): Promise<Map<string, Doc<"metalSpotPrices">>> {
+  return new Map(
+    (await ctx.db.query("metalSpotPrices").collect()).map((p) => [
+      p.metalType,
+      p,
+    ]),
+  );
+}
+
 export async function loadHoldings(
   ctx: QueryCtx,
   userId: string,
 ): Promise<LoadedHolding[]> {
   const rates = await loadFxRates(ctx);
+  const toBaseAmount: ToBaseAmount = (amount, currency) => {
+    const converted = toBase(amount, currency, rates);
+    return converted.ok ? converted.value : null;
+  };
   const now = Date.now();
   const holdings: LoadedHolding[] = [];
 
@@ -177,10 +197,7 @@ export async function loadHoldings(
             .query("bitpandaTransactions")
             .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect(),
-          (amount, currency) => {
-            const converted = toBase(amount, currency, rates);
-            return converted.ok ? converted.value : null;
-          },
+          toBaseAmount,
         )
       : new Map<string, AverageCost>();
   for (const raw of bitpandaHoldings) {
@@ -221,15 +238,18 @@ export async function loadHoldings(
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
   if (vaultItems.length > 0) {
-    const spotByMetal = new Map(
-      (await ctx.db.query("metalSpotPrices").collect()).map((p) => [
-        p.metalType,
-        p,
-      ]),
-    );
+    const spotByMetal = await loadSpotPrices(ctx);
     for (const doc of vaultItems) {
       const spot = spotByMetal.get(doc.metalType);
-      const { value, cost } = valueVaultItem(doc, spot, now);
+      // The cached quantity and cost (rewritten from the ledger on every
+      // change, vault.ts syncProjection)
+      const { value, cost } = vaultItemValuation(
+        doc,
+        undefined,
+        spot,
+        now,
+        toBaseAmount,
+      );
       holdings.push({
         id: doc._id,
         provider: "manual",
@@ -237,7 +257,7 @@ export async function loadHoldings(
         category: "commodities",
         subcategory: "metals",
         name: doc.customName ?? doc.metalType,
-        valueBase: value,
+        valueBase: value ?? 0,
         costBase: cost,
         // The spot row's timestamp even when it is stale and the item fell
         // back to cost, so a stale price pulls asOf back; null only without

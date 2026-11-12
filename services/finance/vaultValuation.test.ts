@@ -13,6 +13,7 @@ import {
   summarizeMetalItems,
   valueMetalItem,
   valueVaultItem,
+  vaultItemValuation,
 } from "./metals";
 
 const NOW = Date.parse("2026-11-11T12:00:00Z");
@@ -50,11 +51,18 @@ describe("valueVaultItem", () => {
 
   it("reports an unknown cost as null, not 0", () => {
     expect(valueVaultItem(oneOzGold, spot(3000), NOW).cost).toBeNull();
+  });
+
+  it("has no value without a fresh spot and without a cost (M-C6)", () => {
     expect(valueVaultItem(oneOzGold, undefined, NOW)).toEqual({
-      value: 0,
+      value: null,
       cost: null,
       pricedAtSpot: false,
     });
+    expect(
+      valueVaultItem(oneOzGold, spot(3000, SPOT_PRICE_MAX_AGE_MS + 1), NOW)
+        .value,
+    ).toBeNull();
   });
 
   it("falls back to purchase price when the spot price is stale", () => {
@@ -143,6 +151,58 @@ describe("resolvePremiums", () => {
   });
 });
 
+describe("vaultItemValuation", () => {
+  // USD → EUR at 0.5; no rate for anything else
+  const toBase = (amount: number, currency: string) =>
+    currency === "EUR" ? amount : currency === "USD" ? amount * 0.5 : null;
+  const record = {
+    fineWeightGrams: TROY_OUNCE_GRAMS,
+    quantity: 3,
+    sellPremium: -0.02,
+    purchasePricePerUnit: 2400,
+    purchaseCurrency: "USD",
+  };
+
+  it("takes quantity and EUR average cost from the ledger", () => {
+    expect(
+      vaultItemValuation(
+        record,
+        { quantity: 2, averageCost: 2500 },
+        spot(3000),
+        NOW,
+        toBase,
+      ),
+    ).toEqual({ value: 5880, cost: 5000, pricedAtSpot: true });
+  });
+
+  it("converts the cached cost to EUR without a ledger", () => {
+    expect(vaultItemValuation(record, null, undefined, NOW, toBase)).toEqual({
+      value: 3600,
+      cost: 3600,
+      pricedAtSpot: false,
+    });
+  });
+
+  it("has no cost, and no value without spot, when the rate is missing", () => {
+    const chf = { ...record, purchaseCurrency: "CHF" };
+    expect(vaultItemValuation(chf, undefined, undefined, NOW, toBase)).toEqual({
+      value: null,
+      cost: null,
+      pricedAtSpot: false,
+    });
+    expect(vaultItemValuation(chf, undefined, spot(3000), NOW, toBase).value).toBe(
+      8820,
+    );
+  });
+
+  it("reads a cached cost without a currency as EUR", () => {
+    const { purchaseCurrency: _, ...eur } = record;
+    expect(vaultItemValuation(eur, undefined, undefined, NOW, toBase).cost).toBe(
+      7200,
+    );
+  });
+});
+
 describe("freshSpotPerOunce", () => {
   it("applies the same staleness window as valueVaultItem", () => {
     expect(freshSpotPerOunce(3000, NOW - SPOT_PRICE_MAX_AGE_MS, NOW)).toBe(3000);
@@ -161,14 +221,24 @@ describe("valueMetalItem", () => {
     quantity: 2,
     buyPremium: 0.05,
     sellPremium: -0.02,
-    purchasePricePerUnit: 2500,
+  };
+  const rates = { eurToUsd: 1.25, eurToChf: null };
+  // The server's EUR valuation at a 3000 EUR/oz spot (vaultItemValuation)
+  const atSpot = {
+    ...valueVaultItem(
+      { ...item, purchasePricePerUnit: 2500 },
+      spot(3000),
+      NOW,
+    ),
+    spot: { eurPerOunce: 3000, sourceTimestamp: NOW },
   };
 
-  it("values at fresh spot with per-unit buy/sell prices and P/L", () => {
-    const v = valueMetalItem(item, { pricePerOunce: 3000, sourceTimestamp: NOW }, NOW);
+  it("shows the server valuation with per-unit buy/sell prices and P/L", () => {
+    const v = valueMetalItem(item, atSpot, "eur", rates);
     expect(v.pricedAtSpot).toBe(true);
     expect(v.currentBuyPrice).toBeCloseTo(3150, 6);
     expect(v.currentSellPrice).toBeCloseTo(2940, 6);
+    expect(v.marketValue).toBe(atSpot.value);
     expect(v.marketValue).toBeCloseTo(5880, 6);
     expect(v.meltValue).toBeCloseTo(6000, 6);
     expect(v.buyPremiumValue).toBeCloseTo(300, 6);
@@ -178,25 +248,48 @@ describe("valueMetalItem", () => {
     expect(v.profitLossPercent).toBeCloseTo(17.6, 6);
   });
 
-  it("matches the server valuation (valueVaultItem)", () => {
-    const v = valueMetalItem(item, { pricePerOunce: 3000, sourceTimestamp: NOW }, NOW);
-    expect(v.marketValue).toBeCloseTo(
-      valueVaultItem(item, spot(3000), NOW).value,
-      9,
-    );
+  it("converts value, cost and spot at the spot rates", () => {
+    const v = valueMetalItem(item, atSpot, "usd", rates);
+    expect(v.marketValue).toBeCloseTo(7350, 6);
+    expect(v.totalCost).toBe(6250);
+    expect(v.currentSellPrice).toBeCloseTo(3675, 6);
+    expect(v.profitLoss).toBeCloseTo(1100, 6);
+    expect(v.profitLossPercent).toBeCloseTo(17.6, 6);
   });
 
-  it("falls back to cost with no P/L when the spot price is stale", () => {
+  it("has no value without a rate for the display currency", () => {
+    const v = valueMetalItem(item, atSpot, "chf", rates);
+    expect(v.marketValue).toBeNull();
+    expect(v.totalCost).toBeNull();
+    expect(v.pricedAtSpot).toBe(false);
+    expect(v.currentSellPrice).toBe(0);
+  });
+
+  it("keeps the server's cost fallback with no P/L when not priced at spot", () => {
     const v = valueMetalItem(
       item,
-      { pricePerOunce: 3000, sourceTimestamp: NOW - SPOT_PRICE_MAX_AGE_MS - 1 },
-      NOW,
+      { value: 5000, cost: 5000, pricedAtSpot: false, spot: atSpot.spot },
+      "eur",
+      rates,
     );
     expect(v.pricedAtSpot).toBe(false);
     expect(v.marketValue).toBe(5000);
     expect(v.currentSellPrice).toBe(0);
     expect(v.profitLoss).toBeNull();
     expect(v.profitLossPercent).toBeNull();
+  });
+
+  it("has no market value when the server has none (M-C6)", () => {
+    const v = valueMetalItem(
+      item,
+      { value: null, cost: null, pricedAtSpot: false, spot: null },
+      "eur",
+      rates,
+    );
+    expect(v.marketValue).toBeNull();
+    expect(v.totalCost).toBeNull();
+    expect(v.profitLoss).toBeNull();
+    expect(v.pricedAtSpot).toBe(false);
   });
 });
 
@@ -255,6 +348,23 @@ describe("summarizeMetalItems", () => {
     expect(s.unrealizedProfitLoss).toBeNull();
     expect(s.totalProfitLoss).toBeNull();
     expect(s.coverage).toBe(0);
+  });
+
+  it("counts an unvalued item as 0 and reports it (M-C6)", () => {
+    const s = summarizeMetalItems([
+      { ...valued("gold", 1200, 1000), pricedAtSpot: true },
+      { ...valued("gold", 0, null), marketValue: null, pricedAtSpot: false },
+    ]);
+    expect(s.totalMarketValue).toBe(1200);
+    expect(s.gold.marketValue).toBe(1200);
+    expect(s.gold.itemCount).toBe(2);
+    expect(s.unvaluedCount).toBe(1);
+    expect(s.pricedAtSpot).toBe(false);
+    expect(s.allocation.gold).toBe(100);
+  });
+
+  it("has no unvalued items when every item has a value", () => {
+    expect(summarizeMetalItems([valued("gold", 500, null)]).unvaluedCount).toBe(0);
   });
 
   it("has no cost or P/L when no item has a purchase price", () => {

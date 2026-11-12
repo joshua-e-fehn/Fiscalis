@@ -258,7 +258,8 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
       },
       { eurPerOunce: live.price, sourceTimestamp: live.timestamp },
       now,
-    ).value;
+      // Unknown (stale spot, no cost) adds nothing, as in the totals
+    ).value ?? 0;
   }
 
   /**

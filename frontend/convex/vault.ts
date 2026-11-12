@@ -7,7 +7,10 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
-import { resolvePremiums } from "../../services/finance/metals";
+import {
+  resolvePremiums,
+  vaultItemValuation,
+} from "../../services/finance/metals";
 import {
   normalizeCurrency,
   toBase,
@@ -27,6 +30,7 @@ import {
   type ToBaseAmount,
 } from "../../services/finance/metalsLedger";
 import { loadFxRates } from "./fxRates";
+import { loadSpotPrices } from "./lib/netWorth";
 import { scheduleSnapshot } from "./portfolioSnapshots";
 
 // ═══════════════════════════════════════════════════════════════
@@ -136,6 +140,42 @@ function readItemLedger(
     if (error instanceof LedgerError) return null;
     throw error;
   }
+}
+
+/**
+ * An item as the vault pages read it: catalog data, its replayed ledger and
+ * its EUR valuation at the spot mirror (vaultItemValuation, the valuation
+ * net worth uses), with the spot price it was valued at so the client can
+ * show it in another currency (convertAtSpotRates).
+ */
+async function vaultItemView(
+  ctx: QueryCtx,
+  item: VaultItemDoc,
+  toBaseAmount: ToBaseAmount,
+  spotByMetal: Awaited<ReturnType<typeof loadSpotPrices>>,
+  now: number,
+) {
+  const catalogItem = item.catalogItemId
+    ? await ctx.db.get(item.catalogItemId)
+    : null;
+  const ledger = readItemLedger(
+    item,
+    await itemTransactions(ctx, item._id),
+    toBaseAmount,
+  );
+  const spot = spotByMetal.get(item.metalType);
+  return {
+    ...item,
+    catalogItem,
+    displayName: item.customName || catalogItem?.name || "Unknown Item",
+    ledger,
+    valuation: {
+      ...vaultItemValuation(item, ledger, spot, now, toBaseAmount),
+      spot: spot
+        ? { eurPerOunce: spot.eurPerOunce, sourceTimestamp: spot.sourceTimestamp }
+        : null,
+    },
+  };
 }
 
 /** A LedgerError as an error the client can show; anything else rethrown. */
@@ -295,26 +335,17 @@ export const getUserVaultItems = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
+    const spotByMetal = await loadSpotPrices(ctx);
+    const now = Date.now();
 
-    // Enrich with catalog data and the item's replayed ledger (quantity over
-    // time, average cost, realized P/L; null when it cannot be replayed)
-    const enrichedItems = await Promise.all(
-      items.map(async (item) => {
-        let catalogItem = null;
-        if (item.catalogItemId) {
-          catalogItem = await ctx.db.get(item.catalogItemId);
-        }
-        const txs = await itemTransactions(ctx, item._id);
-        return {
-          ...item,
-          catalogItem,
-          displayName: item.customName || catalogItem?.name || "Unknown Item",
-          ledger: readItemLedger(item, txs, toBaseAmount),
-        };
-      }),
+    // Enrich with catalog data, the item's replayed ledger (quantity over
+    // time, average cost, realized P/L; null when it cannot be replayed) and
+    // its server valuation
+    return await Promise.all(
+      items.map((item) =>
+        vaultItemView(ctx, item, toBaseAmount, spotByMetal, now),
+      ),
     );
-
-    return enrichedItems;
   },
 });
 
@@ -352,22 +383,13 @@ export const getVaultItem = query({
     if (!userId) return null;
     const item = await getOwnedDoc(ctx, userId, args.vaultItemId);
     if (!item) return null;
-
-    let catalogItem = null;
-    if (item.catalogItemId) {
-      catalogItem = await ctx.db.get(item.catalogItemId);
-    }
-
-    return {
-      ...item,
-      catalogItem,
-      displayName: item.customName || catalogItem?.name || "Unknown Item",
-      ledger: readItemLedger(
-        item,
-        await itemTransactions(ctx, item._id),
-        toBaseAmountWith(await loadFxRates(ctx)),
-      ),
-    };
+    return await vaultItemView(
+      ctx,
+      item,
+      toBaseAmountWith(await loadFxRates(ctx)),
+      await loadSpotPrices(ctx),
+      Date.now(),
+    );
   },
 });
 

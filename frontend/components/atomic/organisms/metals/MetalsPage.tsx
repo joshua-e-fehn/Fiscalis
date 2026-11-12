@@ -645,6 +645,13 @@ export function MetalsPage({
               {summary?.pricedAtSpot && pricesAsOf !== null
                 ? `Spot prices as of ${new Date(pricesAsOf).toLocaleString("de-DE")}`
                 : "Spot prices unavailable or out of date: holdings are valued at cost"}
+              {/* Neither a spot nor a purchase price (M-C6) */}
+              {(summary?.unvaluedCount ?? 0) > 0 &&
+                ` · ${summary!.unvaluedCount} ${
+                  summary!.unvaluedCount === 1 ? "item has" : "items have"
+                } no price or cost and ${
+                  summary!.unvaluedCount === 1 ? "shows" : "show"
+                } "—" (counted as 0)`}
             </p>
           )}
 

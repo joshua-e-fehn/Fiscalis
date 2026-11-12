@@ -107,7 +107,7 @@ export interface MetalItemWithValuation {
   // Computed valuations (in user's preferred currency)
   currentBuyPrice: number; // What you'd pay to buy this item today (spot + buy premium)
   currentSellPrice: number; // What you'd receive selling today (spot + sell premium)
-  marketValue: number; // Current value at sell price (what you could liquidate for)
+  marketValue: number | null; // Value at sell price (what you could liquidate for); null when unknown (no spot, no cost)
   meltValue: number; // Pure metal value at spot price (no premium)
   buyPremiumValue: number; // Premium portion of buy price
   sellPremiumValue: number; // Premium/discount portion of sell price

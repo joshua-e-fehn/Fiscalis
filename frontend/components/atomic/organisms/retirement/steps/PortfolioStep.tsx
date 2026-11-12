@@ -138,9 +138,13 @@ export function PortfolioStep({
 					<span className="font-medium text-foreground">
 						{formatCurrency(results.residenceMortgage.balance, currency)}
 					</span>{" "}
-					mortgage on your home is not subtracted here: its{" "}
-					{formatCurrency(results.residenceMortgage.monthlyPayment, currency)}/mo
+					mortgage on your home is not subtracted here: its
+					{results.residenceMortgage.monthlyPayment > 0
+						? ` ${formatCurrency(results.residenceMortgage.monthlyPayment, currency)}/mo`
+						: ""}{" "}
 					repayments come from your income until retirement.
+					{!results.residenceMortgage.balanceProjected &&
+						" Without its rate and repayment, the full balance counts as still owed when you retire."}
 				</Note>
 			)}
 

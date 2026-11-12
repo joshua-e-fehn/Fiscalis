@@ -6,12 +6,17 @@ import { Label } from "@/components/ui/shadcn/label";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/shadcn/select";
 import { Switch } from "@/components/ui/shadcn/switch";
-import { useRetirementMortgageCandidates } from "@/hooks/convex/retirement";
+import {
+	useRetirementMortgageAccounts,
+	useRetirementMortgageCandidates,
+} from "@/hooks/convex/retirement";
 import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import { validateRetirementInputs } from "@/lib/types/retirement";
 import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
@@ -20,6 +25,9 @@ import type { RetirementStepProps } from "./types";
 
 /** Select value for "no residence mortgage linked". */
 const NO_LOAN = "none";
+/** Select value prefixes: a tracked loan or a bank (Plaid) mortgage account. */
+const LOAN_PREFIX = "loan:";
+const ACCOUNT_PREFIX = "account:";
 
 export function HousingStep({
 	data,
@@ -29,8 +37,22 @@ export function HousingStep({
 	isSaving,
 }: RetirementStepProps) {
 	const currency = useBaseCurrency();
-	const equityError = validateRetirementInputs(data).fundableRealEstateEquity;
+	const errors = validateRetirementInputs(data);
+	const equityError = errors.fundableRealEstateEquity;
+	const mortgageError =
+		errors.primaryResidenceMortgageRate ??
+		errors.primaryResidenceMortgagePayment;
 	const loans = useRetirementMortgageCandidates();
+	const accounts = useRetirementMortgageAccounts();
+	const linkedAccount = data.primaryResidenceAccountId;
+	const selected = data.primaryResidenceLoanId
+		? `${LOAN_PREFIX}${data.primaryResidenceLoanId}`
+		: linkedAccount
+			? `${ACCOUNT_PREFIX}${linkedAccount}`
+			: NO_LOAN;
+	const hasTerms =
+		data.primaryResidenceMortgageRate !== undefined &&
+		(data.primaryResidenceMortgagePayment ?? 0) > 0;
 
 	return (
 		<RetirementStepShell
@@ -39,7 +61,7 @@ export function HousingStep({
 			description="Property is handled differently from investments — let's get it right."
 			onNext={onNext}
 			onBack={onBack}
-			nextDisabled={!!equityError}
+			nextDisabled={!!equityError || !!mortgageError}
 			isSaving={isSaving}
 		>
 			<div className="flex items-center justify-between rounded-lg border border-border p-4">
@@ -77,10 +99,22 @@ export function HousingStep({
 						<span className="font-normal text-muted-foreground">(optional)</span>
 					</Label>
 					<Select
-						value={data.primaryResidenceLoanId ?? NO_LOAN}
+						value={selected}
 						onValueChange={(value) =>
 							update({
-								primaryResidenceLoanId: value === NO_LOAN ? undefined : value,
+								primaryResidenceLoanId: value.startsWith(LOAN_PREFIX)
+									? value.slice(LOAN_PREFIX.length)
+									: undefined,
+								primaryResidenceAccountId: value.startsWith(ACCOUNT_PREFIX)
+									? value.slice(ACCOUNT_PREFIX.length)
+									: undefined,
+								// The rate and repayment belong to the linked account
+								...(value === selected
+									? {}
+									: {
+											primaryResidenceMortgageRate: undefined,
+											primaryResidenceMortgagePayment: undefined,
+										}),
 							})
 						}
 					>
@@ -89,11 +123,34 @@ export function HousingStep({
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value={NO_LOAN}>No mortgage / not tracked</SelectItem>
-							{loans?.map((loan) => (
-								<SelectItem key={loan._id} value={loan._id}>
-									{loan.name} — {formatCurrency(loan.currentBalance, currency)}
-								</SelectItem>
-							))}
+							{!!loans?.length && (
+								<SelectGroup>
+									<SelectLabel>Tracked loans</SelectLabel>
+									{loans.map((loan) => (
+										<SelectItem
+											key={loan._id}
+											value={`${LOAN_PREFIX}${loan._id}`}
+										>
+											{loan.name} —{" "}
+											{formatCurrency(loan.currentBalance, loan.currency)}
+										</SelectItem>
+									))}
+								</SelectGroup>
+							)}
+							{!!accounts?.length && (
+								<SelectGroup>
+									<SelectLabel>Bank mortgage accounts</SelectLabel>
+									{accounts.map((account) => (
+										<SelectItem
+											key={account._id}
+											value={`${ACCOUNT_PREFIX}${account._id}`}
+										>
+											{account.name} —{" "}
+											{formatCurrency(account.balance, currency)}
+										</SelectItem>
+									))}
+								</SelectGroup>
+							)}
 						</SelectContent>
 					</Select>
 					<p className="text-xs text-muted-foreground">
@@ -101,6 +158,70 @@ export function HousingStep({
 						the repayments from your income until retirement, like rent. Any
 						balance still owed when you retire is added to your target.
 					</p>
+				</div>
+			)}
+
+			{data.ownsPrimaryResidence && linkedAccount && (
+				<div className="space-y-3 rounded-lg border border-border p-4">
+					<p className="text-sm text-muted-foreground">
+						Your bank reports only the balance. Add the interest rate and
+						monthly repayment to project what is still owed when you retire.
+					</p>
+					<div className="grid gap-3 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="mortgageRate">Interest rate (% a year)</Label>
+							<Input
+								id="mortgageRate"
+								type="number"
+								min={0}
+								step={0.1}
+								value={
+									data.primaryResidenceMortgageRate === undefined
+										? ""
+										: Math.round(data.primaryResidenceMortgageRate * 10000) /
+											100
+								}
+								onChange={(e) =>
+									update({
+										primaryResidenceMortgageRate:
+											e.target.value === ""
+												? undefined
+												: Number(e.target.value) / 100,
+									})
+								}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="mortgagePayment">
+								Monthly repayment ({currencySymbols[currency].trim()})
+							</Label>
+							<Input
+								id="mortgagePayment"
+								type="number"
+								min={0}
+								step={50}
+								value={data.primaryResidenceMortgagePayment ?? ""}
+								onChange={(e) =>
+									update({
+										primaryResidenceMortgagePayment:
+											e.target.value === ""
+												? undefined
+												: Number(e.target.value),
+									})
+								}
+							/>
+						</div>
+					</div>
+					{mortgageError ? (
+						<p className="text-xs text-destructive">{mortgageError}.</p>
+					) : (
+						!hasTerms && (
+							<p className="text-xs text-muted-foreground">
+								Without both, the full current balance counts as still owed at
+								retirement.
+							</p>
+						)
+					)}
 				</div>
 			)}
 

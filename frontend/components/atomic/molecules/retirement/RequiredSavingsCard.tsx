@@ -85,6 +85,19 @@ export function RequiredSavingsCard({ results, className }: Props) {
 					</div>
 				)}
 				{results.residenceMortgage &&
+					!results.residenceMortgage.balanceProjected && (
+						<p className="mt-3 text-xs text-muted-foreground">
+							Your home mortgage&apos;s full balance of{" "}
+							{formatCurrency(
+								results.residenceMortgage.balanceAtRetirement,
+								currency,
+							)}{" "}
+							counts as still owed at retirement and is part of your target:
+							add its rate and repayment in the plan to project it.
+						</p>
+					)}
+				{results.residenceMortgage &&
+					results.residenceMortgage.balanceProjected &&
 					results.residenceMortgage.monthlyPayment > 0 && (
 						<p className="mt-3 text-xs text-muted-foreground">
 							On top of this, your home mortgage repayments of{" "}

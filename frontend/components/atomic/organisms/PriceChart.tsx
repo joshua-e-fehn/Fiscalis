@@ -21,6 +21,10 @@ import { MetalChartData } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { TimeRange } from "@/../services/finance/financeService";
 import { formatDate } from "@/lib/utils/date";
+import {
+  isRecordedClose,
+  percentFromFirstClose,
+} from "@/../services/finance/metals";
 
 interface PriceChartProps {
   chartData: MetalChartData[];
@@ -31,7 +35,7 @@ interface PriceChartProps {
 }
 
 /** A missing close (null, or 0 from the API) is a gap, never a price */
-const hasPrice = (d: MetalChartData) => d.price !== null && d.price > 0;
+const hasPrice = (d: MetalChartData) => isRecordedClose(d.price);
 
 // Custom tooltip content; a gap says so instead of showing a price
 const CustomTooltipContent = ({
@@ -195,22 +199,22 @@ export const CompareChart = memo(function CompareChart({
 
     if (!baseDataset.data || baseDataset.data.length === 0) return [];
 
-    // Create normalized data points
+    // Each metal as % change from its first recorded close; a gap leaves
+    // the key unset so that line breaks, as in PriceChart
+    const normalized = datasets.map((dataset) => ({
+      metal: dataset.metal,
+      percents: percentFromFirstClose(dataset.data ?? []),
+    }));
+
     return baseDataset.data.map((point, index) => {
       const result: Record<string, any> = {
         date: point.date,
       };
 
-      for (const dataset of datasets) {
-        if (!dataset.data || dataset.data.length === 0) continue;
-
-        const startPrice = dataset.data[0]?.price;
-        const currentPoint = dataset.data[index];
-
-        if (startPrice && currentPoint?.price) {
-          const percentChange =
-            ((currentPoint.price - startPrice) / startPrice) * 100;
-          result[dataset.metal] = percentChange;
+      for (const { metal, percents } of normalized) {
+        const percentChange = percents[index];
+        if (percentChange !== null && percentChange !== undefined) {
+          result[metal] = percentChange;
         }
       }
 

@@ -13,6 +13,7 @@ import {
 } from "@/components/atomic/atoms/metals";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -23,19 +24,6 @@ interface TotalValueCardProps {
   currency?: MetalsCurrency;
   isLoading?: boolean;
   className?: string;
-}
-
-function formatCurrency(value: number, currency: MetalsCurrency): string {
-  const currencyMap: Record<MetalsCurrency, string> = {
-    eur: "EUR",
-    usd: "USD",
-    chf: "CHF",
-  };
-  return new Intl.NumberFormat("de-CH", {
-    style: "currency",
-    currency: currencyMap[currency],
-    minimumFractionDigits: 2,
-  }).format(value);
 }
 
 export function TotalValueCard({

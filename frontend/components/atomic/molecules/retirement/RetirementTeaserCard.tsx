@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import {
 	useRetirementPlan,
 	useRetirementResults,
 } from "@/hooks/convex/retirement";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import {
 	isOnTrack,
 	type RetirementResults,
@@ -20,6 +22,7 @@ import { formatCurrency, formatRate } from "@/lib/utils/currency";
 function activePlanSummary(
 	results: RetirementResults,
 	needsReview: boolean,
+	currency: InvestmentCurrency,
 ): string {
 	if (needsReview) {
 		return "Your plan needs a quick review — open it to adjust your retirement age or assumptions.";
@@ -30,7 +33,7 @@ function activePlanSummary(
 	if (results.hasNetDebt) {
 		return "Your liabilities currently exceed your assets — paying them down is the first step.";
 	}
-	const target = formatCurrency(results.targetPortfolio, "eur", {
+	const target = formatCurrency(results.targetPortfolio, currency, {
 		compact: true,
 	});
 	// Same rule as the plan page: on track only if both scenarios are
@@ -38,7 +41,7 @@ function activePlanSummary(
 		return `You're on track for your ${target} target.`;
 	}
 	if (results.optimistic.onTrack) {
-		return `On track at the expected ${formatRate(results.optimistic.baseReturn)} return; saving ${formatCurrency(results.conservative.monthlyContribution, "eur")}/mo covers the conservative case.`;
+		return `On track at the expected ${formatRate(results.optimistic.baseReturn)} return; saving ${formatCurrency(results.conservative.monthlyContribution, currency)}/mo covers the conservative case.`;
 	}
 	return `You're ${(results.progressPct * 100).toFixed(0)}% of the way to your ${target} target.`;
 }
@@ -48,6 +51,7 @@ function activePlanSummary(
  * has no plan, a draft in progress, or a saved (active) plan.
  */
 export function RetirementTeaserCard() {
+	const currency = useBaseCurrency();
 	const plan = useRetirementPlan();
 	const results = useRetirementResults();
 
@@ -74,7 +78,7 @@ export function RetirementTeaserCard() {
 
 	const description =
 		isActive && results
-			? activePlanSummary(results, needsReview)
+			? activePlanSummary(results, needsReview, currency)
 			: isDraft
 				? "Pick up where you left off and see your number."
 				: "Turn your retirement goal into a monthly savings plan in a couple of minutes.";

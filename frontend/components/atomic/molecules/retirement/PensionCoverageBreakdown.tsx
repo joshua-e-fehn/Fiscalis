@@ -6,6 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import { formatYears, type RetirementResults } from "@/lib/types/retirement";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -20,6 +21,7 @@ interface Props {
  * entered in today's money and inflated to the retirement date.
  */
 export function PensionCoverageBreakdown({ results, className }: Props) {
+	const currency = useBaseCurrency();
 	const expense = results.expenseFutureMonthly;
 	const pension = Math.min(results.pensionFutureMonthly, expense);
 	const portfolio = results.gapMonthly;
@@ -38,11 +40,11 @@ export function PensionCoverageBreakdown({ results, className }: Props) {
 				<p className="text-sm text-muted-foreground">
 					Your{" "}
 					<span className="font-medium text-foreground">
-						{formatCurrency(results.expenseTodayMonthly, "eur")}/mo
+						{formatCurrency(results.expenseTodayMonthly, currency)}/mo
 					</span>{" "}
 					of expenses today grows to{" "}
 					<span className="font-medium text-foreground">
-						{formatCurrency(expense, "eur")}/mo
+						{formatCurrency(expense, currency)}/mo
 					</span>{" "}
 					in {formatYears(results.yearsToRetirement)} after inflation.
 					{results.pensionTodayMonthly > 0 && (
@@ -50,14 +52,14 @@ export function PensionCoverageBreakdown({ results, className }: Props) {
 							{" "}
 							Your pensions of{" "}
 							<span className="font-medium text-foreground">
-								{formatCurrency(results.pensionTodayMonthly, "eur")}/mo
+								{formatCurrency(results.pensionTodayMonthly, currency)}/mo
 							</span>{" "}
 							in today&apos;s money
 							{results.pensionDeductionsMonthly > 0 &&
-								` (after ${formatCurrency(results.pensionDeductionsMonthly, "eur")}/mo tax & health insurance)`}{" "}
+								` (after ${formatCurrency(results.pensionDeductionsMonthly, currency)}/mo tax & health insurance)`}{" "}
 							come to{" "}
 							<span className="font-medium text-foreground">
-								{formatCurrency(results.pensionFutureMonthly, "eur")}/mo
+								{formatCurrency(results.pensionFutureMonthly, currency)}/mo
 							</span>
 							.
 						</>
@@ -84,12 +86,12 @@ export function PensionCoverageBreakdown({ results, className }: Props) {
 					<Legend
 						color="bg-emerald-500"
 						label="Covered by pensions"
-						value={formatCurrency(pension, "eur")}
+						value={formatCurrency(pension, currency)}
 					/>
 					<Legend
 						color="bg-primary"
 						label="Funded by portfolio"
-						value={formatCurrency(portfolio, "eur")}
+						value={formatCurrency(portfolio, currency)}
 					/>
 				</div>
 			</CardContent>

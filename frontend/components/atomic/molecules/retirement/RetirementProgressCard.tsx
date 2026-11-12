@@ -7,6 +7,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import { formatYears, type RetirementResults } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRate } from "@/lib/utils/currency";
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export function RetirementProgressCard({ results, className }: Props) {
+	const currency = useBaseCurrency();
 	// Headline progress is the conservative scenario's (the one isOnTrack also
 	// requires). Never negative but may exceed 1 (ahead of the target).
 	const rawPct = results.progressPct;
@@ -40,7 +42,7 @@ export function RetirementProgressCard({ results, className }: Props) {
 							Target portfolio needed
 						</p>
 						<p className="text-3xl font-bold">
-							{hasTarget ? formatCurrency(results.targetPortfolio, "eur") : "—"}
+							{hasTarget ? formatCurrency(results.targetPortfolio, currency) : "—"}
 						</p>
 					</div>
 					<div className="text-right">
@@ -72,11 +74,11 @@ export function RetirementProgressCard({ results, className }: Props) {
 						<p className="text-xs text-muted-foreground">
 							Your current{" "}
 							<span className="font-medium text-foreground">
-								{formatCurrency(results.investableNow, "eur")}
+								{formatCurrency(results.investableNow, currency)}
 							</span>{" "}
 							grows to{" "}
 							<span className="font-medium text-foreground">
-								{formatCurrency(results.conservative.projectedFromCurrent, "eur")}
+								{formatCurrency(results.conservative.projectedFromCurrent, currency)}
 							</span>{" "}
 							by retirement at a cautious{" "}
 							{formatRate(results.conservative.baseReturn)} per year — that&apos;s{" "}
@@ -93,8 +95,8 @@ export function RetirementProgressCard({ results, className }: Props) {
 						<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
 						<span>
 							Your liabilities exceed your assets by{" "}
-							{formatCurrency(-results.fundableNow, "eur")}. Your plan starts
-							from €0, so paying down that debt comes on top of the monthly
+							{formatCurrency(-results.fundableNow, currency)}. Your plan starts
+							from {formatCurrency(0, currency, { compact: true })}, so paying down that debt comes on top of the monthly
 							savings we calculate.
 						</span>
 					</div>

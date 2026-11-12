@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { gramsToTroyOunces } from "@/convex/lib/priceCalculations";
+import { gramsToTroyOunces } from "@/../services/finance/metals";
 
 type WeightUnit = "g" | "oz" | "kg";
 

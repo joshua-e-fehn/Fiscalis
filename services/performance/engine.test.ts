@@ -580,6 +580,20 @@ describe("live end (PF-05)", () => {
     expect(r.metrics.firstPointTimestamp).toBe(NOW);
   });
 
+  it("ends at a zero live value after a funded history", () => {
+    const r = ytd(snaps, { value: 0, costBasis: 0 });
+    expect(r.metrics.startValue).toBe(9_000);
+    expect(r.metrics.endValue).toBe(0);
+    expect(r.metrics.absoluteChange).toBe(-9_000);
+    expect(r.dataPoints.at(-1)!.timestamp).toBe(NOW);
+    expect(r.dataPoints.at(-1)!.value).toBe(0);
+  });
+
+  it("plots nothing for a zero live value without history", () => {
+    expect(ytd([], { value: 0, costBasis: null }).dataPoints).toEqual([]);
+    expect(ytd([], { value: 0, costBasis: 0 }).dataPoints).toEqual([]);
+  });
+
   it("withLiveEnd replaces the points at and after the range end", () => {
     const points = [
       { timestamp: 10, date: "", value: 1, costBasis: null, source: "snapshot" as const, confidence: 1 },
@@ -622,6 +636,35 @@ describe("partial snapshots (NW-11)", () => {
   it("does not flag a partial snapshot the measured figures skip", () => {
     expect(ytd([start, { ...middle, partial: true }, end]).partial).toBe(false);
     expect(ytd([start, middle, end]).partial).toBe(false);
+  });
+
+  it("flags an interpolated start only when the partial snapshot's value enters it", () => {
+    // The week starts at NOW - 7d, between a complete row at -8.5d and a
+    // partial one at -6d
+    const row = (days: number, value: number, netFlow = 0): SnapshotData => ({
+      timestamp: NOW - days * DAY,
+      date: "",
+      totalAssets: value,
+      totalLiabilities: 0,
+      netWorth: value,
+      categoryBreakdown: [{ category: "equities", value, netFlow }],
+    });
+    const week = (partialRow: SnapshotData) =>
+      calculateDiscretePerformance(
+        {
+          snapshots: [row(8.5, 1_000), { ...partialRow, partial: true }, row(0, 1_700)],
+          metric: { kind: "category", category: "equities" },
+        },
+        { timeRange: "Week" },
+      ).metrics;
+    // A flow at the partial row: the start holds the complete row's value
+    const held = week(row(6, 1_600, 500));
+    expect(held.startValue).toBe(1_000);
+    expect(held.partial).toBe(false);
+    // No flow: the start is interpolated toward the partial row
+    const interpolated = week(row(6, 1_600));
+    expect(interpolated.startValue).toBe(1_360);
+    expect(interpolated.partial).toBe(true);
   });
 });
 

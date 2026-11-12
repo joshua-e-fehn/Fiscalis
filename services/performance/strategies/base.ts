@@ -194,8 +194,11 @@ export function changePercent(
  * A series ended at the context's live value: every point at or after the
  * range end is replaced by one observed point at the range end holding the
  * live value and cost line. Without a live value the series is returned
- * as is. An empty series becomes that one point: the live figure is known
- * even before the first snapshot.
+ * as is. A zero live value is a real end (everything sold, debt repaid)
+ * and still replaces the last snapshot's. An empty series becomes that one
+ * point (the live figure is known even before the first snapshot) unless
+ * the live value and cost line are zero too: then nothing has ever been
+ * held and there is nothing to plot.
  */
 export function withLiveEnd(
   points: PerformanceDataPoint[],
@@ -203,6 +206,9 @@ export function withLiveEnd(
 ): PerformanceDataPoint[] {
   const live = context.liveEnd;
   if (!live) return points;
+  if (points.length === 0 && live.value === 0 && !live.costBasis) {
+    return points;
+  }
   const end = context.endTimestamp;
   return [
     ...points.filter((p) => p.timestamp < end),

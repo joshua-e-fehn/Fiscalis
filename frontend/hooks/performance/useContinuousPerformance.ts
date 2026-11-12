@@ -32,7 +32,6 @@ import { resolvePremiums } from "@/../services/finance/metals";
 import { ledgerHoldings } from "@/../services/finance/metalsLedger";
 
 import { getSpotPrice, useMetalPriceHistory, useMetalsPrices } from "@/hooks/metals";
-import type { MetalCurrency, MetalType } from "@/lib/types/metals";
 import type { MetalsCurrency, MetalsType } from "@/lib/types/metals-extended";
 
 const METALS: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
@@ -67,12 +66,11 @@ export function useVaultPerformanceInput(
 
   // One shared history per metal (fixed hook order); disabled for metals
   // not held
-  const metalCurrency = currency as MetalCurrency;
   const history = (metal: MetalsType) =>
     [
-      metal as MetalType,
+      metal,
       timeRange,
-      metalCurrency,
+      currency,
       { lookbackMs: PRICE_LOOKBACK_MS, enabled: enabled && held.has(metal) },
     ] as const;
   const series: Record<MetalsType, ReturnType<typeof useMetalPriceHistory>> = {

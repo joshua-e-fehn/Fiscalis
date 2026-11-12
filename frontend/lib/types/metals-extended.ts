@@ -2,12 +2,15 @@
  * Types for precious metals tracking
  */
 
+import type { MetalCurrency, MetalType } from "./metals";
+
 // ═══════════════════════════════════════════════════════════════
 // Price Types (from Supabase via /api/metals/*)
 // ═══════════════════════════════════════════════════════════════
 
-export type MetalsCurrency = "eur" | "usd" | "chf";
-export type MetalsType = "gold" | "silver" | "platinum" | "palladium";
+/** Aliases of the one definition in lib/types/metals.ts */
+export type MetalsCurrency = MetalCurrency;
+export type MetalsType = MetalType;
 
 /** Purity levels for gold (in per-mille) */
 export type GoldPurity = 333 | 585 | 750 | 833 | 900 | 916 | 999;

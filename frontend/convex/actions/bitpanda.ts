@@ -22,6 +22,7 @@ import {
   getClassificationFields,
 } from "../lib/classification/engine";
 import { scheduledSyncEnabled } from "../lib/scheduledSync";
+import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -193,20 +194,19 @@ export const syncAllConnections = action({
       { userId },
     );
 
-    let failed = 0;
+    let synced = 0;
     for (const connection of connections) {
       try {
         const holdingsSync: { ok: boolean } = await ctx.runAction(
           internal.actions.bitpanda.syncConnectionInternal,
           { userId, connectionId: connection._id },
         );
-        if (!holdingsSync.ok) failed++;
+        if (holdingsSync.ok) synced++;
         await ctx.runAction(
           internal.actions.bitpanda.syncTransactionsInternal,
           { userId, connectionId: connection._id },
         );
       } catch (error) {
-        failed++;
         console.error(
           `Error syncing Bitpanda connection ${connection._id}:`,
           error,
@@ -214,12 +214,16 @@ export const syncAllConnections = action({
       }
     }
 
-    // Snapshot only when every connection's holdings synced
-    if (!args.skipSnapshot && failed === 0) {
+    // No snapshot when every connection failed; tagged partial when only
+    // some did
+    const failed = connections.length - synced;
+    const snapshot = providerSyncSnapshot(synced, failed);
+    if (!args.skipSnapshot && snapshot.take) {
       try {
         await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
           userId,
           source: "bitpanda",
+          partial: snapshot.partial,
         });
       } catch (snapshotError) {
         console.error("Failed to take portfolio snapshot:", snapshotError);
@@ -291,6 +295,8 @@ export const syncConnectionInternal = internalAction({
           classificationRule: fields.classificationRule,
           // Holdings are already valued in EUR by the normalizer. Fiat
           // holdings retain the actual native→EUR rate used for traceability.
+          // syncHoldings swaps in the last known price where the ticker had
+          // none (holdingPrice.ts).
           valueInBaseCurrency: h.marketValue,
           exchangeRateUsed:
             h.assetType === "fiat" ? h.currentPrice : 1,

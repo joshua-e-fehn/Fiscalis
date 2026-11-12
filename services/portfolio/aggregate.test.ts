@@ -6,8 +6,10 @@ import {
   isFlowAdjustedCategory,
   liabilityCountsLabel,
   categoryFlowFromHoldings,
+  collapseIntradaySnapshots,
   holdingNetFlow,
   snapshotCategoryFlow,
+  providerSyncSnapshot,
   snapshotPartial,
   withoutSnapshotHoldings,
   HOLDING_CATEGORIES,
@@ -453,6 +455,70 @@ describe("loanMonthlyPaymentInBase", () => {
     expect(
       loanMonthlyPaymentInBase({ ...loan, status: "paid_off", paymentFrequency: "MONTHLY" }, rates),
     ).toBe(0);
+  });
+});
+
+describe("collapseIntradaySnapshots", () => {
+  const row = (id: string, userId: string, date: string, timestamp: number) => ({
+    id,
+    userId,
+    date,
+    timestamp,
+  });
+
+  it("keeps the newest row per user per day and drops the rest", () => {
+    const rows = [
+      row("a1", "u1", "2026-11-10", 1_000),
+      row("a2", "u1", "2026-11-10", 3_000),
+      row("a3", "u1", "2026-11-10", 2_000),
+      row("b1", "u1", "2026-11-11", 5_000),
+      row("c1", "u2", "2026-11-10", 1_500),
+      row("c2", "u2", "2026-11-10", 900),
+    ];
+    const { keep, drop } = collapseIntradaySnapshots(rows);
+    expect(keep.map((r) => r.id)).toEqual(["a2", "b1", "c1"]);
+    expect(drop.map((r) => r.id)).toEqual(["a1", "a3", "c2"]);
+  });
+
+  it("keeps the later row on a timestamp tie", () => {
+    const { keep, drop } = collapseIntradaySnapshots([
+      row("x", "u1", "2026-11-10", 1_000),
+      row("y", "u1", "2026-11-10", 1_000),
+    ]);
+    expect(keep.map((r) => r.id)).toEqual(["y"]);
+    expect(drop.map((r) => r.id)).toEqual(["x"]);
+  });
+
+  it("drops nothing when every day has one row", () => {
+    const rows = [
+      row("a", "u1", "2026-11-10", 1_000),
+      row("b", "u1", "2026-11-11", 2_000),
+    ];
+    expect(collapseIntradaySnapshots(rows)).toEqual({ keep: rows, drop: [] });
+  });
+});
+
+describe("providerSyncSnapshot", () => {
+  it("takes an untagged snapshot when nothing failed", () => {
+    expect(providerSyncSnapshot(3, 0)).toEqual({
+      take: true,
+      partial: undefined,
+    });
+    expect(providerSyncSnapshot(0, 0)).toEqual({
+      take: true,
+      partial: undefined,
+    });
+  });
+
+  it("tags the snapshot partial when only some items failed", () => {
+    expect(providerSyncSnapshot(2, 1)).toEqual({ take: true, partial: true });
+  });
+
+  it("takes no snapshot when every item failed", () => {
+    expect(providerSyncSnapshot(0, 2)).toEqual({
+      take: false,
+      partial: undefined,
+    });
   });
 });
 

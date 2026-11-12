@@ -6,6 +6,11 @@ import {
   internalMutation,
 } from "./_generated/server";
 import { getBitpandaHoldingIdentityKeys } from "./lib/bitpandaIdentity";
+import {
+  resolveHoldingPrice,
+  type PreviousHoldingPrice,
+} from "../../services/bitpanda/holdingPrice";
+import { parseClassificationOverride } from "../lib/types/classification";
 
 // ═══════════════════════════════════════════════════════════════
 // CONNECTION QUERIES
@@ -270,7 +275,9 @@ const holdingValidator = v.object({
 
 /**
  * Replace a connection's holdings, preserving any per-holding user overrides
- * (matched by assetType + symbol) across the re-sync.
+ * (matched by assetType + symbol) across the re-sync. A holding the ticker
+ * did not price keeps the stored row's last price, flagged stale
+ * (services/bitpanda/holdingPrice.ts resolveHoldingPrice).
  */
 export const syncHoldings = internalMutation({
   args: {
@@ -293,7 +300,15 @@ export const syncHoldings = internalMutation({
       string,
       { category?: string; subcategory?: string }
     >();
+    const previousPrices = new Map<string, PreviousHoldingPrice>();
     for (const h of existing) {
+      for (const key of getBitpandaHoldingIdentityKeys(h.assetType, h.symbol)) {
+        previousPrices.set(key, {
+          currentPrice: h.currentPrice,
+          // Rows stored before priceAsOf were priced by the sync that wrote them
+          priceAsOf: h.priceAsOf ?? h.lastSyncAt ?? h.createdAt,
+        });
+      }
       if (h.userCategoryOverride || h.userSubcategoryOverride) {
         for (const key of getBitpandaHoldingIdentityKeys(
           h.assetType,
@@ -309,16 +324,37 @@ export const syncHoldings = internalMutation({
     }
 
     for (const holding of args.holdings) {
-      const override = getBitpandaHoldingIdentityKeys(
+      const identityKeys = getBitpandaHoldingIdentityKeys(
         holding.assetType,
         holding.symbol,
-      )
+      );
+      const override = identityKeys
         .map((key) => overrides.get(key))
         .find((value) => value !== undefined);
+      const price = resolveHoldingPrice({
+        quantity: holding.quantity,
+        livePrice: holding.currentPrice,
+        previous: identityKeys
+          .map((key) => previousPrices.get(key))
+          .find((value) => value !== undefined),
+        now,
+      });
       await ctx.db.insert("bitpandaHoldings", {
         userId: args.userId,
         connectionId: args.connectionId,
         ...holding,
+        currentPrice: price.currentPrice,
+        marketValue: price.marketValue,
+        valueInBaseCurrency: price.marketValue,
+        priceStatus: price.priceStatus,
+        priceAsOf: price.priceAsOf,
+        // A fiat holding's price is its EUR rate
+        ...(holding.assetType === "fiat"
+          ? {
+              exchangeRateUsed: price.currentPrice,
+              exchangeRateTimestamp: price.priceAsOf,
+            }
+          : {}),
         // Re-apply preserved user overrides
         userCategoryOverride: override?.category,
         userSubcategoryOverride: override?.subcategory,
@@ -405,6 +441,9 @@ export const scheduledSyncAll = internalMutation({
 
 /**
  * Set or clear a user's manual category override for a single holding.
+ * An override is checked against the taxonomy (parseClassificationOverride,
+ * as in classification.ts); a side left out keeps the holding's current
+ * value, which must then still fit the other side.
  */
 export const setUserOverride = mutation({
   args: {
@@ -421,14 +460,26 @@ export const setUserOverride = mutation({
       throw new Error("Holding not found or unauthorized");
     }
 
-    const hasOverride = Boolean(args.category || args.subcategory);
+    if (!args.category && !args.subcategory) {
+      await ctx.db.patch(args.holdingId, {
+        userCategoryOverride: undefined,
+        userSubcategoryOverride: undefined,
+        classificationSource: "auto",
+      });
+      return { success: true };
+    }
+
+    const { category, subcategory } = parseClassificationOverride(
+      args.category || holding.investmentCategory || "",
+      args.subcategory || holding.investmentSubcategory || "",
+    );
 
     await ctx.db.patch(args.holdingId, {
-      userCategoryOverride: args.category,
-      userSubcategoryOverride: args.subcategory,
-      investmentCategory: args.category ?? holding.investmentCategory,
-      investmentSubcategory: args.subcategory ?? holding.investmentSubcategory,
-      classificationSource: hasOverride ? "user_override" : "auto",
+      userCategoryOverride: category,
+      userSubcategoryOverride: subcategory,
+      investmentCategory: category,
+      investmentSubcategory: subcategory,
+      classificationSource: "user_override",
     });
 
     return { success: true };

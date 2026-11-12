@@ -744,6 +744,13 @@ export default defineSchema({
 		currentPrice: v.optional(v.number()), // EUR price per unit
 		marketValue: v.optional(v.number()), // EUR value
 		currency: v.string(), // "EUR"
+		// live: this sync's ticker price; stale: an earlier sync's price kept
+		// when the ticker had none; missing: never priced (value unset)
+		// (services/bitpanda/holdingPrice.ts). Unset on rows synced before it.
+		priceStatus: v.optional(
+			v.union(v.literal("live"), v.literal("stale"), v.literal("missing")),
+		),
+		priceAsOf: v.optional(v.number()), // when currentPrice was priced (ms)
 
 		// Classification fields
 		investmentCategory: v.optional(v.string()),

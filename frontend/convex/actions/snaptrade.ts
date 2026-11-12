@@ -17,6 +17,7 @@ import {
   mapSnaptradeHoldings,
   snaptradeHoldingsCurrency,
 } from "../../../services/brokers/snaptradePosition";
+import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -347,11 +348,14 @@ export const handleCallback = action({
         connectionId,
       });
 
-      // Snapshot only data that synced completely
-      if (syncResult && syncResult.errors.length === 0) {
+      // No snapshot when nothing synced; tagged partial when only some
+      // accounts did
+      const snapshot = syncResult && snaptradeSyncSnapshot(syncResult);
+      if (snapshot?.take) {
         await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
           userId,
           source: "snaptrade-connect",
+          partial: snapshot.partial,
         });
       }
 
@@ -505,6 +509,11 @@ interface SnaptradeSyncResult {
   positionsProcessed: number;
   /** One user-facing message per connection or account that failed */
   errors: string[];
+}
+
+/** Whether a sync takes a snapshot: accounts stored vs failures reported. */
+function snaptradeSyncSnapshot(result: SnaptradeSyncResult) {
+  return providerSyncSnapshot(result.accountsProcessed, result.errors.length);
 }
 
 /** What a sync covers: every connection, one connection, or one account. */
@@ -946,8 +955,9 @@ export const updateAllBrokerLogos = action({
 
 
 /**
- * Sync all data for all connections. The snapshot is skipped when any
- * connection or account failed (its stored data is then a previous sync's).
+ * Sync all data for all connections. The snapshot is skipped when nothing
+ * synced and tagged partial when some connection or account failed (its
+ * stored data is then a previous sync's).
  * @param skipSnapshot - If true, don't create a snapshot (used by syncAll to avoid duplicates)
  */
 export const syncAll = action({
@@ -965,11 +975,13 @@ export const syncAll = action({
       return { success: true, message: "No SnapTrade user registered" };
     }
 
-    if (!args.skipSnapshot && result.errors.length === 0) {
+    const snapshot = snaptradeSyncSnapshot(result);
+    if (!args.skipSnapshot && snapshot.take) {
       try {
         await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
           userId,
           source: "snaptrade",
+          partial: snapshot.partial,
         });
       } catch (snapshotError) {
         console.error("Failed to take portfolio snapshot:", snapshotError);

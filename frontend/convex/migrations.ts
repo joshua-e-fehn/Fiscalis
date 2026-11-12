@@ -20,6 +20,7 @@ import {
   toBaseAmountWith,
 } from "./vault";
 import { ledgerOverCounts } from "../../services/finance/metalsLedger";
+import { collapseIntradaySnapshots as intradayRowsToDrop } from "../../services/portfolio/aggregate";
 import {
   bankAccountBaseFields,
   brokerAccountBaseFields,
@@ -676,5 +677,41 @@ export const backfillInterestOnlyScheduledPayments = internalMutation({
       }
     }
     return { scanned: loans.length, changed, skipped };
+  },
+});
+
+/**
+ * Migration: portfolio snapshots written before the one-row-a-day upsert
+ * (portfolioSnapshots.takeSnapshot) can hold several rows for one user and
+ * day. Keeps each day's newest row and deletes the others
+ * (services/portfolio/aggregate.ts collapseIntradaySnapshots). The kept row
+ * is the one takeSnapshot already reads as the previous day. Idempotent.
+ * NOT RUN: deletes rows, so it waits for the owner's OK. Dry run first, one
+ * user at a time if the table is large:
+ *   npx convex run migrations:collapseIntradaySnapshots '{"dryRun": true}'
+ */
+export const collapseIntradaySnapshots = internalMutation({
+  args: { dryRun: v.optional(v.boolean()), userId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = args.userId;
+    const rows = userId
+      ? await ctx.db
+          .query("portfolioSnapshots")
+          .withIndex("by_user_date", (q) => q.eq("userId", userId))
+          .collect()
+      : await ctx.db.query("portfolioSnapshots").collect();
+    const { drop } = intradayRowsToDrop(rows);
+    if (!args.dryRun) {
+      for (const row of drop) await ctx.db.delete(row._id);
+    }
+    return {
+      scanned: rows.length,
+      dropped: drop.map((row) => ({
+        snapshotId: row._id,
+        userId: row.userId,
+        date: row.date,
+        timestamp: row.timestamp,
+      })),
+    };
   },
 });

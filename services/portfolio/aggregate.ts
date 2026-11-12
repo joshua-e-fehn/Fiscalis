@@ -495,16 +495,56 @@ export function buildSnapshotBreakdown(
  *
  * Only a full sync of every provider knows whether the day's provider data
  * is complete, so it passes `requested` (true when a provider failed) and
- * that verdict replaces the row's. Any other write (a vault or loan change,
- * a single provider's sync) passes undefined and keeps the row's flag: a
- * provider that failed earlier today still holds its last successful sync's
- * values until a full sync refreshes it.
+ * that verdict replaces the row's. A single provider's sync passes true
+ * when only some of its items failed (providerSyncSnapshot) and otherwise
+ * undefined; any other write (a vault or loan change) passes undefined.
+ * Undefined keeps the row's flag: a provider that failed earlier today
+ * still holds its last successful sync's values until a full sync
+ * refreshes it.
  */
 export function snapshotPartial(
   existing: boolean | undefined,
   requested: boolean | undefined,
 ): true | undefined {
   return (requested ?? existing) ? true : undefined;
+}
+
+/**
+ * Whether one provider's sync takes today's snapshot, and its `partial`
+ * request (snapshotPartial). A sync where nothing failed takes it; one
+ * where only some items (bank items, connections, accounts) failed takes
+ * it tagged partial; one where everything failed takes none, since the
+ * provider's stored data is still the last successful sync's.
+ */
+export function providerSyncSnapshot(
+  synced: number,
+  failed: number,
+): { take: boolean; partial: true | undefined } {
+  if (failed === 0) return { take: true, partial: undefined };
+  if (synced > 0) return { take: true, partial: true };
+  return { take: false, partial: undefined };
+}
+
+/**
+ * One snapshot per user per day: the newest row of each day by timestamp
+ * (a tie goes to the later row in `rows`) is kept, the rest are dropped.
+ * takeSnapshot upserts one row a day; rows written before that policy can
+ * hold several, which double-count a day in the history.
+ */
+export function collapseIntradaySnapshots<
+  T extends { userId: string; date: string; timestamp: number },
+>(rows: readonly T[]): { keep: T[]; drop: T[] } {
+  const newest = new Map<string, T>();
+  for (const row of rows) {
+    const day = `${row.userId}|${row.date}`;
+    const current = newest.get(day);
+    if (!current || row.timestamp >= current.timestamp) newest.set(day, row);
+  }
+  const kept = new Set(newest.values());
+  return {
+    keep: rows.filter((row) => kept.has(row)),
+    drop: rows.filter((row) => !kept.has(row)),
+  };
 }
 
 /** A breakdown without the holdings kept for the next day's flows. */

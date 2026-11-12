@@ -27,9 +27,10 @@ import {
 import { Input } from "@/components/ui/shadcn/input";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Button } from "@/components/ui/shadcn/button";
-import { useCryptoPositions } from "@/hooks/convex/crypto";
+import { positionPriceIssue, useCryptoPositions } from "@/hooks/convex/crypto";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
+import { formatDate } from "@/lib/utils/date";
 import { subcategoryDisplayNames } from "@/lib/types/classification";
 import type { InvestmentSubcategory } from "@/lib/types/classification";
 
@@ -192,44 +193,69 @@ export function CryptoPositionsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPositions.map((position) => (
-                  <TableRow key={position._id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                          <Coins className="h-4 w-4 text-muted-foreground" />
+                {filteredPositions.map((position) => {
+                  const priceIssue = positionPriceIssue(position);
+                  return (
+                    <TableRow key={position._id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                            <Coins className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <span className="font-medium">
+                              {position.symbol}
+                            </span>
+                            {position.name && (
+                              <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                {position.name}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-medium">{position.symbol}</span>
-                          {position.name && (
-                            <p className="text-xs text-muted-foreground truncate max-w-[120px]">
-                              {position.name}
-                            </p>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-sm">
+                          {formatNumber(position.quantity)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="font-medium">
+                            {priceIssue?.status === "missing"
+                              ? "—"
+                              : formatCurrency(posValue(position), "eur")}
+                          </span>
+                          {priceIssue?.status === "missing" && (
+                            <Badge variant="outline" className="text-xs">
+                              Price unavailable
+                            </Badge>
+                          )}
+                          {priceIssue?.status === "stale" && (
+                            <Badge
+                              variant="outline"
+                              className="text-xs"
+                              title="Bitpanda had no current price; the last known price is shown"
+                            >
+                              {priceIssue.asOf !== undefined
+                                ? `Price as of ${formatDate(new Date(priceIssue.asOf))}`
+                                : "Last known price"}
+                            </Badge>
                           )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-sm">
-                        {formatNumber(position.quantity)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">
-                        {formatCurrency(posValue(position), "eur")}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="capitalize">
-                        {position.investmentSubcategory
-                          ? (subcategoryDisplayNames[
-                              position.investmentSubcategory as InvestmentSubcategory
-                            ] ?? position.investmentSubcategory)
-                          : "Crypto"}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="capitalize">
+                          {position.investmentSubcategory
+                            ? (subcategoryDisplayNames[
+                                position.investmentSubcategory as InvestmentSubcategory
+                              ] ?? position.investmentSubcategory)
+                            : "Crypto"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

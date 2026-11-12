@@ -322,15 +322,15 @@ frontend/
 
 ### Convex Queries (Real-time)
 
-| Module       | Key Functions                                              |
-| ------------ | ---------------------------------------------------------- |
-| `banking`    | `getItems`, `getAccounts`, `getTransactions`               |
-| `brokers`    | `getConnections`, `getAccounts`, `getPositions`            |
-| `crypto`     | `getConnections`, `getPositions`, `getTransactions`        |
-| `categories` | `getCashHoldings`, `getEquitiesHoldings`, `getLiabilities` |
-| `portfolio`  | `getPortfolioSummary`, `getAssetAllocation`                |
-| `loans`      | `getLoans`, `getLoanDetails`, `getScenarios`               |
-| `vault`      | `getVaultItems`, `getVaultTransactions`                    |
+| Module       | Key Functions                                         |
+| ------------ | ----------------------------------------------------- |
+| `banking`    | `getItems`, `getAccounts`, `getTransactions`          |
+| `brokers`    | `getConnections`, `getAccounts`, `getPositions`       |
+| `bitpanda`   | `getConnections`, `getHoldings`, `getTransactions`    |
+| `categories` | `getCashHoldings`, `getEquities`, `getLiabilities`    |
+| `portfolio`  | `getOverview`, `getUnifiedPositions`                  |
+| `loans`      | `getLoans`, `getLoanWithPayments`, `getLoanScenarios` |
+| `vault`      | `getUserVaultItems`, `getUserTransactions`            |
 
 ---
 

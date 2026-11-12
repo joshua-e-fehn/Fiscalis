@@ -449,6 +449,70 @@ export function sumSaleProfitLoss(sales: readonly SaleProfitLoss[]): SaleProfitL
   };
 }
 
+/** A listed transaction, as the history totals read it. */
+export type ListedTransaction = Pick<
+  LedgerTransaction,
+  "transactionType" | "quantity" | "pricePerUnit" | "currency" | "pricePerUnitBase"
+>;
+
+export interface TransactionTotals {
+  /** Bought or received, in the display currency */
+  totalBought: number;
+  /** Sold or given, in the display currency */
+  totalSold: number;
+  buyCount: number;
+  sellCount: number;
+  /** Rows with a price that has no rate into the display currency (left out) */
+  notConverted: number;
+  /** Rows whose price is unknown: opening balances (left out) */
+  unknownCost: number;
+}
+
+/**
+ * Bought / sold totals of listed transactions in one display currency. A
+ * row in that currency counts at its own price; any other at its EUR price
+ * (`pricePerUnitBase`, else its own price) converted at the spot rates
+ * (convertAtSpotRates). Rows that cannot be converted are counted, never
+ * added in their own currency.
+ */
+export function transactionTotals(
+  txs: readonly ListedTransaction[],
+  displayCurrency: string,
+  rates: SpotExchangeRates | null | undefined,
+): TransactionTotals {
+  const totals: TransactionTotals = {
+    totalBought: 0,
+    totalSold: 0,
+    buyCount: 0,
+    sellCount: 0,
+    notConverted: 0,
+    unknownCost: 0,
+  };
+  const display = displayCurrency.toUpperCase();
+  for (const tx of txs) {
+    const acquired = isAcquisition(tx.transactionType);
+    if (acquired) totals.buyCount++;
+    else totals.sellCount++;
+    if (tx.pricePerUnit == null) {
+      totals.unknownCost++;
+      continue;
+    }
+    const unit =
+      tx.currency.toUpperCase() === display
+        ? tx.pricePerUnit
+        : tx.pricePerUnitBase != null
+          ? convertAtSpotRates(tx.pricePerUnitBase, "EUR", display, rates)
+          : convertAtSpotRates(tx.pricePerUnit, tx.currency, display, rates);
+    if (unit === null) {
+      totals.notConverted++;
+      continue;
+    }
+    if (acquired) totals.totalBought += unit * tx.quantity;
+    else totals.totalSold += unit * tx.quantity;
+  }
+  return totals;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // History engine input
 // ═══════════════════════════════════════════════════════════════

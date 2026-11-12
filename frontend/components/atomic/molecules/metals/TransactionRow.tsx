@@ -11,6 +11,8 @@ export interface Transaction {
   quantity: number;
   pricePerUnit: number;
   currency: string;
+  /** EUR per unit at the rate of its date; absent on older rows */
+  pricePerUnitBase?: number;
   transactionDate: string;
   spotPriceAtTransaction?: number;
   notes?: string;

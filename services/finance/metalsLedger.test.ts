@@ -12,6 +12,7 @@ import {
   saleProfitLoss,
   sortLedger,
   sumSaleProfitLoss,
+  transactionTotals,
   transactionUnitAmount,
   validateTransactionInput,
 } from "./metalsLedger";
@@ -436,6 +437,57 @@ describe("ledgerHoldings in another currency (PF-13)", () => {
     expect(lot.purchasePricePerUnit).toBeUndefined();
     expect(lot.costPerUnit).toBeNull();
     expect(lot.costLine).toBeUndefined();
+  });
+});
+
+describe("transactionTotals (M-C5)", () => {
+  const rates = { eurToUsd: 2, eurToChf: 0.5 };
+  const txs = [
+    // EUR buy: 2 × 100 €
+    { ...buy(2, 100, "2026-01-05"), pricePerUnitBase: 100 },
+    // USD buy stored at 50 € per unit on its date: 1 × 120 $
+    { ...buy(1, 120, "2026-02-05", "USD"), pricePerUnitBase: 50 },
+    // EUR sale: 1 × 150 €
+    { ...sell(1, 150, "2026-03-05"), pricePerUnitBase: 150 },
+    // Opening balance of unknown cost
+    buy(3, null, null),
+  ];
+
+  it("sums EUR rows and converts the others' EUR price", () => {
+    expect(transactionTotals(txs, "eur", rates)).toEqual({
+      totalBought: 250,
+      totalSold: 150,
+      buyCount: 3,
+      sellCount: 1,
+      notConverted: 0,
+      unknownCost: 1,
+    });
+  });
+
+  it("takes a row in the display currency at its own price", () => {
+    // 200 € × 2 + 120 $ (own price) ; sale 150 € × 2
+    expect(transactionTotals(txs, "usd", rates)).toMatchObject({
+      totalBought: 520,
+      totalSold: 300,
+      notConverted: 0,
+    });
+  });
+
+  it("converts an older row without an EUR price from its own currency", () => {
+    const older = [buy(1, 100, "2026-01-05", "USD")];
+    expect(transactionTotals(older, "CHF", rates).totalBought).toBe(25);
+  });
+
+  it("counts rows without a rate instead of mixing currencies", () => {
+    const noUsd = { eurToUsd: null, eurToChf: 0.5 };
+    expect(transactionTotals(txs, "usd", noUsd)).toEqual({
+      totalBought: 120,
+      totalSold: 0,
+      buyCount: 3,
+      sellCount: 1,
+      notConverted: 2,
+      unknownCost: 1,
+    });
   });
 });
 

@@ -522,6 +522,7 @@ export function MetalsPage({
               quantity: tx.quantity,
               pricePerUnit: tx.pricePerUnit,
               currency: tx.currency,
+              pricePerUnitBase: tx.pricePerUnitBase ?? undefined,
               transactionDate: tx.transactionDate,
               spotPriceAtTransaction: tx.spotPriceAtTransaction ?? undefined,
               notes: tx.notes ?? undefined,
@@ -804,6 +805,7 @@ export function MetalsPage({
                 <TransactionSummary
                   transactions={transactions}
                   displayCurrency={initialCurrency}
+                  exchangeRates={(prices ?? pricesData)?.all?.exchangeRates}
                   realizedPL={summary?.realizedProfitLoss ?? null}
                   unrealizedPL={
                     summary?.pricedAtSpot ? summary.unrealizedProfitLoss : null

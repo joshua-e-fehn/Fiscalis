@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Transaction } from "./TransactionRow";
+import { transactionTotals } from "@/../services/finance/metalsLedger";
+import type { SpotExchangeRates } from "@/../services/finance/metals";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -16,6 +18,8 @@ interface TransactionSummaryProps {
   /** The listed transactions: the bought / sold / cash-flow totals */
   transactions: Transaction[];
   displayCurrency?: "eur" | "usd" | "chf";
+  /** The rates the spot prices are served with: other currencies convert at them */
+  exchangeRates?: SpotExchangeRates | null;
   /**
    * P/L of the whole vault, independent of the list's filters: realized
    * per item from its unfiltered ledger at average cost (MetalsSummary)
@@ -45,41 +49,22 @@ function formatCurrency(value: number, currency: string): string {
 export function TransactionSummary({
   transactions,
   displayCurrency = "eur",
+  exchangeRates,
   realizedPL = null,
   unrealizedPL = null,
   totalPL = null,
   className,
 }: TransactionSummaryProps) {
   const summary = useMemo(() => {
-    let totalBought = 0;
-    let totalSold = 0;
-    let buyCount = 0;
-    let sellCount = 0;
-
-    for (const tx of transactions) {
-      const total = tx.pricePerUnit * tx.quantity;
-      if (
-        tx.transactionType === "buy" ||
-        tx.transactionType === "gift_received"
-      ) {
-        totalBought += total;
-        buyCount++;
-      } else {
-        totalSold += total;
-        sellCount++;
-      }
-    }
-
+    const totals = transactionTotals(transactions, displayCurrency, exchangeRates);
     return {
-      totalBought,
-      totalSold,
-      cashFlow: totalBought - totalSold,
-      buyCount,
-      sellCount,
-      totalCount: buyCount + sellCount,
+      ...totals,
+      cashFlow: totals.totalBought - totals.totalSold,
+      // Left out of the totals: no rate into the display currency, or no price
+      leftOut: totals.notConverted + totals.unknownCost,
       realizedPL,
     };
-  }, [transactions, realizedPL]);
+  }, [transactions, displayCurrency, exchangeRates, realizedPL]);
 
   const isNetOutflow = summary.cashFlow >= 0;
   const hasUnrealizedPL = unrealizedPL !== null;
@@ -134,6 +119,14 @@ export function TransactionSummary({
             </div>
             <div className="text-xs text-muted-foreground">
               {isNetOutflow ? "Net spent" : "Net received"}
+              {summary.leftOut > 0 &&
+                ` · ${summary.leftOut} not included (${[
+                  summary.notConverted > 0 &&
+                    `${summary.notConverted} not converted`,
+                  summary.unknownCost > 0 && `${summary.unknownCost} cost unknown`,
+                ]
+                  .filter(Boolean)
+                  .join(", ")})`}
             </div>
           </div>
 

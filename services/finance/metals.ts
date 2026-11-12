@@ -113,6 +113,50 @@ export function calculatePriceChange(
 }
 
 // ============================================
+// Price history with gaps
+// ============================================
+
+/**
+ * A recorded close. The price-history API reports a missing close as null
+ * or 0; either is a gap, never a price.
+ */
+export function isRecordedClose(
+  price: number | null | undefined,
+): price is number {
+  return price !== null && price !== undefined && price > 0;
+}
+
+/**
+ * Change from the first to the last recorded close of a price history,
+ * skipping gaps at either end. null when fewer than two closes are recorded.
+ */
+export function recordedRangeChange(
+  history: readonly { price: number | null }[],
+): PriceChange | null {
+  const recorded = history.filter((p) => isRecordedClose(p.price));
+  if (recorded.length < 2) return null;
+  return calculatePriceChange(
+    recorded[recorded.length - 1].price!,
+    recorded[0].price!,
+  );
+}
+
+/**
+ * Each close as a percent change from the first recorded close, for
+ * comparing metals on one axis. Gaps stay null so the line breaks there.
+ */
+export function percentFromFirstClose(
+  history: readonly { price: number | null }[],
+): (number | null)[] {
+  const start = history.find((p) => isRecordedClose(p.price))?.price;
+  return history.map((p) =>
+    isRecordedClose(start) && isRecordedClose(p.price)
+      ? calculatePriceChange(p.price, start).percentage
+      : null,
+  );
+}
+
+// ============================================
 // Spot prices and staleness
 // ============================================
 
@@ -219,10 +263,13 @@ export function convertAtSpotRates(
   if (source === target) return amount;
   const perEur = (currency: string): number | null => {
     const rate =
-      currency === "EUR" ? 1
-      : currency === "USD" ? rates?.eurToUsd
-      : currency === "CHF" ? rates?.eurToChf
-      : null;
+      currency === "EUR"
+        ? 1
+        : currency === "USD"
+          ? rates?.eurToUsd
+          : currency === "CHF"
+            ? rates?.eurToChf
+            : null;
     return rate != null && Number.isFinite(rate) && rate > 0 ? rate : null;
   };
   const sourceRate = perEur(source);
@@ -550,7 +597,8 @@ export function summarizeMetalItems(
   const totalProfitLoss =
     unrealized !== null && realized !== null ? unrealized + realized : null;
   const invested =
-    (total.costBasis ?? 0) + items.reduce((sum, i) => sum + (i.soldCost ?? 0), 0);
+    (total.costBasis ?? 0) +
+    items.reduce((sum, i) => sum + (i.soldCost ?? 0), 0);
 
   return {
     gold,

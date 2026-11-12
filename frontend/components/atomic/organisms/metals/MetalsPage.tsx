@@ -34,11 +34,11 @@ import {
   useMetalsPrices,
   useMetalPrices,
   useMetalPriceLatest,
-  useMetalPricesRange,
+  useMetalPriceHistory,
 } from "@/hooks/metals";
 import { useMetalsYTD } from "@/hooks/performance";
 import { useVaultPerformance } from "@/hooks/performance/useContinuousPerformance";
-import { labelToTimeRange } from "@/lib/performance";
+import { labelToTimeRange, toChartPoints } from "@/lib/performance";
 import {
   MetalsType,
   MetalsCurrency,
@@ -46,6 +46,10 @@ import {
 } from "@/lib/types/metals-extended";
 import { MetalCurrency, MetalType } from "@/lib/types/metals";
 import { TimeRange } from "@/../services/finance/financeService";
+import {
+  isRecordedClose,
+  recordedRangeChange,
+} from "@/../services/finance/metals";
 import {
   TotalValueCard,
   TotalProfitLossCard,
@@ -176,18 +180,12 @@ const MetalPriceCard = ({
   const config = metalConfig[metal];
   const { data, isLoading } = useMetalPriceLatest(metal, currency);
 
-  // Fetch YTD data to calculate performance
-  const today = new Date();
-  const currentYear = today.getUTCFullYear();
-  const startOfYear = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
-
-  const { data: ytdData, isLoading: ytdLoading } = useMetalPricesRange(
+  // YTD closes (the shared daily history) to calculate performance
+  const { data: ytdData, isLoading: ytdLoading } = useMetalPriceHistory(
     metal,
-    startOfYear,
-    today,
-    "day",
+    "YTD",
     currency,
-    !isLoading,
+    { enabled: !isLoading },
   );
 
   // Calculate YTD performance
@@ -430,9 +428,9 @@ export function MetalsPage({
     });
   };
 
-  const currentPrice = priceChartData
-    ? (priceChartData[priceChartData.length - 1]?.price ?? null)
-    : null;
+  // The last recorded close (a missing one is a gap, null or 0)
+  const currentPrice =
+    priceChartData?.findLast((p) => isRecordedClose(p.price))?.price ?? null;
   const isCompareLoading =
     goldData.isLoading ||
     silverData.isLoading ||
@@ -453,12 +451,7 @@ export function MetalsPage({
     includeDataPoints: true,
   });
   const chartPoints = useMemo(
-    () =>
-      vaultHistory.dataPoints.map((p) => ({
-        timestamp: p.timestamp,
-        value: p.value,
-        cost: p.costBasis,
-      })),
+    () => toChartPoints(vaultHistory.dataPoints),
     [vaultHistory.dataPoints],
   );
 
@@ -968,16 +961,12 @@ export function MetalsPage({
                     {/* Performance indicator */}
                     {!priceChartLoading &&
                       priceChartData &&
-                      priceChartData.length >= 2 &&
                       (() => {
-                        const firstPrice =
-                          priceChartData?.find(
-                            (item) => item?.price && item.price > 0,
-                          )?.price ?? null;
-                        const lastPrice =
-                          priceChartData[priceChartData.length - 1].price;
-                        const performancePercent =
-                          ((lastPrice! - firstPrice!) / firstPrice!) * 100;
+                        // First to last recorded close; gaps at either end
+                        // are skipped, never read as a price
+                        const change = recordedRangeChange(priceChartData);
+                        if (!change) return null;
+                        const performancePercent = change.percentage;
                         const isPositive = performancePercent >= 0;
 
                         const timeRangeLabels: Record<TimeRange, string> = {
@@ -1025,20 +1014,9 @@ export function MetalsPage({
                         (d) => d.metal === m,
                       );
                       const metalData = dataset?.data;
-                      let performancePercent: number | null = null;
-
-                      if (metalData && metalData.length >= 2) {
-                        const firstPrice =
-                          metalData.find(
-                            (item) => item?.price && item.price > 0,
-                          )?.price ?? null;
-                        const lastPrice =
-                          metalData[metalData.length - 1]?.price;
-                        if (firstPrice && lastPrice) {
-                          performancePercent =
-                            ((lastPrice - firstPrice) / firstPrice) * 100;
-                        }
-                      }
+                      const performancePercent = metalData
+                        ? (recordedRangeChange(metalData)?.percentage ?? null)
+                        : null;
 
                       return (
                         <div key={m} className="flex items-center gap-1.5">

@@ -8,17 +8,17 @@
 
 import { useMemo } from "react";
 
-import { toChartPoints, type TimeRange } from "@/lib/performance";
-import type { PortfolioDataPoint } from "@/lib/types/investments";
+import {
+  toChartPoints,
+  type ChartPoint,
+  type TimeRange,
+} from "@/lib/performance";
 
 import {
   portfolioLiveEnd,
   useCategoryPerformance,
   type LivePortfolioTotals,
 } from "./useCategoryPerformance";
-
-/** One chart point; `cost` is the engine's cost line, null (a gap) where unknown */
-export type PortfolioChartPoint = PortfolioDataPoint;
 
 /** What the chart plots: gross assets, or assets less debt */
 export type PortfolioChartMetric = "totalAssets" | "netWorth";
@@ -33,7 +33,7 @@ export interface UsePortfolioChartDataOptions {
 }
 
 export interface UsePortfolioChartDataResult {
-  dataPoints: PortfolioChartPoint[];
+  dataPoints: ChartPoint[];
   /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
   isLoading: boolean;
@@ -66,7 +66,7 @@ export function usePortfolioChartData(
 }
 
 export interface CategoryChartDataResult {
-  dataPoints: PortfolioChartPoint[];
+  dataPoints: ChartPoint[];
   /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
   isLoading: boolean;

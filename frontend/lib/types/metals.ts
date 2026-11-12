@@ -6,9 +6,8 @@ export type MetalType = "gold" | "silver" | "platinum" | "palladium";
 
 export interface MetalChartData {
   date: Date | null;
+  /** null (or 0) where no price was recorded: a gap, never filled */
   price: number | null;
-  /** True if this data point was interpolated due to missing/zero data */
-  isInterpolated?: boolean;
 }
 
 export const metalColumns = {

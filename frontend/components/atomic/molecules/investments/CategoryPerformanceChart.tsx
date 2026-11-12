@@ -18,10 +18,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import {
-  InvestmentCurrency,
-  PortfolioDataPoint,
-} from "@/lib/types/investments";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import type { ChartPoint } from "@/lib/performance";
 import { currencyCodes } from "@/lib/utils/currency";
 import { TrendingUp, Wallet } from "lucide-react";
 import {
@@ -38,7 +36,7 @@ interface CategoryPerformanceChartProps {
    * it starts exactly at the range start. `cost` is the cost line, null (a
    * gap) where unknown.
    */
-  dataPoints: PortfolioDataPoint[];
+  dataPoints: ChartPoint[];
   currency?: InvestmentCurrency;
   isLoading?: boolean;
   className?: string;

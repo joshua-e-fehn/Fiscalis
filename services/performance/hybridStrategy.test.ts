@@ -410,6 +410,84 @@ describe("HybridPerformanceStrategy", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════
+// Clock reads (ENG-155)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Run `fn` with a clock that advances 1 ms on every Date.now() read, as a
+ * loaded machine does between calls. Before the range was anchored to one
+ * end timestamp (22b2c45), the hybrid's discrete and continuous grids each
+ * read the clock, came out offset by a few ms, and merge-by-timestamp lost
+ * points: "should merge data points at the same timestamp" and "should
+ * handle very large portfolios" failed intermittently in full runs.
+ */
+function withTickingClock<T>(fn: () => T): T {
+  let t = NOW;
+  const spy = vi.spyOn(Date, "now").mockImplementation(() => t++);
+  try {
+    return fn();
+  } finally {
+    spy.mockRestore();
+  }
+}
+
+describe("HybridPerformanceStrategy - clock reads", () => {
+  const options: PerformanceCalculationOptions = {
+    timeRange: "Month",
+    includeDataPoints: true,
+  };
+
+  it("reads the clock once: a ticking clock gives the same result", () => {
+    const input: HybridPerformanceInput = {
+      continuousSources: VAULT,
+      discrete: {
+        snapshots: createLinearGrowthSnapshots(5, 10000, 11000, 30),
+        metric: TOTAL,
+      },
+      continuous: {
+        holdings: [createMetalHolding("gold-1", "gold", 100, 1, 0.05)],
+        prices: { gold: createPriceHistory(30, 60, 66) },
+      },
+    };
+    const strategy = new HybridPerformanceStrategy();
+
+    const steady = strategy.calculate(input, options);
+    const ticking = withTickingClock(() => strategy.calculate(input, options));
+
+    expect(ticking).toEqual(steady);
+    expect(ticking.metrics.endTimestamp).toBe(NOW);
+    expect(ticking.metrics.startTimestamp).toBe(steady.metrics.startTimestamp);
+    expect(ticking.dataPoints.length).toBe(steady.dataPoints.length);
+  });
+
+  it("keeps a large portfolio's merged series under a ticking clock", () => {
+    const input: HybridPerformanceInput = {
+      continuousSources: VAULT,
+      discrete: {
+        snapshots: createLinearGrowthSnapshots(30, 1000000, 1100000, 30),
+        metric: TOTAL,
+      },
+      continuous: {
+        holdings: [
+          createMetalHolding("gold-1", "gold", 10000, 10, 0.05),
+          createMetalHolding("silver-1", "silver", 100000, 1, 0.1),
+        ],
+        prices: {
+          gold: createPriceHistory(30, 60, 66),
+          silver: createPriceHistory(30, 0.8, 0.88),
+        },
+      },
+    };
+    const strategy = new HybridPerformanceStrategy();
+
+    const steady = strategy.calculate(input, options);
+    const ticking = withTickingClock(() => strategy.calculate(input, options));
+
+    expect(ticking).toEqual(steady);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
 // Edge Cases
 // ═══════════════════════════════════════════════════════════════
 

@@ -76,7 +76,6 @@ export interface CategorySummary {
   ytdProfitLossPercent: number | null;
   valueAtYearStart: number | null; // Value on Jan 1 of current year
   subcategories: SubcategoryData[];
-  historyDataPoints: PortfolioDataPoint[];
 }
 
 /**

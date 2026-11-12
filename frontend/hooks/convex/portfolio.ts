@@ -12,14 +12,10 @@ import { api } from "@/convex/_generated/api";
 import {
   InvestmentCategory,
   InvestmentCurrency,
-  PortfolioDataPoint,
 } from "@/lib/types/investments";
 import { categoryPrimaryColors } from "@/lib/config/categoryUI";
 import { useUserSettings } from "./onboarding";
-import {
-  costLine,
-  snapshotCostLine,
-} from "@/../services/portfolio/unrealizedProfitLoss";
+import { costLine } from "@/../services/portfolio/unrealizedProfitLoss";
 import {
   Briefcase,
   Coins,
@@ -123,9 +119,6 @@ export interface PortfolioSummary {
   // Liabilities
   liabilities: LiabilitiesSummaryData | null;
 
-  // Historical performance (combined)
-  historyDataPoints: PortfolioDataPoint[];
-
   /** Data freshness: oldest provider sync or spot price (ms) */
   asOf: number | null;
 }
@@ -161,14 +154,7 @@ export function usePortfolioOverview(): {
   isLoading: boolean;
 } {
   const overview = useQuery(api.portfolio.getOverview);
-
-  // Portfolio snapshots for the historical chart
-  const portfolioSnapshots = useQuery(api.portfolioSnapshots.getSnapshots, {
-    limit: 365,
-  });
-
-  const isLoading =
-    overview === undefined || portfolioSnapshots === undefined;
+  const isLoading = overview === undefined;
 
   const summary = useMemo<PortfolioSummary | null>(() => {
     if (!overview) return null;
@@ -195,32 +181,6 @@ export function usePortfolioOverview(): {
     const { totalAssets, unrealized } = overview;
     const totalCostLine = costLine(totalAssets, unrealized.profitLoss);
 
-    // History from the daily snapshots
-    const historyDataPoints: PortfolioDataPoint[] = (
-      portfolioSnapshots ?? []
-    ).map((snapshot) => ({
-      date: snapshot.date,
-      timestamp: snapshot.timestamp,
-      value: snapshot.totalAssets,
-      cost: snapshotCostLine({
-        value: snapshot.totalAssets,
-        costBasis: snapshot.totalCostBasis,
-        coveredValue: snapshot.totalCoveredValue,
-      }),
-    }));
-
-    // Without a snapshot for today, add today's live point
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
-    if (!historyDataPoints.some((p) => p.date === todayStr) && totalAssets > 0) {
-      historyDataPoints.push({
-        date: todayStr,
-        timestamp: today.getTime(),
-        value: totalAssets,
-        cost: totalCostLine,
-      });
-    }
-
     return {
       totalAssets,
       totalLiabilities: overview.totalLiabilities,
@@ -232,10 +192,9 @@ export function usePortfolioOverview(): {
       unrealizedProfitLossCoverage: unrealized.coverage,
       assetCategories,
       liabilities: overview.liabilities,
-      historyDataPoints,
       asOf: overview.asOf,
     };
-  }, [overview, portfolioSnapshots]);
+  }, [overview]);
 
   return { summary, isLoading };
 }

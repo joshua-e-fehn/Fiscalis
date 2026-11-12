@@ -1,6 +1,6 @@
 /**
- * Portfolio chart data: adapts the performance engine's total-assets or
- * net-worth series to the chart's point shape. The engine owns the grid,
+ * Chart data: adapts the performance engine's total-assets, net-worth or
+ * category series to the chart's point shape. The engine owns the grid,
  * the values, the vault's continuous valuation and the cost line, and ends
  * the series at the overview's live figure when given one; nothing is
  * drawn before the first known point.
@@ -13,7 +13,6 @@ import type { PortfolioDataPoint } from "@/lib/types/investments";
 
 import {
   portfolioLiveEnd,
-  toPeriodChange,
   useCategoryPerformance,
   type LivePortfolioTotals,
 } from "./useCategoryPerformance";
@@ -35,12 +34,6 @@ export interface UsePortfolioChartDataOptions {
 
 export interface UsePortfolioChartDataResult {
   dataPoints: PortfolioChartPoint[];
-  /** The metric at the range end, 0 without data */
-  currentValue: number;
-  /** Cost line at the range end, null when unknown */
-  totalCost: number | null;
-  /** First known point when there is no value at the range start; null otherwise */
-  trackingSince: number | null;
   /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
   isLoading: boolean;
@@ -62,15 +55,48 @@ export function usePortfolioChartData(
     { includeDataPoints: true, enabled, liveEnd },
   );
 
-  return useMemo(() => {
-    const last = dataPoints.at(-1);
-    return {
+  return useMemo(
+    () => ({
       dataPoints: toChartPoints(dataPoints),
-      currentValue: metrics?.endValue ?? 0,
-      totalCost: last?.costBasis ?? null,
-      trackingSince: toPeriodChange(metrics).trackingSince,
       partial: metrics?.partial ?? false,
       isLoading,
-    };
-  }, [dataPoints, metrics, isLoading]);
+    }),
+    [dataPoints, metrics, isLoading],
+  );
+}
+
+export interface CategoryChartDataResult {
+  dataPoints: PortfolioChartPoint[];
+  /** Some values are incomplete (a missing price, a partly failed sync) */
+  partial: boolean;
+  isLoading: boolean;
+}
+
+/**
+ * A category page's chart: the engine's series for the category over the
+ * range, from the snapshots' categoryBreakdown (and the vault at spot for
+ * commodities), with its per-point cost line.
+ */
+export function useCategoryChartData(
+  category: string,
+  timeRange: TimeRange,
+  options?: { enabled?: boolean },
+): CategoryChartDataResult {
+  const measure = useMemo(
+    () => ({ kind: "category" as const, category }),
+    [category],
+  );
+  const { dataPoints, metrics, isLoading } = useCategoryPerformance(
+    measure,
+    timeRange,
+    { includeDataPoints: true, enabled: options?.enabled ?? true },
+  );
+  return useMemo(
+    () => ({
+      dataPoints: toChartPoints(dataPoints),
+      partial: metrics?.partial ?? false,
+      isLoading,
+    }),
+    [dataPoints, metrics, isLoading],
+  );
 }

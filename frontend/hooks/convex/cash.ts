@@ -13,7 +13,6 @@ import { api } from "@/convex/_generated/api";
 import {
   CategorySummary,
   SubcategoryData,
-  PortfolioDataPoint,
   Holding,
 } from "@/lib/types/investments";
 import {
@@ -148,7 +147,6 @@ export function useCashSummary(): {
 
     // Calculate totals
     const totalValue = dataSummary.totalValue;
-    const historyDataPoints: PortfolioDataPoint[] = [];
 
     return {
       totalValue,
@@ -159,7 +157,6 @@ export function useCashSummary(): {
       ytdProfitLossPercent: null,
       valueAtYearStart: null,
       subcategories,
-      historyDataPoints,
     };
   }, [cashData]);
 

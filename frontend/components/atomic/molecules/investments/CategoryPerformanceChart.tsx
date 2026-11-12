@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -24,8 +24,6 @@ import {
 } from "@/lib/types/investments";
 import { currencyCodes } from "@/lib/utils/currency";
 import { TrendingUp, Wallet } from "lucide-react";
-import { TIME_RANGE_LABEL_MAP } from "@/lib/performance";
-import { getTimeRangeStartTimestamp } from "@/../services/finance/financeService";
 import {
   CHART_TIME_RANGES,
   type ChartTimeRange,
@@ -36,8 +34,9 @@ export type ChartViewMode = "portfolio" | "networth";
 
 interface CategoryPerformanceChartProps {
   /**
-   * The series to plot, ending at the current value. `cost` is the cost
-   * line, null (a gap) where unknown.
+   * The engine's series for `timeRange` (toChartPoints), plotted unchanged:
+   * it starts exactly at the range start. `cost` is the cost line, null (a
+   * gap) where unknown.
    */
   dataPoints: PortfolioDataPoint[];
   currency?: InvestmentCurrency;
@@ -46,12 +45,11 @@ interface CategoryPerformanceChartProps {
   /** Title override - defaults to "Portfolio Performance" */
   title?: string;
   /**
-   * Selected range (shared range labels). With `onTimeRangeChange` the
-   * caller owns it and fetches the series for it; otherwise the chart keeps
-   * it (default 3M) and shows the part of `dataPoints` within it.
+   * Selected range (shared range labels). The caller owns it and fetches the
+   * series for it.
    */
-  timeRange?: ChartTimeRange;
-  onTimeRangeChange?: (range: ChartTimeRange) => void;
+  timeRange: ChartTimeRange;
+  onTimeRangeChange: (range: ChartTimeRange) => void;
   /**
    * With `onViewModeChange`, the Portfolio / Net Worth toggle is shown and
    * the caller passes the matching series (gross assets or net worth).
@@ -60,6 +58,8 @@ interface CategoryPerformanceChartProps {
   onViewModeChange?: (mode: ChartViewMode) => void;
   /** Some values are incomplete (a missing price, a partly failed sync) */
   partial?: boolean;
+  /** Second line of the empty state; defaults to asking for holdings */
+  emptyHint?: string;
 }
 
 function formatCurrency(value: number, currency: InvestmentCurrency): string {
@@ -85,34 +85,23 @@ export function CategoryPerformanceChart({
   isLoading = false,
   className,
   title,
-  timeRange: controlledRange,
-  onTimeRangeChange,
+  timeRange,
+  onTimeRangeChange: setTimeRange,
   viewMode = "portfolio",
   onViewModeChange,
   partial = false,
+  emptyHint = "Add holdings to track portfolio performance",
 }: CategoryPerformanceChartProps) {
-  const [ownRange, setOwnRange] = useState<ChartTimeRange>("3M");
-  const timeRange = controlledRange ?? ownRange;
-  const setTimeRange = onTimeRangeChange ?? setOwnRange;
-
-  // The points within the range, in time order. A caller that owns the
-  // range passes the engine's series for it, which starts exactly at the
-  // range start: shown unchanged, since filtering again with a later
-  // Date.now() would cut that baseline point (services toChartPoints).
-  const controlled = onTimeRangeChange !== undefined;
-  const chartData = useMemo(() => {
-    const start =
-      controlled || timeRange === "ALL"
-        ? -Infinity
-        : getTimeRangeStartTimestamp(
-            TIME_RANGE_LABEL_MAP[timeRange],
-            Date.now(),
-          );
-    return dataPoints
-      .filter((dp) => dp.timestamp >= start)
-      .sort((a, b) => a.timestamp - b.timestamp)
-      .map((dp) => ({ ...dp, date: formatDate(dp.timestamp, timeRange) }));
-  }, [dataPoints, timeRange, controlled]);
+  // The caller's series for the range, unchanged: filtering it again with a
+  // later Date.now() would cut the range-start point it is measured from
+  const chartData = useMemo(
+    () =>
+      dataPoints.map((dp) => ({
+        ...dp,
+        date: formatDate(dp.timestamp, timeRange),
+      })),
+    [dataPoints, timeRange],
+  );
 
   const hasCost = chartData.some((d) => d.cost !== null);
 
@@ -169,9 +158,7 @@ export function CategoryPerformanceChart({
         <CardContent className="flex flex-col items-center justify-center h-48">
           <div className="text-muted-foreground text-sm text-center">
             <p>No performance data yet</p>
-            <p className="text-xs mt-1">
-              Add holdings to track portfolio performance
-            </p>
+            <p className="text-xs mt-1">{emptyHint}</p>
           </div>
         </CardContent>
       </Card>

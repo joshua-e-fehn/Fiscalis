@@ -525,6 +525,28 @@ export function providerSyncSnapshot(
   return { take: false, partial: undefined };
 }
 
+/**
+ * One snapshot per user per day: the newest row of each day by timestamp
+ * (a tie goes to the later row in `rows`) is kept, the rest are dropped.
+ * takeSnapshot upserts one row a day; rows written before that policy can
+ * hold several, which double-count a day in the history.
+ */
+export function collapseIntradaySnapshots<
+  T extends { userId: string; date: string; timestamp: number },
+>(rows: readonly T[]): { keep: T[]; drop: T[] } {
+  const newest = new Map<string, T>();
+  for (const row of rows) {
+    const day = `${row.userId}|${row.date}`;
+    const current = newest.get(day);
+    if (!current || row.timestamp >= current.timestamp) newest.set(day, row);
+  }
+  const kept = new Set(newest.values());
+  return {
+    keep: rows.filter((row) => kept.has(row)),
+    drop: rows.filter((row) => !kept.has(row)),
+  };
+}
+
 /** A breakdown without the holdings kept for the next day's flows. */
 export function withoutSnapshotHoldings(
   breakdown: readonly SnapshotCategoryEntry[],

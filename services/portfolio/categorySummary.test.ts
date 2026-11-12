@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 
-import { fxRatesFromDaily } from "../finance/currency";
+import {
+  brokerAccountWithBaseFields,
+  fxRatesFromDaily,
+  positionWithBaseFields,
+} from "../finance/currency";
 import { holdingNetFlow } from "./aggregate";
 import {
   averageCostPerUnit,
@@ -17,6 +21,7 @@ import {
   loanCountsAsLiability,
   positionCostBasis,
   positionToHolding,
+  positionValue,
   resolveCategoryProfitLoss,
   summarizeHoldings,
   topHoldings,
@@ -181,6 +186,23 @@ describe("accounts and loans", () => {
       cash: 1_250,
     });
     expect(brokerAccountTotals([])).toEqual({ value: 0, cash: 0 });
+  });
+
+  it("totals unstamped rows in EUR once read-time stamped, not as 0", () => {
+    // brokers.getAccounts / getPositions stamp rows stored before sync-time
+    // stamping (no exchangeRateSource) so the brokers page matches netWorth.
+    const rates = fxRatesFromDaily([
+      { date: "2026-11-10", currency: "USD", unitsPerEur: 1.25 },
+    ]);
+    const account = { cash: 1_250, balance: 12_500, currency: "USD" };
+    expect(brokerAccountTotals([account])).toEqual({ value: 0, cash: 0 });
+    expect(
+      brokerAccountTotals([brokerAccountWithBaseFields(account, rates)]),
+    ).toEqual({ value: 10_000, cash: 1_000 });
+
+    const position = { marketValue: 2_500, currency: "USD" };
+    expect(positionValue(position)).toBe(0);
+    expect(positionValue(positionWithBaseFields(position, rates))).toBe(2_000);
   });
 
   it("converts outstanding loans by their currency (D1 statuses)", () => {

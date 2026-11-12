@@ -12,7 +12,9 @@ import {
 import { loadFxRates } from "./fxRates";
 import {
   brokerAccountBaseFields,
+  brokerAccountWithBaseFields,
   positionBaseFields,
+  positionWithBaseFields,
 } from "../../services/finance/currency";
 import {
   positionOverrideKeys,
@@ -133,19 +135,24 @@ export const getAccounts = query({
       if (!connection || connection.userId !== userId) {
         throw new Error("Connection not found or unauthorized");
       }
-
-      return await ctx.db
-        .query("brokerAccounts")
-        .withIndex("by_connection", (q) =>
-          q.eq("connectionId", args.connectionId!),
-        )
-        .collect();
     }
 
-    return await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const accounts = args.connectionId
+      ? await ctx.db
+          .query("brokerAccounts")
+          .withIndex("by_connection", (q) =>
+            q.eq("connectionId", args.connectionId!),
+          )
+          .collect()
+      : await ctx.db
+          .query("brokerAccounts")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+
+    // Stamp rows stored before sync-time stamping, as netWorth does, so the
+    // client totals read the same base-currency values the server counts.
+    const rates = await loadFxRates(ctx);
+    return accounts.map((a) => brokerAccountWithBaseFields(a, rates));
   },
 });
 
@@ -170,17 +177,20 @@ export const getPositions = query({
       if (!account || account.userId !== userId) {
         throw new Error("Account not found or unauthorized");
       }
-
-      return await ctx.db
-        .query("brokerPositions")
-        .withIndex("by_account", (q) => q.eq("accountId", args.accountId!))
-        .collect();
     }
 
-    return await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const positions = args.accountId
+      ? await ctx.db
+          .query("brokerPositions")
+          .withIndex("by_account", (q) => q.eq("accountId", args.accountId!))
+          .collect()
+      : await ctx.db
+          .query("brokerPositions")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+
+    const rates = await loadFxRates(ctx);
+    return positions.map((p) => positionWithBaseFields(p, rates));
   },
 });
 
@@ -195,12 +205,15 @@ export const getPositionsBySymbol = query({
 
     const userId = identity.subject;
 
-    return await ctx.db
+    const positions = await ctx.db
       .query("brokerPositions")
       .withIndex("by_symbol", (q) =>
         q.eq("userId", userId).eq("symbol", args.symbol),
       )
       .collect();
+
+    const rates = await loadFxRates(ctx);
+    return positions.map((p) => positionWithBaseFields(p, rates));
   },
 });
 

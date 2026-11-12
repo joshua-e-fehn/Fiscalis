@@ -556,7 +556,7 @@ export default function DashboardPage() {
     summary && (summary.totalAssets !== 0 || summary.totalLiabilities !== 0)
       ? summary
       : undefined;
-  const netWorthYTD = useNetWorthYTD();
+  const netWorthYTD = useNetWorthYTD({ live, enabled: !isLoading });
 
   // Portfolio chart: the engine's series for the selected range and view,
   // nothing before tracking started

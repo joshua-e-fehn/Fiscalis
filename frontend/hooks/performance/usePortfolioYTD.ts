@@ -6,7 +6,12 @@
  */
 
 import { useMemo } from "react";
-import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance";
+import {
+  portfolioLiveEnd,
+  toPeriodChange,
+  useCategoryPerformance,
+  type LivePortfolioTotals,
+} from "./useCategoryPerformance";
 
 export interface PortfolioYTDResult {
   /** P/L net of flows for an investment category, else the change in value */
@@ -41,13 +46,17 @@ const NET_WORTH = { kind: "netWorth" } as const;
 /**
  * YTD change in net worth: a plain change in value, not a return (savings
  * and newly connected accounts raise it). Null figures and `trackingSince`
- * when there is no value at 1 Jan.
+ * when there is no value at 1 Jan. Given the overview's live totals, it
+ * ends at the live net worth, the figure NetWorthCard shows (PF-05).
  */
 export function useNetWorthYTD(options?: {
+  live?: LivePortfolioTotals;
   enabled?: boolean;
 }): NetWorthYTDResult {
+  const live = options?.live;
   const { metrics, isLoading } = useCategoryPerformance(NET_WORTH, "YTD", {
     enabled: options?.enabled ?? true,
+    liveEnd: live && portfolioLiveEnd("netWorth", live),
   });
   return useMemo(() => {
     const ytd = toPeriodChange(metrics);

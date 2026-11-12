@@ -7,6 +7,7 @@ import {
   ledgerHoldings,
   ledgerOverCounts,
   missingOpeningTransaction,
+  nextOpeningQuantity,
   replayLedger,
   retainedBasePrice,
   saleProfitLoss,
@@ -517,5 +518,26 @@ describe("retainedBasePrice", () => {
     expect(
       retainedBasePrice({ ...opening, pricePerUnitBase: undefined }, opening),
     ).toBeUndefined();
+  });
+});
+
+describe("nextOpeningQuantity", () => {
+  it("sets the opening directly, independent of the total held", () => {
+    // Opening 5 → 7 saved, held 10 → 12; a second edit to 9 stays 9
+    expect(nextOpeningQuantity(7, { openingQuantity: 9, held: 12 })).toBe(9);
+  });
+
+  it("moves the opening by the change in total held", () => {
+    expect(nextOpeningQuantity(5, { quantity: 12, held: 10 })).toBe(7);
+  });
+
+  it("keeps the opening when neither is given", () => {
+    expect(nextOpeningQuantity(5, { held: 10 })).toBe(5);
+  });
+
+  it("rejects both at once", () => {
+    expect(() =>
+      nextOpeningQuantity(5, { openingQuantity: 6, quantity: 12, held: 10 }),
+    ).toThrow(LedgerError);
   });
 });

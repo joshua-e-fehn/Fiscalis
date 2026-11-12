@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { InvestmentDashboardSection } from "@/components/atomic/molecules/investments";
 import { useLiabilitiesSummary } from "@/hooks/convex/liabilities";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { formatCurrency } from "@/lib/utils/currency";
 import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dialog";
 
 /**
@@ -93,15 +95,9 @@ const LiabilityCategoryCard = ({
   const Icon = category.icon;
   const hasHoldings = holdingsCount > 0;
 
-  // Format value for display
-  const formatValue = (val: number) => {
-    if (val >= 1000000) {
-      return `€${(val / 1000000).toFixed(2)}M`;
-    } else if (val >= 1000) {
-      return `€${(val / 1000).toFixed(1)}K`;
-    }
-    return `€${val.toFixed(2)}`;
-  };
+  const baseCurrency = useBaseCurrency();
+  const formatValue = (val: number) =>
+    formatCurrency(val, baseCurrency, { compact: true });
 
   return (
     <Card
@@ -190,6 +186,7 @@ const LiabilityCategoryCard = ({
 
 export default function LiabilitiesPage() {
   const { summary, isLoading } = useLiabilitiesSummary();
+  const baseCurrency = useBaseCurrency();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Check if there are any liabilities
@@ -231,10 +228,7 @@ export default function LiabilitiesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-destructive">
-              €
-              {summary.totalValue.toLocaleString("de-DE", {
-                minimumFractionDigits: 2,
-              })}
+              {formatCurrency(summary.totalValue, baseCurrency)}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Across{" "}
@@ -252,7 +246,7 @@ export default function LiabilitiesPage() {
       <InvestmentDashboardSection
         category="liabilities"
         summary={summary}
-        currency="eur"
+        currency={baseCurrency}
         isLoading={isLoading}
         showTopHoldings={hasLiabilities ?? false}
       />

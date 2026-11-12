@@ -8,6 +8,8 @@ import {
   bitpandaCostBasis,
   brokerAccountCash,
   brokerAccountMarginDebt,
+  brokerAccountTotals,
+  brokerAccountValue,
   buildCategorySummary,
   groupSmallSlices,
   holdingProfitLoss,
@@ -142,6 +144,43 @@ describe("accounts and loans", () => {
     expect(
       brokerAccountMarginDebt({ cash: -10, cashValueInBaseCurrency: -9 }),
     ).toBe(9);
+  });
+
+  it("totals broker accounts in EUR from the base-currency fields only", () => {
+    const accounts = [
+      // USD account: 11,700 USD balance, 1,170 USD cash
+      {
+        cash: 1_170,
+        balance: 11_700,
+        cashValueInBaseCurrency: 1_000,
+        balanceInBaseCurrency: 10_000,
+        cashInvestmentCategory: "cash",
+      },
+      // Fully invested: a balance but no cash is not cash
+      {
+        cash: 0,
+        balance: 5_000,
+        cashValueInBaseCurrency: 0,
+        balanceInBaseCurrency: 4_500,
+      },
+      // Margin debit: owes 2,000, adds no cash
+      {
+        cash: -2_340,
+        balance: 8_000,
+        cashValueInBaseCurrency: -2_000,
+        balanceInBaseCurrency: 7_000,
+        cashInvestmentCategory: "liabilities",
+      },
+      // Mixed-currency balance without a rate: no EUR value
+      { cash: 300, balance: 900, cashValueInBaseCurrency: 250 },
+    ];
+    expect(brokerAccountValue(accounts[0])).toBe(10_000);
+    expect(brokerAccountValue(accounts[3])).toBe(0);
+    expect(brokerAccountTotals(accounts)).toEqual({
+      value: 21_500,
+      cash: 1_250,
+    });
+    expect(brokerAccountTotals([])).toEqual({ value: 0, cash: 0 });
   });
 
   it("converts outstanding loans by their currency (D1 statuses)", () => {

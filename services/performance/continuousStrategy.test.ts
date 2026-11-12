@@ -569,6 +569,6 @@ describe("ContinuousPerformanceStrategy - agrees with valueVaultItem", () => {
     );
 
     expect(vault.value).toBeCloseTo(3000 * 0.97 * 2, 6);
-    expect(result.metrics.endValue).toBeCloseTo(vault.value, 6);
+    expect(result.metrics.endValue).toBeCloseTo(vault.value!, 6);
   });
 });

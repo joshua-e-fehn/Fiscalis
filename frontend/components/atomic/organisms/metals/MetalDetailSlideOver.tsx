@@ -118,12 +118,24 @@ export function MetalDetailSlideOver({
               <div className="text-sm text-muted-foreground mb-1">
                 Current Value
               </div>
-              <PriceDisplay
-                value={item.marketValue ?? 0}
-                currency={currency}
-                size="xl"
-                className="font-bold"
-              />
+              {item.marketValue === null ? (
+                <>
+                  <span className="text-2xl font-bold text-muted-foreground">
+                    —
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No current spot price and no purchase price: the value
+                    is unknown and counted as 0 in the totals
+                  </p>
+                </>
+              ) : (
+                <PriceDisplay
+                  value={item.marketValue}
+                  currency={currency}
+                  size="xl"
+                  className="font-bold"
+                />
+              )}
               {item.profitLoss !== null && item.profitLossPercent !== null && (
                 <div className="mt-2">
                   <ChangeIndicator
@@ -221,11 +233,15 @@ export function MetalDetailSlideOver({
                   />
                 </DetailRowFull>
                 <DetailRowFull label="Market Value (total at sell price)">
-                  <PriceDisplay
-                    value={item.marketValue}
-                    currency={currency}
-                    size="md"
-                  />
+                  {item.marketValue === null ? (
+                    <span className="text-muted-foreground">—</span>
+                  ) : (
+                    <PriceDisplay
+                      value={item.marketValue}
+                      currency={currency}
+                      size="md"
+                    />
+                  )}
                 </DetailRowFull>
                 {item.totalCost !== null && (
                   <DetailRowFull label="Total Cost">

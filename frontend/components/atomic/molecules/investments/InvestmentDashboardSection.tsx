@@ -26,11 +26,7 @@ import {
   InvestmentCategory,
 } from "@/lib/types/investments";
 import { currencySymbols } from "@/lib/utils/currency";
-import {
-  useCategoryYTD,
-  useCategoryProfitLoss,
-  useMetalsYTD,
-} from "@/hooks/performance";
+import { useCategoryYTD, useCategoryProfitLoss } from "@/hooks/performance";
 import { CategoryAllocationChart } from "./CategoryAllocationChart";
 import { CategoryPerformanceChart } from "./CategoryPerformanceChart";
 import { TopHoldingsList } from "./TopHoldingsList";
@@ -43,7 +39,6 @@ import {
   Building2,
   type LucideIcon,
 } from "lucide-react";
-import type { MetalsCurrency } from "@/lib/types/metals-extended";
 import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
 
 /** A short date for "since …" notes on the KPI cards */
@@ -72,7 +67,6 @@ export type KPICardType =
   | "total-value"
   | "profit-loss"
   | "ytd-performance"
-  | "ytd-continuous" // For commodities with price-based YTD
   | "portfolio-allocation"
   | "accounts-count"
   | "custom";
@@ -129,6 +123,11 @@ export interface InvestmentDashboardSectionProps {
   customHoldingsSection?: ReactNode;
   /** Custom chart title */
   performanceChartTitle?: string;
+  /**
+   * Colour a rise as a loss and a fall as a gain (a debt going down is
+   * good). Defaults to true for the liabilities category.
+   */
+  invertColors?: boolean;
   /** Additional class name */
   className?: string;
 }
@@ -144,17 +143,6 @@ export const STANDARD_KPI_CARDS: [KPICardConfig, KPICardConfig, KPICardConfig] =
     { type: "profit-loss" },
     { type: "ytd-performance" },
   ];
-
-/** Commodities KPI cards: Total Value, P/L, YTD (continuous/price-based) */
-export const COMMODITIES_KPI_CARDS: [
-  KPICardConfig,
-  KPICardConfig,
-  KPICardConfig,
-] = [
-  { type: "total-value" },
-  { type: "profit-loss" },
-  { type: "ytd-continuous" },
-];
 
 /** Cash KPI cards: Total Cash, Portfolio %, Accounts */
 export const CASH_KPI_CARDS: [KPICardConfig, KPICardConfig, KPICardConfig] = [
@@ -238,6 +226,8 @@ interface ProfitLossCardProps {
   title?: string;
   /** Shown under the figure, e.g. what it is measured since */
   note?: string | null;
+  /** A rise is bad (liabilities) */
+  invertColors?: boolean;
 }
 
 /**
@@ -245,7 +235,13 @@ interface ProfitLossCardProps {
  * return can fall while the money P/L rises (a loss, then a deposit that
  * grows), so it never takes the amount's sign.
  */
-function SignedPercent({ percent }: { percent: number }) {
+function SignedPercent({
+  percent,
+  invertColors = false,
+}: {
+  percent: number;
+  invertColors?: boolean;
+}) {
   const formatted = new Intl.NumberFormat("de-CH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -256,7 +252,7 @@ function SignedPercent({ percent }: { percent: number }) {
     <span
       className={cn(
         "text-xl font-semibold",
-        isGain ? "text-profit" : "text-loss",
+        isGain !== invertColors ? "text-profit" : "text-loss",
       )}
     >
       ({isGain ? "+" : "-"}
@@ -273,6 +269,7 @@ function ProfitLossCard({
   hasHoldings,
   title = "Total Profit / Loss",
   note = null,
+  invertColors = false,
 }: ProfitLossCardProps) {
   if (isLoading) {
     return <KPICardSkeleton title={title} />;
@@ -312,7 +309,7 @@ function ProfitLossCard({
               <span
                 className={cn(
                   "text-3xl font-bold",
-                  isProfit ? "text-profit" : "text-loss",
+                  isProfit !== invertColors ? "text-profit" : "text-loss",
                 )}
               >
                 {isProfit ? "+" : "-"}
@@ -320,7 +317,10 @@ function ProfitLossCard({
                 {formattedValue}
               </span>
               {profitLossPercent !== null && (
-                <SignedPercent percent={profitLossPercent} />
+                <SignedPercent
+                  percent={profitLossPercent}
+                  invertColors={invertColors}
+                />
               )}
             </div>
             {note && (
@@ -350,6 +350,8 @@ interface YTDPerformanceCardProps {
   isLoading: boolean;
   hasHoldings: boolean;
   title: string;
+  /** A rise is bad (liabilities) */
+  invertColors?: boolean;
 }
 
 function YTDPerformanceCard({
@@ -361,6 +363,7 @@ function YTDPerformanceCard({
   isLoading,
   hasHoldings,
   title,
+  invertColors = false,
 }: YTDPerformanceCardProps) {
   if (isLoading) {
     return <KPICardSkeleton title={title} />;
@@ -402,7 +405,7 @@ function YTDPerformanceCard({
               <span
                 className={cn(
                   "text-3xl font-bold",
-                  isProfit ? "text-profit" : "text-loss",
+                  isProfit !== invertColors ? "text-profit" : "text-loss",
                 )}
               >
                 {isProfit ? "+" : "-"}
@@ -410,7 +413,10 @@ function YTDPerformanceCard({
                 {formattedValue}
               </span>
               {ytdProfitLossPercent !== null && (
-                <SignedPercent percent={ytdProfitLossPercent} />
+                <SignedPercent
+                  percent={ytdProfitLossPercent}
+                  invertColors={invertColors}
+                />
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -538,24 +544,19 @@ export function InvestmentDashboardSection({
   customContentBelowCharts,
   customHoldingsSection,
   performanceChartTitle,
+  invertColors = category === "liabilities",
   className,
 }: InvestmentDashboardSectionProps) {
   // ─────────────────────────────────────────────────────────────
   // Performance Calculations
   // ─────────────────────────────────────────────────────────────
 
-  // Determine if we need discrete or continuous YTD
-  const needsContinuousYTD = kpiCards.some((c) => c.type === "ytd-continuous");
-  const needsDiscreteYTD = kpiCards.some((c) => c.type === "ytd-performance");
-
-  // Discrete YTD (snapshot-based) for most categories
-  const discreteYTD = useCategoryYTD(category, {
-    enabled: needsDiscreteYTD && !isLoading,
-  });
-
-  // Continuous YTD (price-based) for commodities
-  const continuousYTD = useMetalsYTD(currency as MetalsCurrency, {
-    enabled: needsContinuousYTD && !isLoading,
+  // YTD of the category from the one performance entry point: the resolver
+  // values sources with a price feed (vault metals) continuously and the
+  // rest from snapshots (hybrid), so no preset picks a strategy
+  const needsYTD = kpiCards.some((c) => c.type === "ytd-performance");
+  const categoryYTD = useCategoryYTD(category, {
+    enabled: needsYTD && !isLoading,
   });
 
   // One P/L resolution (holdings cost basis, else the performance since
@@ -606,9 +607,8 @@ export function InvestmentDashboardSection({
         : null;
 
   // YTD values for custom cards
-  const ytd = needsContinuousYTD ? continuousYTD : discreteYTD;
-  const ytdProfitLoss = ytd.ytdProfitLoss;
-  const ytdProfitLossPercent = ytd.ytdProfitLossPercent;
+  const ytdProfitLoss = categoryYTD.ytdProfitLoss;
+  const ytdProfitLossPercent = categoryYTD.ytdProfitLossPercent;
 
   // P/L loading: only show loading when there ARE holdings and P/L is calculating
   // If there are no holdings, we show "No holdings yet" immediately (not skeleton)
@@ -658,6 +658,7 @@ export function InvestmentDashboardSection({
             hasHoldings={hasHoldings}
             title={config.title ?? plTitle}
             note={plNote}
+            invertColors={invertColors}
           />
         );
 
@@ -665,35 +666,18 @@ export function InvestmentDashboardSection({
         return (
           <YTDPerformanceCard
             key={key}
-            ytdProfitLoss={discreteYTD.ytdProfitLoss}
-            ytdProfitLossPercent={discreteYTD.ytdProfitLossPercent}
-            trackingSince={discreteYTD.trackingSince}
-            partial={discreteYTD.partial}
+            ytdProfitLoss={categoryYTD.ytdProfitLoss}
+            ytdProfitLossPercent={categoryYTD.ytdProfitLossPercent}
+            trackingSince={categoryYTD.trackingSince}
+            partial={categoryYTD.partial}
             currency={currency}
-            isLoading={isLoading || (hasHoldings && discreteYTD.isLoading)}
+            isLoading={isLoading || (hasHoldings && categoryYTD.isLoading)}
             hasHoldings={hasHoldings}
             title={
               config.title ??
-              ytdTitle(discreteYTD.flowAdjusted, discreteYTD.flowsEstimated)
+              ytdTitle(categoryYTD.flowAdjusted, categoryYTD.flowsEstimated)
             }
-          />
-        );
-
-      case "ytd-continuous":
-        return (
-          <YTDPerformanceCard
-            key={key}
-            ytdProfitLoss={continuousYTD.ytdProfitLoss}
-            ytdProfitLossPercent={continuousYTD.ytdProfitLossPercent}
-            trackingSince={null}
-            partial={false}
-            currency={currency}
-            isLoading={isLoading || (hasHoldings && continuousYTD.isLoading)}
-            hasHoldings={hasHoldings}
-            title={
-              config.title ??
-              ytdTitle(continuousYTD.flowAdjusted, continuousYTD.flowsEstimated)
-            }
+            invertColors={invertColors}
           />
         );
 

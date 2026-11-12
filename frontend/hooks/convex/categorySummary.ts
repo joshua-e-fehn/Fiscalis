@@ -1,6 +1,6 @@
 /**
  * Category summary for the investment category pages (equities, bonds,
- * real estate, crypto): turns a `categories.get*` query result, whose
+ * real estate, crypto, commodities): turns a `categories.get*` query result, whose
  * `summary` the server built with services/portfolio/categorySummary.ts,
  * into the `CategorySummary` the dashboard renders.
  *
@@ -25,10 +25,14 @@ import {
   holdingProfitLoss,
   positionToHolding,
   topHoldings,
+  type CategoryHolding,
   type HoldingsSummary,
 } from "@/../services/portfolio/categorySummary";
 
-/** Result of categories.getEquities / getBonds / getCrypto / getRealEstate */
+/**
+ * Result of categories.getEquities / getBonds / getCrypto / getRealEstate /
+ * getCommodities
+ */
 export type CategoryPositionsData = FunctionReturnType<
   typeof api.categories.getEquities
 >;
@@ -43,6 +47,24 @@ const EMPTY: HoldingsSummary = {
   coverage: null,
 };
 
+/** The `limit` largest holdings (any source) as dashboard holdings. */
+export function toTopHoldingRows(
+  holdings: CategoryHolding[],
+  subcategoryId: string,
+  categoryValue: number,
+  limit: number,
+): Holding[] {
+  return topHoldings(holdings, limit).map((h) => ({
+    id: h.id,
+    name: h.name,
+    subcategoryId,
+    value: h.value,
+    costBasis: h.costBasis ?? null,
+    ...holdingProfitLoss(h),
+    allocationPercent: categoryValue > 0 ? (h.value / categoryValue) * 100 : 0,
+  }));
+}
+
 /** The `limit` largest positions as dashboard holdings. */
 export function toTopHoldings(
   positions: CategoryPosition[],
@@ -52,18 +74,12 @@ export function toTopHoldings(
   name: (p: CategoryPosition) => string = (p) =>
     p.symbol ?? p.name ?? "Unknown",
 ): Holding[] {
-  return topHoldings(
-    positions.map((p) => ({ position: p, ...positionToHolding(p) })),
-    limit,
-  ).map((h) => ({
-    id: h.id,
-    name: name(h.position),
+  return toTopHoldingRows(
+    positions.map((p) => ({ ...positionToHolding(p), name: name(p) })),
     subcategoryId,
-    value: h.value,
-    costBasis: h.costBasis ?? null,
-    ...holdingProfitLoss(h),
-    allocationPercent: categoryValue > 0 ? (h.value / categoryValue) * 100 : 0,
-  }));
+    categoryValue,
+    limit,
+  );
 }
 
 /** P/L fields of a SubcategoryData / CategorySummary from a summary. */
@@ -117,7 +133,12 @@ export function useCategorySummary(
 ): { summary: CategorySummary | null; isLoading: boolean } {
   const summary = useMemo<CategorySummary | null>(() => {
     if (data === undefined || data === null) return null;
-    const { positions, summary: total } = data;
+    const { positions, vaultHoldings, summary: total } = data;
+    // Provider positions and vault items (commodities) side by side
+    const holdings: CategoryHolding[] = [
+      ...positions.map(positionToHolding),
+      ...vaultHoldings,
+    ];
 
     return toCategorySummary(
       total,
@@ -127,10 +148,8 @@ export function useCategorySummary(
           ...base,
           totalValue: sub.value,
           ...summaryProfitLoss(sub),
-          topHoldings: toTopHoldings(
-            positions.filter(
-              (p) => (p.investmentSubcategory ?? "unknown") === base.id,
-            ),
+          topHoldings: toTopHoldingRows(
+            holdings.filter((h) => h.subcategory === base.id),
             base.id,
             total.value,
             topHoldingsPerSubcategory,

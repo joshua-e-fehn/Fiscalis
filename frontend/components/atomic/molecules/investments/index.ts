@@ -6,7 +6,6 @@ export { TopHoldingsList } from "./TopHoldingsList";
 export {
   InvestmentDashboardSection,
   STANDARD_KPI_CARDS,
-  COMMODITIES_KPI_CARDS,
   CASH_KPI_CARDS,
   type KPICardType,
   type KPICardConfig,

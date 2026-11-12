@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { useMetalsPrices, getSpotPrice } from "@/hooks/metals";
+import { useMetalsPrices } from "@/hooks/metals";
 import {
   MetalsPrices,
   MetalItemWithValuation,
@@ -15,6 +15,7 @@ import {
   summarizeMetalItems,
   valueMetalItem,
   type MetalsPortfolioSummary,
+  type SpotExchangeRates,
 } from "@/../services/finance/metals";
 
 // ═══════════════════════════════════════════════════════════════
@@ -29,6 +30,10 @@ interface UseMetalsReturn {
   pricesLoading: boolean;
   pricesError: Error | null;
   prices: MetalsPrices | undefined;
+  /** The exchange rates a USD or CHF view needs are still loading */
+  ratesLoading: boolean;
+  /** When the oldest spot price an item is valued at was observed (ms) */
+  spotAsOf: number | null;
 }
 
 /** Return type for useMetalsSummary hook */
@@ -38,7 +43,7 @@ interface UseMetalsSummaryReturn {
   isLoading: boolean;
   isError: boolean;
   pricesLoading: boolean;
-  /** When the spot prices were observed (ms); null without prices */
+  /** When the oldest spot price used was observed (ms); null without one */
   pricesAsOf: number | null;
 }
 
@@ -58,22 +63,17 @@ interface UseMetalItemReturn {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Enrich a metal item with current valuations
+ * A vault item in the display currency, from its server valuation
+ * (vault.getUserVaultItems: EUR at the Convex spot mirror, the valuation
+ * net worth uses). Value, cost and realized P/L are converted at the rates
+ * the spot prices are served with (convertAtSpotRates); nothing is revalued
+ * from the client price feed.
  */
 function enrichItemWithValuation(
   item: NonNullable<typeof api.vault.getUserVaultItems._returnType>[number],
-  prices: MetalsPrices | undefined,
+  rates: SpotExchangeRates | undefined,
   currency: MetalsCurrency = "eur",
 ): MetalItemWithValuation {
-  // Spot price per ounce from /api/metals/prices/all/latest, valued with
-  // the same staleness policy and formula as the server (services/finance/metals).
-  const spotPrice = prices
-    ? getSpotPrice(prices, item.metalType as MetalsType, currency)
-    : null;
-  const spotTimestamp = prices?.all?.timestamp
-    ? Date.parse(prices.all.timestamp)
-    : null;
-
   const { buyPremium, sellPremium } = resolvePremiums({
     // `premium` is the legacy single-premium field on old documents
     buy: [item.buyPremium, (item as { premium?: number }).premium],
@@ -90,24 +90,16 @@ function enrichItemWithValuation(
   // The ledger is in EUR; the cached fields in their purchase currency
   const costCurrency = ledger ? "EUR" : (item.purchaseCurrency ?? "EUR");
 
-  // Costs and realized P/L in the display currency, at the rates the spot
-  // prices were served with, so they compare with the spot values; unknown
-  // when a rate is missing
-  const rates = prices?.all?.exchangeRates;
+  // Unknown when a rate is missing
   const toDisplay = (amount: number | null, from: string) =>
     amount === null ? null : convertAtSpotRates(amount, from, currency, rates);
   const unitCost = toDisplay(averageCost, costCurrency);
 
   const valuation = valueMetalItem(
-    {
-      fineWeightGrams: item.fineWeightGrams,
-      quantity,
-      buyPremium,
-      sellPremium,
-      purchasePricePerUnit: unitCost ?? undefined,
-    },
-    { pricePerOunce: spotPrice, sourceTimestamp: spotTimestamp },
-    Date.now(),
+    { fineWeightGrams: item.fineWeightGrams, quantity, buyPremium, sellPremium },
+    item.valuation,
+    currency,
+    rates,
   );
 
   return {
@@ -156,29 +148,38 @@ function enrichItemWithValuation(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Main metals hook - combines Convex data with Supabase prices
- *
- * Returns metal items enriched with current market valuations
- * calculated using live spot prices from Supabase.
+ * Main metals hook: the vault items with their server valuation (EUR at the
+ * Convex spot mirror) in the display currency. The client price feed only
+ * supplies the exchange rates for a USD or CHF view.
  */
 export function useMetals(currency: MetalsCurrency = "eur"): UseMetalsReturn {
-  // Fetch metal items from Convex
   const metalItems = useQuery(api.vault.getUserVaultItems);
 
-  // Fetch prices from Supabase
+  // Prices from the time-series store: their exchange rates convert the
+  // EUR valuation (and the Prices tab shows them)
   const {
     data: prices,
     isLoading: pricesLoading,
     isError: pricesError,
     error,
   } = useMetalsPrices();
+  const rates = prices?.all?.exchangeRates;
 
-  // Enrich items with valuations
   const enrichedItems = useMemo(
     () =>
-      metalItems?.map((item) => enrichItemWithValuation(item, prices, currency)),
-    [metalItems, prices, currency],
+      metalItems?.map((item) => enrichItemWithValuation(item, rates, currency)),
+    [metalItems, rates, currency],
   );
+
+  // When the oldest spot price an item is valued at was observed
+  const spotAsOf = useMemo(() => {
+    const observed = (metalItems ?? []).flatMap((item) =>
+      item.valuation.pricedAtSpot && item.valuation.spot
+        ? [item.valuation.spot.sourceTimestamp]
+        : [],
+    );
+    return observed.length > 0 ? Math.min(...observed) : null;
+  }, [metalItems]);
 
   return {
     items: enrichedItems,
@@ -187,37 +188,36 @@ export function useMetals(currency: MetalsCurrency = "eur"): UseMetalsReturn {
     pricesLoading,
     pricesError: pricesError ? (error as Error) : null,
     prices,
+    // The EUR view needs no rates; another currency waits for them
+    ratesLoading: currency !== "eur" && pricesLoading,
+    spotAsOf,
   };
 }
 
 /**
- * Metals summary hook - aggregated portfolio statistics
- *
- * Calculates total portfolio value, per-metal breakdowns,
- * and allocation percentages using live Supabase prices.
+ * Metals summary hook: per-metal and total value, cost, unrealized and
+ * realized P/L and allocation of the server-valued items.
  */
 export function useMetalsSummary(
   currency: MetalsCurrency = "eur",
 ): UseMetalsSummaryReturn {
-  // Get all items with valuations
-  const { items, isLoading, isError, pricesLoading, prices } =
+  const { items, isLoading, isError, pricesLoading, ratesLoading, spotAsOf } =
     useMetals(currency);
 
-  // Per-metal and total summary; unrealized cost and P/L cover only items
-  // with a cost (see summarizeMetalItems), total P/L adds realized sales.
-  // Gated on the prices: before they load every item would sit at cost.
+  // Unrealized cost and P/L cover only items with a cost (see
+  // summarizeMetalItems), total P/L adds realized sales. Gated on the
+  // rates in a USD or CHF view: before they load no value converts.
   const summary = useMemo(
-    () => (items && !pricesLoading ? summarizeMetalItems(items) : undefined),
-    [items, pricesLoading],
+    () => (items && !ratesLoading ? summarizeMetalItems(items) : undefined),
+    [items, ratesLoading],
   );
-  const asOf = prices?.all?.timestamp ? Date.parse(prices.all.timestamp) : NaN;
 
   return {
     summary,
-    isLoading: isLoading || pricesLoading,
+    isLoading: isLoading || ratesLoading,
     isError,
     pricesLoading,
-    pricesAsOf: Number.isFinite(asOf) ? asOf : null,
+    pricesAsOf: spotAsOf,
   };
 }
 
@@ -236,18 +236,12 @@ export function useMetalItem(
     vaultItemId: itemId,
   });
 
-  // Fetch prices from Supabase
+  // Exchange rates for a USD or CHF view
   const { data: prices, isLoading: pricesLoading } = useMetalsPrices();
 
   // Enrich item with valuation
   const enrichedItem = item
-    ? enrichItemWithValuation(
-        item as NonNullable<
-          typeof api.vault.getUserVaultItems._returnType
-        >[number],
-        prices,
-        currency,
-      )
+    ? enrichItemWithValuation(item, prices?.all?.exchangeRates, currency)
     : undefined;
 
   return {

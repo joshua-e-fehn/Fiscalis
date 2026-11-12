@@ -21,6 +21,7 @@ import {
   itemProjection,
   ledgerOverCounts,
   missingOpeningTransaction,
+  nextOpeningQuantity,
   replayLedger,
   retainedBasePrice,
   transactionUnitAmount,
@@ -595,14 +596,18 @@ export const addCustomVaultItem = mutation({
 
 /**
  * Update a vault item. Quantity, purchase price, date and currency are
- * ledger fields: they edit the item's opening balance (the quantity is the
- * new total held, the price is per unit in purchaseCurrency), and the
- * edit is rejected when the ledger would then hold a negative quantity.
+ * ledger fields: they edit the item's opening balance (openingQuantity sets
+ * the opening's own quantity; quantity is instead a new total held and moves
+ * the opening by the difference; the price is per unit in purchaseCurrency),
+ * and the edit is rejected when the ledger would then hold a negative
+ * quantity. openingQuantity is resolved against the ledger read in this
+ * transaction, so a client holding a stale total cannot undo an earlier edit.
  */
 export const updateVaultItem = mutation({
   args: {
     vaultItemId: v.id("vaultItems"),
     quantity: v.optional(v.number()),
+    openingQuantity: v.optional(v.number()),
     buyPremium: v.optional(v.number()),
     sellPremium: v.optional(v.number()),
     purchasePricePerUnit: v.optional(v.number()),
@@ -616,6 +621,7 @@ export const updateVaultItem = mutation({
     const {
       vaultItemId,
       quantity,
+      openingQuantity: newOpeningQuantity,
       purchasePricePerUnit,
       purchaseDate,
       purchaseCurrency,
@@ -642,6 +648,7 @@ export const updateVaultItem = mutation({
 
     const editsLedger =
       quantity !== undefined ||
+      newOpeningQuantity !== undefined ||
       purchasePricePerUnit !== undefined ||
       purchaseDate !== undefined ||
       purchaseCurrency !== undefined;
@@ -654,14 +661,17 @@ export const updateVaultItem = mutation({
         );
       }
       const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
-      let held: number;
+      let openingQuantity: number;
       try {
-        held = replayLedger(txs.map(asLedgerTransaction), toBaseAmount).quantity;
+        const held = replayLedger(txs.map(asLedgerTransaction), toBaseAmount).quantity;
+        openingQuantity = nextOpeningQuantity(opening.quantity, {
+          openingQuantity: newOpeningQuantity,
+          quantity,
+          held,
+        });
       } catch (error) {
         throw asUserError(error);
       }
-      const openingQuantity =
-        opening.quantity + (quantity === undefined ? 0 : quantity - held);
       const next = {
         quantity: openingQuantity,
         pricePerUnit: purchasePricePerUnit ?? opening.pricePerUnit,

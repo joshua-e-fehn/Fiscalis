@@ -314,16 +314,19 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       // one that does not: the two values measure different scopes.
       // ... nor toward a snapshot that received a flow
       const next = values[lastIndexAtOrBefore(values, ts) + 1];
-      const value =
+      const interpolatesToNext =
         found.kind === "interpolated" &&
         next !== undefined &&
-        (next.includesContinuous !== includesContinuous ||
-          (next.flow !== null && next.flow.amount !== 0))
+        next.includesContinuous === includesContinuous &&
+        (next.flow === null || next.flow.amount === 0);
+      const value =
+        found.kind === "interpolated" && !interpolatesToNext
           ? found.point.value
           : found.value;
+      // The next snapshot's partial status counts only when its value
+      // enters this point
       pointPartial.push(
-        found.point.partial ||
-          (found.kind === "interpolated" && next?.partial === true),
+        found.point.partial || (interpolatesToNext && next.partial === true),
       );
       const point =
         found.kind === "observed"

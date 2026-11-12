@@ -8,6 +8,7 @@ import {
   aggregateNetWorth,
   CREDIT_BALANCE_SUBCATEGORY,
   placeHolding,
+  profitLossCostBase,
   type CategoryAggregate,
   type HoldingSource,
   type NetWorthAggregate,
@@ -93,7 +94,8 @@ async function toVaultHoldings(
                 name: h.doc.customName || catalog?.name || h.name,
                 subcategory: h.subcategory,
                 value: h.valueBase,
-                costBasis: h.costBase,
+                // None when valued at cost: its P/L is unknown
+                costBasis: profitLossCostBase(h),
               };
             })(),
           ]

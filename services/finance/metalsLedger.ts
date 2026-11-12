@@ -206,6 +206,24 @@ export function retainedBasePrice(
   return unchanged ? previous.pricePerUnitBase : undefined;
 }
 
+/**
+ * The quantity an edited opening balance takes. `openingQuantity` sets it
+ * directly; `quantity` is a new total held (`held`, the ledger's replayed
+ * quantity) and moves the opening by the difference, so later buys and sales
+ * stay as recorded. Neither keeps it. Both at once is ambiguous: LedgerError.
+ */
+export function nextOpeningQuantity(
+  currentOpening: number,
+  edit: { openingQuantity?: number; quantity?: number; held: number },
+): number {
+  if (edit.openingQuantity !== undefined && edit.quantity !== undefined) {
+    throw new LedgerError("Set either the opening quantity or the total held, not both");
+  }
+  if (edit.openingQuantity !== undefined) return edit.openingQuantity;
+  if (edit.quantity !== undefined) return currentOpening + (edit.quantity - edit.held);
+  return currentOpening;
+}
+
 /** Ledger order: undated opening balances first, then by date, then creation. */
 export function sortLedger<T extends LedgerTransaction>(txs: readonly T[]): T[] {
   return [...txs].sort((a, b) => {

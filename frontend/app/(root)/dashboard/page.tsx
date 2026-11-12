@@ -559,11 +559,9 @@ export default function DashboardPage() {
   const currency = useBaseCurrency();
   const { summary, isLoading } = usePortfolioOverview();
   // The live totals the headline cards show: the YTD card and the chart end
-  // there (PF-05). Without any holdings or debt there is nothing to plot.
-  const live =
-    summary && (summary.totalAssets !== 0 || summary.totalLiabilities !== 0)
-      ? summary
-      : undefined;
+  // there (PF-05), at zero too once everything is sold or repaid. Without
+  // any history a zero live figure plots nothing (withLiveEnd).
+  const live = summary ?? undefined;
   const netWorthYTD = useNetWorthYTD({ live, enabled: !isLoading });
 
   // Portfolio chart: the engine's series for the selected range and view,

@@ -57,7 +57,12 @@ export function EditVaultItemDialog({
   onClose,
 }: EditVaultItemDialogProps) {
   const updateItem = useUpdateMetalItem();
-  const { transactions } = useMetalItem(item._id as Id<"vaultItems">);
+  const { item: liveItem, transactions } = useMetalItem(
+    item._id as Id<"vaultItems">,
+  );
+  // The item the caller passed is a snapshot; compare against the live one
+  // so a second edit in the same slide-over starts from the saved values
+  const current = liveItem ?? item;
   const opening = transactions?.find((tx) => tx.isOpening);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,49 +78,50 @@ export function EditVaultItemDialog({
   const [openingCurrency, setOpeningCurrency] = useState("EUR");
   const [openingDate, setOpeningDate] = useState("");
 
-  // Reset the form whenever the dialog opens (and once the opening loads)
+  // Reset the form whenever the dialog opens (and once the live item and
+  // the opening load)
   const openingId = opening?._id;
+  const liveLoaded = liveItem !== undefined;
   useEffect(() => {
     if (!isOpen) return;
-    setName(item.customName ?? "");
-    setBuyPremium(toPercent(item.buyPremium));
-    setSellPremium(toPercent(item.sellPremium));
-    setStorageLocation(item.storageLocation ?? "");
-    setNotes(item.notes ?? "");
+    setName(current.customName ?? "");
+    setBuyPremium(toPercent(current.buyPremium));
+    setSellPremium(toPercent(current.sellPremium));
+    setStorageLocation(current.storageLocation ?? "");
+    setNotes(current.notes ?? "");
     setOpeningQuantity(opening ? String(opening.quantity) : "");
     setOpeningPrice(opening?.pricePerUnit != null ? String(opening.pricePerUnit) : "");
     setOpeningCurrency(opening?.currency ?? "EUR");
     setOpeningDate(opening?.transactionDate?.slice(0, 10) ?? "");
     setError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, item._id, openingId]);
+  }, [isOpen, item._id, openingId, liveLoaded]);
 
   /** The changed fields, or an error message for an invalid entry. */
   const buildUpdate = (): UpdateArgs | string => {
     const update: UpdateArgs = { vaultItemId: item._id as Id<"vaultItems"> };
 
     const trimmedName = name.trim();
-    if (trimmedName !== (item.customName ?? "") && trimmedName !== "") {
+    if (trimmedName !== (current.customName ?? "") && trimmedName !== "") {
       update.customName = trimmedName;
     }
     const buy = parsePercent(buyPremium);
     const sell = parsePercent(sellPremium);
     if (buy === null || sell === null) return "Premiums must be numbers";
-    if (Math.abs(buy - item.buyPremium) > 1e-9) update.buyPremium = buy;
-    if (Math.abs(sell - item.sellPremium) > 1e-9) update.sellPremium = sell;
-    if (storageLocation !== (item.storageLocation ?? "")) {
+    if (Math.abs(buy - current.buyPremium) > 1e-9) update.buyPremium = buy;
+    if (Math.abs(sell - current.sellPremium) > 1e-9) update.sellPremium = sell;
+    if (storageLocation !== (current.storageLocation ?? "")) {
       update.storageLocation = storageLocation;
     }
-    if (notes !== (item.notes ?? "")) update.notes = notes;
+    if (notes !== (current.notes ?? "")) update.notes = notes;
 
     if (opening) {
       const quantity = parseFloat(openingQuantity);
       if (!Number.isFinite(quantity)) return "Opening quantity must be a number";
-      // The mutation takes the quantity held and moves the opening by the
-      // difference, so the later buys and sales stay as recorded
-      if (quantity !== opening.quantity) {
-        update.quantity = item.quantity + (quantity - opening.quantity);
-      }
+      // Sent as the opening's own quantity: the mutation resolves it against
+      // the ledger it reads, so no client-side total (which can be stale
+      // after an earlier edit) feeds into it
+      if (quantity !== opening.quantity) update.openingQuantity = quantity;
       if (openingPrice.trim() !== "") {
         const price = parseFloat(openingPrice);
         if (!Number.isFinite(price)) return "Price per unit must be a number";

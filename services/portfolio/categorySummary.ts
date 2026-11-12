@@ -13,7 +13,6 @@
  */
 
 import {
-  costLine,
   sumCostCoveredValue,
   type HoldingValuation,
 } from "./unrealizedProfitLoss";
@@ -517,13 +516,6 @@ export interface TrackedChange {
 export interface ResolvedProfitLoss {
   /** The holdings' cost basis; never inferred from a snapshot */
   costBasis: number | null;
-  /**
-   * The line a chart draws against the category's full value:
-   * currentValue − profitLoss, so the chart's gap and the KPI agree even when
-   * only some holdings carry a cost basis. Since tracking started it is the
-   * value then plus the net flows since. Null when there is no P/L.
-   */
-  costLine: number | null;
   profitLoss: number | null;
   profitLossPercent: number | null;
   /** Where the figures come from; null when there is no P/L to show */
@@ -540,8 +532,8 @@ export interface ResolvedProfitLoss {
 }
 
 /**
- * The one precedence chain for a category's P/L, used for both the KPI card
- * and the chart's cost line (`costLine`) so they never disagree:
+ * The one precedence chain for a category's P/L, shown on the category
+ * page's P/L KPI card (useCategoryProfitLoss):
  *
  * 1. the holdings' own cost basis (coverage-based, from the summary);
  * 2. otherwise the performance since tracking started, net of flows where
@@ -561,7 +553,6 @@ export function resolveCategoryProfitLoss(input: {
   if (holdings && holdings.costBasis !== null && holdings.profitLoss !== null) {
     return {
       costBasis: holdings.costBasis,
-      costLine: costLine(currentValue, holdings.profitLoss),
       profitLoss: holdings.profitLoss,
       profitLossPercent:
         holdings.profitLossPercent ??
@@ -576,7 +567,6 @@ export function resolveCategoryProfitLoss(input: {
   if (sinceTracking && currentValue > 0) {
     return {
       costBasis: null,
-      costLine: costLine(currentValue, sinceTracking.change),
       profitLoss: sinceTracking.change,
       profitLossPercent: sinceTracking.changePercent,
       source: "since-tracking",
@@ -588,7 +578,6 @@ export function resolveCategoryProfitLoss(input: {
 
   return {
     costBasis: null,
-    costLine: null,
     profitLoss: null,
     profitLossPercent: null,
     source: null,

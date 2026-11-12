@@ -504,7 +504,6 @@ describe("resolveCategoryProfitLoss", () => {
       resolveCategoryProfitLoss({ currentValue: 5000, holdings, sinceTracking: tracked }),
     ).toEqual({
       costBasis: 1000,
-      costLine: 5000,
       profitLoss: 0,
       profitLossPercent: 0,
       source: "cost-basis",
@@ -517,7 +516,6 @@ describe("resolveCategoryProfitLoss", () => {
       resolveCategoryProfitLoss({ currentValue: 5000, holdings: noCost, sinceTracking: tracked }),
     ).toEqual({
       costBasis: null,
-      costLine: 4700,
       profitLoss: 300,
       profitLossPercent: 7.5,
       source: "since-tracking",
@@ -527,15 +525,15 @@ describe("resolveCategoryProfitLoss", () => {
     });
   });
 
-  it("draws a cost line whose gap to the value is the KPI P/L", () => {
+  it("takes a partial cost basis's P/L over the history", () => {
     // 5000 in the category, of which 1200 carry a cost of 1000
     const partial = { costBasis: 1000, profitLoss: 200, profitLossPercent: 20 };
     for (const sinceTracking of [tracked, null]) {
       const r = resolveCategoryProfitLoss({ currentValue: 5000, holdings: partial, sinceTracking });
       expect(r.source).toBe("cost-basis");
       expect(r.costBasis).toBe(1000);
-      expect(5000 - r.costLine!).toBe(r.profitLoss);
       expect(r.profitLoss).toBe(200);
+      expect(r.profitLossPercent).toBe(20);
     }
   });
 
@@ -544,7 +542,6 @@ describe("resolveCategoryProfitLoss", () => {
       resolveCategoryProfitLoss({ currentValue: 5000, holdings: null, sinceTracking: null }),
     ).toEqual({
       costBasis: null,
-      costLine: null,
       profitLoss: null,
       profitLossPercent: null,
       source: null,

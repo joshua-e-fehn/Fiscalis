@@ -34,7 +34,7 @@ import {
   useMetalsPrices,
   useMetalPrices,
   useMetalPriceLatest,
-  useMetalPricesRange,
+  useMetalPriceHistory,
 } from "@/hooks/metals";
 import { useMetalsYTD } from "@/hooks/performance";
 import { useVaultPerformance } from "@/hooks/performance/useContinuousPerformance";
@@ -176,18 +176,12 @@ const MetalPriceCard = ({
   const config = metalConfig[metal];
   const { data, isLoading } = useMetalPriceLatest(metal, currency);
 
-  // Fetch YTD data to calculate performance
-  const today = new Date();
-  const currentYear = today.getUTCFullYear();
-  const startOfYear = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
-
-  const { data: ytdData, isLoading: ytdLoading } = useMetalPricesRange(
+  // YTD closes (the shared daily history) to calculate performance
+  const { data: ytdData, isLoading: ytdLoading } = useMetalPriceHistory(
     metal,
-    startOfYear,
-    today,
-    "day",
+    "YTD",
     currency,
-    !isLoading,
+    { enabled: !isLoading },
   );
 
   // Calculate YTD performance

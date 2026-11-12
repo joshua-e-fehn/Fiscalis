@@ -8,7 +8,14 @@ import {
   MetalsType,
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
-import { TimeRange, TimeInterval } from "@/../services/finance/financeService";
+import {
+  type TimeRange,
+  type PriceHistoryWindow,
+  getTimeRangeStartTimestamp,
+  priceHistoryWindow,
+  sliceFrom,
+} from "@/../services/finance/financeService";
+import type { PricePoint } from "@/lib/performance";
 import { interpolateMissingData } from "@/lib/utils/interpolate";
 
 import * as metalsApi from "@/lib/api/metals";
@@ -28,20 +35,17 @@ export const metalKeys = {
     timeRange: TimeRange,
     currency: MetalCurrency,
   ) => [...metalKeys.prices(metal), "historical", timeRange, currency] as const,
-  range: (
+  history: (
     metal: MetalType,
-    startDate: string,
-    endDate: string,
-    aggregationInterval: TimeInterval,
     currency: MetalCurrency,
+    window: PriceHistoryWindow,
   ) =>
     [
       ...metalKeys.prices(metal),
-      "range",
-      startDate,
-      endDate,
-      aggregationInterval,
+      "history",
       currency,
+      window.interval,
+      window.from,
     ] as const,
 };
 
@@ -98,44 +102,45 @@ export function useMetalPriceLatest(metal: MetalType, currency: MetalCurrency) {
 }
 
 /**
- * Hook to fetch metal prices for a custom date range with specified aggregation
- * Automatically interpolates missing/zero data points
+ * A metal's closes for a range, as price points (no gap filling: the
+ * performance strategies bridge gaps themselves).
+ *
+ * Every range with the same interval shares one fetch per metal and
+ * currency (priceHistoryWindow: the widest of those ranges, stable for the
+ * day), and each caller slices it to its own range start less `lookbackMs`.
  */
-export function useMetalPricesRange(
+export function useMetalPriceHistory(
   metal: MetalType,
-  startDate: Date,
-  endDate: Date,
-  aggregationInterval: TimeInterval,
+  timeRange: TimeRange,
   currency: MetalCurrency,
-  enabled = true,
+  options: { lookbackMs?: number; enabled?: boolean } = {},
 ) {
-  // Format dates for query key to ensure stable keys
-  const formattedStartDate = startDate.toISOString().split("T")[0];
-  const formattedEndDate = endDate.toISOString().split("T")[0];
+  const { lookbackMs = 0, enabled = true } = options;
+  const window = priceHistoryWindow(timeRange);
 
-  return useQuery<MetalChartData[]>({
-    queryKey: metalKeys.range(
-      metal,
-      formattedStartDate,
-      formattedEndDate,
-      aggregationInterval,
-      currency,
-    ),
-    queryFn: async () => {
+  return useQuery({
+    queryKey: metalKeys.history(metal, currency, window),
+    queryFn: async (): Promise<PricePoint[]> => {
       const data = await metalsApi.getMetalPricesRange(
         metal,
-        startDate,
-        endDate,
-        aggregationInterval,
+        new Date(window.from),
+        new Date(),
+        window.interval,
         currency,
       );
-      // Interpolate missing/zero values
-      return interpolateMissingData(data);
+      // A missing close comes back as null or 0: it is a gap, not a price
+      return data.flatMap((p) =>
+        p.date !== null && p.price !== null && p.price > 0
+          ? [{ timestamp: new Date(p.date).getTime(), price: p.price }]
+          : [],
+      );
     },
+    select: (points) =>
+      sliceFrom(points, getTimeRangeStartTimestamp(timeRange) - lookbackMs),
     staleTime: 1000 * 60 * 15, // 15 minutes (historical data changes less frequently)
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    enabled, // Allow disabling the query when needed
+    enabled,
   });
 }
 

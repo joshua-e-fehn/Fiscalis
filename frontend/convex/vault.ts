@@ -440,11 +440,13 @@ export const getVaultItemTransactions = query({
     const userId = await getUserId(ctx);
     if (!userId) return [];
     if (!(await getOwnedDoc(ctx, userId, args.vaultItemId))) return [];
-    return await ctx.db
+    const txs = await ctx.db
       .query("vaultTransactions")
       .withIndex("by_item", (q) => q.eq("vaultItemId", args.vaultItemId))
       .order("desc")
       .collect();
+    // The opening balance is what the item edit dialog changes
+    return txs.map((tx) => ({ ...tx, isOpening: isOpeningTransaction(tx) }));
   },
 });
 

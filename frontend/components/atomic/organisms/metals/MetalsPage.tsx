@@ -1079,9 +1079,6 @@ export function MetalsPage({
         isOpen={!!selectedItem}
         onClose={() => setSelectedItem(null)}
         currency={initialCurrency}
-        onEdit={(item) => {
-          console.log("Edit item", item);
-        }}
       />
 
       <AddMetalSlideOver

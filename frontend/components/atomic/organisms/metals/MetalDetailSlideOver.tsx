@@ -50,13 +50,13 @@ import {
   BadgeDollarSign,
 } from "lucide-react";
 import { SellItemDialog } from "./SellItemDialog";
+import { EditVaultItemDialog } from "./EditVaultItemDialog";
 
 interface MetalDetailSlideOverProps {
   item: MetalItemWithValuation | null;
   isOpen: boolean;
   onClose: () => void;
   currency?: MetalsCurrency;
-  onEdit?: (item: MetalItemWithValuation) => void;
 }
 
 export function MetalDetailSlideOver({
@@ -64,10 +64,10 @@ export function MetalDetailSlideOver({
   isOpen,
   onClose,
   currency = "eur",
-  onEdit,
 }: MetalDetailSlideOverProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const deleteItem = useMutation(api.vault.deleteVaultItem);
 
@@ -351,23 +351,21 @@ export function MetalDetailSlideOver({
 
               {/* Secondary Actions */}
               <div className="flex gap-3">
-                {onEdit && (
-                  <Button
-                    variant="outline"
-                    onClick={() => onEdit(item)}
-                    className="flex-1"
-                  >
-                    <Edit2 className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setIsEditOpen(true)}
+                  className="flex-1"
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
                         "text-destructive hover:text-destructive hover:bg-destructive/10",
-                        onEdit ? "flex-1" : "w-full",
+                        "flex-1",
                       )}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
@@ -414,6 +412,13 @@ export function MetalDetailSlideOver({
           isOpen={isSellOpen}
           onClose={() => setIsSellOpen(false)}
           currency={currency}
+        />
+
+        {/* Edit Dialog: details and opening balance (vault.updateVaultItem) */}
+        <EditVaultItemDialog
+          item={item}
+          isOpen={isEditOpen}
+          onClose={() => setIsEditOpen(false)}
         />
       </SheetContent>
     </Sheet>

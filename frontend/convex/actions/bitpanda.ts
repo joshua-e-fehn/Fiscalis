@@ -20,7 +20,7 @@ import {
 import {
   classifyBitpandaPosition,
   getClassificationFields,
-} from "../lib/classification/engine";
+} from "../../../services/classification/engine";
 import { scheduledSyncEnabled } from "../lib/scheduledSync";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 

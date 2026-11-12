@@ -13,7 +13,7 @@ import type {
   BitpandaPositionContext,
   InvestmentCategory,
   InvestmentSubcategory,
-} from "../../../lib/types/classification";
+} from "../../frontend/lib/types/classification";
 
 import { BASE_CURRENCY } from "./currency";
 

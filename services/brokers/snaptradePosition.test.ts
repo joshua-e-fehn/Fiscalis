@@ -11,7 +11,7 @@ import {
   type SnaptradeHoldingsLike,
 } from "./snaptradePosition";
 import { fxRatesFromDaily } from "../finance/currency";
-import { classifySnaptradePosition } from "../../frontend/convex/lib/classification/engine";
+import { classifySnaptradePosition } from "../classification/engine";
 import { parseClassificationOverride } from "../../frontend/lib/types/classification";
 
 describe("normalizeAssetType", () => {

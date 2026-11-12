@@ -9,7 +9,7 @@ import { internal } from "./_generated/api";
 import {
   classifyPlaidAccount,
   getClassificationFields,
-} from "./lib/classification";
+} from "../../services/classification";
 import { getUserId } from "./lib/auth";
 import { loadFxRates } from "./fxRates";
 import {

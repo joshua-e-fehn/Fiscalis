@@ -8,7 +8,7 @@
  * The first matching rule determines the classification.
  */
 
-import type { ClassificationRule } from "../../../lib/types/classification";
+import type { ClassificationRule } from "../../frontend/lib/types/classification";
 
 // ═══════════════════════════════════════════════════════════════
 // KNOWN SYMBOLS

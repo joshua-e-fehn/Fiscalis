@@ -5,7 +5,7 @@ import {
   normalizeTransactions,
 } from "../../frontend/convex/lib/bitpanda";
 import { getBitpandaHoldingIdentityKeys } from "../../frontend/convex/lib/bitpandaIdentity";
-import { classifyBitpandaPosition } from "../../frontend/convex/lib/classification/engine";
+import { classifyBitpandaPosition } from "../classification/engine";
 
 describe("normalizeHoldings", () => {
   it("normalizes Bitpanda fiat earn wallets with live ticker FX", () => {

@@ -26,6 +26,19 @@ export const currencyCodes: Record<InvestmentCurrency, string> = {
 };
 
 /**
+ * Read a stored currency code ("EUR", "usd") as a supported display currency;
+ * undefined when it is none of them.
+ */
+export function toInvestmentCurrency(
+  code: string,
+): InvestmentCurrency | undefined {
+  const lower = code.toLowerCase();
+  return Object.hasOwn(currencyCodes, lower)
+    ? (lower as InvestmentCurrency)
+    : undefined;
+}
+
+/**
  * Short form for charts and summaries: "€950", "€12.5K", "€1.46M".
  * Keeps decimals so neighbouring values (1.5M vs 2M) stay distinguishable;
  * de-CH's own compact notation rounds to whole millions and has no "K".

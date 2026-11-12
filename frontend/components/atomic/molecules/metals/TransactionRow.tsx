@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { formatCurrency, toInvestmentCurrency } from "@/lib/utils/currency";
 import { MetalBadge } from "@/components/atomic/atoms/metals";
 import { MetalsType, MetalsCurrency } from "@/lib/types/metals-extended";
 import { ArrowDownLeft, ArrowUpRight, Gift, GiftIcon } from "lucide-react";
@@ -51,22 +52,6 @@ const transactionLabels = {
   gift_given: "Gift Given",
 };
 
-function formatCurrency(value: number, currency: string): string {
-  const currencyMap: Record<string, string> = {
-    eur: "EUR",
-    usd: "USD",
-    chf: "CHF",
-    EUR: "EUR",
-    USD: "USD",
-    CHF: "CHF",
-  };
-  return new Intl.NumberFormat("de-CH", {
-    style: "currency",
-    currency: currencyMap[currency] || "EUR",
-    minimumFractionDigits: 2,
-  }).format(value);
-}
-
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return new Intl.DateTimeFormat("en-US", {
@@ -81,6 +66,8 @@ export function TransactionRow({
   className,
 }: TransactionRowProps) {
   const Icon = transactionIcons[transaction.transactionType];
+  // Stored as an ISO code ("EUR"); unknown codes fall back to EUR as before
+  const currency = toInvestmentCurrency(transaction.currency) ?? "eur";
   const totalValue =
     transaction.pricePerUnit === null
       ? null
@@ -136,7 +123,7 @@ export function TransactionRow({
       <div className="w-28 text-right text-sm text-muted-foreground">
         {transaction.pricePerUnit === null
           ? "Cost unknown"
-          : `${formatCurrency(transaction.pricePerUnit, transaction.currency)}/unit`}
+          : `${formatCurrency(transaction.pricePerUnit, currency)}/unit`}
       </div>
 
       {/* Total */}
@@ -151,7 +138,7 @@ export function TransactionRow({
         ) : (
           <>
             {isIncoming ? "" : "-"}
-            {formatCurrency(totalValue, transaction.currency)}
+            {formatCurrency(totalValue, currency)}
           </>
         )}
       </div>

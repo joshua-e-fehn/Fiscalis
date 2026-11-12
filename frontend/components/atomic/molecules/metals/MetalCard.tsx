@@ -21,6 +21,7 @@ import {
 } from "@/lib/types/metals-extended";
 import { getSpotPrice } from "@/hooks/metals";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 
 interface MetalCardProps {
   metal: MetalsType;
@@ -75,12 +76,6 @@ export function MetalCard({
   const hasHoldings = summary.itemCount > 0;
   const spotPrice = prices ? getSpotPrice(prices, metal, currency) : null;
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("de-CH", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-      minimumFractionDigits: 2,
-    }).format(value);
 
   if (isLoading) {
     return (
@@ -121,7 +116,7 @@ export function MetalCard({
               <div className="flex items-baseline gap-1">
                 <AnimatedNumber
                   value={spotPrice}
-                  formatFn={formatCurrency}
+                  formatFn={(value) => formatCurrency(value, currency)}
                   className="text-sm font-medium text-muted-foreground"
                   duration={400}
                 />

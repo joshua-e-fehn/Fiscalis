@@ -19,6 +19,7 @@ import {
   Area,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -55,20 +56,6 @@ interface PortfolioChartProps {
   currency?: MetalsCurrency;
   isLoading?: boolean;
   className?: string;
-}
-
-function formatCurrency(value: number, currency: MetalsCurrency): string {
-  const currencyMap: Record<MetalsCurrency, string> = {
-    eur: "EUR",
-    usd: "USD",
-    chf: "CHF",
-  };
-  return new Intl.NumberFormat("de-CH", {
-    style: "currency",
-    currency: currencyMap[currency],
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function formatDate(timestamp: number, range: ChartTimeRange): string {
@@ -123,8 +110,7 @@ function CustomTooltip({
                   profitLoss >= 0 ? "text-profit" : "text-loss",
                 )}
               >
-                {profitLoss >= 0 ? "+" : ""}
-                {formatCurrency(profitLoss, currency)}
+                {formatCurrency(profitLoss, currency, { showSign: true })}
                 {profitLossPercent !== null &&
                   ` (${profitLossPercent.toFixed(1)}%)`}
               </span>
@@ -259,7 +245,9 @@ export function PortfolioChart({
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                  tickFormatter={(value) => formatCurrency(value, currency)}
+                  tickFormatter={(value) =>
+                    formatCurrency(value, currency, { compact: true })
+                  }
                   width={70}
                 />
                 <Tooltip

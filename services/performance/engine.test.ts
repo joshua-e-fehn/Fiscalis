@@ -480,3 +480,30 @@ describe("hybrid strategy", () => {
     expect(r.dataPoints.every((p) => p.timestamp >= snaps[4].timestamp)).toBe(true);
   });
 });
+
+describe("partial snapshots (NW-11)", () => {
+  const DEC31 = Date.UTC(2025, 11, 31, 12);
+  const ytd = (snapshots: SnapshotData[]) =>
+    calculateDiscretePerformance(
+      { snapshots, metric: { kind: "netWorth" } },
+      { timeRange: "YTD" },
+    ).metrics;
+  const start = snapshot(DEC31, 1_000, 0);
+  const middle = snapshot(Date.UTC(2026, 2, 1, 12), 1_200, 0);
+  const end = snapshot(NOW - DAY, 1_500, 0);
+
+  it("flags a series that ends on a partial snapshot", () => {
+    const m = ytd([start, middle, { ...end, partial: true }]);
+    expect(m.partial).toBe(true);
+    expect(m.endValue).toBe(1_500);
+  });
+
+  it("flags a series that starts on a partial snapshot", () => {
+    expect(ytd([{ ...start, partial: true }, middle, end]).partial).toBe(true);
+  });
+
+  it("does not flag a partial snapshot the measured figures skip", () => {
+    expect(ytd([start, { ...middle, partial: true }, end]).partial).toBe(false);
+    expect(ytd([start, middle, end]).partial).toBe(false);
+  });
+});

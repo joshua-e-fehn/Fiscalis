@@ -203,7 +203,11 @@ export interface DataPointGenerationResult {
   actualDataPoints: number;
   interpolatedDataPoints: number;
   dataQuality: DataQuality;
-  /** Some held assets had no price series (continuous) */
+  /**
+   * Some values are incomplete: held assets without a price series
+   * (continuous), or the first or last point rests on a snapshot taken
+   * after a provider sync partly failed (discrete)
+   */
   partial?: boolean;
   /**
    * Timestamps of the real snapshots (not grid points) the series was built

@@ -60,6 +60,12 @@ interface SnapshotValue {
   costIncludesContinuous: boolean;
 }
 
+interface SeriesValue extends SnapshotValue {
+  flow: NetFlow | null;
+  /** The snapshot was taken after a provider sync partly failed */
+  partial: boolean;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Snapshot value extraction
 // ═══════════════════════════════════════════════════════════════
@@ -253,13 +259,14 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     input: DiscretePerformanceInput,
     context: CalculationContext,
   ): DataPointGenerationResult {
-    const values: (SnapshotValue & { flow: NetFlow | null })[] = [];
+    const values: SeriesValue[] = [];
     let prev: SnapshotData | undefined;
     for (const s of sortByTimestamp(input.snapshots ?? [])) {
       const v = snapshotMetricValue(s, input.metric, input.excludeSources);
       if (!v) continue;
       values.push({
         ...v,
+        partial: s.partial === true,
         flow: prev
           ? snapshotMetricFlow(prev, s, input.metric, input.excludeSources)
           : null,
@@ -287,6 +294,8 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     const dataPoints: PerformanceDataPoint[] = [];
     let observed = 0;
     let interpolated = 0;
+    // Whether each point's value rests on a partial snapshot
+    const pointPartial: boolean[] = [];
     const lookup = this.lookupOptions(context);
 
     for (const ts of this.generateTimestampSeries(context)) {
@@ -305,6 +314,10 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
           (next.flow !== null && next.flow.amount !== 0))
           ? found.point.value
           : found.value;
+      pointPartial.push(
+        found.point.partial ||
+          (found.kind === "interpolated" && next?.partial === true),
+      );
       const point =
         found.kind === "observed"
           ? this.createSnapshotPoint(ts, value, costBasis)
@@ -323,6 +336,8 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       actualDataPoints: observed,
       interpolatedDataPoints: interpolated,
       dataQuality: assessDataQuality(observed, context.expectedDataPoints),
+      // The measured figures (start and end) rest on a partial snapshot
+      partial: pointPartial[0] === true || pointPartial.at(-1) === true,
       actualSnapshotTimestamps: values
         .map((s) => s.timestamp)
         .filter((t) => t <= context.endTimestamp),

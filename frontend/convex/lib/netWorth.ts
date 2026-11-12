@@ -40,7 +40,7 @@ import {
   brokerPositionKey,
   snaptradeActivityFlow,
   tradeFlowsBetween,
-  vaultTradeFlow,
+  vaultLedgerFlows,
   type ToBaseOn,
   type TradeFlow,
 } from "../../../services/portfolio/flows";
@@ -310,8 +310,9 @@ export async function loadHoldings(
  * Exact flow per holding key since the previous snapshot (`from`, ms) from
  * the trade logs: Bitpanda transactions, the vault ledger and the synced
  * SnapTrade activities (brokerTransactions), each amount at the rate of
- * its own date (services/portfolio/flows.ts). Rows are read from the day
- * of `from`; tradeFlowsBetween keeps the ones after it.
+ * its own date (services/portfolio/flows.ts). Provider rows are read from
+ * the day of `from`, the vault ledger whole; tradeFlowsBetween keeps the
+ * ones after `from`.
  */
 async function loadExactFlows(
   ctx: QueryCtx,
@@ -329,11 +330,11 @@ async function loadExactFlows(
         q.eq("userId", userId).gte("transactionDate", since),
       )
       .collect(),
+    // The whole ledger: a row written since `from` may be dated before it
+    // (vaultLedgerFlows). A vault is small.
     ctx.db
       .query("vaultTransactions")
-      .withIndex("by_date", (q) =>
-        q.eq("userId", userId).gte("transactionDate", since),
-      )
+      .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect(),
     ctx.db
       .query("brokerTransactions")
@@ -382,7 +383,7 @@ async function loadExactFlows(
   ]);
   const flows = [
     ...bitpanda.map((t) => bitpandaTradeFlow(t, bitpandaKeys, toBaseOn)),
-    ...vault.map((t) => vaultTradeFlow(t)),
+    ...vaultLedgerFlows(vault, from, to),
     ...broker.map((t) => snaptradeActivityFlow(t, toBaseOn)),
   ].filter((f): f is TradeFlow => f !== null);
   return tradeFlowsBetween(flows, from, to);

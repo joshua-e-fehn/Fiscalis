@@ -9,7 +9,9 @@
  * - Bitpanda: bitpandaTransactions, the fiat amount at the rate of the
  *   transaction date;
  * - vault: vaultTransactions, quantity × pricePerUnitBase (EUR at the rate
- *   of the transaction date), so a sale's proceeds are the actual ones;
+ *   of the transaction date), so a sale's proceeds are the actual ones; an
+ *   item with a backdated row written in the interval keeps the proxy
+ *   (vaultLedgerFlows);
  * - SnapTrade: brokerTransactions, the account activities synced from the
  *   broker, at the rate of the trade date.
  *
@@ -201,6 +203,31 @@ export function vaultTradeFlow(tx: {
         ? null
         : sign * Math.abs(tx.quantity) * price,
   };
+}
+
+/**
+ * The flows of a user's whole vault ledger over (from, to] (ms): each row's
+ * vaultTradeFlow, plus an unknown flow (dated `to`) for the item of every
+ * row written in the interval but dated before it (or undated). A vault
+ * item's holding is a projection of its whole ledger, so a backdated row
+ * moves today's value while its trade date falls outside the interval:
+ * tradeFlowsBetween then leaves the item out and it keeps the cost proxy.
+ */
+export function vaultLedgerFlows(
+  rows: readonly (Parameters<typeof vaultTradeFlow>[0] & { createdAt: number })[],
+  from: number,
+  to: number,
+): TradeFlow[] {
+  const flows: TradeFlow[] = [];
+  const date = new Date(to).toISOString();
+  for (const row of rows) {
+    const flow = vaultTradeFlow(row);
+    if (flow) flows.push(flow);
+    if (row.createdAt <= from || row.createdAt > to) continue;
+    const t = row.transactionDate ? Date.parse(row.transactionDate) : NaN;
+    if (!(t > from)) flows.push({ key: row.vaultItemId, date, amount: null });
+  }
+  return flows;
 }
 
 /** SnapTrade activity types that change a position without money moving in or out. */

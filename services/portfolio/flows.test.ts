@@ -7,6 +7,7 @@ import {
   brokerPositionKey,
   snaptradeActivityFlow,
   tradeFlowsBetween,
+  vaultLedgerFlows,
   vaultTradeFlow,
   type ToBaseOn,
 } from "./flows";
@@ -170,6 +171,47 @@ describe("vaultTradeFlow", () => {
   it("has no amount without a price, and no flow without a date", () => {
     expect(vaultTradeFlow(row("sell"))!.amount).toBeNull();
     expect(vaultTradeFlow(row("buy", 2_500, null))).toBeNull();
+  });
+});
+
+describe("vaultLedgerFlows", () => {
+  const from = Date.parse("2026-11-11T02:00:00Z");
+  const to = Date.parse("2026-11-12T02:00:00Z");
+  const row = (
+    vaultItemId: string,
+    transactionType: "buy" | "sell",
+    transactionDate: string | null,
+    createdAt: number,
+  ) => ({ vaultItemId, transactionType, quantity: 2, pricePerUnitBase: 1_000, transactionDate, createdAt });
+
+  it("drops an item with a backdated row written in the interval", () => {
+    const rows = [
+      // A sale dated today and a missed buy from 2023, both recorded today
+      row("item1", "sell", "2026-11-11T10:00:00Z", Date.parse("2026-11-11T10:00:00Z")),
+      row("item1", "buy", "2023-04-01", Date.parse("2026-11-11T10:05:00Z")),
+      // Another item sold today, nothing backdated
+      row("item2", "sell", "2026-11-11T12:00:00Z", Date.parse("2026-11-11T12:00:00Z")),
+    ];
+    expect(vaultLedgerFlows(rows, from, to)).toContainEqual({
+      key: "item1",
+      date: "2026-11-12T02:00:00.000Z",
+      amount: null,
+    });
+    expect(tradeFlowsBetween(vaultLedgerFlows(rows, from, to), from, to)).toEqual(
+      new Map([["item2", -2_000]]),
+    );
+  });
+
+  it("keeps backdated rows written before the interval, and undated rows written in it unknown", () => {
+    const old = row("item1", "buy", "2023-04-01", Date.parse("2026-01-01T00:00:00Z"));
+    const sale = row("item1", "sell", "2026-11-11T10:00:00Z", Date.parse("2026-11-11T10:00:00Z"));
+    expect(tradeFlowsBetween(vaultLedgerFlows([old, sale], from, to), from, to)).toEqual(
+      new Map([["item1", -2_000]]),
+    );
+    const opening = row("item1", "buy", null, Date.parse("2026-11-11T09:00:00Z"));
+    expect(tradeFlowsBetween(vaultLedgerFlows([opening, sale], from, to), from, to)).toEqual(
+      new Map(),
+    );
   });
 });
 

@@ -68,42 +68,18 @@ export type TimeInterval =
   | "quarter"
   | "year";
 
-export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
-  const now = new Date();
+/** Start of the "ALL" range: 1 January 2024 (UTC), the platform launch. */
+export const PLATFORM_LAUNCH_TIMESTAMP = Date.UTC(2024, 0, 1);
 
-  switch (timeRange) {
-    case "Hour":
-      return MS_PER_HOUR;
-    case "Day":
-      return MS_PER_DAY;
-    case "Week":
-      return MS_PER_WEEK;
-    case "Month":
-      return MS_PER_MONTH;
-    case "3Month":
-      return MS_PER_3_MONTHS;
-    case "6Month":
-      return MS_PER_6_MONTHS;
-    case "Year":
-      return MS_PER_YEAR;
-    case "3Year":
-      return MS_PER_3_YEARS;
-    case "5Year":
-      return MS_PER_5_YEARS;
-    case "YTD": {
-      // Time from start of year until now in UTC
-      const currentYear = now.getUTCFullYear();
-      const startOfYearUTC = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
-      return now.getTime() - startOfYearUTC.getTime();
-    }
-    case "ALL": {
-      // From January 1, 2024 (UTC) until now (platform launch)
-      const startOf2024UTC = new Date(Date.UTC(2024, 0, 1, 0, 0, 0, 0));
-      return now.getTime() - startOf2024UTC.getTime();
-    }
-    default:
-      return MS_PER_DAY; // Default to 1 day
-  }
+/**
+ * Length of a time range ending at `now` (default: Date.now()), in ms:
+ * `now − getTimeRangeStartTimestamp(timeRange, now)`.
+ */
+export function getTimeRangeInMilliseconds(
+  timeRange: TimeRange,
+  now: number = Date.now(),
+): number {
+  return now - getTimeRangeStartTimestamp(timeRange, now);
 }
 
 /**
@@ -140,8 +116,7 @@ export function getTimeRangeStartTimestamp(
       return new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0)).getTime();
     }
     case "ALL":
-      // Platform launch date
-      return new Date(Date.UTC(2024, 0, 1, 0, 0, 0, 0)).getTime();
+      return PLATFORM_LAUNCH_TIMESTAMP;
     default:
       return now - MS_PER_DAY;
   }

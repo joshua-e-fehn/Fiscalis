@@ -4,10 +4,12 @@ import {
   calculateAverageInterest,
   type capitalPointInTime,
   getTimeIntervalInMilliseconds,
+  getTimeRangeInMilliseconds,
   getTimeRangeStartTimestamp,
   PRICE_LOOKBACK_MS,
   priceHistoryWindow,
   sliceFrom,
+  PLATFORM_LAUNCH_TIMESTAMP,
 } from "./financeService";
 
 it("should calculate average interest", () => {
@@ -40,6 +42,23 @@ describe("getTimeRangeStartTimestamp with a reference time", () => {
     expect(getTimeRangeStartTimestamp("YTD", ref)).toBe(
       Date.parse("2026-01-01T00:00:00.000Z"),
     );
+  });
+
+  it("starts ALL at the platform launch, 1 January 2024 UTC", () => {
+    expect(PLATFORM_LAUNCH_TIMESTAMP).toBe(Date.parse("2024-01-01T00:00:00.000Z"));
+    expect(getTimeRangeStartTimestamp("ALL", ref)).toBe(1_704_067_200_000);
+  });
+});
+
+describe("getTimeRangeInMilliseconds", () => {
+  const ref = Date.parse("2026-03-15T10:00:00.000Z");
+
+  it("is the distance from the range start to the reference time", () => {
+    expect(getTimeRangeInMilliseconds("Week", ref)).toBe(604_800_000);
+    expect(getTimeRangeInMilliseconds("YTD", ref)).toBe(
+      ref - Date.parse("2026-01-01T00:00:00.000Z"),
+    );
+    expect(getTimeRangeInMilliseconds("ALL", ref)).toBe(ref - 1_704_067_200_000);
   });
 });
 

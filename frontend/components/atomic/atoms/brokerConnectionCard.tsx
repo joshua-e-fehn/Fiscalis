@@ -36,7 +36,7 @@ import {
   CheckCircle2,
   Clock,
 } from "lucide-react";
-import { useDeleteBrokerConnection } from "@/hooks/convex/brokers";
+import { useDeleteConnection } from "@/hooks/convex/brokers";
 import { Id } from "@/convex/_generated/dataModel";
 
 // Broker connection type from Convex (updated for SnapTrade)
@@ -72,7 +72,7 @@ export function BrokerConnectionCard({
 }: BrokerConnectionCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const deleteConnection = useDeleteBrokerConnection();
+  const { deleteConnection, isLoading: isDeleting } = useDeleteConnection();
 
   // Use SnapTrade fields with fallback to legacy fields
   const displayName =
@@ -82,7 +82,7 @@ export function BrokerConnectionCard({
 
   const handleDelete = async () => {
     try {
-      await deleteConnection.mutate(connection._id);
+      await deleteConnection(connection._id);
       setShowDeleteDialog(false);
     } catch (error) {
       console.error("Failed to delete broker:", error);
@@ -262,7 +262,7 @@ export function BrokerConnectionCard({
               onClick={handleDelete}
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
             >
-              {deleteConnection.isLoading ? "Disconnecting..." : "Disconnect"}
+              {isDeleting ? "Disconnecting..." : "Disconnect"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

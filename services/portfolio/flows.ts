@@ -29,7 +29,11 @@
 export interface TradeFlow {
   /** Snapshot key of the holding the trade moved (NormalizedHolding.key) */
   key: string;
-  /** When the trade happened (ISO date or date-time; a bare date is UTC midnight) */
+  /**
+   * When the trade happened: an ISO date-time, or a date only (a bare
+   * YYYY-MM-DD, or a UTC midnight with no time of day), which places the
+   * trade somewhere in that UTC day (tradeTimeSpan)
+   */
   date: string;
   /**
    * Money put in (> 0, a purchase) or taken out (< 0, a sale), in the base
@@ -46,10 +50,37 @@ export type ToBaseOn = (
   date: string,
 ) => number | null;
 
+const DAY_MS = 86_400_000;
+
+/** A date with no time of day: a bare date, or a UTC midnight with zero time. */
+const DATE_ONLY =
+  /^\d{4}-\d{2}-\d{2}(?:T00:00(?::00(?:\.0+)?)?(?:Z|[+-]00:?00)?)?$/;
+
 /**
- * Net exact flow per holding key over the trades dated in (from, to] (ms).
- * A key with a trade of unknown amount in the interval is left out, so its
- * holding falls back to the cost proxy rather than taking a partial sum.
+ * The span of time (ms, end exclusive) a trade's date places it in: the
+ * instant of a date-time, the whole UTC day of a date only, since a broker
+ * that reports only the date says nothing about the time of day (SnapTrade's
+ * trade_date granularity depends on the brokerage; a vault row is dated by
+ * day). Null when the date cannot be read.
+ */
+export function tradeTimeSpan(
+  date: string,
+): { start: number; end: number; dateOnly: boolean } | null {
+  const t = Date.parse(date);
+  if (!Number.isFinite(t)) return null;
+  return DATE_ONLY.test(date)
+    ? { start: t, end: t + DAY_MS, dateOnly: true }
+    : { start: t, end: t + 1, dateOnly: false };
+}
+
+/**
+ * Net exact flow per holding key over the trades in (from, to] (ms). Only
+ * a complete sum is exact, so a key is left out, and its holding falls back
+ * to the cost proxy, when any of its trades in or touching the interval is
+ * of unknown amount, or is dated only by a day that straddles `from` or `to`
+ * (a daily snapshot taken during that day: the trade may lie on either
+ * side, and the holding's value may or may not include it yet). A day
+ * that starts exactly at a snapshot belongs to the interval after it.
  */
 export function tradeFlowsBetween(
   flows: readonly TradeFlow[],
@@ -59,8 +90,19 @@ export function tradeFlowsBetween(
   const sums = new Map<string, number>();
   const unknown = new Set<string>();
   for (const f of flows) {
-    const t = Date.parse(f.date);
-    if (!Number.isFinite(t) || t <= from || t > to) continue;
+    const span = tradeTimeSpan(f.date);
+    if (!span) continue;
+    const { start, end, dateOnly } = span;
+    const inside = dateOnly
+      ? start >= from && end <= to
+      : start > from && start <= to;
+    const outside = dateOnly
+      ? end <= from || start >= to
+      : start <= from || start > to;
+    if (!inside) {
+      if (!outside) unknown.add(f.key);
+      continue;
+    }
     if (f.amount === null || !Number.isFinite(f.amount)) {
       unknown.add(f.key);
       continue;
@@ -207,7 +249,8 @@ export function vaultTradeFlow(tx: {
 
 /**
  * The flows of a user's whole vault ledger over (from, to] (ms): each row's
- * vaultTradeFlow, plus an unknown flow (dated `to`) for the item of every
+ * vaultTradeFlow, plus an unknown flow (at the last instant before `to`,
+ * never read as a date only) for the item of every
  * row written in the interval but dated before it (or undated). A vault
  * item's holding is a projection of its whole ledger, so a backdated row
  * moves today's value while its trade date falls outside the interval:
@@ -219,7 +262,7 @@ export function vaultLedgerFlows(
   to: number,
 ): TradeFlow[] {
   const flows: TradeFlow[] = [];
-  const date = new Date(to).toISOString();
+  const date = new Date(to - 1).toISOString();
   for (const row of rows) {
     const flow = vaultTradeFlow(row);
     if (flow) flows.push(flow);

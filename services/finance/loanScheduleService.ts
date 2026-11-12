@@ -32,6 +32,9 @@
 //      cost prepaymentPenaltyRate × amount, and either shorten the term
 //      (reduce_term, the default) or lower the regular payment
 //      (reduce_payment) for every loan type.
+//   6. Interest accrues per period by the loan's day-count convention over
+//      the actual due dates (D_{k-1} → D_k). Unset, every period is a flat
+//      1 / paymentsPerYear (what 30/360 gives for whole-month periods).
 
 import { calculateAnnuityPayment, roundMoney } from "./financeService";
 
@@ -83,6 +86,22 @@ export type LoanPaymentType = (typeof LOAN_PAYMENT_TYPES)[number];
 export const PREPAYMENT_EFFECTS = ["reduce_term", "reduce_payment"] as const;
 export type PrepaymentEffect = (typeof PREPAYMENT_EFFECTS)[number];
 
+/**
+ * How a period's interest accrues (the year fraction of D_{k-1} → D_k):
+ * - 30/360: every month is 30 days of a 360-day year (flat periods)
+ * - ACT/360: actual days / 360
+ * - ACT/365: actual days / 365 (fixed)
+ * - ACT/ACT: actual days, each counted against its own year's length
+ *   (365 or 366; ISDA)
+ */
+export const DAY_COUNT_CONVENTIONS = [
+  "30/360",
+  "ACT/360",
+  "ACT/365",
+  "ACT/ACT",
+] as const;
+export type DayCountConvention = (typeof DAY_COUNT_CONVENTIONS)[number];
+
 // ───────────────────────────────────────────────────────────────
 // Types
 // ───────────────────────────────────────────────────────────────
@@ -103,6 +122,8 @@ export interface LoanTerms {
   maxAnnualPrepaymentRate?: number;
   /** Penalty charged on each prepaid amount (0.01 = 1%). */
   prepaymentPenaltyRate?: number;
+  /** Interest accrual convention; unset = flat periods (as 30/360). */
+  dayCount?: DayCountConvention;
 }
 
 /** The loan fields the schedule needs (a structural subset of the stored loan). */
@@ -136,6 +157,7 @@ export interface DatedPrepayment {
   date: string;
   amount: number;
 }
+
 
 export type LoanScheduleRowStatus = "paid" | "extra" | "scheduled";
 
@@ -255,6 +277,66 @@ function getPeriodicRate(
   frequency: LoanPaymentFrequency,
 ): number {
   return annualInterestRate / getPaymentsPerYear(frequency);
+}
+
+/** Days since 1970-01-01 of a `YYYY-MM-DD` date (calendar only). */
+function epochDay(isoDate: string): number {
+  const [year, month, day] = parseCalendarDate(isoDate);
+  return Math.round(Date.UTC(year, month, day) / 86_400_000);
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * Year fraction of the period `from` → `to` under an ACT convention:
+ * actual days over 360, over 365, or (ACT/ACT ISDA) the days falling in
+ * each calendar year over that year's length.
+ */
+export function actualYearFraction(
+  convention: Exclude<DayCountConvention, "30/360">,
+  from: string,
+  to: string,
+): number {
+  const start = epochDay(from);
+  const end = epochDay(to);
+  if (end <= start) return 0;
+  if (convention === "ACT/360") return (end - start) / 360;
+  if (convention === "ACT/365") return (end - start) / 365;
+  let fraction = 0;
+  let cursor = start;
+  for (let year = parseCalendarDate(from)[0]; cursor < end; year++) {
+    const nextYear = Math.round(Date.UTC(year + 1, 0, 1) / 86_400_000);
+    const stop = Math.min(end, nextYear);
+    fraction += (stop - cursor) / (isLeapYear(year) ? 366 : 365);
+    cursor = stop;
+  }
+  return fraction;
+}
+
+/**
+ * The interest rate of due period k (D_{k-1} → D_k) at an annual rate, by
+ * the loan's day-count convention. Unset and 30/360 are the flat
+ * annualRate / paymentsPerYear: due dates are whole months apart, and
+ * 30/360 counts every month as 30 days.
+ */
+export function periodicRateAt(
+  terms: Pick<LoanTerms, "startDate" | "paymentFrequency" | "dayCount">,
+  annualRate: number,
+  k: number,
+): number {
+  if (!terms.dayCount || terms.dayCount === "30/360") {
+    return getPeriodicRate(annualRate, terms.paymentFrequency);
+  }
+  return (
+    annualRate *
+    actualYearFraction(
+      terms.dayCount,
+      getDueDate(terms, k - 1),
+      getDueDate(terms, k),
+    )
+  );
 }
 
 /**
@@ -438,6 +520,12 @@ export interface LoanSplitBasis {
   annualInterestRate: number;
   paymentFrequency: LoanPaymentFrequency;
   /**
+   * Interest rate of the due period the payment covers (by the loan's
+   * day-count convention, see {@link periodicRateAt}); the flat
+   * annualInterestRate / paymentsPerYear when absent.
+   */
+  periodRate?: number;
+  /**
    * A due date already partly paid by earlier partial payments: its period
    * interest is charged on its opening balance, minus the interest those
    * payments already booked, so it is charged only once.
@@ -509,7 +597,8 @@ export function splitLoanPayment(
     const open = basis.openPeriod;
     const periodInterest = roundMoney(
       Math.max(0, open ? open.openingBalance : basis.balance) *
-        getPeriodicRate(basis.annualInterestRate, basis.paymentFrequency),
+        (basis.periodRate ??
+          getPeriodicRate(basis.annualInterestRate, basis.paymentFrequency)),
     );
     const interestDue = roundMoney(
       Math.max(0, periodInterest - (open?.interestBooked ?? 0)),
@@ -703,7 +792,12 @@ function amortize(plan: AmortizationPlan): LoanProjection {
     if (plan.maxRows !== undefined && rows.length >= plan.maxRows) break;
     const dueDate = getDueDate(terms, k);
     const openingBalance = balance;
-    const interest = roundMoney(openingBalance * rate);
+    const interest = roundMoney(
+      openingBalance *
+        (terms.dayCount
+          ? periodicRateAt(terms, plan.annualInterestRate, k)
+          : rate),
+    );
 
     let principal: number;
     if (k === lastPeriod) {
@@ -828,6 +922,8 @@ interface RecordedWalk<T extends SchedulePayment> {
   closingBalanceByIndex: number[];
   /** The due date left partly paid after each sorted payment, if any. */
   openPeriodByIndex: Array<OpenPeriod | null>;
+  /** Due dates fully covered after each sorted payment. */
+  coveredPeriodsByIndex: number[];
   /** Balance before the first payment. */
   initialBalance: number;
   /**
@@ -884,6 +980,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
   const openingBalanceByIndex: number[] = [];
   const closingBalanceByIndex: number[] = [];
   const openPeriodByIndex: Array<OpenPeriod | null> = [];
+  const coveredPeriodsByIndex: number[] = [];
 
   for (const p of sorted) {
     const openingBalance = balance;
@@ -919,6 +1016,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
     openingBalanceByIndex.push(openingBalance);
     closingBalanceByIndex.push(balance);
     openPeriodByIndex.push(openPeriod);
+    coveredPeriodsByIndex.push(coveredPeriods);
   }
 
   return {
@@ -928,6 +1026,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
     openingBalanceByIndex,
     closingBalanceByIndex,
     openPeriodByIndex,
+    coveredPeriodsByIndex,
     initialBalance,
     historyInconsistent:
       initialBalance - loan.originalPrincipal > PAID_OFF_THRESHOLD,
@@ -939,7 +1038,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
  * after every recorded payment made on or before that date (a back-dated
  * payment is split on the balance owed then, not on today's balance), and
  * the due date those payments left partly paid, so its interest isn't
- * charged twice.
+ * charged twice. The period rate is that of the due date the payment covers.
  */
 export function paymentSplitBasis(
   loan: ScheduleLoan,
@@ -949,15 +1048,22 @@ export function paymentSplitBasis(
   const walk = walkRecordedPayments(loan, payments);
   let balance = walk.initialBalance;
   let openPeriod: OpenPeriod | null = null;
+  let coveredPeriods = 0;
   for (let i = 0; i < walk.sorted.length; i++) {
     if (walk.sorted[i].paymentDate > paymentDate) break;
     balance = walk.closingBalanceByIndex[i];
     openPeriod = walk.openPeriodByIndex[i];
+    coveredPeriods = walk.coveredPeriodsByIndex[i];
   }
   return {
     balance,
     annualInterestRate: loan.annualInterestRate,
     paymentFrequency: loan.paymentFrequency,
+    periodRate: periodicRateAt(
+      loan,
+      loan.annualInterestRate,
+      coveredPeriods + 1,
+    ),
     openPeriod,
   };
 }
@@ -1074,11 +1180,12 @@ export function initialScheduledPayment(
   terms: Omit<
     LoanTerms,
     "startDate" | "maxAnnualPrepaymentRate" | "prepaymentPenaltyRate"
-  >,
+  > & { startDate?: string },
 ): number {
   if (terms.originalPrincipal <= 0) return 0;
   const projection = amortize({
-    terms: { ...terms, startDate: "2000-01-01" },
+    // The start date only matters for an actual day count
+    terms: { ...terms, startDate: terms.startDate ?? "2000-01-01" },
     annualInterestRate: terms.annualInterestRate,
     fromPeriod: 1,
     openingBalance: terms.originalPrincipal,

@@ -190,6 +190,33 @@ export function changePercent(
   return ((end - start) / Math.abs(start)) * 100;
 }
 
+/**
+ * A series ended at the context's live value: every point at or after the
+ * range end is replaced by one observed point at the range end holding the
+ * live value and cost line. Without a live value the series is returned
+ * as is. An empty series becomes that one point: the live figure is known
+ * even before the first snapshot.
+ */
+export function withLiveEnd(
+  points: PerformanceDataPoint[],
+  context: Pick<CalculationContext, "endTimestamp" | "liveEnd">,
+): PerformanceDataPoint[] {
+  const live = context.liveEnd;
+  if (!live) return points;
+  const end = context.endTimestamp;
+  return [
+    ...points.filter((p) => p.timestamp < end),
+    {
+      timestamp: end,
+      date: new Date(end).toISOString(),
+      value: live.value,
+      costBasis: live.costBasis,
+      source: "calculated",
+      confidence: 1,
+    },
+  ];
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Flow-adjusted period return
 // ═══════════════════════════════════════════════════════════════
@@ -383,8 +410,14 @@ export abstract class BasePerformanceStrategy<
    * once (`endTimestamp ?? Date.now()`) and the range start derives from it.
    */
   createContext(options: PerformanceCalculationOptions): CalculationContext {
-    const { timeRange, interval, endTimestamp, maxInterpolationGap, baseline } =
-      options;
+    const {
+      timeRange,
+      interval,
+      endTimestamp,
+      maxInterpolationGap,
+      baseline,
+      liveEnd,
+    } = options;
 
     const end = endTimestamp ?? Date.now();
     const start = getTimeRangeStartTimestamp(timeRange, end);
@@ -401,6 +434,7 @@ export abstract class BasePerformanceStrategy<
       }).length,
       maxInterpolationGap,
       baseline,
+      liveEnd,
     };
   }
 

@@ -344,7 +344,7 @@ interface YTDPerformanceCardProps {
   ytdProfitLossPercent: number | null;
   /** First known value when there is none at 1 Jan */
   trackingSince: number | null;
-  /** Some holdings could not be priced */
+  /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
   currency: InvestmentCurrency;
   isLoading: boolean;
@@ -421,7 +421,7 @@ function YTDPerformanceCard({
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Since Jan 1, {currentYear}
-              {partial && " · some prices missing"}
+              {partial && " · partial: a sync failed or a price is missing"}
             </p>
           </>
         ) : (
@@ -560,7 +560,7 @@ export function InvestmentDashboardSection({
   });
 
   // One P/L resolution (holdings cost basis, else the performance since
-  // tracking started) shared by the KPI card and the chart's cost line
+  // tracking started) for the KPI card
   const holdingsPL = useMemo(
     () =>
       summary
@@ -578,7 +578,7 @@ export function InvestmentDashboardSection({
     holdings: holdingsPL,
     enabled: !isLoading && (summary?.totalValue ?? 0) > 0,
   });
-  const { profitLoss, profitLossPercent, costBasis, costLine } = plData;
+  const { profitLoss, profitLossPercent, costBasis } = plData;
 
   // Without a holdings cost basis the card shows the performance since
   // tracking started: a profit only when it is net of known flows
@@ -749,8 +749,6 @@ export function InvestmentDashboardSection({
         {customPerformanceChart ?? (
           <CategoryPerformanceChart
             dataPoints={summary?.historyDataPoints ?? []}
-            currentValue={summary?.totalValue ?? 0}
-            totalCost={costLine}
             currency={currency}
             isLoading={isLoading}
             title={performanceChartTitle}

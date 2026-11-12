@@ -225,7 +225,11 @@ export interface PerformanceMetrics {
   insufficientHistory: boolean;
   /** Timestamp of the first point in the series, null without points */
   firstPointTimestamp: number | null;
-  /** Some held assets had no price series and are missing from the values */
+  /**
+   * Some values are incomplete: held assets without a price series, or the
+   * start or end value rests on a snapshot taken after a provider sync
+   * partly failed
+   */
   partial: boolean;
 
   // Time context
@@ -310,6 +314,8 @@ export interface SnapshotData {
   totalCoveredValue?: number;
   categoryBreakdown?: SnapshotCategoryBreakdown[];
   source?: string;
+  /** Taken after a provider sync partly failed: some values are stale */
+  partial?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════

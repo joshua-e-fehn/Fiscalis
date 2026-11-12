@@ -20,7 +20,9 @@ import {
   CategoryPerformanceChart,
   UnifiedPositionsTable,
   PageHeader,
+  type ChartViewMode,
 } from "@/components/atomic/molecules/investments";
+import type { ChartTimeRange } from "@/components/atomic/molecules/metals";
 import { RetirementTeaserCard } from "@/components/atomic/molecules/retirement";
 import { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -38,6 +40,7 @@ import {
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useNetWorthYTD, usePortfolioChartData } from "@/hooks/performance";
+import { TIME_RANGE_LABEL_MAP } from "@/lib/performance";
 import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
 
 // ═══════════════════════════════════════════════════════════════
@@ -123,6 +126,8 @@ interface YTDNetWorthCardProps {
   ytdChangePercent: number | null;
   /** First snapshot time when there is no snapshot at or before Jan 1 */
   trackingSince: number | null;
+  /** Some values are incomplete (a missing price, a partly failed sync) */
+  partial: boolean;
   currency: InvestmentCurrency;
   isLoading?: boolean;
 }
@@ -131,6 +136,7 @@ function YTDNetWorthCard({
   ytdChange,
   ytdChangePercent,
   trackingSince,
+  partial,
   currency,
   isLoading = false,
 }: YTDNetWorthCardProps) {
@@ -174,6 +180,11 @@ function YTDNetWorthCard({
             {ytdChangePercent !== null && (
               <p className="text-xs text-muted-foreground mt-1">
                 {formatPercent(ytdChangePercent)} change since Jan 1
+              </p>
+            )}
+            {partial && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Partial: a provider sync failed or a price is missing
               </p>
             )}
           </>
@@ -547,11 +558,23 @@ function LiabilitiesCard({
 export default function DashboardPage() {
   const currency = useBaseCurrency();
   const { summary, isLoading } = usePortfolioOverview();
-  const netWorthYTD = useNetWorthYTD();
+  // The live totals the headline cards show: the YTD card and the chart end
+  // there (PF-05). Without any holdings or debt there is nothing to plot.
+  const live =
+    summary && (summary.totalAssets !== 0 || summary.totalLiabilities !== 0)
+      ? summary
+      : undefined;
+  const netWorthYTD = useNetWorthYTD({ live, enabled: !isLoading });
 
-  // Portfolio chart: snapshot totals only, nothing before tracking started
+  // Portfolio chart: the engine's series for the selected range and view,
+  // nothing before tracking started
+  const [chartRange, setChartRange] = React.useState<ChartTimeRange>("3M");
+  const [chartView, setChartView] =
+    React.useState<ChartViewMode>("portfolio");
   const portfolioChart = usePortfolioChartData({
-    timeRange: "Year", // Default to 1 year view
+    timeRange: TIME_RANGE_LABEL_MAP[chartRange],
+    metric: chartView === "networth" ? "netWorth" : "totalAssets",
+    live,
     enabled: !isLoading,
   });
 
@@ -602,6 +625,7 @@ export default function DashboardPage() {
           ytdChange={netWorthYTD.ytdChange}
           ytdChangePercent={netWorthYTD.ytdChangePercent}
           trackingSince={netWorthYTD.trackingSince}
+          partial={netWorthYTD.partial}
           currency={currency}
           isLoading={netWorthYTD.isLoading}
         />
@@ -616,21 +640,14 @@ export default function DashboardPage() {
           isLoading={isLoading}
         />
         <CategoryPerformanceChart
-          dataPoints={
-            portfolioChart.dataPoints.length > 0
-              ? portfolioChart.dataPoints
-              : (summary?.historyDataPoints ?? [])
-          }
-          currentValue={
-            portfolioChart.currentValue || summary?.totalAssets || 0
-          }
-          totalCost={
-            portfolioChart.totalCost ?? summary?.costLine ?? null
-          }
-          totalLiabilities={summary?.totalLiabilities ?? 0}
+          dataPoints={portfolioChart.dataPoints}
+          timeRange={chartRange}
+          onTimeRangeChange={setChartRange}
+          viewMode={chartView}
+          onViewModeChange={setChartView}
+          partial={portfolioChart.partial}
           currency={currency}
           isLoading={isLoading || portfolioChart.isLoading}
-          showViewToggle={true}
           title="Portfolio Development"
         />
       </div>

@@ -35,13 +35,13 @@ export function useCommoditiesSummary(): {
 
   const summary = useMemo<CategorySummary | null>(() => {
     if (!base) return null;
-    // The chart's cost line: the cost where known, else the value
+    // The chart's cost line, null (a gap) where unknown
     const historyDataPoints: PortfolioDataPoint[] = history.dataPoints.map(
       (dp) => ({
         date: new Date(dp.timestamp).toLocaleDateString("de-DE"),
         timestamp: dp.timestamp,
         value: dp.value,
-        cost: dp.costBasis ?? dp.value,
+        cost: dp.costBasis,
       }),
     );
     return { ...base, historyDataPoints };

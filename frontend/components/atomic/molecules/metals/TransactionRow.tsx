@@ -9,11 +9,15 @@ export interface Transaction {
   _id: string;
   transactionType: "buy" | "sell" | "gift_received" | "gift_given";
   quantity: number;
-  pricePerUnit: number;
+  /** Null: unknown (an opening balance entered without a price) */
+  pricePerUnit: number | null;
   currency: string;
   /** EUR per unit at the rate of its date; absent on older rows */
   pricePerUnitBase?: number;
-  transactionDate: string;
+  /** Null: unknown (an opening balance held since before any range) */
+  transactionDate: string | null;
+  /** The item's opening balance */
+  isOpening?: boolean;
   spotPriceAtTransaction?: number;
   notes?: string;
   itemName: string;
@@ -77,7 +81,10 @@ export function TransactionRow({
   className,
 }: TransactionRowProps) {
   const Icon = transactionIcons[transaction.transactionType];
-  const totalValue = transaction.pricePerUnit * transaction.quantity;
+  const totalValue =
+    transaction.pricePerUnit === null
+      ? null
+      : transaction.pricePerUnit * transaction.quantity;
   const isIncoming =
     transaction.transactionType === "buy" ||
     transaction.transactionType === "gift_received";
@@ -91,7 +98,9 @@ export function TransactionRow({
     >
       {/* Date */}
       <div className="w-16 text-sm text-muted-foreground">
-        {formatDate(transaction.transactionDate)}
+        {transaction.transactionDate === null
+          ? "Unknown"
+          : formatDate(transaction.transactionDate)}
       </div>
 
       {/* Type badge */}
@@ -111,6 +120,11 @@ export function TransactionRow({
           <MetalBadge metal={transaction.metalType as MetalsType} size="sm" />
         )}
         <span className="font-medium truncate">{transaction.itemName}</span>
+        {transaction.isOpening && (
+          <span className="text-xs text-muted-foreground border rounded px-1.5 py-0.5">
+            Opening balance
+          </span>
+        )}
         {transaction.quantity > 1 && (
           <span className="text-muted-foreground text-sm">
             (x{transaction.quantity})
@@ -120,7 +134,9 @@ export function TransactionRow({
 
       {/* Price per unit */}
       <div className="w-28 text-right text-sm text-muted-foreground">
-        {formatCurrency(transaction.pricePerUnit, transaction.currency)}/unit
+        {transaction.pricePerUnit === null
+          ? "Cost unknown"
+          : `${formatCurrency(transaction.pricePerUnit, transaction.currency)}/unit`}
       </div>
 
       {/* Total */}
@@ -130,8 +146,14 @@ export function TransactionRow({
           isIncoming ? "text-foreground" : "text-loss",
         )}
       >
-        {isIncoming ? "" : "-"}
-        {formatCurrency(totalValue, transaction.currency)}
+        {totalValue === null ? (
+          <span className="text-muted-foreground">--</span>
+        ) : (
+          <>
+            {isIncoming ? "" : "-"}
+            {formatCurrency(totalValue, transaction.currency)}
+          </>
+        )}
       </div>
     </div>
   );

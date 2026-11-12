@@ -1,7 +1,11 @@
 import { Transaction } from "@/components/atomic/molecules/metals";
 
+/** An opening balance's cost or date that was never entered */
+const UNKNOWN = "unknown";
+
 /**
- * Export transactions to CSV file
+ * Export transactions to CSV file; opening balances included, with an
+ * unknown cost or date written as "unknown"
  */
 export function exportTransactionsToCSV(
   transactions: Transaction[],
@@ -17,19 +21,23 @@ export function exportTransactionsToCSV(
     "Total",
     "Currency",
     "Spot Price",
+    "Opening Balance",
     "Notes",
   ];
 
   const rows = transactions.map((tx) => [
-    tx.transactionDate,
+    tx.transactionDate ?? UNKNOWN,
     tx.transactionType,
     tx.itemName,
     tx.metalType || "",
     tx.quantity.toString(),
-    tx.pricePerUnit.toFixed(2),
-    (tx.quantity * tx.pricePerUnit).toFixed(2),
+    tx.pricePerUnit === null ? UNKNOWN : tx.pricePerUnit.toFixed(2),
+    tx.pricePerUnit === null
+      ? UNKNOWN
+      : (tx.quantity * tx.pricePerUnit).toFixed(2),
     tx.currency,
     tx.spotPriceAtTransaction?.toFixed(2) || "",
+    tx.isOpening ? "yes" : "no",
     tx.notes || "",
   ]);
 

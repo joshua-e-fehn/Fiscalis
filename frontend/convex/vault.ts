@@ -480,6 +480,8 @@ export const getUserTransactions = query({
           itemName:
             vaultItem?.customName || catalogItem?.name || "Unknown Item",
           metalType: vaultItem?.metalType,
+          // Listed in the history with its unknown cost or date shown as such
+          isOpening: isOpeningTransaction(tx),
         };
       }),
     );

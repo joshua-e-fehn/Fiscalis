@@ -509,28 +509,21 @@ export function MetalsPage({
   const transactions: Transaction[] = useMemo(() => {
     if (!rawTransactions) return [];
 
-    // Opening balances of unknown cost or date are ledger entries, not
-    // dealings: they are not listed (the holdings tab shows them)
-    let result = rawTransactions.flatMap((tx) =>
-      tx.pricePerUnit === undefined || tx.transactionDate === undefined
-        ? []
-        : [
-            {
-              _id: tx._id,
-              transactionType:
-                tx.transactionType as Transaction["transactionType"],
-              quantity: tx.quantity,
-              pricePerUnit: tx.pricePerUnit,
-              currency: tx.currency,
-              pricePerUnitBase: tx.pricePerUnitBase ?? undefined,
-              transactionDate: tx.transactionDate,
-              spotPriceAtTransaction: tx.spotPriceAtTransaction ?? undefined,
-              notes: tx.notes ?? undefined,
-              itemName: tx.itemName,
-              metalType: tx.metalType,
-            },
-          ],
-    );
+    // Opening balances are listed too, an unknown cost or date shown as such
+    let result: Transaction[] = rawTransactions.map((tx) => ({
+      _id: tx._id,
+      transactionType: tx.transactionType as Transaction["transactionType"],
+      quantity: tx.quantity,
+      pricePerUnit: tx.pricePerUnit ?? null,
+      currency: tx.currency,
+      pricePerUnitBase: tx.pricePerUnitBase ?? undefined,
+      transactionDate: tx.transactionDate ?? null,
+      isOpening: tx.isOpening,
+      spotPriceAtTransaction: tx.spotPriceAtTransaction ?? undefined,
+      notes: tx.notes ?? undefined,
+      itemName: tx.itemName,
+      metalType: tx.metalType,
+    }));
 
     if (txSearchQuery) {
       const query = txSearchQuery.toLowerCase();

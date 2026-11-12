@@ -55,6 +55,13 @@ import {
   type SchedulePayment,
 } from "./loanScheduleService";
 import { loanCountsAsLiability } from "../portfolio/categorySummary";
+import {
+  ASSET_CATEGORIES,
+  placeHolding,
+  type NetWorthAggregate,
+  type NormalizedHolding,
+} from "../portfolio/aggregate";
+import { getAgeFromBirthDate } from "../../frontend/lib/utils/date";
 
 // ───────────────────────────────────────────────────────────────
 // Defaults (single source of truth — also imported by convex/retirement.ts)
@@ -194,6 +201,16 @@ export interface RetirementInputs {
    */
   primaryResidenceLoanId?: string;
   /**
+   * Alternative to `primaryResidenceLoanId`: a linked bank (Plaid) mortgage
+   * account. Resolved by the caller like the loan
+   * (residenceMortgageFromAccount).
+   */
+  primaryResidenceAccountId?: string;
+  /** Annual rate of the linked account's mortgage (0.03 = 3%), optional. */
+  primaryResidenceMortgageRate?: number;
+  /** Monthly repayment of the linked account's mortgage (base currency), optional. */
+  primaryResidenceMortgagePayment?: number;
+  /**
    * Sellable property value net of loans not tracked in Fiscalis (tracked loans
    * are already subtracted from net worth), counted toward retirement funding.
    */
@@ -231,6 +248,12 @@ export interface ResidenceMortgage {
    * Only then is it taken back out of the liabilities.
    */
   countedInLiabilities: boolean;
+  /**
+   * Whether `balanceSchedule` projects the repayments. false: none are known
+   * (a linked account without rate and repayment), so the full balance is
+   * taken as still owed at retirement.
+   */
+  balanceProjected: boolean;
 }
 
 /** What the plan is funded from: today's assets per category and the debts. */
@@ -336,6 +359,8 @@ export interface RetirementResults {
      * withdrawal tax, since the payoff is withdrawn from the portfolio.
      */
     balanceAtRetirement: number;
+    /** false: no repayments known, so balanceAtRetirement is today's balance. */
+    balanceProjected: boolean;
   } | null;
 
   /** includedAssets − liabilitiesCounted; negative when debts exceed assets. */
@@ -511,24 +536,156 @@ export function retirementTimeline(
  * projectOutstandingPayments — due dates before `today` count as reflected in
  * `currentBalance`, never as future repayments), reduced to the projected
  * balances, and the next repayment normalised to monthly.
+ *
+ * `toBase` converts the loan's currency to the base currency (the loan's
+ * base balance / its native balance), so the mortgage is on the same basis
+ * as the liabilities it is taken out of.
  */
 export function residenceMortgageFromLoan(
   loan: ScheduleLoan,
   payments: SchedulePayment[],
   today: string,
+  toBase = 1,
 ): ResidenceMortgage {
   const projected = projectOutstandingPayments(loan, payments, today);
   const nextPayment = projected[0]?.payment ?? 0;
   return {
-    balance: Math.max(0, loan.currentBalance),
+    balance: Math.max(0, loan.currentBalance) * toBase,
     monthlyPayment:
-      (nextPayment * getPaymentsPerYear(loan.paymentFrequency)) / 12,
+      ((nextPayment * getPaymentsPerYear(loan.paymentFrequency)) / 12) *
+      toBase,
     balanceSchedule: projected.map((row) => ({
       date: row.date,
-      closingBalance: row.closingBalance,
+      closingBalance: row.closingBalance * toBase,
     })),
     // The same status rule as the dashboard liabilities (D1)
     countedInLiabilities: loanCountsAsLiability(loan.status ?? "active"),
+    balanceProjected: true,
+  };
+}
+
+/** Months an account mortgage is projected over at most (then settled). */
+const ACCOUNT_MORTGAGE_MAX_MONTHS = 1200;
+
+/**
+ * A linked bank (Plaid) mortgage account as the residence-mortgage input.
+ * Plaid reports only the balance, so the repayments come from the user: with
+ * both a rate and a monthly repayment, the balance is amortised as an annuity
+ * from today through loanScheduleService (residenceMortgageFromLoan);
+ * without them nothing is projected and the full balance counts as owed at
+ * retirement (`balanceProjected: false`).
+ *
+ * @param balance Amount owed today, base currency.
+ * @param countedInLiabilities Whether the account is part of the liabilities.
+ */
+export function residenceMortgageFromAccount(
+  balance: number,
+  terms: { annualInterestRate?: number; monthlyPayment?: number },
+  countedInLiabilities: boolean,
+  today: string,
+): ResidenceMortgage {
+  const owed = Math.max(0, balance);
+  const { annualInterestRate, monthlyPayment } = terms;
+  if (
+    annualInterestRate === undefined ||
+    monthlyPayment === undefined ||
+    !(monthlyPayment > 0) ||
+    !(annualInterestRate >= 0)
+  ) {
+    return {
+      balance: owed,
+      monthlyPayment: Math.max(0, monthlyPayment ?? 0),
+      balanceSchedule: [],
+      countedInLiabilities,
+      balanceProjected: false,
+    };
+  }
+  return {
+    ...residenceMortgageFromLoan(
+      {
+        loanType: "ANNUITY",
+        originalPrincipal: owed,
+        currentBalance: owed,
+        annualInterestRate,
+        termMonths: ACCOUNT_MORTGAGE_MAX_MONTHS,
+        paymentFrequency: "MONTHLY",
+        scheduledPayment: monthlyPayment,
+        startDate: today,
+      },
+      [],
+      today,
+    ),
+    countedInLiabilities,
+  };
+}
+
+/**
+ * The bank (Plaid) accounts a residence mortgage can be linked to: those the
+ * net worth counts as liabilities under the mortgages subcategory.
+ */
+export function mortgageAccountHoldings<H extends NormalizedHolding>(
+  holdings: readonly H[],
+): H[] {
+  return holdings.filter((h) => {
+    if (h.source !== "bank") return false;
+    const placed = placeHolding(h);
+    return (
+      placed.category === "liabilities" && placed.subcategory === "mortgages"
+    );
+  });
+}
+
+/**
+ * The funding base from the net-worth aggregate (services/portfolio/
+ * aggregate.ts aggregateNetWorth, the one behind the dashboard and the
+ * snapshots): each asset category's value and the total liabilities, in the
+ * base currency, plus the linked residence mortgage.
+ */
+export function retirementFundingBase(
+  aggregate: Pick<NetWorthAggregate, "byCategory" | "totalLiabilities">,
+  primaryResidenceMortgage: ResidenceMortgage | null,
+): RetirementFundingBase {
+  return {
+    assetsByCategory: Object.fromEntries(
+      ASSET_CATEGORIES.map((c) => [c, aggregate.byCategory[c].value]),
+    ),
+    totalLiabilities: aggregate.totalLiabilities,
+    primaryResidenceMortgage,
+  };
+}
+
+/**
+ * Map a stored plan to the inputs. The age is always derived fresh: from the
+ * profile date of birth (canonical), else the plan's snapshot of it, else the
+ * age stored at the last save.
+ */
+export function planToInputs(
+  plan: RetirementInputs,
+  profileBirthDate: string | undefined,
+): RetirementInputs {
+  return {
+    currentAge:
+      getAgeFromBirthDate(profileBirthDate) ??
+      getAgeFromBirthDate(plan.birthDate) ??
+      plan.currentAge,
+    retirementAge: plan.retirementAge,
+    birthDate: profileBirthDate ?? plan.birthDate,
+    monthlyExpensesToday: plan.monthlyExpensesToday,
+    ownsPrimaryResidence: plan.ownsPrimaryResidence,
+    primaryResidenceLoanId: plan.primaryResidenceLoanId,
+    primaryResidenceAccountId: plan.primaryResidenceAccountId,
+    primaryResidenceMortgageRate: plan.primaryResidenceMortgageRate,
+    primaryResidenceMortgagePayment: plan.primaryResidenceMortgagePayment,
+    fundableRealEstateEquity: plan.fundableRealEstateEquity ?? 0,
+    fundingTreatments: plan.fundingTreatments,
+    pensionSources: plan.pensionSources,
+    pensionDeductionRate: plan.pensionDeductionRate,
+    withdrawalTaxRate: plan.withdrawalTaxRate,
+    indexContributions: plan.indexContributions,
+    inflationRate: plan.inflationRate,
+    withdrawalRate: plan.withdrawalRate,
+    optimisticReturn: plan.optimisticReturn,
+    conservativeReturn: plan.conservativeReturn,
   };
 }
 
@@ -767,6 +924,7 @@ export function computeRetirementResults(
           mortgage,
           timeline.retirementDate,
         ),
+        balanceProjected: mortgage.balanceProjected,
       }
     : null;
   // Only a mortgage the liabilities contain is taken back out of them.
@@ -1002,6 +1160,17 @@ export function validateRetirementInputs(
   }
   if (!isNonNegativeAmount(inputs.fundableRealEstateEquity ?? 0)) {
     errors.fundableRealEstateEquity = "Property value must be zero or more";
+  }
+  const mortgageRate = inputs.primaryResidenceMortgageRate;
+  if (
+    mortgageRate !== undefined &&
+    !(mortgageRate >= 0 && mortgageRate <= MAX_RETIREMENT_RATE)
+  ) {
+    errors.primaryResidenceMortgageRate = `Mortgage rate must be between 0% and ${MAX_RATE_LABEL}`;
+  }
+  if (!isNonNegativeAmount(inputs.primaryResidenceMortgagePayment ?? 0)) {
+    errors.primaryResidenceMortgagePayment =
+      "Mortgage repayment must be zero or more";
   }
   return { ...errors, ...validateRetirementDeductions(inputs) };
 }

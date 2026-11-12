@@ -416,7 +416,7 @@ export interface SnaptradePositionContext {
  *
  * Bitpanda holds a mix of asset classes (crypto, metals, commodities,
  * stocks/ETFs, indices, fiat) behind a single read-only API key.
- * `assetType` is the normalized Bitpanda asset class (see convex/lib/bitpanda.ts).
+ * `assetType` is the normalized Bitpanda asset class (see services/bitpanda/normalize.ts).
  */
 export interface BitpandaPositionContext {
   provider: "bitpanda";

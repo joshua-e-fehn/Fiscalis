@@ -583,7 +583,7 @@ export const CLASSIFICATION_RULES: ClassificationRule[] = [
 
   // ═══════════════════════════════════════════════════════════════
   // BITPANDA HOLDING RULES (mixed-asset broker/crypto)
-  // Bitpanda asset classes are normalized in convex/lib/bitpanda.ts to:
+  // Bitpanda asset classes are normalized in services/bitpanda/normalize.ts to:
   // "crypto" | "metal" | "commodity" | "stock" | "etf" | "index" | "fiat"
   // Symbol rules above (BTC/ETH/stablecoins) refine crypto automatically.
   // ═══════════════════════════════════════════════════════════════

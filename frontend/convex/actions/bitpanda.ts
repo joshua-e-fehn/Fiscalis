@@ -13,10 +13,12 @@ import {
   fetchCryptoTransactions,
   fetchFiatTransactions,
   fetchCommodityTransactions,
-  normalizeHoldings,
-  normalizeTransactions,
   BitpandaAuthError,
 } from "../lib/bitpanda";
+import {
+  normalizeHoldings,
+  normalizeTransactions,
+} from "../../../services/bitpanda/normalize";
 import {
   classifyBitpandaPosition,
   getClassificationFields,

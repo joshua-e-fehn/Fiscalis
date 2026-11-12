@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeHoldings,
   normalizeTransactions,
-} from "../../frontend/convex/lib/bitpanda";
+} from "./normalize";
 import { getBitpandaHoldingIdentityKeys } from "./identity";
 import { classifyBitpandaPosition } from "../classification/engine";
 

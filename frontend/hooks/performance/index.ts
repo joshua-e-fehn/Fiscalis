@@ -39,7 +39,6 @@ export {
   usePortfolioChartData,
   useCategoryChartData,
   type CategoryChartDataResult,
-  type PortfolioChartPoint,
   type PortfolioChartMetric,
   type UsePortfolioChartDataOptions,
   type UsePortfolioChartDataResult,

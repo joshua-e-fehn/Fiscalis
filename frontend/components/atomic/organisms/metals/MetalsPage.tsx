@@ -38,7 +38,7 @@ import {
 } from "@/hooks/metals";
 import { useMetalsYTD } from "@/hooks/performance";
 import { useVaultPerformance } from "@/hooks/performance/useContinuousPerformance";
-import { labelToTimeRange } from "@/lib/performance";
+import { labelToTimeRange, toChartPoints } from "@/lib/performance";
 import {
   MetalsType,
   MetalsCurrency,
@@ -448,12 +448,7 @@ export function MetalsPage({
     includeDataPoints: true,
   });
   const chartPoints = useMemo(
-    () =>
-      vaultHistory.dataPoints.map((p) => ({
-        timestamp: p.timestamp,
-        value: p.value,
-        cost: p.costBasis,
-      })),
+    () => toChartPoints(vaultHistory.dataPoints),
     [vaultHistory.dataPoints],
   );
 

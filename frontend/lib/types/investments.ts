@@ -49,17 +49,6 @@ export interface SubcategoryData {
 }
 
 /**
- * A single data point in the portfolio history
- */
-export interface PortfolioDataPoint {
-  date: string;
-  timestamp: number;
-  value: number;
-  /** Cost line (cost basis plus uncovered value); null where unknown */
-  cost: number | null;
-}
-
-/**
  * Summary data for an entire investment category
  */
 export interface CategorySummary {

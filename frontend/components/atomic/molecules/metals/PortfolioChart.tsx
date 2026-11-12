@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { PerformanceTimeRangeLabel } from "@/lib/performance";
+import type { ChartPoint, PerformanceTimeRangeLabel } from "@/lib/performance";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -43,19 +43,13 @@ export const CHART_TIME_RANGES: readonly ChartTimeRange[] = [
   "ALL",
 ];
 
-/**
- * One point of the vault's value history (useVaultPerformance): value at
- * the quantity held then and historical spot, and the cost line (null
- * where the cost is unknown).
- */
-export interface PortfolioChartPoint {
-  timestamp: number;
-  value: number;
-  cost: number | null;
-}
-
 interface PortfolioChartProps {
-  dataPoints: PortfolioChartPoint[];
+  /**
+   * The vault's value history (useVaultPerformance, toChartPoints): value
+   * at the quantity held then and historical spot, and the cost line (null
+   * where the cost is unknown).
+   */
+  dataPoints: ChartPoint[];
   timeRange: ChartTimeRange;
   onTimeRangeChange: (range: ChartTimeRange) => void;
   currency?: MetalsCurrency;

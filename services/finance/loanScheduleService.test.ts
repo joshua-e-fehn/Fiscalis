@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  actualYearFraction,
   addMonthsToISODate,
   adjustmentForBalance,
   buildLoanSchedule,
@@ -11,6 +12,9 @@ import {
   initialScheduledPayment,
   loanBalanceAdjustment,
   loanKpis,
+  paymentSplitBasis,
+  periodicRateAt,
+  projectLoan,
   projectOutstandingPayments,
   settleLoanBalance,
   splitLoanPayment,
@@ -743,5 +747,146 @@ describe("projectOutstandingPayments", () => {
     expect(
       projectOutstandingPayments({ ...realLoan, status: "paid_off" }, [], "2026-11-11"),
     ).toEqual([]);
+  });
+});
+
+describe("day-count convention", () => {
+  // 12,000 interest-only at 6%, monthly through the leap year 2024
+  const bullet: ScheduleLoan = {
+    loanType: "BULLET",
+    paymentFrequency: "MONTHLY",
+    originalPrincipal: 12000,
+    currentBalance: 12000,
+    annualInterestRate: 0.06,
+    termMonths: 12,
+    scheduledPayment: 60,
+    startDate: "2024-01-01",
+    status: "active",
+  };
+  const interests = (loan: ScheduleLoan) =>
+    projectLoan(loan, []).rows.map((r) => r.interest);
+
+  it("counts ACT/ACT days against each calendar year's own length", () => {
+    // 31 days of 2023 over 365, then 60 days of the leap year 2024 over 366
+    expect(actualYearFraction("ACT/ACT", "2023-12-01", "2024-03-01")).toBe(
+      31 / 365 + 60 / 366,
+    );
+    expect(actualYearFraction("ACT/ACT", "2023-12-15", "2024-01-15")).toBe(
+      17 / 365 + 14 / 366,
+    );
+    expect(actualYearFraction("ACT/ACT", "2024-01-01", "2025-01-01")).toBe(1);
+    expect(actualYearFraction("ACT/ACT", "2023-07-01", "2024-07-01")).toBe(
+      184 / 365 + 182 / 366,
+    );
+  });
+
+  it("counts ACT/360 and ACT/365 days over a fixed year", () => {
+    expect(actualYearFraction("ACT/360", "2024-02-01", "2024-03-01")).toBe(
+      29 / 360,
+    );
+    expect(actualYearFraction("ACT/365", "2024-02-01", "2024-03-01")).toBe(
+      29 / 365,
+    );
+    expect(actualYearFraction("ACT/365", "2024-03-01", "2024-03-01")).toBe(0);
+  });
+
+  it("keeps unset and 30/360 on the flat periodic rate", () => {
+    expect(periodicRateAt(bullet, 0.06, 2)).toBe(0.06 / 12);
+    expect(periodicRateAt({ ...bullet, dayCount: "30/360" }, 0.06, 2)).toBe(
+      0.06 / 12,
+    );
+    expect(periodicRateAt({ ...bullet, dayCount: "ACT/360" }, 0.06, 2)).toBe(
+      0.06 * (29 / 360),
+    );
+    expect(interests(bullet)).toEqual(Array(12).fill(60));
+    expect(projectLoan({ ...bullet, dayCount: "30/360" }, [])).toEqual(
+      projectLoan(bullet, []),
+    );
+  });
+
+  it("accrues each period on its actual days", () => {
+    expect(interests({ ...bullet, dayCount: "ACT/360" })).toEqual([
+      62, 58, 62, 60, 62, 60, 62, 62, 60, 62, 60, 62,
+    ]);
+    expect(interests({ ...bullet, dayCount: "ACT/365" })).toEqual([
+      61.15, 57.21, 61.15, 59.18, 61.15, 59.18, 61.15, 61.15, 59.18, 61.15,
+      59.18, 61.15,
+    ]);
+    // A leap year: 29 February counts, and the year still totals 6%
+    expect(interests({ ...bullet, dayCount: "ACT/ACT" })).toEqual([
+      60.98, 57.05, 60.98, 59.02, 60.98, 59.02, 60.98, 60.98, 59.02, 60.98,
+      59.02, 60.98,
+    ]);
+    expect(projectLoan({ ...bullet, dayCount: "ACT/ACT" }, []).totalInterest).toBe(
+      719.99,
+    );
+    expect(projectLoan({ ...bullet, dayCount: "ACT/365" }, []).totalInterest).toBe(
+      721.98,
+    );
+  });
+
+  it("keeps the agreed annuity and settles the day-count difference at the end", () => {
+    const annuity: ScheduleLoan = {
+      ...bullet,
+      loanType: "ANNUITY",
+      scheduledPayment: 1032.8,
+      startDate: "2026-01-01",
+      dayCount: "ACT/360",
+    };
+    const projection = projectLoan(annuity, []);
+    expect(projection.rows.slice(0, 2).map((r) => r.interest)).toEqual([
+      62, 51.47,
+    ]);
+    expect(projection.rows[0].payment).toBe(1032.8);
+    expect(projection.rows[11]).toMatchObject({
+      openingBalance: 1031.42,
+      payment: 1036.75,
+      closingBalance: 0,
+    });
+    expect(projection.totalInterest).toBe(397.55);
+  });
+
+  it("splits a payment on the interest of the due period it covers", () => {
+    const loan: ScheduleLoan = {
+      ...bullet,
+      loanType: "ANNUITY",
+      scheduledPayment: 1032.8,
+      startDate: "2026-01-01",
+    };
+    // January 2026: 31 days at 6% on 12,000
+    expect(
+      splitLoanPayment(
+        paymentSplitBasis({ ...loan, dayCount: "ACT/360" }, [], "2026-02-01"),
+        1032.8,
+        "scheduled",
+      ),
+    ).toEqual({
+      principalPortion: 970.8,
+      interestPortion: 62,
+      feesPortion: 0,
+      overpayment: 0,
+      amount: 1032.8,
+    });
+    expect(
+      splitLoanPayment(paymentSplitBasis(loan, [], "2026-02-01"), 1032.8, "scheduled")
+        .interestPortion,
+    ).toBe(60);
+    // After the first due date is paid, the next payment covers February
+    const paid: SchedulePayment[] = [
+      {
+        paymentDate: "2026-02-01",
+        amount: 1032.8,
+        principalPortion: 970.8,
+        interestPortion: 62,
+        paymentType: "scheduled",
+      },
+    ];
+    expect(
+      paymentSplitBasis(
+        { ...loan, dayCount: "ACT/360", currentBalance: 11029.2 },
+        paid,
+        "2026-03-01",
+      ).periodRate,
+    ).toBe(0.06 * (28 / 360));
   });
 });

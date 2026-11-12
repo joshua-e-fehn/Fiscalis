@@ -27,11 +27,15 @@
 //        INTEREST_ONLY_THEN  interest only for gracePeriods, then an annuity
 //                            fixed once over the remaining periods
 //      The final period settles whatever balance is left (no residual).
-//   5. Prepayments (a recurring extra per period and one-time amounts) are
-//      capped by maxAnnualPrepaymentRate × originalPrincipal per calendar year,
+//   5. Prepayments (recurring extras per period, each active between optional
+//      from/until due dates, and one-time amounts) are capped by
+//      maxAnnualPrepaymentRate × originalPrincipal per calendar year,
 //      cost prepaymentPenaltyRate × amount, and either shorten the term
 //      (reduce_term, the default) or lower the regular payment
 //      (reduce_payment) for every loan type.
+//   6. Interest accrues per period by the loan's day-count convention over
+//      the actual due dates (D_{k-1} → D_k). Unset, every period is a flat
+//      1 / paymentsPerYear (what 30/360 gives for whole-month periods).
 
 import { calculateAnnuityPayment, roundMoney } from "./financeService";
 
@@ -83,6 +87,22 @@ export type LoanPaymentType = (typeof LOAN_PAYMENT_TYPES)[number];
 export const PREPAYMENT_EFFECTS = ["reduce_term", "reduce_payment"] as const;
 export type PrepaymentEffect = (typeof PREPAYMENT_EFFECTS)[number];
 
+/**
+ * How a period's interest accrues (the year fraction of D_{k-1} → D_k):
+ * - 30/360: every month is 30 days of a 360-day year (flat periods)
+ * - ACT/360: actual days / 360
+ * - ACT/365: actual days / 365 (fixed)
+ * - ACT/ACT: actual days, each counted against its own year's length
+ *   (365 or 366; ISDA)
+ */
+export const DAY_COUNT_CONVENTIONS = [
+  "30/360",
+  "ACT/360",
+  "ACT/365",
+  "ACT/ACT",
+] as const;
+export type DayCountConvention = (typeof DAY_COUNT_CONVENTIONS)[number];
+
 // ───────────────────────────────────────────────────────────────
 // Types
 // ───────────────────────────────────────────────────────────────
@@ -103,6 +123,8 @@ export interface LoanTerms {
   maxAnnualPrepaymentRate?: number;
   /** Penalty charged on each prepaid amount (0.01 = 1%). */
   prepaymentPenaltyRate?: number;
+  /** Interest accrual convention; unset = flat periods (as 30/360). */
+  dayCount?: DayCountConvention;
 }
 
 /** The loan fields the schedule needs (a structural subset of the stored loan). */
@@ -135,6 +157,66 @@ export interface SchedulePayment {
 export interface DatedPrepayment {
   date: string;
   amount: number;
+}
+
+/**
+ * Extra principal paid with every regular payment whose due date lies in
+ * [from, until] (each bound optional, inclusive).
+ */
+export interface RecurringExtra {
+  amount: number;
+  /** First due date (`YYYY-MM-DD`) it applies to; from the next one when unset. */
+  from?: string;
+  /** Last due date it applies to; to the end when unset. */
+  until?: string;
+}
+
+/** Where recurring extras are stored: the list, or the legacy single extra. */
+export interface RecurringExtrasSource {
+  recurringExtras?: RecurringExtra[];
+  /** Legacy single extra per period. */
+  extraPerPeriod?: number;
+  /** Legacy first due date of {@link extraPerPeriod}. */
+  extraPerPeriodFrom?: string;
+  /** Deprecated, misnamed alias of {@link extraPerPeriod}. */
+  extraMonthlyPayment?: number;
+}
+
+/**
+ * The recurring extras of a scenario: the stored list when there is one,
+ * otherwise the legacy single extra as a one-entry list (none when ≤ 0).
+ */
+export function resolveRecurringExtras(
+  source: RecurringExtrasSource,
+): RecurringExtra[] {
+  if (source.recurringExtras !== undefined) {
+    return source.recurringExtras.filter((e) => e.amount > 0);
+  }
+  const amount = source.extraPerPeriod ?? source.extraMonthlyPayment ?? 0;
+  if (!(amount > 0)) return [];
+  return [
+    source.extraPerPeriodFrom
+      ? { amount, from: source.extraPerPeriodFrom }
+      : { amount },
+  ];
+}
+
+/** Sum of the recurring extras active on a due date. */
+export function recurringExtraOn(
+  extras: RecurringExtra[],
+  dueDate: string,
+): number {
+  return roundMoney(
+    extras.reduce(
+      (sum, e) =>
+        e.amount > 0 &&
+        (!e.from || dueDate >= e.from) &&
+        (!e.until || dueDate <= e.until)
+          ? sum + e.amount
+          : sum,
+      0,
+    ),
+  );
 }
 
 export type LoanScheduleRowStatus = "paid" | "extra" | "scheduled";
@@ -255,6 +337,66 @@ function getPeriodicRate(
   frequency: LoanPaymentFrequency,
 ): number {
   return annualInterestRate / getPaymentsPerYear(frequency);
+}
+
+/** Days since 1970-01-01 of a `YYYY-MM-DD` date (calendar only). */
+function epochDay(isoDate: string): number {
+  const [year, month, day] = parseCalendarDate(isoDate);
+  return Math.round(Date.UTC(year, month, day) / 86_400_000);
+}
+
+function isLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * Year fraction of the period `from` → `to` under an ACT convention:
+ * actual days over 360, over 365, or (ACT/ACT ISDA) the days falling in
+ * each calendar year over that year's length.
+ */
+export function actualYearFraction(
+  convention: Exclude<DayCountConvention, "30/360">,
+  from: string,
+  to: string,
+): number {
+  const start = epochDay(from);
+  const end = epochDay(to);
+  if (end <= start) return 0;
+  if (convention === "ACT/360") return (end - start) / 360;
+  if (convention === "ACT/365") return (end - start) / 365;
+  let fraction = 0;
+  let cursor = start;
+  for (let year = parseCalendarDate(from)[0]; cursor < end; year++) {
+    const nextYear = Math.round(Date.UTC(year + 1, 0, 1) / 86_400_000);
+    const stop = Math.min(end, nextYear);
+    fraction += (stop - cursor) / (isLeapYear(year) ? 366 : 365);
+    cursor = stop;
+  }
+  return fraction;
+}
+
+/**
+ * The interest rate of due period k (D_{k-1} → D_k) at an annual rate, by
+ * the loan's day-count convention. Unset and 30/360 are the flat
+ * annualRate / paymentsPerYear: due dates are whole months apart, and
+ * 30/360 counts every month as 30 days.
+ */
+export function periodicRateAt(
+  terms: Pick<LoanTerms, "startDate" | "paymentFrequency" | "dayCount">,
+  annualRate: number,
+  k: number,
+): number {
+  if (!terms.dayCount || terms.dayCount === "30/360") {
+    return getPeriodicRate(annualRate, terms.paymentFrequency);
+  }
+  return (
+    annualRate *
+    actualYearFraction(
+      terms.dayCount,
+      getDueDate(terms, k - 1),
+      getDueDate(terms, k),
+    )
+  );
 }
 
 /**
@@ -438,6 +580,12 @@ export interface LoanSplitBasis {
   annualInterestRate: number;
   paymentFrequency: LoanPaymentFrequency;
   /**
+   * Interest rate of the due period the payment covers (by the loan's
+   * day-count convention, see {@link periodicRateAt}); the flat
+   * annualInterestRate / paymentsPerYear when absent.
+   */
+  periodRate?: number;
+  /**
    * A due date already partly paid by earlier partial payments: its period
    * interest is charged on its opening balance, minus the interest those
    * payments already booked, so it is charged only once.
@@ -509,7 +657,8 @@ export function splitLoanPayment(
     const open = basis.openPeriod;
     const periodInterest = roundMoney(
       Math.max(0, open ? open.openingBalance : basis.balance) *
-        getPeriodicRate(basis.annualInterestRate, basis.paymentFrequency),
+        (basis.periodRate ??
+          getPeriodicRate(basis.annualInterestRate, basis.paymentFrequency)),
     );
     const interestDue = roundMoney(
       Math.max(0, periodInterest - (open?.interestBooked ?? 0)),
@@ -544,9 +693,7 @@ interface AmortizationPlan {
   openingBalance: number;
   /** ANNUITY: the agreed payment; derived over the remaining periods when absent. */
   annuityPayment?: number;
-  extraPerPeriod?: number;
-  /** First due date the recurring extra applies to. */
-  extraPerPeriodFrom?: string;
+  recurringExtras?: RecurringExtra[];
   prepayments?: DatedPrepayment[];
   prepaymentEffect?: PrepaymentEffect;
   /** `YYYY-MM-DD` used to flag overdue rows. */
@@ -596,7 +743,7 @@ function amortize(plan: AmortizationPlan): LoanProjection {
     fromPeriod + MAX_PROJECTED_PERIODS - 1,
   );
   const effect = plan.prepaymentEffect ?? "reduce_term";
-  const extraPerPeriod = Math.max(0, plan.extraPerPeriod ?? 0);
+  const recurringExtras = plan.recurringExtras ?? [];
   const cap = createPrepaymentCap(terms);
   const penaltyRate = Math.max(0, terms.prepaymentPenaltyRate ?? 0);
   const prepayments = [...(plan.prepayments ?? [])]
@@ -703,7 +850,12 @@ function amortize(plan: AmortizationPlan): LoanProjection {
     if (plan.maxRows !== undefined && rows.length >= plan.maxRows) break;
     const dueDate = getDueDate(terms, k);
     const openingBalance = balance;
-    const interest = roundMoney(openingBalance * rate);
+    const interest = roundMoney(
+      openingBalance *
+        (terms.dayCount
+          ? periodicRateAt(terms, plan.annualInterestRate, k)
+          : rate),
+    );
 
     let principal: number;
     if (k === lastPeriod) {
@@ -742,11 +894,8 @@ function amortize(plan: AmortizationPlan): LoanProjection {
       finalBalloon = principal;
     }
 
-    const extra =
-      extraPerPeriod > 0 &&
-      (!plan.extraPerPeriodFrom || dueDate >= plan.extraPerPeriodFrom)
-        ? extraPerPeriod
-        : 0;
+    // The prepayment cap applies to the sum of the active extras
+    const extra = recurringExtraOn(recurringExtras, dueDate);
     const prepaid =
       k === lastPeriod
         ? applyPrepayments(dueDate, takePrepaymentsUntil(dueDate), 0, 0)
@@ -828,6 +977,8 @@ interface RecordedWalk<T extends SchedulePayment> {
   closingBalanceByIndex: number[];
   /** The due date left partly paid after each sorted payment, if any. */
   openPeriodByIndex: Array<OpenPeriod | null>;
+  /** Due dates fully covered after each sorted payment. */
+  coveredPeriodsByIndex: number[];
   /** Balance before the first payment. */
   initialBalance: number;
   /**
@@ -884,6 +1035,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
   const openingBalanceByIndex: number[] = [];
   const closingBalanceByIndex: number[] = [];
   const openPeriodByIndex: Array<OpenPeriod | null> = [];
+  const coveredPeriodsByIndex: number[] = [];
 
   for (const p of sorted) {
     const openingBalance = balance;
@@ -919,6 +1071,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
     openingBalanceByIndex.push(openingBalance);
     closingBalanceByIndex.push(balance);
     openPeriodByIndex.push(openPeriod);
+    coveredPeriodsByIndex.push(coveredPeriods);
   }
 
   return {
@@ -928,6 +1081,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
     openingBalanceByIndex,
     closingBalanceByIndex,
     openPeriodByIndex,
+    coveredPeriodsByIndex,
     initialBalance,
     historyInconsistent:
       initialBalance - loan.originalPrincipal > PAID_OFF_THRESHOLD,
@@ -939,7 +1093,7 @@ function walkRecordedPayments<T extends SchedulePayment>(
  * after every recorded payment made on or before that date (a back-dated
  * payment is split on the balance owed then, not on today's balance), and
  * the due date those payments left partly paid, so its interest isn't
- * charged twice.
+ * charged twice. The period rate is that of the due date the payment covers.
  */
 export function paymentSplitBasis(
   loan: ScheduleLoan,
@@ -949,15 +1103,22 @@ export function paymentSplitBasis(
   const walk = walkRecordedPayments(loan, payments);
   let balance = walk.initialBalance;
   let openPeriod: OpenPeriod | null = null;
+  let coveredPeriods = 0;
   for (let i = 0; i < walk.sorted.length; i++) {
     if (walk.sorted[i].paymentDate > paymentDate) break;
     balance = walk.closingBalanceByIndex[i];
     openPeriod = walk.openPeriodByIndex[i];
+    coveredPeriods = walk.coveredPeriodsByIndex[i];
   }
   return {
     balance,
     annualInterestRate: loan.annualInterestRate,
     paymentFrequency: loan.paymentFrequency,
+    periodRate: periodicRateAt(
+      loan,
+      loan.annualInterestRate,
+      coveredPeriods + 1,
+    ),
     openPeriod,
   };
 }
@@ -981,11 +1142,13 @@ export function computeNextPaymentDate(
 // ───────────────────────────────────────────────────────────────
 
 /** Options of a What-If projection. */
-export interface ProjectLoanOptions {
-  /** Extra principal paid with every regular payment (per period, not per month). */
-  extraPerPeriod?: number;
-  /** First due date the recurring extra applies to. */
-  extraPerPeriodFrom?: string;
+export interface ProjectLoanOptions extends RecurringExtrasSource {
+  /**
+   * Extra principal paid with the regular payments (per period, not per
+   * month); the sum of the extras active on a due date is paid then. The
+   * legacy extraPerPeriod / extraPerPeriodFrom pair is one such extra.
+   */
+  recurringExtras?: RecurringExtra[];
   oneTimePrepayments?: DatedPrepayment[];
   /** New annual rate (refinancing); the regular payment is re-derived. */
   newRate?: number;
@@ -1018,8 +1181,7 @@ export function projectLoan(
     // A new rate re-derives the annuity over the remaining periods
     annuityPayment:
       newRate === undefined ? agreedAnnuityPayment(loan) : undefined,
-    extraPerPeriod: options.extraPerPeriod,
-    extraPerPeriodFrom: options.extraPerPeriodFrom,
+    recurringExtras: resolveRecurringExtras(options),
     prepayments: options.oneTimePrepayments,
     prepaymentEffect: options.prepaymentEffect,
     today,
@@ -1074,11 +1236,12 @@ export function initialScheduledPayment(
   terms: Omit<
     LoanTerms,
     "startDate" | "maxAnnualPrepaymentRate" | "prepaymentPenaltyRate"
-  >,
+  > & { startDate?: string },
 ): number {
   if (terms.originalPrincipal <= 0) return 0;
   const projection = amortize({
-    terms: { ...terms, startDate: "2000-01-01" },
+    // The start date only matters for an actual day count
+    terms: { ...terms, startDate: terms.startDate ?? "2000-01-01" },
     annualInterestRate: terms.annualInterestRate,
     fromPeriod: 1,
     openingBalance: terms.originalPrincipal,
@@ -1492,7 +1655,7 @@ export function calculateLoanSchedule(input: LoanInput): LoanSummary {
     fromPeriod: 1,
     openingBalance: input.principal,
     annuityPayment: input.fixedPayment,
-    extraPerPeriod: input.extraPerPeriod,
+    recurringExtras: resolveRecurringExtras(input),
     prepayments: input.prepayments,
     prepaymentEffect: input.prepaymentEffect,
   });

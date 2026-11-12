@@ -3,7 +3,10 @@
 import { useState, useEffect } from "react";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useUpdateLoan, LoanStatus } from "@/hooks/convex/loans";
-import { scheduledPaymentAfterEdit } from "@/../services/finance/loanScheduleService";
+import {
+  scheduledPaymentAfterEdit,
+  type DayCountConvention,
+} from "@/../services/finance/loanScheduleService";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +27,7 @@ import { Label } from "@/components/ui/shadcn/label";
 import { Button } from "@/components/ui/shadcn/button";
 import { Textarea } from "@/components/ui/shadcn/textarea";
 import { Loader2 } from "lucide-react";
+import { DayCountSelect } from "@/components/atomic/molecules/loans/day-count-select";
 
 type Loan = Doc<"loans">;
 
@@ -65,6 +69,9 @@ export function EditLoanDialog({
   // the remaining periods (the same rule updateLoan applies)
   const [paymentEdited, setPaymentEdited] = useState(false);
   const [status, setStatus] = useState<LoanStatus>(loan.status);
+  const [dayCount, setDayCount] = useState<DayCountConvention | undefined>(
+    loan.dayCount,
+  );
   const [lender, setLender] = useState(loan.lender ?? "");
   const [contractNumber, setContractNumber] = useState(
     loan.contractNumber ?? "",
@@ -80,6 +87,7 @@ export function EditLoanDialog({
     setScheduledPayment(loan.scheduledPayment.toString());
     setPaymentEdited(false);
     setStatus(loan.status);
+    setDayCount(loan.dayCount);
     setLender(loan.lender ?? "");
     setContractNumber(loan.contractNumber ?? "");
     setCollateral(loan.collateral ?? "");
@@ -112,6 +120,8 @@ export function EditLoanDialog({
         annualInterestRate: parseFloat(annualInterestRate) / 100,
         scheduledPayment: parseFloat(scheduledPayment),
         status,
+        // null clears a convention back to equal periods
+        dayCount: dayCount ?? null,
         lender: lender || undefined,
         contractNumber: contractNumber || undefined,
         collateral: collateral || undefined,
@@ -230,6 +240,12 @@ export function EditLoanDialog({
               </Select>
             </div>
           </div>
+
+          <DayCountSelect
+            id="edit-day-count"
+            value={dayCount}
+            onChange={setDayCount}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div>

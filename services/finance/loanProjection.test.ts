@@ -11,6 +11,8 @@ import {
   nextLoanPayment,
   paymentSplitBasis,
   projectLoan,
+  recurringExtraOn,
+  resolveRecurringExtras,
   isLegacyFullTermAnnuityPayment,
   isLegacyInterestOnlyThenPayment,
   rederiveScheduledPayment,
@@ -677,5 +679,73 @@ describe("monthsBetweenISODates", () => {
     expect(monthsBetweenISODates("2026-11-11", "2027-01-01")).toBe(1);
     expect(monthsBetweenISODates("2026-11-11", "2026-12-11")).toBe(1);
     expect(monthsBetweenISODates("2027-01-01", "2026-01-01")).toBe(0);
+  });
+});
+
+describe("recurring extras", () => {
+  it("maps the legacy single extra to a one-entry list", () => {
+    expect(
+      resolveRecurringExtras({ extraPerPeriod: 50, extraPerPeriodFrom: "2028-01-01" }),
+    ).toEqual([{ amount: 50, from: "2028-01-01" }]);
+    expect(resolveRecurringExtras({ extraMonthlyPayment: 25 })).toEqual([
+      { amount: 25 },
+    ]);
+    expect(resolveRecurringExtras({ extraPerPeriod: 0 })).toEqual([]);
+    expect(resolveRecurringExtras({})).toEqual([]);
+    // A stored list wins over the legacy fields
+    expect(
+      resolveRecurringExtras({
+        recurringExtras: [{ amount: 10 }, { amount: 0 }],
+        extraPerPeriod: 50,
+      }),
+    ).toEqual([{ amount: 10 }]);
+  });
+
+  it("sums the extras active on a due date, bounds inclusive", () => {
+    const extras = [
+      { amount: 50 },
+      { amount: 20, from: "2028-01-01" },
+      { amount: 30, until: "2027-01-01" },
+    ];
+    expect(recurringExtraOn(extras, "2027-01-01")).toBe(80);
+    expect(recurringExtraOn(extras, "2028-01-01")).toBe(70);
+  });
+
+  it("pays every active extra with each regular payment", () => {
+    const scenario = projectLoan(base, [], {
+      recurringExtras: [
+        { amount: 50 },
+        { amount: 20, from: "2028-01-01" },
+        { amount: 30, until: "2027-01-01" },
+      ],
+    });
+    expect(
+      scenario.rows.map((r) => [r.dueDate, r.prepayment, r.closingBalance]),
+    ).toEqual([
+      ["2027-01-01", 80, 704.53],
+      ["2028-01-01", 70, 389.51],
+      ["2029-01-01", 70, 42.99],
+      ["2030-01-01", 0, 0],
+    ]);
+  });
+
+  it("caps the sum of the extras by the annual prepayment limit", () => {
+    const scenario = projectLoan(
+      { ...base, maxAnnualPrepaymentRate: 0.06 },
+      [],
+      { recurringExtras: [{ amount: 40 }, { amount: 30 }] },
+    );
+    expect(scenario.rows.map((r) => r.prepayment)).toEqual([60, 60, 60, 0]);
+    expect(scenario.prepaymentsCapped).toBe(30);
+  });
+
+  it("projects a legacy extra exactly like its one-entry list", () => {
+    expect(
+      projectLoan(base, [], { extraPerPeriod: 50, extraPerPeriodFrom: "2028-01-01" }),
+    ).toEqual(
+      projectLoan(base, [], {
+        recurringExtras: [{ amount: 50, from: "2028-01-01" }],
+      }),
+    );
   });
 });

@@ -740,6 +740,19 @@ describe("primary residence mortgage", () => {
     expect(mortgageBalanceOn(anchored, "2026-01-20")).toBe(244000);
   });
 
+  it("projects the mortgage balance by the loan's day-count convention", () => {
+    const owedOn = (dayCount?: ScheduleLoan["dayCount"]) =>
+      mortgageBalanceOn(
+        residenceMortgageFromLoan({ ...loan, dayCount }, [], "2026-01-15"),
+        "2031-01-15",
+      );
+    expect(owedOn()).toBe(213763.62);
+    expect(owedOn("30/360")).toBe(213763.62);
+    // More interest per year (365/360) leaves less principal repaid
+    expect(owedOn("ACT/360")).toBe(214303.66);
+    expect(owedOn("ACT/365")).toBe(213779.65);
+  });
+
   it("normalises the next payment to monthly", () => {
     const quarterly = residenceMortgageFromLoan(
       {

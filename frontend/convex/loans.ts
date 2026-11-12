@@ -18,6 +18,7 @@ import {
   loanBalanceAdjustment,
   loanKpis,
   paymentSplitBasis,
+  periodicRateAt,
   scheduledPaymentAfterEdit,
   settleLoanBalance,
   splitLoanPayment,
@@ -25,6 +26,7 @@ import {
 import type { LoanStatus } from "../../services/finance/loanScheduleService";
 import { roundMoney } from "../../services/finance/financeService";
 import {
+  dayCountValidator,
   loanPaymentFrequencyValidator,
   loanPaymentTypeValidator,
   loanStatusValidator,
@@ -369,6 +371,7 @@ export const createLoan = mutation({
     // Ignored (derived from the payments); kept for older clients
     nextPaymentDate: v.optional(v.string()),
     gracePeriods: v.optional(v.number()),
+    dayCount: v.optional(dayCountValidator),
     maxAnnualPrepaymentRate: v.optional(v.number()),
     prepaymentPenaltyRate: v.optional(v.number()),
     lender: v.optional(v.string()),
@@ -409,9 +412,17 @@ export const createLoan = mutation({
     const splits = [...historicalPayments]
       .sort((a, b) => a.paymentDate.localeCompare(b.paymentDate))
       .filter((p) => p.amount > 0)
-      .map((p) => {
+      .map((p, index) => {
         const split = splitLoanPayment(
-          { ...terms, balance },
+          {
+            ...terms,
+            balance,
+            periodRate: periodicRateAt(
+              terms,
+              terms.annualInterestRate,
+              index + 1,
+            ),
+          },
           p.amount,
           "scheduled",
         );
@@ -506,11 +517,18 @@ export const updateLoan = mutation({
     notes: v.optional(v.string()),
     maxAnnualPrepaymentRate: v.optional(v.number()),
     prepaymentPenaltyRate: v.optional(v.number()),
+    // null clears it (back to flat periods)
+    dayCount: v.optional(v.union(dayCountValidator, v.null())),
   },
   handler: async (ctx, args) => {
     // nextPaymentDate is derived from the payments, so a sent one is ignored
     // (kept as an arg for older clients)
-    const { loanId, nextPaymentDate: _nextPaymentDate, ...updates } = args;
+    const {
+      loanId,
+      nextPaymentDate: _nextPaymentDate,
+      dayCount,
+      ...updates
+    } = args;
 
     const { loan } = await requireOwnedLoan(ctx, loanId);
 
@@ -518,6 +536,9 @@ export const updateLoan = mutation({
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
     ) as Partial<Loan>;
+    if (dayCount !== undefined) {
+      filteredUpdates.dayCount = dayCount ?? undefined;
+    }
 
     const payments = await getLoanPaymentDocs(ctx, loanId);
 

@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
+	DAY_COUNT_CONVENTIONS,
 	LOAN_PAYMENT_FREQUENCIES,
 	LOAN_PAYMENT_TYPES,
 	LOAN_STATUSES,
@@ -17,6 +18,7 @@ export const loanPaymentFrequencyValidator = oneOf(LOAN_PAYMENT_FREQUENCIES);
 export const loanStatusValidator = oneOf(LOAN_STATUSES);
 export const loanPaymentTypeValidator = oneOf(LOAN_PAYMENT_TYPES);
 export const prepaymentEffectValidator = oneOf(PREPAYMENT_EFFECTS);
+export const dayCountValidator = oneOf(DAY_COUNT_CONVENTIONS);
 
 /** Retirement plan: how a funding category grows (FundingTreatment in retirementService). */
 export const retirementFundingTreatmentValidator = v.union(
@@ -319,6 +321,9 @@ export default defineSchema({
 		termMonths: v.number(), // Original loan term in months
 		paymentFrequency: loanPaymentFrequencyValidator,
 		scheduledPayment: v.number(), // Regular payment amount (INTEREST_ONLY_THEN: the post-grace payment)
+		// Interest accrual convention of each period; unset = flat periods
+		// (rate / payments per year, as 30/360)
+		dayCount: v.optional(dayCountValidator),
 
 		// Dates
 		startDate: v.string(), // Loan start date (ISO)

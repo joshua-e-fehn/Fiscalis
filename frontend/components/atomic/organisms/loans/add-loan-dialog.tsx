@@ -65,8 +65,10 @@ import {
   getDueDate,
   getPaymentsPerYear,
   initialScheduledPayment,
+  type DayCountConvention,
 } from "@/../services/finance/loanScheduleService";
 import { roundMoney } from "@/../services/finance/financeService";
+import { DayCountSelect } from "@/components/atomic/molecules/loans/day-count-select";
 
 interface AddLoanDialogProps {
   open: boolean;
@@ -303,6 +305,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   const [paymentFrequency, setPaymentFrequency] =
     useState<PaymentFrequency>("MONTHLY");
   const [gracePeriods, setGracePeriods] = useState("");
+  const [dayCount, setDayCount] = useState<DayCountConvention | undefined>();
 
   // Step 3: Schedule
   const [startDate, setStartDate] = useState("");
@@ -454,6 +457,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     setTermPeriods("");
     setPaymentFrequency("MONTHLY");
     setGracePeriods("");
+    setDayCount(undefined);
     setStartDate("");
     setScheduledPayment("");
     setUseCalculatedPayment(true);
@@ -512,6 +516,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
         contractNumber: contractNumber || undefined,
         collateral: collateral || undefined,
         gracePeriods: gracePeriods ? parseInt(gracePeriods) : undefined,
+        dayCount,
         maxAnnualPrepaymentRate:
           allowPrepayment && maxPrepayment
             ? parseFloat(maxPrepayment) / 100
@@ -874,6 +879,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                   )}
                 </div>
               </div>
+
+              <DayCountSelect
+                id="dayCount"
+                value={dayCount}
+                onChange={setDayCount}
+              />
 
               {loanType === "INTEREST_ONLY_THEN" && (
                 <div>

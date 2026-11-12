@@ -10,6 +10,7 @@ import {
   resolveHoldingPrice,
   type PreviousHoldingPrice,
 } from "../../services/bitpanda/holdingPrice";
+import { parseClassificationOverride } from "../lib/types/classification";
 
 // ═══════════════════════════════════════════════════════════════
 // CONNECTION QUERIES
@@ -440,6 +441,9 @@ export const scheduledSyncAll = internalMutation({
 
 /**
  * Set or clear a user's manual category override for a single holding.
+ * An override is checked against the taxonomy (parseClassificationOverride,
+ * as in classification.ts); a side left out keeps the holding's current
+ * value, which must then still fit the other side.
  */
 export const setUserOverride = mutation({
   args: {
@@ -456,14 +460,26 @@ export const setUserOverride = mutation({
       throw new Error("Holding not found or unauthorized");
     }
 
-    const hasOverride = Boolean(args.category || args.subcategory);
+    if (!args.category && !args.subcategory) {
+      await ctx.db.patch(args.holdingId, {
+        userCategoryOverride: undefined,
+        userSubcategoryOverride: undefined,
+        classificationSource: "auto",
+      });
+      return { success: true };
+    }
+
+    const { category, subcategory } = parseClassificationOverride(
+      args.category || holding.investmentCategory || "",
+      args.subcategory || holding.investmentSubcategory || "",
+    );
 
     await ctx.db.patch(args.holdingId, {
-      userCategoryOverride: args.category,
-      userSubcategoryOverride: args.subcategory,
-      investmentCategory: args.category ?? holding.investmentCategory,
-      investmentSubcategory: args.subcategory ?? holding.investmentSubcategory,
-      classificationSource: hasOverride ? "user_override" : "auto",
+      userCategoryOverride: category,
+      userSubcategoryOverride: subcategory,
+      investmentCategory: category,
+      investmentSubcategory: subcategory,
+      classificationSource: "user_override",
     });
 
     return { success: true };

@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/shadcn/select";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { useRetirementPreview } from "@/hooks/convex/retirement";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import {
 	FUNDING_TREATMENT_LABELS,
 	type FundingTreatment,
@@ -27,6 +28,7 @@ export function PortfolioStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
+	const currency = useBaseCurrency();
 	// The funding base exactly as the plan uses it (dashboard assets per
 	// category, liabilities, the residence mortgage taken out).
 	const results = useRetirementPreview(data);
@@ -52,7 +54,7 @@ export function PortfolioStep({
 				<div className="space-y-3">
 					{results.fundingLines.length === 0 && (
 						<p className="text-sm text-muted-foreground">
-							No assets tracked yet — your plan starts from €0.
+							No assets tracked yet — your plan starts from {formatCurrency(0, currency, { compact: true })}.
 						</p>
 					)}
 					{results.fundingLines.map((line) => (
@@ -69,7 +71,7 @@ export function PortfolioStep({
 											: "text-xs text-muted-foreground"
 									}
 								>
-									{formatCurrency(line.value, "eur")}
+									{formatCurrency(line.value, currency)}
 								</p>
 							</div>
 							<Select
@@ -99,7 +101,7 @@ export function PortfolioStep({
 						<div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
 							<span>Liabilities</span>
 							<span className="font-medium">
-								−{formatCurrency(results.liabilitiesCounted, "eur")}
+								−{formatCurrency(results.liabilitiesCounted, currency)}
 							</span>
 						</div>
 					)}
@@ -113,7 +115,7 @@ export function PortfolioStep({
 							</p>
 						</div>
 						<span className="text-xl font-bold">
-							{formatCurrency(results.fundableNow, "eur")}
+							{formatCurrency(results.fundableNow, currency)}
 						</span>
 					</div>
 				</div>
@@ -123,9 +125,10 @@ export function PortfolioStep({
 				<Note>
 					Your liabilities exceed your assets by{" "}
 					<span className="font-medium text-foreground">
-						{formatCurrency(-results.fundableNow, "eur")}
+						{formatCurrency(-results.fundableNow, currency)}
 					</span>
-					. Your plan starts from €0 — debt isn&apos;t grown at the investment
+					. Your plan starts from{" "}
+					{formatCurrency(0, currency, { compact: true })} — debt isn&apos;t grown at the investment
 					return — so paying it down comes on top of the savings we calculate.
 				</Note>
 			)}
@@ -133,10 +136,10 @@ export function PortfolioStep({
 				<Note>
 					The{" "}
 					<span className="font-medium text-foreground">
-						{formatCurrency(results.residenceMortgage.balance, "eur")}
+						{formatCurrency(results.residenceMortgage.balance, currency)}
 					</span>{" "}
 					mortgage on your home is not subtracted here: its{" "}
-					{formatCurrency(results.residenceMortgage.monthlyPayment, "eur")}/mo
+					{formatCurrency(results.residenceMortgage.monthlyPayment, currency)}/mo
 					repayments come from your income until retirement.
 				</Note>
 			)}

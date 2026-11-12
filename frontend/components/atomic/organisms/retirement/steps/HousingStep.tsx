@@ -12,8 +12,9 @@ import {
 } from "@/components/ui/shadcn/select";
 import { Switch } from "@/components/ui/shadcn/switch";
 import { useRetirementMortgageCandidates } from "@/hooks/convex/retirement";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import { validateRetirementInputs } from "@/lib/types/retirement";
-import { formatCurrency } from "@/lib/utils/currency";
+import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
@@ -27,6 +28,7 @@ export function HousingStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
+	const currency = useBaseCurrency();
 	const equityError = validateRetirementInputs(data).fundableRealEstateEquity;
 	const loans = useRetirementMortgageCandidates();
 
@@ -89,7 +91,7 @@ export function HousingStep({
 							<SelectItem value={NO_LOAN}>No mortgage / not tracked</SelectItem>
 							{loans?.map((loan) => (
 								<SelectItem key={loan._id} value={loan._id}>
-									{loan.name} — {formatCurrency(loan.currentBalance, "eur")}
+									{loan.name} — {formatCurrency(loan.currentBalance, currency)}
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -109,7 +111,7 @@ export function HousingStep({
 				</Label>
 				<div className="relative">
 					<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-						€
+						{currencySymbols[currency].trim()}
 					</span>
 					<Input
 						id="fundableEquity"

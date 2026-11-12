@@ -151,8 +151,11 @@ export const PriceChart = memo(function PriceChart({
               `${currency === "eur" ? "€" : "$"}${value.toFixed(2)}`
             }
           />
+          {/* Recharts drops null values from the payload by default; a gap
+              (price null) must reach the content to say no price was recorded */}
           <ChartTooltip
             cursor={false}
+            filterNull={false}
             content={
               <CustomTooltipContent timeRange={timeRange} currency={currency} />
             }

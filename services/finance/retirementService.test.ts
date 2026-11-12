@@ -24,6 +24,7 @@ import {
   residenceMortgageFromLoan,
   retirementFundingBase,
   retirementTimeline,
+  retirementValuationDay,
   type RetirementFundingBase,
   type RetirementInputs,
 } from "./retirementService";
@@ -1245,6 +1246,53 @@ describe("planToInputs", () => {
     const inputs = planToInputs(plan, `${year}-01-01`);
     expect(inputs.currentAge).toBe(41);
     expect(inputs.birthDate).toBe(`${year}-01-01`);
+  });
+
+  it("takes the age on the given day, so a birthday moves it", () => {
+    const withDob = { ...plan, birthDate: "1985-06-15" };
+    expect(
+      planToInputs(withDob, undefined, new Date(2026, 5, 14)).currentAge,
+    ).toBe(40);
+    expect(
+      planToInputs(withDob, undefined, new Date(2026, 5, 15)).currentAge,
+    ).toBe(41);
+  });
+});
+
+describe("retirementValuationDay", () => {
+  const now = new Date(Date.UTC(2026, 10, 12, 23, 30)); // 2026-11-12 23:30 UTC
+
+  it("uses the viewer's local day when it is within a day of the server's", () => {
+    expect(retirementValuationDay("2026-11-13", now).iso).toBe("2026-11-13");
+    expect(retirementValuationDay("2026-11-11", now).iso).toBe("2026-11-11");
+    const { date } = retirementValuationDay(" 2026-11-13 ", now);
+    expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([
+      2026, 10, 13,
+    ]);
+  });
+
+  it("falls back to the server's UTC day when absent, invalid or far off", () => {
+    expect(retirementValuationDay(undefined, now).iso).toBe("2026-11-12");
+    expect(retirementValuationDay("2026-11-14", now).iso).toBe("2026-11-12");
+    expect(retirementValuationDay("2026-02-30", now).iso).toBe("2026-11-12");
+    expect(retirementValuationDay("12.11.2026", now).iso).toBe("2026-11-12");
+  });
+
+  it("gives a different result key each day: the horizon moves", () => {
+    const inputs = { ...baseInputs, birthDate: "1990-01-01", retirementAge: 67 };
+    const day1 = retirementTimeline(
+      inputs,
+      retirementValuationDay("2026-11-12", now).date,
+    );
+    const day2 = retirementTimeline(
+      inputs,
+      retirementValuationDay("2026-11-13", now).date,
+    );
+    expect(day1.retirementDate).toBe("2057-01-01");
+    expect((day1.yearsToRetirement - day2.yearsToRetirement) * 365.25).toBeCloseTo(
+      1,
+      10,
+    );
   });
 });
 

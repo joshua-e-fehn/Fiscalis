@@ -176,10 +176,15 @@ export function MetalsLargestHoldingsCard({
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-medium">
-                        {currencySymbols[currency]}
-                        {formatValue(item.marketValue ?? 0)}
-                      </span>
+                      {/* No fresh spot and no cost: the value is unknown */}
+                      {item.marketValue === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="font-medium">
+                          {currencySymbols[currency]}
+                          {formatValue(item.marketValue)}
+                        </span>
+                      )}
                       {item.profitLossPercent !== null && (
                         <span
                           className={cn(

@@ -399,7 +399,20 @@ export default defineSchema({
 		description: v.optional(v.string()),
 
 		// Scenario Configuration
-		// Extra principal paid with every regular payment (per payment period)
+		// Extra principal paid with the regular payments (per payment period),
+		// each between optional first/last due dates (YYYY-MM-DD, inclusive).
+		// Read through resolveRecurringExtras, which maps the legacy fields.
+		recurringExtras: v.optional(
+			v.array(
+				v.object({
+					amount: v.number(),
+					from: v.optional(v.string()),
+					until: v.optional(v.string()),
+				}),
+			),
+		),
+		// Legacy single extra (a scenario saved before recurringExtras): read
+		// as a one-entry recurringExtras, cleared when the extras are saved
 		extraPerPeriod: v.optional(v.number()),
 		// First due date the extra applies to (YYYY-MM-DD); from now when unset
 		extraPerPeriodFrom: v.optional(v.string()),

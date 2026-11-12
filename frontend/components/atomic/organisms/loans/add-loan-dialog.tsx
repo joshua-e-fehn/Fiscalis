@@ -268,7 +268,10 @@ interface ExtraPayment {
   type: "one_time" | "recurring";
   amount: string;
   date?: string;
+  /** Recurring: first due date it applies to (blank = from the first). */
   startDate?: string;
+  /** Recurring: last due date it applies to (blank = to the end). */
+  endDate?: string;
 }
 
 interface PastPayment {
@@ -477,16 +480,18 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   }, [open]);
 
   // Planned extra payments, saved as the loan's "Planned extra payments"
-  // scenario. A scenario holds one recurring extra (amount + start date), so
-  // the form allows a single recurring entry rather than merging several.
-  const hasRecurringExtra = extraPayments.some((ep) => ep.type === "recurring");
+  // scenario: every recurring extra, each with its own from/until due dates
   const plannedPrepayments = () => {
     if (!allowPrepayment) return undefined;
     const valid = extraPayments.filter((ep) => parseFloat(ep.amount) > 0);
-    const recurring = valid.find((ep) => ep.type === "recurring");
     return {
-      extraPerPeriod: recurring ? parseFloat(recurring.amount) : 0,
-      extraPerPeriodFrom: recurring?.startDate || undefined,
+      recurringExtras: valid
+        .filter((ep) => ep.type === "recurring")
+        .map((ep) => ({
+          amount: parseFloat(ep.amount),
+          from: ep.startDate || undefined,
+          until: ep.endDate || undefined,
+        })),
       oneTimePrepayments: valid
         .filter((ep) => ep.type === "one_time" && ep.date)
         .map((ep) => ({ date: ep.date!, amount: parseFloat(ep.amount) })),
@@ -593,7 +598,6 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   // ═══════════════════════════════════════════════════════════════
 
   const addExtraPayment = (type: "one_time" | "recurring") => {
-    if (type === "recurring" && hasRecurringExtra) return;
     setExtraPayments((prev) => [
       ...prev,
       {
@@ -602,6 +606,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
         amount: "",
         date: type === "one_time" ? "" : undefined,
         startDate: type === "recurring" ? "" : undefined,
+        endDate: type === "recurring" ? "" : undefined,
       },
     ]);
   };
@@ -1175,12 +1180,6 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => addExtraPayment("recurring")}
-                          disabled={hasRecurringExtra}
-                          title={
-                            hasRecurringExtra
-                              ? "One recurring extra per loan; edit its amount or start date"
-                              : undefined
-                          }
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           Recurring
@@ -1246,13 +1245,32 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                 </Button>
                               </div>
                               {ep.type === "recurring" && (
-                                <p className="text-xs text-muted-foreground mt-2 ml-20">
-                                  Added to each{" "}
-                                  {frequencyInfo.label
-                                    .toLowerCase()
-                                    .replace("ly", "")}{" "}
-                                  payment
-                                </p>
+                                <div className="flex flex-wrap items-center gap-2 mt-2 ml-20">
+                                  <Label
+                                    htmlFor={`extra-${ep.id}-until`}
+                                    className="text-xs text-muted-foreground"
+                                  >
+                                    Until
+                                  </Label>
+                                  <Input
+                                    id={`extra-${ep.id}-until`}
+                                    type="date"
+                                    className="w-auto h-8"
+                                    value={ep.endDate}
+                                    onChange={(e) =>
+                                      updateExtraPayment(ep.id, {
+                                        endDate: e.target.value,
+                                      })
+                                    }
+                                  />
+                                  <p className="text-xs text-muted-foreground">
+                                    Added to each{" "}
+                                    {frequencyInfo.label
+                                      .toLowerCase()
+                                      .replace("ly", "")}{" "}
+                                    payment in this range (blank: no limit)
+                                  </p>
+                                </div>
                               )}
                             </CardContent>
                           </Card>

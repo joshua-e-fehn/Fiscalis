@@ -19,11 +19,15 @@ import {
   loanKpis,
   paymentSplitBasis,
   periodicRateAt,
+  resolveRecurringExtras,
   scheduledPaymentAfterEdit,
   settleLoanBalance,
   splitLoanPayment,
 } from "../../services/finance/loanScheduleService";
-import type { LoanStatus } from "../../services/finance/loanScheduleService";
+import type {
+  LoanStatus,
+  RecurringExtrasSource,
+} from "../../services/finance/loanScheduleService";
 import { roundMoney } from "../../services/finance/financeService";
 import {
   dayCountValidator,
@@ -264,10 +268,15 @@ export const getLoanScenarios = query({
     const userId = await getUserId(ctx);
     if (!userId) return [];
     if (!(await getOwnedDoc(ctx, userId, args.loanId))) return [];
-    return await ctx.db
+    const scenarios = await ctx.db
       .query("loanScenarios")
       .withIndex("by_loan", (q) => q.eq("loanId", args.loanId))
       .collect();
+    // A legacy single extra reads as a one-entry list
+    return scenarios.map((scenario) => ({
+      ...scenario,
+      recurringExtras: resolveRecurringExtras(scenario),
+    }));
   },
 });
 
@@ -351,6 +360,14 @@ const oneTimePrepaymentsValidator = v.array(
   }),
 );
 
+const recurringExtrasValidator = v.array(
+  v.object({
+    amount: v.number(),
+    from: v.optional(v.string()),
+    until: v.optional(v.string()),
+  }),
+);
+
 const PLANNED_PREPAYMENTS_SCENARIO = "Planned extra payments";
 
 // Create a new loan, with the payments already made (import) and the
@@ -385,6 +402,8 @@ export const createLoan = mutation({
     // Saved as the loan's "Planned extra payments" scenario
     plannedPrepayments: v.optional(
       v.object({
+        recurringExtras: v.optional(recurringExtrasValidator),
+        // Legacy single extra, accepted from older clients
         extraPerPeriod: v.optional(v.number()),
         extraPerPeriodFrom: v.optional(v.string()),
         oneTimePrepayments: v.optional(oneTimePrepaymentsValidator),
@@ -481,16 +500,15 @@ export const createLoan = mutation({
       });
     }
 
-    const { extraPerPeriod, extraPerPeriodFrom, oneTimePrepayments } =
-      plannedPrepayments ?? {};
-    if ((extraPerPeriod ?? 0) > 0 || (oneTimePrepayments?.length ?? 0) > 0) {
+    const { oneTimePrepayments, ...extras } = plannedPrepayments ?? {};
+    const recurringExtras = resolveRecurringExtras(extras);
+    if (recurringExtras.length > 0 || (oneTimePrepayments?.length ?? 0) > 0) {
       await ctx.db.insert("loanScenarios", {
         userId,
         loanId,
         name: PLANNED_PREPAYMENTS_SCENARIO,
         description: "Entered when the loan was added",
-        extraPerPeriod,
-        extraPerPeriodFrom,
+        recurringExtras,
         oneTimePrepayments,
         createdAt: now,
         updatedAt: now,
@@ -941,7 +959,9 @@ export const repairLoans = internalMutation({
 
 const scenarioFields = {
   description: v.optional(v.string()),
-  // Extra principal paid with every regular payment (per payment period)
+  // Extra principal paid with the regular payments (per payment period)
+  recurringExtras: v.optional(recurringExtrasValidator),
+  // Legacy single extra, accepted from older clients
   extraPerPeriod: v.optional(v.number()),
   extraPerPeriodFrom: v.optional(v.string()),
   prepaymentEffect: v.optional(prepaymentEffectValidator),
@@ -954,13 +974,24 @@ const scenarioFields = {
   monthsSaved: v.optional(v.number()),
 };
 
-// Stores the extra under its correct name only
-function normalizeScenarioExtra<
-  T extends { extraPerPeriod?: number; extraMonthlyPayment?: number },
->({ extraMonthlyPayment, ...rest }: T) {
+// Stores the extras as a list only: legacy single-extra args become a
+// one-entry list. recurringExtras is undefined when no extra was sent.
+function normalizeScenarioExtras<T extends RecurringExtrasSource>({
+  recurringExtras,
+  extraPerPeriod,
+  extraPerPeriodFrom,
+  extraMonthlyPayment,
+  ...rest
+}: T) {
+  const legacy = { extraPerPeriod, extraPerPeriodFrom, extraMonthlyPayment };
+  const sent =
+    recurringExtras !== undefined ||
+    Object.values(legacy).some((value) => value !== undefined);
   return {
-    ...rest,
-    extraPerPeriod: rest.extraPerPeriod ?? extraMonthlyPayment,
+    rest,
+    recurringExtras: sent
+      ? resolveRecurringExtras({ recurringExtras, ...legacy })
+      : undefined,
   };
 }
 
@@ -975,9 +1006,11 @@ export const saveScenario = mutation({
     const { userId } = await requireOwnedLoan(ctx, args.loanId);
     const now = Date.now();
 
+    const { rest, recurringExtras } = normalizeScenarioExtras(args);
     return await ctx.db.insert("loanScenarios", {
       userId,
-      ...normalizeScenarioExtra(args),
+      ...rest,
+      recurringExtras,
       createdAt: now,
       updatedAt: now,
     });
@@ -995,14 +1028,20 @@ export const updateScenario = mutation({
     const { scenarioId, ...updates } = args;
     await requireOwnedScenario(ctx, scenarioId);
 
+    const { rest, recurringExtras } = normalizeScenarioExtras(updates);
     const filteredUpdates = Object.fromEntries(
-      Object.entries(normalizeScenarioExtra(updates)).filter(
-        ([, v]) => v !== undefined,
-      ),
+      Object.entries(rest).filter(([, v]) => v !== undefined),
     );
 
     await ctx.db.patch(scenarioId, {
       ...filteredUpdates,
+      // New extras replace the legacy single extra
+      ...(recurringExtras && {
+        recurringExtras,
+        extraPerPeriod: undefined,
+        extraPerPeriodFrom: undefined,
+        extraMonthlyPayment: undefined,
+      }),
       updatedAt: Date.now(),
     });
   },

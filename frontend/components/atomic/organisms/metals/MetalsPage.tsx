@@ -424,9 +424,10 @@ export function MetalsPage({
     });
   };
 
-  const currentPrice = priceChartData
-    ? (priceChartData[priceChartData.length - 1]?.price ?? null)
-    : null;
+  // The last recorded close (a missing one is a gap, null or 0)
+  const currentPrice =
+    priceChartData?.findLast((p) => p.price !== null && p.price > 0)?.price ??
+    null;
   const isCompareLoading =
     goldData.isLoading ||
     silverData.isLoading ||

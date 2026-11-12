@@ -16,7 +16,6 @@ import {
   sliceFrom,
 } from "@/../services/finance/financeService";
 import type { PricePoint } from "@/lib/performance";
-import { interpolateMissingData } from "@/lib/utils/interpolate";
 
 import * as metalsApi from "@/lib/api/metals";
 
@@ -61,8 +60,9 @@ export const metalsPriceKeys = {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Hook to fetch historical metal prices based on a predefined time range
- * Automatically interpolates missing/zero data points
+ * Hook to fetch historical metal prices based on a predefined time range,
+ * for the price charts. Missing closes stay gaps (null or 0); PriceChart
+ * breaks the line there.
  */
 export function useMetalPrices(
   metal: MetalType,
@@ -71,15 +71,8 @@ export function useMetalPrices(
 ) {
   return useQuery<MetalChartData[]>({
     queryKey: metalKeys.historical(metal, timeRange, currency),
-    queryFn: async () => {
-      const data = await metalsApi.getMetalPricesHistorical(
-        metal,
-        timeRange,
-        currency,
-      );
-      // Interpolate missing/zero values
-      return interpolateMissingData(data);
-    },
+    queryFn: () =>
+      metalsApi.getMetalPricesHistorical(metal, timeRange, currency),
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,

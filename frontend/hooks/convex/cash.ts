@@ -20,6 +20,11 @@ import {
   cashSubcategoryUI,
   makeSubcategoryBase,
 } from "@/lib/config/categoryUI";
+import {
+  bankAccountValue,
+  brokerAccountCash as accountCash,
+  positionValue,
+} from "@/../services/portfolio/categorySummary";
 
 /**
  * Hook to get the cash category summary
@@ -52,23 +57,27 @@ export function useCashSummary(): {
     ): Holding[] => {
       const holdings: Holding[] = [];
 
+      // Every value is in EUR, as the server totals are (an amount
+      // without a base value counts as 0 there too)
+
       // Add bank accounts matching this subcategory
       bankAccounts
         .filter((acc) => acc.investmentSubcategory === subcategory)
-        .sort((a, b) => (b.currentBalance ?? 0) - (a.currentBalance ?? 0))
+        .sort((a, b) => bankAccountValue(b) - bankAccountValue(a))
         .slice(0, limit)
         .forEach((acc) => {
+          const value = bankAccountValue(acc);
           holdings.push({
             id: acc._id,
             name: acc.name || acc.officialName || "Bank Account",
             subcategoryId: subcategory,
-            value: acc.currentBalance ?? 0,
+            value,
             costBasis: null,
             profitLoss: null,
             profitLossPercent: null,
             allocationPercent:
               dataSummary.totalValue > 0
-                ? ((acc.currentBalance ?? 0) / dataSummary.totalValue) * 100
+                ? (value / dataSummary.totalValue) * 100
                 : 0,
             institutionName: acc.institutionName ?? undefined,
           });
@@ -77,14 +86,10 @@ export function useCashSummary(): {
       // Add broker cash positions matching this subcategory
       brokerCash
         .filter((pos) => pos.investmentSubcategory === subcategory)
-        .sort(
-          (a, b) =>
-            (b.valueInBaseCurrency ?? b.marketValue ?? 0) -
-            (a.valueInBaseCurrency ?? a.marketValue ?? 0),
-        )
+        .sort((a, b) => positionValue(b) - positionValue(a))
         .slice(0, limit - holdings.length)
         .forEach((pos) => {
-          const value = pos.valueInBaseCurrency ?? pos.marketValue ?? 0;
+          const value = positionValue(pos);
           holdings.push({
             id: pos._id,
             name: pos.symbol ?? pos.name ?? "Cash Position",
@@ -100,25 +105,14 @@ export function useCashSummary(): {
           });
         });
 
-      // Add broker account cash for "broker-cash" subcategory
+      // Add broker account cash for "broker-cash" subcategory: the EUR
+      // amount the server counted (brokerAccountCash), never the balance
       if (subcategory === "broker-cash" && brokerAccountCash) {
-        // Helper to get effective cash value (same logic as in categories.ts)
-        const getEffectiveCash = (acc: (typeof brokerAccountCash)[0]) => {
-          if ((acc.cash ?? 0) > 0) {
-            return acc.cashValueInBaseCurrency ?? acc.cash ?? 0;
-          }
-          // If balance > 0 and cash is 0, the balance IS the cash
-          if ((acc.balance ?? 0) > 0) {
-            return acc.balance ?? 0;
-          }
-          return 0;
-        };
-
-        brokerAccountCash
-          .sort((a, b) => getEffectiveCash(b) - getEffectiveCash(a))
+        [...brokerAccountCash]
+          .sort((a, b) => accountCash(b) - accountCash(a))
           .slice(0, limit - holdings.length)
           .forEach((acc) => {
-            const value = getEffectiveCash(acc);
+            const value = accountCash(acc);
             holdings.push({
               id: acc._id,
               name: `${acc.institutionName || acc.name} - Cash`,

@@ -29,6 +29,10 @@ import {
   Coins,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import {
+  brokerAccountTotals,
+  positionValue,
+} from "@/../services/portfolio/categorySummary";
 
 export default function BrokersPage() {
   const connections = useBrokerConnections();
@@ -52,9 +56,10 @@ export default function BrokersPage() {
   const stats = useMemo(() => {
     if (!hasAnyConnection) return null;
 
-    // SnapTrade market value
+    // SnapTrade market value in EUR (a position without a rate counts 0,
+    // as in net worth)
     const snaptradeValue =
-      positions?.reduce((sum, pos) => sum + (pos.marketValue ?? 0), 0) ?? 0;
+      positions?.reduce((sum, pos) => sum + positionValue(pos), 0) ?? 0;
 
     // Bitpanda value (already in EUR base)
     const bitpandaValue =
@@ -65,20 +70,8 @@ export default function BrokersPage() {
 
     const totalValue = snaptradeValue + bitpandaValue;
 
-    // Build a set of account IDs that have positions
-    const accountsWithPositions = new Set(
-      positions?.map((p) => p.accountId) ?? [],
-    );
-
-    // Calculate total cash across all SnapTrade accounts
-    const snaptradeCash =
-      accounts?.reduce((sum, acc) => {
-        if ((acc.cash ?? 0) > 0) return sum + (acc.cash ?? 0);
-        if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
-          return sum + (acc.balance ?? 0);
-        }
-        return sum;
-      }, 0) ?? 0;
+    // Uninvested SnapTrade cash in EUR; the balance is never cash
+    const snaptradeCash = brokerAccountTotals(accounts ?? []).cash;
     const bitpandaCash =
       bitpandaHoldings?.reduce(
         (sum, holding) =>

@@ -13,7 +13,6 @@ export {
   type KPICardRenderProps,
   type InvestmentDashboardSectionProps,
 } from "./InvestmentDashboardSection";
-export { ClassificationOverrideDialog } from "./ClassificationOverrideDialog";
 export {
   SubcategoryCategoryCard,
   type SubcategoryCardData,

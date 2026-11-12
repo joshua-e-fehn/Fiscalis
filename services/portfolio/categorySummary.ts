@@ -351,6 +351,34 @@ export function brokerAccountMarginDebt(
 }
 
 /**
+ * Total balance of a broker account in EUR; 0 without a base value (a
+ * balance summed across currencies with no rate, see balanceIsMixed).
+ */
+export function brokerAccountValue(account: {
+  balanceInBaseCurrency?: number;
+}): number {
+  return account.balanceInBaseCurrency ?? 0;
+}
+
+/**
+ * EUR totals over broker accounts: their balances and their uninvested
+ * cash (brokerAccountCash, so a margin debit and the balance never count).
+ */
+export function brokerAccountTotals(
+  accounts: readonly (BrokerAccountCashLike & {
+    balanceInBaseCurrency?: number;
+  })[],
+): { value: number; cash: number } {
+  let value = 0;
+  let cash = 0;
+  for (const account of accounts) {
+    value += brokerAccountValue(account);
+    cash += brokerAccountCash(account);
+  }
+  return { value, cash };
+}
+
+/**
  * Loan statuses that count as a liability (D1): paid off and refinanced
  * loans do not.
  */

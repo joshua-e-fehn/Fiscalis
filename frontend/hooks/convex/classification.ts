@@ -66,17 +66,9 @@ export interface UseClassificationOverrideReturn {
  * ```tsx
  * const { state, openDialog, closeDialog } = useClassificationOverride();
  *
- * // Open dialog for a Plaid account
+ * // Open the override for a Plaid account, then render a dialog
+ * // driven by state.isOpen / state.itemType / state.itemId
  * openDialog("plaid", account._id, account.name);
- *
- * // Render dialog
- * <ClassificationOverrideDialog
- *   open={state.isOpen}
- *   onOpenChange={(open) => !open && closeDialog()}
- *   itemType={state.itemType!}
- *   itemId={state.itemId!}
- *   itemName={state.itemName}
- * />
  * ```
  */
 export function useClassificationOverride(): UseClassificationOverrideReturn {

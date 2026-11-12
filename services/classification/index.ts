@@ -25,8 +25,6 @@ export {
   applyUserOverride,
   hasUserOverride,
   getClassificationFields,
-  reclassifyPlaidAccounts,
-  reclassifyBrokerPositions,
 } from "./engine";
 
 // Currency conversion lives in services/finance/currency.ts (toBase)

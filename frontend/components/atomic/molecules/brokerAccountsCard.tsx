@@ -9,11 +9,13 @@
 
 import { TrendingUp, Briefcase, LineChart, Coins } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
+import { useDeleteConnection, useSyncAll } from "@/hooks/convex";
 import {
-  useDeleteConnection,
-  useSyncAll,
-  useBrokerPositions,
-} from "@/hooks/convex";
+  brokerAccountCash,
+  brokerAccountTotals,
+  brokerAccountValue,
+} from "@/../services/portfolio/categorySummary";
+import { BASE_CURRENCY } from "@/../services/finance/currency";
 import { useSyncContextSafe } from "@/providers/syncProvider";
 import {
   IntegrationConnectionCard,
@@ -47,6 +49,10 @@ interface BrokerAccount {
   balance?: number;
   cash?: number;
   currency: string;
+  balanceCurrency?: string;
+  balanceInBaseCurrency?: number;
+  cashValueInBaseCurrency?: number;
+  cashInvestmentCategory?: string;
 }
 
 interface BrokerAccountsCardProps {
@@ -76,7 +82,6 @@ export function BrokerAccountsCard({
 }: BrokerAccountsCardProps) {
   const { deleteConnection, isLoading: isDeleting } = useDeleteConnection();
   const { syncAll, isLoading: isLocalSyncing } = useSyncAll();
-  const positions = useBrokerPositions(); // Get all positions to determine which accounts have them
 
   // Get global sync state (may be undefined if outside SyncProvider)
   const syncContext = useSyncContextSafe();
@@ -97,31 +102,9 @@ export function BrokerAccountsCard({
     await syncAll();
   };
 
-  // Build a set of account IDs that have positions
-  const accountsWithPositions = new Set(
-    positions?.map((p) => p.accountId) ?? [],
-  );
-
-  // Helper to get effective cash for an account
-  // Same logic as cash page: if cash > 0 use it, else if no positions treat balance as cash
-  const getEffectiveCash = (acc: BrokerAccount) => {
-    if ((acc.cash ?? 0) > 0) return acc.cash ?? 0;
-    // If no positions and balance > 0, treat balance as cash
-    if (!accountsWithPositions.has(acc._id) && (acc.balance ?? 0) > 0) {
-      return acc.balance ?? 0;
-    }
-    return 0;
-  };
-
-  // Calculate total portfolio value for this connection
-  const totalValue = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-
-  // Calculate total cash across all accounts using the same logic as cash page
-  const totalCash = accounts.reduce(
-    (sum, acc) => sum + getEffectiveCash(acc),
-    0,
-  );
-  const currency = accounts[0]?.currency || "USD";
+  // Connection totals in EUR, the way net worth counts them: the balance
+  // is never cash, only the explicit cash the sync stored
+  const { value: totalValue, cash: totalCash } = brokerAccountTotals(accounts);
 
   // Map connection status to integration status
   const mapStatus = (status: BrokerConnection["status"]) => {
@@ -140,7 +123,7 @@ export function BrokerAccountsCard({
       status={mapStatus(connection.status)}
       totalValue={totalValue}
       totalCash={totalCash}
-      currency={currency}
+      currency={BASE_CURRENCY}
       lastSyncAt={connection.lastSyncAt}
       errorMessage={connection.errorMessage}
       secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
@@ -151,7 +134,7 @@ export function BrokerAccountsCard({
     >
       <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
         {[...accounts]
-          .sort((a, b) => (b.balance || 0) - (a.balance || 0)) // Descending order
+          .sort((a, b) => brokerAccountValue(b) - brokerAccountValue(a))
           .map((account) => (
             <IntegrationAccountItem
               key={account._id}
@@ -159,8 +142,9 @@ export function BrokerAccountsCard({
               type={account.accountType}
               accountNumber={account.accountNumber}
               balance={account.balance || 0}
-              cash={getEffectiveCash(account)}
-              currency={account.currency}
+              // Native amounts; cash only where net worth counts it
+              cash={brokerAccountCash(account) > 0 ? account.cash : undefined}
+              currency={account.balanceCurrency ?? account.currency}
               icon={getAccountIcon(account.accountType)}
             />
           ))}

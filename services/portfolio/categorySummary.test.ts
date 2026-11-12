@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 
-import { fxRatesFromDaily } from "../finance/currency";
+import {
+  brokerAccountWithBaseFields,
+  fxRatesFromDaily,
+  positionWithBaseFields,
+} from "../finance/currency";
 import { holdingNetFlow } from "./aggregate";
 import {
   averageCostPerUnit,
@@ -8,6 +12,8 @@ import {
   bitpandaCostBasis,
   brokerAccountCash,
   brokerAccountMarginDebt,
+  brokerAccountTotals,
+  brokerAccountValue,
   buildCategorySummary,
   groupSmallSlices,
   holdingProfitLoss,
@@ -15,6 +21,7 @@ import {
   loanCountsAsLiability,
   positionCostBasis,
   positionToHolding,
+  positionValue,
   resolveCategoryProfitLoss,
   summarizeHoldings,
   topHoldings,
@@ -142,6 +149,60 @@ describe("accounts and loans", () => {
     expect(
       brokerAccountMarginDebt({ cash: -10, cashValueInBaseCurrency: -9 }),
     ).toBe(9);
+  });
+
+  it("totals broker accounts in EUR from the base-currency fields only", () => {
+    const accounts = [
+      // USD account: 11,700 USD balance, 1,170 USD cash
+      {
+        cash: 1_170,
+        balance: 11_700,
+        cashValueInBaseCurrency: 1_000,
+        balanceInBaseCurrency: 10_000,
+        cashInvestmentCategory: "cash",
+      },
+      // Fully invested: a balance but no cash is not cash
+      {
+        cash: 0,
+        balance: 5_000,
+        cashValueInBaseCurrency: 0,
+        balanceInBaseCurrency: 4_500,
+      },
+      // Margin debit: owes 2,000, adds no cash
+      {
+        cash: -2_340,
+        balance: 8_000,
+        cashValueInBaseCurrency: -2_000,
+        balanceInBaseCurrency: 7_000,
+        cashInvestmentCategory: "liabilities",
+      },
+      // Mixed-currency balance without a rate: no EUR value
+      { cash: 300, balance: 900, cashValueInBaseCurrency: 250 },
+    ];
+    expect(brokerAccountValue(accounts[0])).toBe(10_000);
+    expect(brokerAccountValue(accounts[3])).toBe(0);
+    expect(brokerAccountTotals(accounts)).toEqual({
+      value: 21_500,
+      cash: 1_250,
+    });
+    expect(brokerAccountTotals([])).toEqual({ value: 0, cash: 0 });
+  });
+
+  it("totals unstamped rows in EUR once read-time stamped, not as 0", () => {
+    // brokers.getAccounts / getPositions stamp rows stored before sync-time
+    // stamping (no exchangeRateSource) so the brokers page matches netWorth.
+    const rates = fxRatesFromDaily([
+      { date: "2026-11-10", currency: "USD", unitsPerEur: 1.25 },
+    ]);
+    const account = { cash: 1_250, balance: 12_500, currency: "USD" };
+    expect(brokerAccountTotals([account])).toEqual({ value: 0, cash: 0 });
+    expect(
+      brokerAccountTotals([brokerAccountWithBaseFields(account, rates)]),
+    ).toEqual({ value: 10_000, cash: 1_000 });
+
+    const position = { marketValue: 2_500, currency: "USD" };
+    expect(positionValue(position)).toBe(0);
+    expect(positionValue(positionWithBaseFields(position, rates))).toBe(2_000);
   });
 
   it("converts outstanding loans by their currency (D1 statuses)", () => {

@@ -14,6 +14,7 @@ import {
 	residenceMortgageFromAccount,
 	residenceMortgageFromLoan,
 	retirementFundingBase,
+	retirementValuationDay,
 } from "../../services/finance/retirementService";
 import { aggregateNetWorth } from "../../services/portfolio/aggregate";
 import { validateBirthDate } from "../lib/utils/date";
@@ -66,15 +67,16 @@ interface ResidenceMortgageLink {
  * The funding base: the net worth's per-category assets and liabilities plus
  * the linked residence mortgage. A tracked loan is projected by its own
  * schedule and payments (only one the liabilities count, D1); a Plaid
- * mortgage account from the plan's optional rate and repayment.
+ * mortgage account from the plan's optional rate and repayment, both from
+ * `today` (`YYYY-MM-DD`).
  */
 async function loadFundingBase(
 	ctx: QueryCtx,
 	userId: string,
 	link: ResidenceMortgageLink,
+	today: string,
 ): Promise<RetirementFundingBase> {
 	const holdings = await loadHoldings(ctx, userId);
-	const today = new Date().toISOString().slice(0, 10);
 	let mortgage: ResidenceMortgage | null = null;
 	if (link.primaryResidenceLoanId) {
 		const holding = holdings.find(
@@ -131,12 +133,20 @@ export const getRetirementPlan = query({
 });
 
 /**
- * The stored plan's results, computed from the user's current net worth.
- * null when signed out or without a plan.
+ * The valuation day argument of the date-dependent queries: the viewer's
+ * local `YYYY-MM-DD`. A query result is cached per argument set and the
+ * clock is not a dependency, so the day must be an argument for the age,
+ * horizon and mortgage projection to advance (retirementValuationDay).
+ */
+const valuationDayArg = v.optional(v.string());
+
+/**
+ * The stored plan's results on `today`, computed from the user's current net
+ * worth. null when signed out or without a plan.
  */
 export const getResults = query({
-	args: {},
-	handler: async (ctx) => {
+	args: { today: valuationDayArg },
+	handler: async (ctx, args) => {
 		const userId = await getUserId(ctx);
 		if (!userId) return null;
 		const plan = await ctx.db
@@ -148,19 +158,22 @@ export const getResults = query({
 			.query("userSettings")
 			.withIndex("by_user", (q) => q.eq("userId", userId))
 			.first();
+		const day = retirementValuationDay(args.today);
 		return computeRetirementResults(
-			planToInputs(plan, settings?.birthDate),
-			await loadFundingBase(ctx, userId, plan),
+			planToInputs(plan, settings?.birthDate, day.date),
+			await loadFundingBase(ctx, userId, plan, day.iso),
+			day.date,
 		);
 	},
 });
 
 /**
- * The funding base for a residence-mortgage link, for the wizard's preview
- * of unsaved inputs. null when signed out.
+ * The funding base for a residence-mortgage link on `today`, for the
+ * wizard's preview of unsaved inputs. null when signed out.
  */
 export const getFundingBase = query({
 	args: {
+		today: valuationDayArg,
 		primaryResidenceLoanId: v.optional(v.id("loans")),
 		primaryResidenceAccountId: v.optional(v.id("plaidAccounts")),
 		primaryResidenceMortgageRate: v.optional(v.number()),
@@ -169,7 +182,13 @@ export const getFundingBase = query({
 	handler: async (ctx, args) => {
 		const userId = await getUserId(ctx);
 		if (!userId) return null;
-		return await loadFundingBase(ctx, userId, args);
+		const { today, ...link } = args;
+		return await loadFundingBase(
+			ctx,
+			userId,
+			link,
+			retirementValuationDay(today).iso,
+		);
 	},
 });
 

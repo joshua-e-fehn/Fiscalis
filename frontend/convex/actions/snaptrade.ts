@@ -20,8 +20,8 @@ import {
 import {
   ACTIVITY_PAGE_SIZE,
   activitiesStartDate,
+  fetchActivityPagesOldestFirst,
   mapSnaptradeActivity,
-  nextActivitiesOffset,
   type StoredSnaptradeActivity,
 } from "../../../services/brokers/snaptradeActivity";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
@@ -823,9 +823,11 @@ async function syncSnaptrade(
 /**
  * Fetch an account's activities (its transaction history) since a week
  * before the newest one stored, or the whole history the first time, page
- * by page, and store the new ones (brokers.upsertTransactions). Each page
- * is stored as it arrives, so a later failed page (a rate limit) keeps the
- * earlier ones and the next sync resumes from them.
+ * by page, and store the new ones (brokers.upsertTransactions). Pages are
+ * stored only once all have arrived, oldest first
+ * (fetchActivityPagesOldestFirst), so a failed page (a rate limit) never
+ * advances the newest stored date past history not yet stored: the next
+ * sync fetches the same window again.
  */
 async function syncAccountActivities(
   ctx: ActionCtx,
@@ -841,8 +843,7 @@ async function syncAccountActivities(
     { accountId },
   );
   const startDate = activitiesStartDate(newest);
-  let offset: number | null = 0;
-  while (offset !== null) {
+  const pages = await fetchActivityPagesOldestFirst(async (offset) => {
     const page = (
       await snaptrade.accountInformation.getAccountActivities({
         ...credentials,
@@ -852,23 +853,18 @@ async function syncAccountActivities(
         limit: ACTIVITY_PAGE_SIZE,
       })
     ).data;
-    const rows = page.data ?? [];
+    return { rows: page.data ?? [], total: page.pagination?.total };
+  });
+  for (const rows of pages) {
     const activities = rows
       .map((a) => mapSnaptradeActivity(a, accountCurrency))
       .filter((a): a is StoredSnaptradeActivity => a !== null);
-    if (activities.length > 0) {
-      await ctx.runMutation(internal.brokers.upsertTransactions, {
-        userId,
-        accountId,
-        activities,
-      });
-    }
-    offset = nextActivitiesOffset(
-      offset,
-      rows.length,
-      ACTIVITY_PAGE_SIZE,
-      page.pagination?.total,
-    );
+    if (activities.length === 0) continue;
+    await ctx.runMutation(internal.brokers.upsertTransactions, {
+      userId,
+      accountId,
+      activities,
+    });
   }
 }
 

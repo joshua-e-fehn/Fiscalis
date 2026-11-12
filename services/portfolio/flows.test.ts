@@ -7,6 +7,7 @@ import {
   brokerPositionKey,
   snaptradeActivityFlow,
   tradeFlowsBetween,
+  tradeTimeSpan,
   vaultLedgerFlows,
   vaultTradeFlow,
   type ToBaseOn,
@@ -39,32 +40,58 @@ describe("tradeFlowsBetween", () => {
     expect(flows).toEqual(new Map([["a", 300], ["b", 50]]));
   });
 
-  it("places a bare date at UTC midnight", () => {
+  it("counts a date-only trade only when its whole UTC day lies in the interval", () => {
+    const from = Date.parse("2026-11-10T00:00:00Z");
+    const to = Date.parse("2026-11-12T00:00:00Z");
     const flows = tradeFlowsBetween(
       [
-        { key: "today", date: "2026-11-11", amount: 10 },
-        // The previous snapshot's day: before it was taken
-        { key: "yesterday", date: "2026-11-10", amount: 20 },
+        { key: "a", date: "2026-11-10", amount: 10 },
+        { key: "a", date: "2026-11-11T00:00:00Z", amount: 5 },
+        { key: "b", date: "2026-11-11T00:00:00.000Z", amount: 20 },
+        // The day ending at `from`, and the day starting at `to`: outside
+        { key: "c", date: "2026-11-09", amount: 30 },
+        { key: "c", date: "2026-11-12", amount: 40 },
       ],
-      NOV_10,
-      NOV_11,
+      from,
+      to,
     );
-    expect(flows).toEqual(new Map([["today", 10]]));
+    expect(flows).toEqual(new Map([["a", 15], ["b", 20]]));
+  });
+
+  it("leaves out a key with a date-only trade on a snapshot's day, never a partial sum", () => {
+    // Snapshots at 18:00 on consecutive days
+    const from = Date.parse("2026-11-10T18:00:00Z");
+    const to = Date.parse("2026-11-11T18:00:00Z");
+    const flows = tradeFlowsBetween(
+      [
+        // Bought after the first snapshot, or before it: the date cannot say
+        { key: "a", date: "2026-11-10", amount: 500 },
+        { key: "a", date: "2026-11-11T09:00:00Z", amount: 200 },
+        // Bought before the second snapshot, or after it
+        { key: "b", date: "2026-11-11", amount: 300 },
+        // A timed trade in the interval, and a date-only one long before it
+        { key: "c", date: "2026-11-11T09:00:00Z", amount: 70 },
+        { key: "c", date: "2026-11-09", amount: 1_000 },
+      ],
+      from,
+      to,
+    );
+    expect(flows).toEqual(new Map([["c", 70]]));
   });
 
   it("keeps a trade that moved no money as an exact zero", () => {
     expect(
-      tradeFlowsBetween([{ key: "a", date: "2026-11-11", amount: 0 }], NOV_10, NOV_11),
+      tradeFlowsBetween([{ key: "a", date: "2026-11-10T12:00:00Z", amount: 0 }], NOV_10, NOV_11),
     ).toEqual(new Map([["a", 0]]));
   });
 
   it("leaves out a key with a trade of unknown amount, and unparseable dates", () => {
     const flows = tradeFlowsBetween(
       [
-        { key: "a", date: "2026-11-11", amount: 500 },
-        { key: "a", date: "2026-11-11", amount: null },
+        { key: "a", date: "2026-11-10T12:00:00Z", amount: 500 },
+        { key: "a", date: "2026-11-10T12:00:00Z", amount: null },
         { key: "b", date: "not a date", amount: 30 },
-        { key: "c", date: "2026-11-11", amount: 40 },
+        { key: "c", date: "2026-11-10T12:00:00Z", amount: 40 },
       ],
       NOV_10,
       NOV_11,
@@ -194,7 +221,7 @@ describe("vaultLedgerFlows", () => {
     ];
     expect(vaultLedgerFlows(rows, from, to)).toContainEqual({
       key: "item1",
-      date: "2026-11-12T02:00:00.000Z",
+      date: "2026-11-12T01:59:59.999Z",
       amount: null,
     });
     expect(tradeFlowsBetween(vaultLedgerFlows(rows, from, to), from, to)).toEqual(
@@ -271,5 +298,19 @@ describe("snaptradeActivityFlow", () => {
     expect(
       snaptradeActivityFlow(activity("CONTRIBUTION", { symbol: undefined }), toBaseOn),
     ).toBeNull();
+  });
+});
+
+describe("tradeTimeSpan", () => {
+  it("reads a date only as its whole UTC day, a date-time as an instant", () => {
+    const day = Date.parse("2026-11-11T00:00:00Z");
+    for (const date of ["2026-11-11", "2026-11-11T00:00:00Z", "2026-11-11T00:00:00.000Z", "2026-11-11T00:00:00+00:00"]) {
+      expect(tradeTimeSpan(date)).toEqual({ start: day, end: day + 86_400_000, dateOnly: true });
+    }
+    const t = Date.parse("2026-11-11T09:30:00Z");
+    expect(tradeTimeSpan("2026-11-11T09:30:00Z")).toEqual({ start: t, end: t + 1, dateOnly: false });
+    // Midnight in another zone is a time of day in UTC
+    expect(tradeTimeSpan("2026-11-11T00:00:00+01:00")!.dateOnly).toBe(false);
+    expect(tradeTimeSpan("not a date")).toBeNull();
   });
 });

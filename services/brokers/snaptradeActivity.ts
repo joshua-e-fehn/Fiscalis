@@ -113,3 +113,28 @@ export function nextActivitiesOffset(
   if (total !== undefined && next >= total) return null;
   return next;
 }
+
+/**
+ * Every page of an account's activities in the fetch window, oldest page
+ * first. The endpoint pages newest first, while the next incremental fetch
+ * starts from the newest stored activity (activitiesStartDate): storing a
+ * newest page before an older one has been fetched would move that start
+ * past history never stored, and a later failed page would skip it for
+ * good. So nothing is returned unless every page arrives (a failed fetch
+ * rejects, and the next sync fetches the same window again), and the pages
+ * come back in the order to store them: each stored page then leaves the
+ * newest stored date a safe start, even when a later store fails.
+ */
+export async function fetchActivityPagesOldestFirst<Row>(
+  fetchPage: (offset: number) => Promise<{ rows: Row[]; total?: number }>,
+  limit: number = ACTIVITY_PAGE_SIZE,
+): Promise<Row[][]> {
+  const pages: Row[][] = [];
+  let offset: number | null = 0;
+  while (offset !== null) {
+    const { rows, total } = await fetchPage(offset);
+    if (rows.length > 0) pages.push(rows);
+    offset = nextActivitiesOffset(offset, rows.length, limit, total);
+  }
+  return pages.reverse();
+}

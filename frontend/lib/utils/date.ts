@@ -85,11 +85,14 @@ export function validateBirthDate(
 
 /**
  * Compute a person's current age in whole years from an ISO date of birth
- * (YYYY-MM-DD). Returns null for an empty/invalid/future date.
+ * (YYYY-MM-DD) on `today`. Returns null for an empty/invalid/future date.
  */
-export function getAgeFromBirthDate(birthDate: string | undefined): number | null {
+export function getAgeFromBirthDate(
+  birthDate: string | undefined,
+  today: Date = new Date(),
+): number | null {
   if (!birthDate) return null;
-  const result = validateBirthDate(birthDate);
+  const result = validateBirthDate(birthDate, today);
   return result.ok ? result.age : null;
 }
 

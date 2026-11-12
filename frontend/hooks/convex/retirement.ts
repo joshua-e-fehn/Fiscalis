@@ -4,9 +4,11 @@ import {
 	computeRetirementResults,
 	type RetirementInputs,
 	type RetirementResults,
+	retirementValuationDay,
 } from "@/../services/finance/retirementService";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useLocalToday } from "@/hooks/useLocalToday";
 import { useLoans } from "./loans";
 
 // ═══════════════════════════════════════════════════════════════
@@ -51,12 +53,14 @@ export function useRetirementMortgageAccounts() {
 /**
  * Live retirement results of the stored plan, computed on the server
  * (retirement.getResults) from the plan, the profile date of birth and the
- * current net worth. Reactive: recomputes when any of them changes.
+ * current net worth, on the viewer's local day. Reactive: recomputes when any
+ * of them changes, and at local midnight (the day is a query argument).
  *
  * Returns `undefined` while loading, `null` when no plan exists.
  */
 export function useRetirementResults(): RetirementResults | null | undefined {
-	return useQuery(api.retirement.getResults);
+	const today = useLocalToday();
+	return useQuery(api.retirement.getResults, { today });
 }
 
 /**
@@ -67,7 +71,9 @@ export function useRetirementResults(): RetirementResults | null | undefined {
 export function useRetirementPreview(
 	inputs: RetirementInputs | null,
 ): RetirementResults | null | undefined {
+	const today = useLocalToday();
 	const fundingBase = useQuery(api.retirement.getFundingBase, {
+		today,
 		primaryResidenceLoanId: inputs?.primaryResidenceLoanId as
 			| Id<"loans">
 			| undefined,
@@ -81,6 +87,10 @@ export function useRetirementPreview(
 	return useMemo(() => {
 		if (fundingBase === undefined) return undefined;
 		if (!inputs || !fundingBase) return null;
-		return computeRetirementResults(inputs, fundingBase);
-	}, [inputs, fundingBase]);
+		return computeRetirementResults(
+			inputs,
+			fundingBase,
+			retirementValuationDay(today).date,
+		);
+	}, [inputs, fundingBase, today]);
 }

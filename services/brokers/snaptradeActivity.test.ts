@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 
 import {
   activitiesStartDate,
+  fetchActivityPagesOldestFirst,
   mapSnaptradeActivity,
   nextActivitiesOffset,
 } from "./snaptradeActivity";
@@ -94,5 +95,40 @@ describe("nextActivitiesOffset", () => {
     expect(nextActivitiesOffset(2000, 500, 1000, 2500)).toBeNull();
     expect(nextActivitiesOffset(0, 0, 1000, undefined)).toBeNull();
     expect(nextActivitiesOffset(1000, 1000, 1000, 2000)).toBeNull();
+  });
+});
+
+describe("fetchActivityPagesOldestFirst", () => {
+  // Newest first, two rows a page: total 5
+  const history = ["d5", "d4", "d3", "d2", "d1"];
+  const fetchFrom = (failAt?: number) => {
+    const offsets: number[] = [];
+    const fetchPage = async (offset: number) => {
+      offsets.push(offset);
+      if (offset === failAt) throw new Error("rate limited");
+      return { rows: history.slice(offset, offset + 2), total: history.length };
+    };
+    return { offsets, fetchPage };
+  };
+
+  it("returns every page, oldest page first, to store in that order", async () => {
+    const { offsets, fetchPage } = fetchFrom();
+    expect(await fetchActivityPagesOldestFirst(fetchPage, 2)).toEqual([
+      ["d1"],
+      ["d3", "d2"],
+      ["d5", "d4"],
+    ]);
+    expect(offsets).toEqual([0, 2, 4]);
+  });
+
+  it("returns nothing to store when a later page fails", async () => {
+    const { offsets, fetchPage } = fetchFrom(2);
+    await expect(fetchActivityPagesOldestFirst(fetchPage, 2)).rejects.toThrow("rate limited");
+    expect(offsets).toEqual([0, 2]);
+  });
+
+  it("returns no pages for an empty history", async () => {
+    const fetchPage = async () => ({ rows: [] as string[], total: 0 });
+    expect(await fetchActivityPagesOldestFirst(fetchPage, 2)).toEqual([]);
   });
 });

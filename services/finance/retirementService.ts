@@ -496,6 +496,52 @@ function toISODate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Milliseconds per calendar day. */
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * The day a retirement valuation is computed for. Queries take it as an
+ * argument (the viewer's local `YYYY-MM-DD`) instead of reading the clock:
+ * a cached query result is keyed by its arguments, so a new day is a new
+ * result (age, retirement horizon and mortgage projection all move with it).
+ *
+ * `asOf` is used when it is a real calendar date within one day of `now`'s
+ * UTC date (every timezone's local date is); otherwise, or when absent, the
+ * day falls back to `now`'s UTC date. `date` is that day at local midnight,
+ * for the calendar-field arithmetic of retirementTimeline/validateBirthDate.
+ */
+export function retirementValuationDay(
+  asOf: string | undefined,
+  now: Date = new Date(),
+): { iso: string; date: Date } {
+  const serverDay = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  let day = serverDay;
+  const match = asOf ? ISO_DATE.exec(asOf.trim()) : null;
+  if (match) {
+    const [y, m, d] = [Number(match[1]), Number(match[2]) - 1, Number(match[3])];
+    const candidate = Date.UTC(y, m, d);
+    const parsed = new Date(candidate);
+    const isRealDate =
+      parsed.getUTCFullYear() === y &&
+      parsed.getUTCMonth() === m &&
+      parsed.getUTCDate() === d;
+    if (isRealDate && Math.abs(candidate - serverDay) <= MS_PER_DAY) {
+      day = candidate;
+    }
+  }
+  const utc = new Date(day);
+  const date = new Date(
+    utc.getUTCFullYear(),
+    utc.getUTCMonth(),
+    utc.getUTCDate(),
+  );
+  return { iso: toISODate(date), date };
+}
+
 /**
  * Exact age today and fractional years until the retirement date
  * (date of birth + retirementAge years). Calendar fields only, so the result
@@ -657,16 +703,17 @@ export function retirementFundingBase(
 /**
  * Map a stored plan to the inputs. The age is always derived fresh: from the
  * profile date of birth (canonical), else the plan's snapshot of it, else the
- * age stored at the last save.
+ * age stored at the last save. `today` is the day the age is taken on.
  */
 export function planToInputs(
   plan: RetirementInputs,
   profileBirthDate: string | undefined,
+  today: Date = new Date(),
 ): RetirementInputs {
   return {
     currentAge:
-      getAgeFromBirthDate(profileBirthDate) ??
-      getAgeFromBirthDate(plan.birthDate) ??
+      getAgeFromBirthDate(profileBirthDate, today) ??
+      getAgeFromBirthDate(plan.birthDate, today) ??
       plan.currentAge,
     retirementAge: plan.retirementAge,
     birthDate: profileBirthDate ?? plan.birthDate,

@@ -27,8 +27,9 @@
 //        INTEREST_ONLY_THEN  interest only for gracePeriods, then an annuity
 //                            fixed once over the remaining periods
 //      The final period settles whatever balance is left (no residual).
-//   5. Prepayments (a recurring extra per period and one-time amounts) are
-//      capped by maxAnnualPrepaymentRate × originalPrincipal per calendar year,
+//   5. Prepayments (recurring extras per period, each active between optional
+//      from/until due dates, and one-time amounts) are capped by
+//      maxAnnualPrepaymentRate × originalPrincipal per calendar year,
 //      cost prepaymentPenaltyRate × amount, and either shorten the term
 //      (reduce_term, the default) or lower the regular payment
 //      (reduce_payment) for every loan type.
@@ -158,6 +159,65 @@ export interface DatedPrepayment {
   amount: number;
 }
 
+/**
+ * Extra principal paid with every regular payment whose due date lies in
+ * [from, until] (each bound optional, inclusive).
+ */
+export interface RecurringExtra {
+  amount: number;
+  /** First due date (`YYYY-MM-DD`) it applies to; from the next one when unset. */
+  from?: string;
+  /** Last due date it applies to; to the end when unset. */
+  until?: string;
+}
+
+/** Where recurring extras are stored: the list, or the legacy single extra. */
+export interface RecurringExtrasSource {
+  recurringExtras?: RecurringExtra[];
+  /** Legacy single extra per period. */
+  extraPerPeriod?: number;
+  /** Legacy first due date of {@link extraPerPeriod}. */
+  extraPerPeriodFrom?: string;
+  /** Deprecated, misnamed alias of {@link extraPerPeriod}. */
+  extraMonthlyPayment?: number;
+}
+
+/**
+ * The recurring extras of a scenario: the stored list when there is one,
+ * otherwise the legacy single extra as a one-entry list (none when ≤ 0).
+ */
+export function resolveRecurringExtras(
+  source: RecurringExtrasSource,
+): RecurringExtra[] {
+  if (source.recurringExtras !== undefined) {
+    return source.recurringExtras.filter((e) => e.amount > 0);
+  }
+  const amount = source.extraPerPeriod ?? source.extraMonthlyPayment ?? 0;
+  if (!(amount > 0)) return [];
+  return [
+    source.extraPerPeriodFrom
+      ? { amount, from: source.extraPerPeriodFrom }
+      : { amount },
+  ];
+}
+
+/** Sum of the recurring extras active on a due date. */
+export function recurringExtraOn(
+  extras: RecurringExtra[],
+  dueDate: string,
+): number {
+  return roundMoney(
+    extras.reduce(
+      (sum, e) =>
+        e.amount > 0 &&
+        (!e.from || dueDate >= e.from) &&
+        (!e.until || dueDate <= e.until)
+          ? sum + e.amount
+          : sum,
+      0,
+    ),
+  );
+}
 
 export type LoanScheduleRowStatus = "paid" | "extra" | "scheduled";
 
@@ -633,9 +693,7 @@ interface AmortizationPlan {
   openingBalance: number;
   /** ANNUITY: the agreed payment; derived over the remaining periods when absent. */
   annuityPayment?: number;
-  extraPerPeriod?: number;
-  /** First due date the recurring extra applies to. */
-  extraPerPeriodFrom?: string;
+  recurringExtras?: RecurringExtra[];
   prepayments?: DatedPrepayment[];
   prepaymentEffect?: PrepaymentEffect;
   /** `YYYY-MM-DD` used to flag overdue rows. */
@@ -685,7 +743,7 @@ function amortize(plan: AmortizationPlan): LoanProjection {
     fromPeriod + MAX_PROJECTED_PERIODS - 1,
   );
   const effect = plan.prepaymentEffect ?? "reduce_term";
-  const extraPerPeriod = Math.max(0, plan.extraPerPeriod ?? 0);
+  const recurringExtras = plan.recurringExtras ?? [];
   const cap = createPrepaymentCap(terms);
   const penaltyRate = Math.max(0, terms.prepaymentPenaltyRate ?? 0);
   const prepayments = [...(plan.prepayments ?? [])]
@@ -836,11 +894,8 @@ function amortize(plan: AmortizationPlan): LoanProjection {
       finalBalloon = principal;
     }
 
-    const extra =
-      extraPerPeriod > 0 &&
-      (!plan.extraPerPeriodFrom || dueDate >= plan.extraPerPeriodFrom)
-        ? extraPerPeriod
-        : 0;
+    // The prepayment cap applies to the sum of the active extras
+    const extra = recurringExtraOn(recurringExtras, dueDate);
     const prepaid =
       k === lastPeriod
         ? applyPrepayments(dueDate, takePrepaymentsUntil(dueDate), 0, 0)
@@ -1087,11 +1142,13 @@ export function computeNextPaymentDate(
 // ───────────────────────────────────────────────────────────────
 
 /** Options of a What-If projection. */
-export interface ProjectLoanOptions {
-  /** Extra principal paid with every regular payment (per period, not per month). */
-  extraPerPeriod?: number;
-  /** First due date the recurring extra applies to. */
-  extraPerPeriodFrom?: string;
+export interface ProjectLoanOptions extends RecurringExtrasSource {
+  /**
+   * Extra principal paid with the regular payments (per period, not per
+   * month); the sum of the extras active on a due date is paid then. The
+   * legacy extraPerPeriod / extraPerPeriodFrom pair is one such extra.
+   */
+  recurringExtras?: RecurringExtra[];
   oneTimePrepayments?: DatedPrepayment[];
   /** New annual rate (refinancing); the regular payment is re-derived. */
   newRate?: number;
@@ -1124,8 +1181,7 @@ export function projectLoan(
     // A new rate re-derives the annuity over the remaining periods
     annuityPayment:
       newRate === undefined ? agreedAnnuityPayment(loan) : undefined,
-    extraPerPeriod: options.extraPerPeriod,
-    extraPerPeriodFrom: options.extraPerPeriodFrom,
+    recurringExtras: resolveRecurringExtras(options),
     prepayments: options.oneTimePrepayments,
     prepaymentEffect: options.prepaymentEffect,
     today,
@@ -1599,7 +1655,7 @@ export function calculateLoanSchedule(input: LoanInput): LoanSummary {
     fromPeriod: 1,
     openingBalance: input.principal,
     annuityPayment: input.fixedPayment,
-    extraPerPeriod: input.extraPerPeriod,
+    recurringExtras: resolveRecurringExtras(input),
     prepayments: input.prepayments,
     prepaymentEffect: input.prepaymentEffect,
   });

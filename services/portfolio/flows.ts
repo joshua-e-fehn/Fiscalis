@@ -15,8 +15,10 @@
  *
  * Each trade is mapped to the key of the holding it moved (the snapshot
  * holding key, NormalizedHolding.key), and tradeFlowsBetween sums them per
- * key over the interval between two snapshots. A holding with a trade in
- * the interval takes that exact flow; one without keeps the cost proxy.
+ * key over the interval between two snapshots. A holding held at the
+ * previous snapshot with a trade in the interval takes that exact flow; one
+ * without, or one that appeared since (its full value came in), keeps the
+ * cost proxy (aggregate.ts sourceFlowFromHoldings).
  *
  * Framework-free: imported by Convex functions and vitest.
  */

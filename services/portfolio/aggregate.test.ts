@@ -468,7 +468,7 @@ describe("snapshot flows", () => {
       expect(proxy).toMatchObject({ netFlow: 500, netFlowEstimated: true });
     });
 
-    it("counts a holding sold out at its proceeds and a new one at its cost", () => {
+    it("counts a holding sold out at its proceeds and a new one at its value", () => {
       const previous = write([position("aapl", 5_000, 4_000)]);
       const cur = equitiesOf(
         writeExact(
@@ -477,7 +477,23 @@ describe("snapshot flows", () => {
           new Map([["aapl", -5_200], ["msft", 3_000]]),
         ),
       )!;
-      expect(cur.netFlow).toBe(-2_200);
+      // aapl: -5 200 (exact proceeds); msft: +3 050 (appeared, full value)
+      expect(cur.netFlow).toBe(-2_150);
+    });
+
+    it("counts a new holding at its full value despite a smaller exact buy", () => {
+      // A newly connected account: a BTC position worth 20 000 whose trade
+      // log in the interval holds only a 50 savings-plan buy
+      const previous = write([position("aapl", 5_000, 4_000)]);
+      const cur = equitiesOf(
+        writeExact(
+          [position("aapl", 5_000, 4_000), position("btc", 20_000, null)],
+          previous,
+          new Map([["btc", 50]]),
+        ),
+      )!;
+      expect(cur.netFlow).toBe(20_000);
+      expect(cur).not.toHaveProperty("netFlowEstimated");
     });
 
     it("ignores flows of keys held in neither snapshot", () => {

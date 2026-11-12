@@ -685,8 +685,12 @@ export function holdingNetFlow(
 
 /**
  * Sum of the holdings' flows of one source, null without holdings at an
- * end. A holding with an exact flow from its trade log (flows.ts) takes it;
- * the others are derived from their values and costs (holdingNetFlow).
+ * end. A holding held with a value at the previous snapshot and with an
+ * exact flow from its trade log (flows.ts) takes it; the others are derived
+ * from their values and costs (holdingNetFlow). A holding that appears
+ * always counts its whole value as money in: its trade log may cover only
+ * the latest trades of a position held long before (a newly connected
+ * account with a savings plan), never its full cost.
  */
 function sourceFlowFromHoldings(
   prev: SnapshotSourceEntry | undefined,
@@ -700,12 +704,14 @@ function sourceFlowFromHoldings(
   let amount = 0;
   let estimated = false;
   for (const key of keys) {
-    const traded = exact?.get(key);
+    const before = prev?.holdings?.find((h) => h.key === key);
+    const traded =
+      before && before.value !== 0 ? exact?.get(key) : undefined;
     const flow =
       traded !== undefined
         ? { amount: traded, estimated: false }
         : holdingNetFlow(
-            prev?.holdings?.find((h) => h.key === key),
+            before,
             cur?.holdings?.find((h) => h.key === key),
           );
     amount += flow.amount;

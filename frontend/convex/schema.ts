@@ -273,7 +273,9 @@ export default defineSchema({
 			"investmentSubcategory",
 		]),
 
-	// Broker transactions/activities
+	// Broker transactions/activities, synced from SnapTrade's account
+	// activities (actions/snaptrade.ts syncAccountActivities); the snapshot
+	// writer reads BUY/SELL rows as exact flows (services/portfolio/flows.ts)
 	brokerTransactions: defineTable({
 		userId: v.string(), // Clerk user ID
 		accountId: v.id("brokerAccounts"), // Reference to account
@@ -293,6 +295,8 @@ export default defineSchema({
 	})
 		.index("by_user", ["userId"])
 		.index("by_account", ["accountId"])
+		// Newest activity per account: the start of an incremental fetch
+		.index("by_account_date", ["accountId", "tradeDate"])
 		.index("by_date", ["userId", "tradeDate"])
 		.index("by_snaptrade_id", ["snaptradeActivityId"]),
 

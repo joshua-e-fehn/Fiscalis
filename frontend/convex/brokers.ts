@@ -712,56 +712,67 @@ export const replaceAccountHoldings = internalMutation({
   },
 });
 
+/** The provider fields of a brokerTransactions row (snaptradeActivity.ts). */
+const activityFields = v.object({
+  snaptradeActivityId: v.string(),
+  type: v.string(),
+  symbol: v.optional(v.string()),
+  symbolId: v.optional(v.string()),
+  description: v.optional(v.string()),
+  quantity: v.optional(v.number()),
+  price: v.optional(v.number()),
+  amount: v.number(),
+  currency: v.string(),
+  fees: v.optional(v.number()),
+  settlementDate: v.optional(v.string()),
+  tradeDate: v.string(),
+});
+
 /**
- * Create broker transaction
+ * Store one page of an account's SnapTrade activities
+ * (services/brokers/snaptradeActivity.ts mapSnaptradeActivity). An
+ * activity already stored, by its SnapTrade id, is kept as it is, so the
+ * overlapping window of an incremental fetch writes nothing twice.
  */
-export const createTransaction = internalMutation({
+export const upsertTransactions = internalMutation({
   args: {
     userId: v.string(),
     accountId: v.id("brokerAccounts"),
-    snaptradeActivityId: v.string(),
-    type: v.string(),
-    symbol: v.optional(v.string()),
-    symbolId: v.optional(v.string()),
-    description: v.optional(v.string()),
-    quantity: v.optional(v.number()),
-    price: v.optional(v.number()),
-    amount: v.number(),
-    currency: v.string(),
-    fees: v.optional(v.number()),
-    settlementDate: v.optional(v.string()),
-    tradeDate: v.string(),
+    activities: v.array(activityFields),
   },
-  handler: async (ctx, args) => {
-    // Check if transaction already exists
-    const existing = await ctx.db
-      .query("brokerTransactions")
-      .withIndex("by_snaptrade_id", (q) =>
-        q.eq("snaptradeActivityId", args.snaptradeActivityId),
-      )
-      .first();
-
-    if (existing) {
-      return existing._id;
+  handler: async (ctx, { userId, accountId, activities }) => {
+    const now = Date.now();
+    let inserted = 0;
+    for (const activity of activities) {
+      const existing = await ctx.db
+        .query("brokerTransactions")
+        .withIndex("by_snaptrade_id", (q) =>
+          q.eq("snaptradeActivityId", activity.snaptradeActivityId),
+        )
+        .first();
+      if (existing) continue;
+      await ctx.db.insert("brokerTransactions", {
+        userId,
+        accountId,
+        ...activity,
+        createdAt: now,
+      });
+      inserted++;
     }
+    return { inserted };
+  },
+});
 
-    return await ctx.db.insert("brokerTransactions", {
-      userId: args.userId,
-      accountId: args.accountId,
-      snaptradeActivityId: args.snaptradeActivityId,
-      type: args.type,
-      symbol: args.symbol,
-      symbolId: args.symbolId,
-      description: args.description,
-      quantity: args.quantity,
-      price: args.price,
-      amount: args.amount,
-      currency: args.currency,
-      fees: args.fees,
-      settlementDate: args.settlementDate,
-      tradeDate: args.tradeDate,
-      createdAt: Date.now(),
-    });
+/** Trade date of an account's newest stored activity, for an incremental fetch. */
+export const getNewestTransactionDate = internalQuery({
+  args: { accountId: v.id("brokerAccounts") },
+  handler: async (ctx, { accountId }) => {
+    const newest = await ctx.db
+      .query("brokerTransactions")
+      .withIndex("by_account_date", (q) => q.eq("accountId", accountId))
+      .order("desc")
+      .first();
+    return newest?.tradeDate ?? null;
   },
 });
 

@@ -291,6 +291,8 @@ export const syncConnectionInternal = internalAction({
           classificationRule: fields.classificationRule,
           // Holdings are already valued in EUR by the normalizer. Fiat
           // holdings retain the actual native→EUR rate used for traceability.
+          // syncHoldings swaps in the last known price where the ticker had
+          // none (holdingPrice.ts).
           valueInBaseCurrency: h.marketValue,
           exchangeRateUsed:
             h.assetType === "fiat" ? h.currentPrice : 1,

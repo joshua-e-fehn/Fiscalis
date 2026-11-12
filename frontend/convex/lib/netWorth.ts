@@ -204,7 +204,13 @@ export async function loadHoldings(
       // A foreign-currency cost stays put when the rate moves, so the
       // snapshot flow is read from it (holdingNetFlow)
       ...(cost?.native ? { costNative: cost.native } : {}),
-      pricedAt: doc.lastSyncAt ?? doc.createdAt,
+      // When the price was taken, so a stale price (kept from an earlier
+      // sync, holdingPrice.ts) pulls asOf back; null when never priced.
+      // Rows synced before priceStatus fall back to their sync time.
+      pricedAt:
+        doc.priceStatus === "missing"
+          ? null
+          : (doc.priceAsOf ?? doc.lastSyncAt ?? doc.createdAt),
       doc,
     });
   }

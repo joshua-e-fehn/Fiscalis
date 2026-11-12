@@ -202,11 +202,18 @@ export function snapshotMetricValue(
   if (metric.kind === "totalAssets") {
     return without(s.totalAssets, assetsCostLine);
   }
-  // Net worth: the same P/L against the cost line less the debt
-  return without(
-    s.netWorth,
-    assetsCostLine === null ? null : assetsCostLine - s.totalLiabilities,
-  );
+  return without(s.netWorth, netWorthCostLine(assetsCostLine, s.totalLiabilities));
+}
+
+/**
+ * Net worth's cost line: the assets' cost line less the debt, so the P/L
+ * against it is the assets' P/L. Null when the assets' cost line is.
+ */
+export function netWorthCostLine(
+  assetsCostLine: number | null,
+  totalLiabilities: number,
+): number | null {
+  return assetsCostLine === null ? null : assetsCostLine - totalLiabilities;
 }
 
 /**

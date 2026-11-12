@@ -10,13 +10,17 @@ import {
   changePercent,
   lastIndexAtOrBefore,
   valueAt,
+  withLiveEnd,
 } from "./strategies/base";
 import {
   continuousSourcesFor,
   getValueTypeForConfig,
   resolveValuationConfig,
 } from "./config";
-import { calculateDiscretePerformance } from "./strategies/discrete";
+import {
+  calculateDiscretePerformance,
+  netWorthCostLine,
+} from "./strategies/discrete";
 import { calculateContinuousPerformance } from "./strategies/continuous";
 import { calculateHybridPerformance } from "./strategies/hybrid";
 import { calculateSellPrice, valueVaultItem } from "../finance/metals";
@@ -481,6 +485,79 @@ describe("hybrid strategy", () => {
   });
 });
 
+describe("live end (PF-05)", () => {
+  // Net worth: 9000 on 31 Dec (assets 10000, debt 1000), 9500 yesterday
+  const DEC31 = Date.UTC(2025, 11, 31, 12);
+  const snaps = [
+    snapshot(DEC31, 10_000, 0, 0, 1_000),
+    snapshot(NOW - DAY, 10_500, 0, 0, 1_000),
+  ];
+  const ytd = (
+    snapshots: SnapshotData[],
+    liveEnd?: { value: number; costBasis: number | null },
+  ) =>
+    calculateHybridPerformance(
+      {
+        discrete: { snapshots, metric: { kind: "netWorth" } },
+        continuousSources: VAULT,
+      },
+      { timeRange: "YTD", includeDataPoints: true, liveEnd },
+    );
+
+  it("ends the series at the live value, not the last snapshot", () => {
+    const r = ytd(snaps, { value: 9_800, costBasis: 8_000 });
+    expect(r.metrics.startValue).toBe(9_000);
+    expect(r.metrics.endValue).toBe(9_800);
+    expect(r.metrics.absoluteChange).toBe(800);
+    expect(r.metrics.highValue).toBe(9_800);
+    const last = r.dataPoints.at(-1)!;
+    expect(last).toEqual({
+      timestamp: NOW,
+      date: new Date(NOW).toISOString(),
+      value: 9_800,
+      costBasis: 8_000,
+      source: "calculated",
+      confidence: 1,
+    });
+    expect(r.dataPoints.filter((p) => p.timestamp === NOW)).toHaveLength(1);
+    expect(r.dataPoints.at(-2)!.value).toBe(9_500);
+  });
+
+  it("without a live value the series ends at the snapshot", () => {
+    const r = ytd(snaps);
+    expect(r.metrics.endValue).toBe(9_500);
+    expect(r.metrics.absoluteChange).toBe(500);
+    expect(r.dataPoints.at(-1)!.timestamp).toBe(NOW);
+    expect(r.dataPoints.at(-1)!.source).toBe("snapshot");
+  });
+
+  it("before the first snapshot the live value is the one point", () => {
+    const r = ytd([], { value: 9_800, costBasis: null });
+    expect(r.dataPoints).toHaveLength(1);
+    expect(r.metrics.endValue).toBe(9_800);
+    expect(r.metrics.startValue).toBeNull();
+    expect(r.metrics.insufficientHistory).toBe(true);
+    expect(r.metrics.firstPointTimestamp).toBe(NOW);
+  });
+
+  it("withLiveEnd replaces the points at and after the range end", () => {
+    const points = [
+      { timestamp: 10, date: "", value: 1, costBasis: null, source: "snapshot" as const, confidence: 1 },
+      { timestamp: 20, date: "", value: 2, costBasis: 2, source: "snapshot" as const, confidence: 1 },
+    ];
+    expect(withLiveEnd(points, { endTimestamp: 20 })).toBe(points);
+    expect(
+      withLiveEnd(points, {
+        endTimestamp: 20,
+        liveEnd: { value: 5, costBasis: null },
+      }).map((p) => [p.timestamp, p.value, p.costBasis]),
+    ).toEqual([
+      [10, 1, null],
+      [20, 5, null],
+    ]);
+  });
+});
+
 describe("partial snapshots (NW-11)", () => {
   const DEC31 = Date.UTC(2025, 11, 31, 12);
   const ytd = (snapshots: SnapshotData[]) =>
@@ -505,5 +582,12 @@ describe("partial snapshots (NW-11)", () => {
   it("does not flag a partial snapshot the measured figures skip", () => {
     expect(ytd([start, { ...middle, partial: true }, end]).partial).toBe(false);
     expect(ytd([start, middle, end]).partial).toBe(false);
+  });
+});
+
+describe("netWorthCostLine", () => {
+  it("is the assets' cost line less the debt, null when unknown", () => {
+    expect(netWorthCostLine(8_000, 1_000)).toBe(7_000);
+    expect(netWorthCostLine(null, 1_000)).toBeNull();
   });
 });

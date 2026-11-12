@@ -83,6 +83,7 @@ export {
   lookupOptionsForInterval,
   assessDataQuality,
   changePercent,
+  withLiveEnd,
   DEFAULT_CONFIDENCE_THRESHOLD,
   MAX_INTERPOLATION_GAP_MULTIPLIER,
 } from "./strategies/base";
@@ -125,5 +126,5 @@ export {
   type HybridPerformanceResult,
 } from "./strategies";
 
-export type { SnapshotMetric } from "./strategies/types";
-export { snapshotMetricValue } from "./strategies/discrete";
+export type { SnapshotMetric, LiveEnd } from "./strategies/types";
+export { snapshotMetricValue, netWorthCostLine } from "./strategies/discrete";

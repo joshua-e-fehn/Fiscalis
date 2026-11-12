@@ -388,8 +388,8 @@ export const getCryptoTransactions = query({
     }
 
     // Bitpanda's cross-endpoint copies are removed once, at sync time
-    // (lib/bitpanda.ts dedupeAcrossEndpoints); every stored row is a
-    // transaction of its own. Most recent first.
+    // (services/bitpanda/normalize.ts dedupeAcrossEndpoints); every stored
+    // row is a transaction of its own. Most recent first.
     unified.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
     return unified.slice(0, limit);
   },

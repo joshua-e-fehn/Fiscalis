@@ -1,0 +1,525 @@
+/**
+ * Pure Bitpanda normalizers: wallet-tree parsing, ticker pricing and FX,
+ * holding and transaction normalization, and cross-endpoint dedup.
+ *
+ * The `/asset-wallets` JSON shape varies by what the account holds and by
+ * which products Bitpanda exposes to the public API, so the wallet parser
+ * walks the response tree defensively rather than hard-coding a single
+ * shape (see `extractWalletGroups`). Holdings are valued in EUR with
+ * Bitpanda's public ticker.
+ *
+ * Framework-free so it is unit-tested here and bundled into the Convex
+ * Bitpanda sync (frontend/convex/actions/bitpanda.ts); the HTTP wrappers
+ * that fetch the raw responses stay in frontend/convex/lib/bitpanda.ts.
+ */
+
+import {
+  FALLBACK_FX_RATES,
+  toBase,
+  withMarketRate,
+} from "../finance/currency";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+// ═══════════════════════════════════════════════════════════════
+// NORMALIZED SHAPES
+// ═══════════════════════════════════════════════════════════════
+
+/** A single Bitpanda holding, valued in EUR. */
+export interface BitpandaHolding {
+  /** Normalized asset class: crypto | metal | commodity | stock | etf | index | fiat */
+  assetType: string;
+  symbol: string;
+  name?: string;
+  quantity: number;
+  /** Price per unit in EUR (undefined when no price is available) */
+  currentPrice?: number;
+  /** Holding value in EUR */
+  marketValue?: number;
+  /** Currency the value is expressed in — always EUR here */
+  currency: string;
+}
+
+/** A single Bitpanda transaction. */
+export interface BitpandaTransaction {
+  bitpandaTransactionId: string;
+  type: string; // buy | sell | deposit | withdrawal | transfer | reward | other
+  symbol: string;
+  /** Asset class: crypto | metal | commodity | stock | fiat | unknown */
+  assetType: string;
+  quantity: number;
+  price?: number;
+  amount: number;
+  currency: string;
+  fees?: number;
+  transactionDate: string; // ISO 8601
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WALLET TREE PARSING (defensive)
+// ═══════════════════════════════════════════════════════════════
+
+/** Map a Bitpanda asset-class key (from the wallet tree path) to our normalized assetType. */
+function normalizeAssetClass(pathKeys: string[]): string {
+  const keys = pathKeys.map((k) => k.toLowerCase());
+  // Bitpanda Cash Plus / fiat earn balances are nested below
+  // `security.fiat_earn`, but they remain fiat balances in their native
+  // currencies rather than stocks or other securities.
+  if (keys.includes("fiat_earn") || keys.includes("fiatearn")) return "fiat";
+  if (keys.includes("metal")) return "metal";
+  if (keys.includes("commodity") || keys.includes("commodities"))
+    return "commodity";
+  if (keys.includes("cryptocoin") || keys.includes("crypto")) return "crypto";
+  if (keys.includes("index") || keys.includes("indices")) return "index";
+  if (keys.includes("etf")) return "etf";
+  if (
+    keys.includes("security") ||
+    keys.includes("securities") ||
+    keys.includes("stock") ||
+    keys.includes("stocks")
+  )
+    return "stock";
+  if (keys.includes("fiat")) return "fiat";
+  // Fall back to the deepest meaningful key
+  return keys[keys.length - 1] ?? "crypto";
+}
+
+interface WalletGroup {
+  assetType: string;
+  wallets: any[];
+}
+
+/**
+ * Walk the `/asset-wallets` response and collect every `wallets` array with
+ * the asset-class path that led to it. Resilient to nesting differences
+ * (e.g. `commodity.metal.wallets` vs `metal.wallets`).
+ */
+function extractWalletGroups(node: any, pathKeys: string[] = []): WalletGroup[] {
+  const groups: WalletGroup[] = [];
+  if (!node || typeof node !== "object") return groups;
+
+  const attributes = node.attributes ?? node;
+
+  // A node that directly carries a wallets array
+  if (Array.isArray(attributes?.wallets)) {
+    groups.push({
+      assetType: normalizeAssetClass(pathKeys),
+      wallets: attributes.wallets,
+    });
+  }
+
+  // Recurse into child asset-class objects
+  if (attributes && typeof attributes === "object") {
+    for (const [key, value] of Object.entries(attributes)) {
+      if (key === "wallets") continue;
+      if (value && typeof value === "object") {
+        groups.push(...extractWalletGroups(value, [...pathKeys, key]));
+      }
+    }
+  }
+
+  return groups;
+}
+
+/** Probe a wallet's attributes for the asset symbol across known field names. */
+function readSymbol(attrs: any): string {
+  return (
+    attrs?.cryptocoin_symbol ??
+    attrs?.fiat_symbol ??
+    attrs?.symbol ??
+    attrs?.asset_symbol ??
+    attrs?.commodity_symbol ??
+    "UNKNOWN"
+  )
+    .toString()
+    .toUpperCase();
+}
+
+/** Probe a wallet's attributes for the balance/quantity. */
+function readBalance(attrs: any): number {
+  const raw = attrs?.balance ?? attrs?.amount ?? attrs?.quantity ?? 0;
+  const n = typeof raw === "string" ? parseFloat(raw) : raw;
+  return Number.isFinite(n) ? n : 0;
+}
+
+function readName(attrs: any): string | undefined {
+  return attrs?.name ?? attrs?.asset_name ?? undefined;
+}
+
+/**
+ * Cash Plus wallets use asset symbols such as BCPEUR/BCPUSD even though the
+ * balance is denominated in the trailing fiat currency.
+ */
+function readFiatSymbol(attrs: any): string {
+  const symbol = readSymbol(attrs);
+  const cashPlusMatch = /^BCP([A-Z]{3})$/.exec(symbol);
+  return cashPlusMatch?.[1] ?? symbol;
+}
+
+/** Price per unit in EUR from the public ticker, if present. */
+function priceFromTicker(
+  ticker: Record<string, Record<string, string>>,
+  symbol: string,
+): number | undefined {
+  const entry = ticker[symbol] ?? ticker[symbol.toUpperCase()];
+  const raw = entry?.EUR;
+  if (raw === undefined) return undefined;
+  const n = typeof raw === "string" ? parseFloat(raw) : raw;
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Derive a live fiat cross-rate from an asset quoted in both currencies.
+ * For example, BTC/EUR divided by BTC/USD yields EUR per USD. Prefer the
+ * deepest common Bitpanda markets before considering the remaining ticker.
+ */
+function exchangeRateFromTicker(
+  ticker: Record<string, Record<string, string>>,
+  fromCurrency: string,
+  toCurrency: string,
+): number | undefined {
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  if (from === to) return 1;
+
+  const preferredSymbols = ["BTC", "ETH", ...Object.keys(ticker)];
+  const visited = new Set<string>();
+
+  for (const symbol of preferredSymbols) {
+    if (visited.has(symbol)) continue;
+    visited.add(symbol);
+
+    const quote = ticker[symbol];
+    if (!quote) continue;
+
+    const fromPrice = Number.parseFloat(quote[from]);
+    const toPrice = Number.parseFloat(quote[to]);
+    if (
+      Number.isFinite(fromPrice) &&
+      fromPrice > 0 &&
+      Number.isFinite(toPrice) &&
+      toPrice > 0
+    ) {
+      return toPrice / fromPrice;
+    }
+  }
+
+  return undefined;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NORMALIZERS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Flatten asset-wallets + fiat wallets into normalized holdings, valued in EUR.
+ * Zero-balance wallets are dropped.
+ */
+export function normalizeHoldings(
+  assetWalletsResponse: any,
+  fiatWallets: any[],
+  ticker: Record<string, Record<string, string>>,
+): BitpandaHolding[] {
+  const holdings: BitpandaHolding[] = [];
+  const seenWalletIds = new Set<string>();
+
+  const wasAlreadySeen = (wallet: any): boolean => {
+    const id = wallet?.id?.toString();
+    if (!id) return false;
+    if (seenWalletIds.has(id)) return true;
+    seenWalletIds.add(id);
+    return false;
+  };
+
+  const pushFiatHolding = (attrs: any, quantity: number) => {
+    const symbol = readFiatSymbol(attrs);
+    const liveRate = exchangeRateFromTicker(ticker, symbol, "EUR");
+    // Bitpanda's live cross-rate first, then the flagged fallback table; a
+    // currency in neither stays unvalued (never 1:1 as EUR)
+    const conversion = toBase(
+      quantity,
+      symbol,
+      liveRate !== undefined
+        ? withMarketRate(FALLBACK_FX_RATES, symbol, liveRate)
+        : FALLBACK_FX_RATES,
+    );
+
+    holdings.push({
+      assetType: "fiat",
+      symbol,
+      name: readName(attrs) ?? symbol,
+      quantity,
+      currentPrice: conversion.ok ? conversion.rate : undefined,
+      marketValue: conversion.ok
+        ? Math.round(conversion.value * 100) / 100
+        : undefined,
+      currency: "EUR",
+    });
+  };
+
+  // Asset wallets (crypto, metals, commodities, stocks/ETFs, indices)
+  const groups = extractWalletGroups(assetWalletsResponse?.data);
+  for (const group of groups) {
+    for (const wallet of group.wallets) {
+      const attrs = wallet?.attributes ?? wallet;
+      const quantity = readBalance(attrs);
+      if (quantity <= 0) continue;
+      if (wasAlreadySeen(wallet)) continue;
+
+      if (group.assetType === "fiat") {
+        pushFiatHolding(attrs, quantity);
+        continue;
+      }
+
+      const symbol = readSymbol(attrs);
+      const price = priceFromTicker(ticker, symbol);
+      const marketValue =
+        price !== undefined ? quantity * price : undefined;
+
+      holdings.push({
+        assetType: group.assetType,
+        symbol,
+        name: readName(attrs),
+        quantity,
+        currentPrice: price,
+        marketValue:
+          marketValue !== undefined
+            ? Math.round(marketValue * 100) / 100
+            : undefined,
+        currency: "EUR",
+      });
+    }
+  }
+
+  // Fiat wallets — balance already in its own currency → convert to EUR
+  for (const wallet of fiatWallets) {
+    const attrs = wallet?.attributes ?? wallet;
+    const quantity = readBalance(attrs);
+    if (quantity <= 0) continue;
+    if (wasAlreadySeen(wallet)) continue;
+    pushFiatHolding(attrs, quantity);
+  }
+
+  return holdings;
+}
+
+/** Normalize a raw Bitpanda transaction `type` to our small string set. */
+export function normalizeTransactionType(raw: string): string {
+  const t = (raw ?? "").toLowerCase();
+  switch (t) {
+    case "buy":
+    case "purchase":
+      return "buy";
+    case "sell":
+      return "sell";
+    case "deposit":
+    case "incoming":
+      return "deposit";
+    case "withdrawal":
+    case "outgoing":
+      return "withdrawal";
+    case "transfer":
+      return "transfer";
+    case "reward":
+    case "interest":
+    case "staking":
+      return "reward";
+    default:
+      return t || "other";
+  }
+}
+
+/** Read an ISO date out of a Bitpanda transaction's time object. */
+function readTransactionDate(attrs: any): string {
+  return (
+    attrs?.time?.date_iso8601 ??
+    attrs?.time?.unix ??
+    attrs?.created_at ??
+    attrs?.date ??
+    new Date(0).toISOString()
+  ).toString();
+}
+
+function toNumber(raw: any): number {
+  const n = typeof raw === "string" ? parseFloat(raw) : raw;
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Normalize trades + crypto/fiat/commodity transactions into a single list.
+ * `kind` tags which endpoint a record came from so we can read its fields.
+ */
+export function normalizeTransactions(input: {
+  trades: any[];
+  cryptoTransactions: any[];
+  fiatTransactions: any[];
+  commodityTransactions: any[];
+}): BitpandaTransaction[] {
+  const out: NormalizedRecord[] = [];
+
+  // Symbol → asset class derived from the type-specific endpoints. Used to
+  // classify /trades records (which aren't inherently typed) so a transaction
+  // carries its own asset class and never depends on current holdings.
+  const symbolClass = (records: any[]): Set<string> => {
+    const set = new Set<string>();
+    for (const r of records) {
+      set.add(readSymbol(r?.attributes ?? r).toUpperCase());
+    }
+    return set;
+  };
+  const cryptoSymbols = symbolClass(input.cryptoTransactions);
+  const commoditySymbols = symbolClass(input.commodityTransactions);
+  const fiatSymbols = symbolClass(input.fiatTransactions);
+
+  const resolveTradeAssetType = (symbol: string): string => {
+    const s = symbol.toUpperCase();
+    if (cryptoSymbols.has(s)) return "crypto";
+    if (commoditySymbols.has(s)) return "commodity";
+    if (fiatSymbols.has(s)) return "fiat";
+    return "unknown";
+  };
+
+  const pushRecord = (
+    record: any,
+    fallbackPrefix: string,
+    assetType: string,
+  ) => {
+    const attrs = record?.attributes ?? record;
+    const id = (record?.id ?? attrs?.id ?? `${fallbackPrefix}-${out.length}`)
+      .toString();
+
+    const symbol = readSymbol(attrs);
+    const quantity = toNumber(
+      attrs?.amount_cryptocoin ??
+        attrs?.amount_asset ??
+        attrs?.amount ??
+        attrs?.quantity,
+    );
+    const amount = toNumber(
+      attrs?.amount_fiat ?? attrs?.amount_eur ?? attrs?.fiat_amount,
+    );
+    const price = attrs?.price !== undefined ? toNumber(attrs.price) : undefined;
+    const fees =
+      attrs?.fee !== undefined || attrs?.fees !== undefined
+        ? toNumber(attrs?.fee ?? attrs?.fees)
+        : undefined;
+
+    const tx: BitpandaTransaction = {
+      bitpandaTransactionId: id,
+      type: normalizeTransactionType(attrs?.type ?? attrs?.transaction_type),
+      symbol,
+      assetType: assetType === "trade" ? resolveTradeAssetType(symbol) : assetType,
+      quantity,
+      price,
+      amount,
+      currency: (attrs?.fiat_symbol ?? attrs?.currency ?? "EUR")
+        .toString()
+        .toUpperCase(),
+      fees,
+      transactionDate: readTransactionDate(attrs),
+    };
+    out.push(
+      assetType === "trade"
+        ? { tx, fromTrades: true }
+        : { tx, fromTrades: false, tradeRef: readTradeRef(record) },
+    );
+  };
+
+  for (const r of input.trades) pushRecord(r, "trade", "trade");
+  for (const r of input.cryptoTransactions) pushRecord(r, "crypto", "crypto");
+  for (const r of input.fiatTransactions) pushRecord(r, "fiat", "fiat");
+  for (const r of input.commodityTransactions)
+    pushRecord(r, "commodity", "commodity");
+
+  return dedupeAcrossEndpoints(out);
+}
+
+/** A normalized record and the endpoint it came from. */
+export interface NormalizedRecord {
+  tx: BitpandaTransaction;
+  /** From /trades (else from a /wallets/.../transactions endpoint) */
+  fromTrades: boolean;
+  /** The /trades id a wallet transaction belongs to, when it says */
+  tradeRef?: string;
+}
+
+/** The trade id a wallet transaction references, if any. */
+function readTradeRef(record: any): string | undefined {
+  const attrs = record?.attributes ?? record;
+  const ref =
+    attrs?.trade?.id ??
+    attrs?.trade_id ??
+    attrs?.related_trade_id ??
+    record?.relationships?.trade?.data?.id;
+  return ref !== undefined && ref !== null && ref !== ""
+    ? String(ref)
+    : undefined;
+}
+
+/**
+ * A buy/sell appears once in /trades and again, under another id, in a
+ * wallet's transaction list. Drop only that cross-endpoint copy: a wallet
+ * transaction that references a /trades record of the same asset, or,
+ * when it carries no reference, one that matches a not-yet-matched trade
+ * on type, asset, quantity, amount and day (each trade absorbs at most one
+ * copy). Records are never collapsed within one endpoint, so two identical
+ * savings-plan buys on the same day both stay.
+ */
+export function dedupeAcrossEndpoints(
+  records: NormalizedRecord[],
+): BitpandaTransaction[] {
+  const signature = (tx: BitpandaTransaction) =>
+    [
+      tx.type,
+      tx.symbol.toUpperCase(),
+      tx.quantity.toFixed(8),
+      tx.amount.toFixed(2),
+      tx.transactionDate.slice(0, 10),
+    ].join("|");
+  const tradeKey = (id: string, symbol: string) =>
+    `${id}|${symbol.toUpperCase()}`;
+
+  // Trades not yet matched by a wallet copy, by id and by signature
+  const unmatchedById = new Map<string, BitpandaTransaction>();
+  const unmatchedBySignature = new Map<string, BitpandaTransaction[]>();
+  for (const { tx, fromTrades } of records) {
+    if (!fromTrades) continue;
+    unmatchedById.set(tradeKey(tx.bitpandaTransactionId, tx.symbol), tx);
+    const list = unmatchedBySignature.get(signature(tx)) ?? [];
+    list.push(tx);
+    unmatchedBySignature.set(signature(tx), list);
+  }
+  const consume = (trade: BitpandaTransaction) => {
+    unmatchedById.delete(tradeKey(trade.bitpandaTransactionId, trade.symbol));
+    const list = unmatchedBySignature.get(signature(trade));
+    const index = list?.indexOf(trade) ?? -1;
+    if (list && index >= 0) list.splice(index, 1);
+  };
+
+  const dropped = new Set<NormalizedRecord>();
+  // Referenced copies first, so an unreferenced one never takes their trade
+  for (const record of records) {
+    if (record.fromTrades || !record.tradeRef) continue;
+    const trade = unmatchedById.get(
+      tradeKey(record.tradeRef, record.tx.symbol),
+    );
+    if (trade) {
+      consume(trade);
+      dropped.add(record);
+    }
+  }
+  for (const record of records) {
+    if (record.fromTrades || record.tradeRef) continue;
+    const trade = unmatchedBySignature.get(signature(record.tx))?.[0];
+    if (trade) {
+      consume(trade);
+      dropped.add(record);
+    }
+  }
+
+  return records
+    .filter((record) => !dropped.has(record))
+    .map((record) => record.tx);
+}
+
+/* eslint-enable @typescript-eslint/no-explicit-any */

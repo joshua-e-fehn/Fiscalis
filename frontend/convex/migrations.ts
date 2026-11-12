@@ -8,7 +8,7 @@ import {
   classifyPlaidAccount,
   classifySnaptradePosition,
   getClassificationFields,
-} from "./lib/classification";
+} from "../../services/classification";
 import { loadFxRates } from "./fxRates";
 import {
   asLedgerTransaction,

@@ -204,65 +204,6 @@ export const getPositionsBySymbol = query({
   },
 });
 
-/**
- * Get portfolio summary with total values by asset type
- */
-export const getPortfolioSummary = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const positions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Group by asset type
-    const byAssetType: Record<
-      string,
-      { totalValue: number; totalPnl: number; positions: number }
-    > = {};
-
-    let totalMarketValue = 0;
-    let totalUnrealizedPnl = 0;
-    let totalCostBasis = 0;
-
-    for (const position of positions) {
-      const assetType = position.assetType || "unknown";
-      const marketValue = position.marketValue || 0;
-      const pnl = position.unrealizedPL || 0;
-      const costBasis = position.totalCostBasis || 0;
-
-      if (!byAssetType[assetType]) {
-        byAssetType[assetType] = { totalValue: 0, totalPnl: 0, positions: 0 };
-      }
-
-      byAssetType[assetType].totalValue += marketValue;
-      byAssetType[assetType].totalPnl += pnl;
-      byAssetType[assetType].positions += 1;
-
-      totalMarketValue += marketValue;
-      totalUnrealizedPnl += pnl;
-      totalCostBasis += costBasis;
-    }
-
-    return {
-      totalMarketValue,
-      totalUnrealizedPnl,
-      totalCostBasis,
-      totalReturnPercent:
-        totalCostBasis > 0
-          ? ((totalMarketValue - totalCostBasis) / totalCostBasis) * 100
-          : 0,
-      byAssetType,
-      positionCount: positions.length,
-    };
-  },
-});
-
 // ═══════════════════════════════════════════════════════════════
 // BROKER TRANSACTION QUERIES
 // ═══════════════════════════════════════════════════════════════

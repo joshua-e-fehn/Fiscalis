@@ -223,13 +223,6 @@ export function useBrokerPositionsBySymbol(symbol: string) {
   return useQuery(api.brokers.getPositionsBySymbol, { symbol });
 }
 
-/**
- * Hook to get portfolio summary (aggregated totals)
- */
-export function usePortfolioSummary() {
-  return useQuery(api.brokers.getPortfolioSummary);
-}
-
 // ═══════════════════════════════════════════════════════════════
 // BROKER TRANSACTIONS QUERIES
 // ═══════════════════════════════════════════════════════════════

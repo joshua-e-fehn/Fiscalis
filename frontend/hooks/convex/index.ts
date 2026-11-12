@@ -53,7 +53,6 @@ export {
   // Position queries
   useBrokerPositions,
   useBrokerPositionsBySymbol,
-  usePortfolioSummary,
   // Transaction queries
   useBrokerTransactions,
   // Sync hooks

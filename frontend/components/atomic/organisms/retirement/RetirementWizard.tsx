@@ -6,8 +6,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSetBirthDate, useUserSettings } from "@/hooks/convex/onboarding";
+import { planToInputs } from "@/../services/finance/retirementService";
 import {
-	planToInputs,
 	useRetirementPlan,
 	useSaveRetirementPlan,
 } from "@/hooks/convex/retirement";
@@ -46,6 +46,9 @@ const STEP_FIELDS: [RetirementStep, PlanField[]][] = [
 		[
 			"ownsPrimaryResidence",
 			"primaryResidenceLoanId",
+			"primaryResidenceAccountId",
+			"primaryResidenceMortgageRate",
+			"primaryResidenceMortgagePayment",
 			"fundableRealEstateEquity",
 		],
 	],
@@ -71,10 +74,16 @@ function fieldsThrough(step: RetirementStep): PlanField[] {
 
 /**
  * The mutation args for `fields`. Unset optional fields are left out, except
- * the residence loan: null unlinks it.
+ * the residence mortgage link and its terms: null unlinks or clears them.
  */
 function pickFields(values: RetirementInputs, fields: PlanField[]) {
-	const { primaryResidenceLoanId, ...rest } = Object.fromEntries(
+	const {
+		primaryResidenceLoanId,
+		primaryResidenceAccountId,
+		primaryResidenceMortgageRate,
+		primaryResidenceMortgagePayment,
+		...rest
+	} = Object.fromEntries(
 		fields.map((f) => [f, values[f]]),
 	) as Partial<RetirementInputs>;
 	return {
@@ -83,6 +92,12 @@ function pickFields(values: RetirementInputs, fields: PlanField[]) {
 			? {
 					primaryResidenceLoanId:
 						(primaryResidenceLoanId as Id<"loans"> | undefined) ?? null,
+					primaryResidenceAccountId:
+						(primaryResidenceAccountId as Id<"plaidAccounts"> | undefined) ??
+						null,
+					primaryResidenceMortgageRate: primaryResidenceMortgageRate ?? null,
+					primaryResidenceMortgagePayment:
+						primaryResidenceMortgagePayment ?? null,
 				}
 			: {}),
 	};

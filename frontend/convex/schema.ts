@@ -508,6 +508,13 @@ export default defineSchema({
 		// The tracked loan on the home the user lives in: taken out of the
 		// funding base, its repayments are a pre-retirement expense.
 		primaryResidenceLoanId: v.optional(v.id("loans")),
+		// Or a linked bank (Plaid) mortgage account instead of a tracked loan,
+		// with its optional annual rate and monthly repayment (base currency)
+		// to project the balance at retirement; without them the full balance
+		// counts as owed then.
+		primaryResidenceAccountId: v.optional(v.id("plaidAccounts")),
+		primaryResidenceMortgageRate: v.optional(v.number()),
+		primaryResidenceMortgagePayment: v.optional(v.number()),
 		// Sellable property equity the user wants to count toward funding.
 		fundableRealEstateEquity: v.optional(v.number()),
 		// Growth treatment per funding category id (absent = service defaults).

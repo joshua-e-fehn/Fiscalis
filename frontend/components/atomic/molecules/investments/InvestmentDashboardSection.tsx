@@ -613,12 +613,15 @@ export function InvestmentDashboardSection({
         : null;
 
   // The chart: the engine's series for the category over the selected
-  // range (snapshot categoryBreakdown, the vault at spot), with its cost line
+  // range (snapshot categoryBreakdown, the vault at spot), with its cost line.
+  // Loaded exactly when that default chart renders: no custom chart given
+  // (null or undefined)
+  const showsDefaultChart = customPerformanceChart == null;
   const [chartRange, setChartRange] = useState<ChartTimeRange>("3M");
   const chart = useCategoryChartData(
     category,
     TIME_RANGE_LABEL_MAP[chartRange],
-    { enabled: !isLoading && customPerformanceChart === undefined },
+    { enabled: !isLoading && showsDefaultChart },
   );
 
   // YTD values for custom cards
@@ -761,7 +764,7 @@ export function InvestmentDashboardSection({
             isLoading={isLoading}
           />
         )}
-        {customPerformanceChart ?? (
+        {showsDefaultChart ? (
           <CategoryPerformanceChart
             dataPoints={chart.dataPoints}
             timeRange={chartRange}
@@ -776,6 +779,8 @@ export function InvestmentDashboardSection({
                 : undefined
             }
           />
+        ) : (
+          customPerformanceChart
         )}
       </div>
 

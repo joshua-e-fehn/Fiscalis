@@ -16,6 +16,7 @@ import type {
 } from "./strategies/types";
 import type { HoldingData, PriceData, PricePoint } from "./types";
 import { TROY_OUNCE_GRAMS, valueVaultItem } from "../finance/metals";
+import { ledgerHoldings, replayLedger } from "../finance/metalsLedger";
 
 // ═══════════════════════════════════════════════════════════════
 // Test Utilities
@@ -570,5 +571,48 @@ describe("ContinuousPerformanceStrategy - agrees with valueVaultItem", () => {
 
     expect(vault.value).toBeCloseTo(3000 * 0.97 * 2, 6);
     expect(result.metrics.endValue).toBeCloseTo(vault.value!, 6);
+  });
+});
+
+describe("ContinuousPerformanceStrategy - ledger lots in USD (PF-13)", () => {
+  const item = { id: "coin", metalType: "gold", fineWeightGrams: TROY_OUNCE_GRAMS, sellPremium: 0 };
+  // 2 coins bought at 1000 € each in February; the USD series is flat at 3000 $/oz
+  const ledger = replayLedger(
+    [{ transactionType: "buy", quantity: 2, pricePerUnit: 1000, currency: "EUR", transactionDate: "2026-02-01" }],
+    (amount, currency) => (currency === "EUR" ? amount : null),
+  );
+  const prices: PriceData = {
+    gold: Array.from({ length: 200 }, (_, i) => ({
+      timestamp: NOW - (199 - i) * MS_PER_DAY,
+      price: 3000,
+    })),
+  };
+  const run = (rates: { eurToUsd: number | null; eurToChf: number | null }) =>
+    calculateContinuousPerformance(
+      {
+        holdings: ledgerHoldings(item, ledger.lots, { currency: "usd", rates }),
+        prices,
+        currency: "usd",
+      },
+      { timeRange: "YTD", includeDataPoints: true },
+    );
+
+  it("puts the EUR cost on the cost line in dollars", () => {
+    const result = run({ eurToUsd: 1.5, eurToChf: null });
+    const last = result.dataPoints[result.dataPoints.length - 1];
+    expect(last.value).toBe(6000);
+    // 2 × 1000 € × 1.5 $/€, not 2000 € added to dollar values
+    expect(last.costBasis).toBe(3000);
+    // The purchase is an inflow at its converted price
+    expect(result.metrics.netFlows).toBe(3000);
+  });
+
+  it("has no cost line without a rate", () => {
+    const result = run({ eurToUsd: null, eurToChf: null });
+    const last = result.dataPoints[result.dataPoints.length - 1];
+    expect(last.value).toBe(6000);
+    expect(last.costBasis).toBeNull();
+    // The purchase is taken at its value on the day
+    expect(result.metrics.netFlows).toBe(6000);
   });
 });

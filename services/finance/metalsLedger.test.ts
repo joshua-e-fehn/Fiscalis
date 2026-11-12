@@ -394,6 +394,51 @@ describe("ledger lots in the continuous strategy", () => {
   });
 });
 
+describe("ledgerHoldings in another currency (PF-13)", () => {
+  const item = { id: "coin", metalType: "gold", fineWeightGrams: TROY_OUNCE_GRAMS, sellPremium: 0 };
+  const rates = { eurToUsd: 2, eurToChf: 0.5 };
+
+  it("keeps EUR lots as they are", () => {
+    const ledger = replayLedger([buy(2, 100, "2026-02-01")], eurOnly);
+    const [lot] = ledgerHoldings(item, ledger.lots);
+    expect(lot.purchaseCurrency).toBe("EUR");
+    expect(lot.purchasePricePerUnit).toBe(100);
+    expect(lot.costPerUnit).toBe(100);
+    expect(lot.costLine).toEqual({ knownCost: 200, unknownQuantity: 0 });
+  });
+
+  it("converts each lot's price and cost into the series currency", () => {
+    const ledger = replayLedger(
+      [buy(1, null, null), buy(1, 100, "2026-02-01"), sell(1, 150, "2026-04-01")],
+      eurOnly,
+    );
+    const lots = ledgerHoldings(item, ledger.lots, { currency: "usd", rates });
+    expect(lots.map((l) => l.purchaseCurrency)).toEqual(["USD", "USD", "USD"]);
+    expect(lots.map((l) => l.purchasePricePerUnit)).toEqual([undefined, 200, 300]);
+    expect(lots.map((l) => l.costLine)).toEqual([
+      { knownCost: 0, unknownQuantity: 1 },
+      { knownCost: 200, unknownQuantity: 0 },
+      // Half the pool (100 € known, 1 unit unknown) leaves
+      { knownCost: -100, unknownQuantity: -0.5 },
+    ]);
+    const chf = ledgerHoldings(item, ledger.lots, { currency: "CHF", rates });
+    expect(chf[1].costLine).toEqual({ knownCost: 50, unknownQuantity: 0 });
+    expect(chf[1].costPerUnit).toBe(50);
+  });
+
+  it("leaves the cost unknown without a rate, never in EUR", () => {
+    const ledger = replayLedger([buy(2, 100, "2026-02-01")], eurOnly);
+    const [lot] = ledgerHoldings(item, ledger.lots, {
+      currency: "USD",
+      rates: { eurToUsd: null, eurToChf: 0.5 },
+    });
+    expect(lot.purchaseCurrency).toBe("USD");
+    expect(lot.purchasePricePerUnit).toBeUndefined();
+    expect(lot.costPerUnit).toBeNull();
+    expect(lot.costLine).toBeUndefined();
+  });
+});
+
 describe("retainedBasePrice", () => {
   const opening = {
     pricePerUnit: 200,

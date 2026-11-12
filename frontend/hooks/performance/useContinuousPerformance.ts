@@ -109,6 +109,8 @@ export function useVaultPerformanceInput(
             sellPremium,
           },
           item.ledger.lots,
+          // EUR lots in the series' currency, at the spot rates
+          { currency, rates: live.data?.all?.exchangeRates },
         );
       }
       // A ledger that cannot be replayed: the cached quantity, held since

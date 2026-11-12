@@ -24,6 +24,7 @@
  */
 
 import type { HoldingData } from "../performance/types";
+import { convertAtSpotRates, type SpotExchangeRates } from "./metals";
 
 export type VaultTransactionType =
   | "buy"
@@ -455,8 +456,9 @@ export function sumSaleProfitLoss(sales: readonly SaleProfitLoss[]): SaleProfitL
 /**
  * An item's lots as continuous-strategy holdings: the quantity held at t is
  * the sum of the lots dated at or before t, each purchase or sale is a flow
- * at its EUR price (gifts at their value that day), and the cost line moves
- * by each lot's share of the cost pool (unknown-cost units at their value).
+ * at its price in the series' currency (gifts at their value that day), and
+ * the cost line moves by each lot's share of the cost pool (unknown-cost
+ * units at their value).
  */
 export function ledgerHoldings(
   item: {
@@ -466,17 +468,38 @@ export function ledgerHoldings(
     sellPremium: number;
   },
   lots: readonly LedgerLot[],
+  /**
+   * The series' currency and the rates its spot prices are served with:
+   * the lots' EUR prices and costs are converted into it
+   * (convertAtSpotRates), so the cost line never mixes currencies. Without
+   * a rate a lot's cost is unknown and its flow is taken at its value.
+   * Omitted: the series is in EUR.
+   */
+  conversion?: { currency: string; rates: SpotExchangeRates | null | undefined },
 ): HoldingData[] {
-  return lots.map((lot, i) => ({
-    id: `${item.id}:${i}`,
-    assetType: item.metalType,
-    quantity: lot.quantity,
-    fineWeightGrams: item.fineWeightGrams,
-    sellPremium: item.sellPremium,
-    purchaseDate: lot.timestamp ?? undefined,
-    purchasePricePerUnit: lot.flowPricePerUnit ?? undefined,
-    purchaseCurrency: "EUR",
-    costPerUnit: lot.costPerUnit,
-    costLine: lot.costLine,
-  }));
+  const currency = (conversion?.currency ?? "EUR").toUpperCase();
+  const toSeries = (eur: number): number | null =>
+    convertAtSpotRates(eur, "EUR", currency, conversion?.rates);
+  return lots.map((lot, i) => {
+    const flowPrice =
+      lot.flowPricePerUnit === null ? null : toSeries(lot.flowPricePerUnit);
+    const knownCost = toSeries(lot.costLine.knownCost);
+    const costPerUnit = lot.costPerUnit === null ? null : toSeries(lot.costPerUnit);
+    return {
+      id: `${item.id}:${i}`,
+      assetType: item.metalType,
+      quantity: lot.quantity,
+      fineWeightGrams: item.fineWeightGrams,
+      sellPremium: item.sellPremium,
+      purchaseDate: lot.timestamp ?? undefined,
+      purchasePricePerUnit: flowPrice ?? undefined,
+      purchaseCurrency: currency,
+      // No rate: the whole lot's cost is unknown (taken at its value)
+      costPerUnit: knownCost === null ? null : costPerUnit,
+      costLine:
+        knownCost === null
+          ? undefined
+          : { knownCost, unknownQuantity: lot.costLine.unknownQuantity },
+    };
+  });
 }

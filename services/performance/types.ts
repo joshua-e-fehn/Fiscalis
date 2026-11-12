@@ -362,8 +362,10 @@ export interface HoldingData {
   costPerUnit?: number | null;
   /**
    * This holding's signed change to its item's cost pool, when it is a
-   * ledger lot: known EUR cost plus units of unknown cost, which the cost
-   * line takes at their value. Overrides costPerUnit on the cost line, so
+   * ledger lot: known cost (in the series' currency, see metalsLedger
+   * `ledgerHoldings`) plus units of unknown cost, which the cost line takes
+   * at their value. Undefined on a ledger lot whose cost cannot be
+   * converted: the lot is then at its value, never in another currency. Overrides costPerUnit on the cost line, so
    * a sale from a pool mixing known and unknown costs removes its share of
    * each and a sold-out item leaves no cost behind.
    */

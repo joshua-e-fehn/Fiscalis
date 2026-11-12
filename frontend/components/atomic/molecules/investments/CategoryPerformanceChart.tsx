@@ -58,6 +58,8 @@ interface CategoryPerformanceChartProps {
    */
   viewMode?: ChartViewMode;
   onViewModeChange?: (mode: ChartViewMode) => void;
+  /** Some values are incomplete (a missing price, a partly failed sync) */
+  partial?: boolean;
 }
 
 function formatCurrency(value: number, currency: InvestmentCurrency): string {
@@ -87,6 +89,7 @@ export function CategoryPerformanceChart({
   onTimeRangeChange,
   viewMode = "portfolio",
   onViewModeChange,
+  partial = false,
 }: CategoryPerformanceChartProps) {
   const [ownRange, setOwnRange] = useState<ChartTimeRange>("3M");
   const timeRange = controlledRange ?? ownRange;
@@ -367,6 +370,11 @@ export function CategoryPerformanceChart({
             </div>
           )}
         </div>
+        {partial && (
+          <p className="text-xs text-muted-foreground text-center mt-1">
+            Partial: a provider sync failed or a price is missing
+          </p>
+        )}
       </CardContent>
     </Card>
   );

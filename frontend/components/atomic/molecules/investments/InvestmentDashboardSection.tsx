@@ -344,7 +344,7 @@ interface YTDPerformanceCardProps {
   ytdProfitLossPercent: number | null;
   /** First known value when there is none at 1 Jan */
   trackingSince: number | null;
-  /** Some holdings could not be priced */
+  /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
   currency: InvestmentCurrency;
   isLoading: boolean;
@@ -421,7 +421,7 @@ function YTDPerformanceCard({
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Since Jan 1, {currentYear}
-              {partial && " · some prices missing"}
+              {partial && " · partial: a sync failed or a price is missing"}
             </p>
           </>
         ) : (

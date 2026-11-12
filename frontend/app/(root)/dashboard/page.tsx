@@ -126,6 +126,8 @@ interface YTDNetWorthCardProps {
   ytdChangePercent: number | null;
   /** First snapshot time when there is no snapshot at or before Jan 1 */
   trackingSince: number | null;
+  /** Some values are incomplete (a missing price, a partly failed sync) */
+  partial: boolean;
   currency: InvestmentCurrency;
   isLoading?: boolean;
 }
@@ -134,6 +136,7 @@ function YTDNetWorthCard({
   ytdChange,
   ytdChangePercent,
   trackingSince,
+  partial,
   currency,
   isLoading = false,
 }: YTDNetWorthCardProps) {
@@ -177,6 +180,11 @@ function YTDNetWorthCard({
             {ytdChangePercent !== null && (
               <p className="text-xs text-muted-foreground mt-1">
                 {formatPercent(ytdChangePercent)} change since Jan 1
+              </p>
+            )}
+            {partial && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Partial: a provider sync failed or a price is missing
               </p>
             )}
           </>
@@ -617,6 +625,7 @@ export default function DashboardPage() {
           ytdChange={netWorthYTD.ytdChange}
           ytdChangePercent={netWorthYTD.ytdChangePercent}
           trackingSince={netWorthYTD.trackingSince}
+          partial={netWorthYTD.partial}
           currency={currency}
           isLoading={netWorthYTD.isLoading}
         />
@@ -636,6 +645,7 @@ export default function DashboardPage() {
           onTimeRangeChange={setChartRange}
           viewMode={chartView}
           onViewModeChange={setChartView}
+          partial={portfolioChart.partial}
           currency={currency}
           isLoading={isLoading || portfolioChart.isLoading}
           title="Portfolio Development"

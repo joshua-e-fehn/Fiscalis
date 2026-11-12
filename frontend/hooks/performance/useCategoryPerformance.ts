@@ -90,6 +90,7 @@ export function useSnapshots(
           netFlowEstimated: c.netFlowEstimated,
         })),
         source: s.source,
+        partial: s.partial,
       })),
     [raw],
   );

@@ -20,7 +20,7 @@ export interface PortfolioYTDResult {
   valueAtYearStart: number | null;
   /** First known point when there is no value at 1 Jan; null otherwise */
   trackingSince: number | null;
-  /** Some held assets had no price series and are missing from the values */
+  /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
   /** Net of purchases, deposits and sales (D2): a return, not a change */
   flowAdjusted: boolean;
@@ -36,7 +36,7 @@ export interface NetWorthYTDResult {
   currentValue: number | null;
   /** First known point when there is no value at 1 Jan; null otherwise */
   trackingSince: number | null;
-  /** Some held assets had no price series and are missing from the values */
+  /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
   isLoading: boolean;
 }

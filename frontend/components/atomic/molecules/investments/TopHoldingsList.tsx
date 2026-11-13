@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
 import { SubcategoryData, InvestmentCurrency } from "@/lib/types/investments";
-import { currencySymbols } from "@/lib/utils/currency";
+import { currencySuffixes } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface TopHoldingsListProps {
@@ -127,8 +127,8 @@ export function TopHoldingsList({
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-medium">
-                        {currencySymbols[currency]}
                         {formatValue(holding.value)}
+                        {currencySuffixes[currency]}
                       </span>
                       {holding.profitLossPercent !== null && (
                         <span

@@ -9,6 +9,7 @@ import {
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { currencySuffixes } from "@/lib/utils/currency";
 
 interface TotalProfitLossCardProps {
   profitLoss: number | null;
@@ -22,11 +23,6 @@ interface TotalProfitLossCardProps {
   className?: string;
 }
 
-const currencySymbols: Record<MetalsCurrency, string> = {
-  eur: "€",
-  usd: "$",
-  chf: "CHF ",
-};
 
 export function TotalProfitLossCard({
   profitLoss,
@@ -91,8 +87,8 @@ export function TotalProfitLossCard({
               )}
             >
               {isProfit ? "+" : "-"}
-              {currencySymbols[currency]}
               {formattedValue}
+              {currencySuffixes[currency]}
             </span>
             <span
               className={cn(

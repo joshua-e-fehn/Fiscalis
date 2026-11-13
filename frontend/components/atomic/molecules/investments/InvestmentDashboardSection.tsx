@@ -25,7 +25,7 @@ import {
   InvestmentCurrency,
   InvestmentCategory,
 } from "@/lib/types/investments";
-import { currencySymbols } from "@/lib/utils/currency";
+import { currencySuffixes } from "@/lib/utils/currency";
 import {
   useCategoryChartData,
   useCategoryYTD,
@@ -215,8 +215,8 @@ function TotalValueCard({
       </CardHeader>
       <CardContent>
         <span className="text-3xl font-bold">
-          {currencySymbols[currency]}
           {formattedValue}
+          {currencySuffixes[currency]}
         </span>
       </CardContent>
     </Card>
@@ -319,8 +319,8 @@ function ProfitLossCard({
                 )}
               >
                 {isProfit ? "+" : "-"}
-                {currencySymbols[currency]}
                 {formattedValue}
+                {currencySuffixes[currency]}
               </span>
               {profitLossPercent !== null && (
                 <SignedPercent
@@ -415,8 +415,8 @@ function YTDPerformanceCard({
                 )}
               >
                 {isProfit ? "+" : "-"}
-                {currencySymbols[currency]}
                 {formattedValue}
+                {currencySuffixes[currency]}
               </span>
               {ytdProfitLossPercent !== null && (
                 <SignedPercent

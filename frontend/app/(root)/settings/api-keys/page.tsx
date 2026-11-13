@@ -313,7 +313,26 @@ export default function ApiKeysPage() {
   "totalAssets": 150000.00,
   "totalLiabilities": 26543.22,
   "currency": "EUR",
-  "asOf": "2026-01-01T12:00:00.000Z"
+  "asOf": "2026-01-01T12:00:00.000Z",
+  "dataAsOf": "2026-01-01T06:00:41.000Z",
+  "categories": [
+    {
+      "category": "cash",
+      "value": 20000.00,
+      "subcategories": [
+        { "subcategory": "savings-accounts", "value": 14000.00 },
+        { "subcategory": "checking-accounts", "value": 6000.00 }
+      ],
+      "sources": [{ "source": "bank", "value": 20000.00 }]
+    },
+    ...
+    {
+      "category": "liabilities",
+      "value": 26543.22,
+      "subcategories": [{ "subcategory": "loans", "value": 26543.22 }],
+      "sources": [{ "source": "loan", "value": 26543.22 }]
+    }
+  ]
 }`}
           </pre>
         </CardContent>

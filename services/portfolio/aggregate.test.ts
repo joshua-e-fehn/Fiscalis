@@ -5,6 +5,8 @@ import {
   buildSnapshotBreakdown,
   isFlowAdjustedCategory,
   liabilityCountsLabel,
+  netWorthApiBody,
+  netWorthApiBreakdown,
   categoryFlowFromHoldings,
   collapseIntradaySnapshots,
   holdingNetFlow,
@@ -22,6 +24,7 @@ import {
 } from "./aggregate";
 import { loanMonthlyPaymentInBase } from "./categorySummary";
 import { fxRatesFromDaily } from "../finance/currency";
+import { roundMoney } from "../finance/financeService";
 import { snapshotCostLine } from "./unrealizedProfitLoss";
 
 let seq = 0;
@@ -249,6 +252,211 @@ describe("buildSnapshotBreakdown", () => {
       totalCostBasis: undefined,
       totalCoveredValue: undefined,
     });
+  });
+});
+
+describe("netWorthApiBreakdown", () => {
+  const a = aggregateNetWorth(holdings);
+  const breakdown = netWorthApiBreakdown(a);
+  const of = (category: string) => breakdown.find((c) => c.category === category)!;
+
+  it("lists all nine categories in display order, including empty ones", () => {
+    expect(breakdown.map((c) => c.category)).toEqual([...HOLDING_CATEGORIES]);
+    expect(of("bonds")).toEqual({ category: "bonds", value: 0, subcategories: [], sources: [] });
+    expect(of("collectibles")).toEqual({ category: "collectibles", value: 0, subcategories: [], sources: [] });
+  });
+
+  it("has asset categories that sum to total assets, up to rounding", () => {
+    const assets = breakdown.filter((c) => c.category !== "liabilities");
+    const sum = assets.reduce((total, c) => total + c.value, 0);
+    // Half a cent per rounded part; exact here only because the fixture is whole
+    expect(Math.abs(sum - roundMoney(a.totalAssets))).toBeLessThanOrEqual(
+      0.005 * assets.length + 1e-9,
+    );
+  });
+
+  it("lets rounded parts drift from their rounded total by more than a cent", () => {
+    const five = ["cash", "equities", "bonds", "crypto", "commodities"] as const;
+    const drifted = aggregateNetWorth(
+      five.map((category) => holding({ source: "bank", category, valueBase: 10.004 })),
+    );
+    const sum = netWorthApiBreakdown(drifted)
+      .filter((c) => c.category !== "liabilities")
+      .reduce((total, c) => total + c.value, 0);
+    expect(sum).toBe(50);
+    expect(roundMoney(drifted.totalAssets)).toBe(50.02);
+  });
+
+  it("can leave a non-zero category without subcategories", () => {
+    const names = ["savings-accounts", "checking-accounts", "money-market", "cds", "forex"];
+    const cash = netWorthApiBreakdown(
+      aggregateNetWorth(
+        names.map((subcategory) =>
+          holding({ source: "bank", category: "cash", subcategory, valueBase: 0.004 }),
+        ),
+      ),
+    ).find((c) => c.category === "cash");
+    expect(cash).toEqual({
+      category: "cash",
+      value: 0.02,
+      subcategories: [],
+      sources: [{ source: "bank", value: 0.02 }],
+    });
+  });
+
+  it("reports liabilities as the amount owed, equal to total liabilities", () => {
+    expect(of("liabilities")).toEqual({
+      category: "liabilities",
+      value: a.totalLiabilities,
+      subcategories: [
+        { subcategory: "loans", value: 10_000 },
+        { subcategory: "credit-cards", value: 500 },
+        { subcategory: "margin-loans", value: 70 },
+      ],
+      sources: [
+        { source: "loan", value: 10_000 },
+        { source: "bank", value: 500 },
+        { source: "brokerAccount", value: 70 },
+      ],
+    });
+  });
+
+  it("shows a credit balance under cash, not under liabilities", () => {
+    expect(of("cash").value).toBe(2_140);
+    expect(of("cash").subcategories).toEqual([
+      { subcategory: "checking-accounts", value: 2_000 },
+      { subcategory: "broker-cash", value: 100 },
+      { subcategory: "credit-balance", value: 40 },
+    ]);
+    expect(of("cash").sources).toEqual([
+      { source: "bank", value: 2_040 },
+      { source: "brokerAccount", value: 100 },
+    ]);
+    expect(of("liabilities").subcategories.map((s) => s.subcategory)).not.toContain("credit-balance");
+  });
+
+  it("passes a negative asset value through, netted and sorted last", () => {
+    // Only a liability in credit is rerouted (placeHolding); an overdrawn
+    // account or short position stays a negative part of its asset category
+    const overdrawn = aggregateNetWorth([
+      holding({ source: "bank", category: "cash", subcategory: "checking-accounts", valueBase: -250 }),
+      holding({ source: "bank", category: "cash", subcategory: "savings-accounts", valueBase: 100 }),
+    ]);
+    expect(overdrawn.totalAssets).toBe(-150);
+    expect(netWorthApiBreakdown(overdrawn).find((c) => c.category === "cash")).toEqual({
+      category: "cash",
+      value: -150,
+      subcategories: [
+        { subcategory: "savings-accounts", value: 100 },
+        { subcategory: "checking-accounts", value: -250 },
+      ],
+      sources: [{ source: "bank", value: -150 }],
+    });
+  });
+
+  it("keeps vault, Bitpanda and broker metals apart in sources", () => {
+    expect(of("commodities")).toEqual({
+      category: "commodities",
+      value: 7_200,
+      subcategories: [{ subcategory: "metals", value: 7_200 }],
+      sources: [
+        { source: "vault", value: 6_200 },
+        { source: "bitpanda", value: 800 },
+        { source: "brokerPosition", value: 200 },
+      ],
+    });
+  });
+
+  it("rounds every value to cents", () => {
+    const rounded = netWorthApiBreakdown(
+      aggregateNetWorth([
+        holding({ source: "bank", category: "cash", subcategory: "savings-accounts", valueBase: 10.004 }),
+        holding({ source: "bitpanda", category: "cash", subcategory: "forex", valueBase: 0.1 + 0.2 }),
+        holding({ source: "loan", category: "liabilities", subcategory: "loans", valueBase: 99.995 }),
+      ]),
+    );
+    expect(rounded.find((c) => c.category === "cash")).toEqual({
+      category: "cash",
+      value: 10.3,
+      subcategories: [
+        { subcategory: "savings-accounts", value: 10 },
+        { subcategory: "forex", value: 0.3 },
+      ],
+      sources: [
+        { source: "bank", value: 10 },
+        { source: "bitpanda", value: 0.3 },
+      ],
+    });
+    expect(rounded.find((c) => c.category === "liabilities")!.value).toBe(100);
+  });
+
+  it("orders equal values by name and leaves out what is worth nothing", () => {
+    const cash = netWorthApiBreakdown(
+      aggregateNetWorth([
+        holding({ source: "brokerAccount", category: "cash", subcategory: "money-market", valueBase: 50 }),
+        holding({ source: "bank", category: "cash", subcategory: "checking-accounts", valueBase: 50 }),
+        holding({ source: "bitpanda", category: "cash", subcategory: "forex", valueBase: 0 }),
+        holding({ source: "vault", category: "cash", subcategory: "cds", valueBase: 0.004 }),
+      ]),
+    ).find((c) => c.category === "cash")!;
+    expect(cash.subcategories).toEqual([
+      { subcategory: "checking-accounts", value: 50 },
+      { subcategory: "money-market", value: 50 },
+    ]);
+    expect(cash.sources).toEqual([
+      { source: "bank", value: 50 },
+      { source: "brokerAccount", value: 50 },
+    ]);
+  });
+});
+
+describe("netWorthApiBody", () => {
+  const now = Date.UTC(2026, 0, 1, 12);
+
+  it("keeps the six original fields and adds dataAsOf and categories", () => {
+    const a = aggregateNetWorth([
+      ...holdings,
+      holding({ source: "bank", category: "cash", valueBase: 0.005, pricedAt: 2_000 }),
+    ]);
+    const body = netWorthApiBody(a, now);
+    expect(Object.keys(body)).toEqual([
+      "object",
+      "netWorth",
+      "totalAssets",
+      "totalLiabilities",
+      "currency",
+      "asOf",
+      "dataAsOf",
+      "categories",
+    ]);
+    expect(body).toMatchObject({
+      object: "net_worth",
+      netWorth: 9_142.01,
+      totalAssets: 19_712.01,
+      totalLiabilities: 10_570,
+      currency: "EUR",
+      asOf: "2026-01-01T12:00:00.000Z",
+    });
+    expect(body.categories).toEqual(netWorthApiBreakdown(a));
+  });
+
+  it("reports the oldest price time as dataAsOf, not the serving time", () => {
+    // The fixture's oldest pricedAt is 900 ms after the epoch
+    expect(netWorthApiBody(aggregateNetWorth(holdings), now).dataAsOf).toBe(
+      "1970-01-01T00:00:00.900Z",
+    );
+  });
+
+  it("reports dataAsOf null when no holding carries a time", () => {
+    const body = netWorthApiBody(
+      aggregateNetWorth([
+        holding({ source: "loan", category: "liabilities", subcategory: "loans", valueBase: 100 }),
+      ]),
+      now,
+    );
+    expect(body.dataAsOf).toBeNull();
+    expect(body.asOf).toBe("2026-01-01T12:00:00.000Z");
+    expect(body.netWorth).toBe(-100);
   });
 });
 

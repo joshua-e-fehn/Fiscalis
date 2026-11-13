@@ -29,6 +29,7 @@ import {
   summarizeUnrealizedProfitLoss,
   type UnrealizedProfitLoss,
 } from "./unrealizedProfitLoss";
+import { roundMoney } from "../finance/financeService";
 
 // ═══════════════════════════════════════════════════════════════
 // Holdings
@@ -518,6 +519,94 @@ export function buildSnapshotBreakdown(
   }
 
   return { categoryBreakdown, totalCostBasis, totalCoveredValue };
+}
+
+/** One category of GET /api/v1/net-worth's `categories` */
+export interface NetWorthApiCategory {
+  category: HoldingCategory;
+  /** Rounded to cents; for liabilities, the amount owed (positive) */
+  value: number;
+  subcategories: { subcategory: string; value: number }[];
+  sources: { source: HoldingSource; value: number }[];
+}
+
+/** Largest value first, ties by name, so the output order is deterministic */
+function byValueThenName<T extends { value: number }>(
+  name: (entry: T) => string,
+): (a: T, b: T) => number {
+  return (a, b) =>
+    b.value - a.value || (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0);
+}
+
+/**
+ * The public API's category breakdown: every category in HOLDING_CATEGORIES
+ * order, including empty ones, each with its value per subcategory and per
+ * source. Every value is rounded to cents on its own, so a sum of parts can
+ * differ from its rounded total by up to half a cent per part. A subcategory
+ * or source that rounds to zero is left out, so a non-zero category can list
+ * fewer parts than it has. Unlike the snapshot breakdown it includes liabilities (as the amount
+ * owed) and carries no cost basis or holdings.
+ */
+export function netWorthApiBreakdown(
+  aggregate: Pick<NetWorthAggregate, "byCategory">,
+): NetWorthApiCategory[] {
+  return HOLDING_CATEGORIES.map((category) => {
+    const { value, bySubcategory, bySource } = aggregate.byCategory[category];
+    return {
+      category,
+      value: roundMoney(value),
+      subcategories: Object.entries(bySubcategory)
+        .map(([subcategory, s]) => ({
+          subcategory,
+          value: roundMoney(s.value),
+        }))
+        .filter((s) => s.value !== 0)
+        .sort(byValueThenName((s) => s.subcategory)),
+      sources: (Object.entries(bySource) as [HoldingSource, number][])
+        .map(([source, v]) => ({ source, value: roundMoney(v) }))
+        .filter((s) => s.value !== 0)
+        .sort(byValueThenName((s) => s.source)),
+    };
+  });
+}
+
+/** The 200 body of GET /api/v1/net-worth */
+export interface NetWorthApiBody {
+  object: "net_worth";
+  netWorth: number;
+  totalAssets: number;
+  totalLiabilities: number;
+  currency: "EUR";
+  /** When the request was served, ISO 8601 */
+  asOf: string;
+  /** How fresh the data is, ISO 8601; null when no holding carries a time */
+  dataAsOf: string | null;
+  categories: NetWorthApiCategory[];
+}
+
+/**
+ * The public API's response body for a net worth served at `now` (epoch ms).
+ * `asOf` is the serving time; the aggregate's own asOf (the oldest pricedAt)
+ * goes out as `dataAsOf`. Amounts are rounded to cents.
+ */
+export function netWorthApiBody(
+  netWorth: Pick<
+    NetWorthAggregate,
+    "netWorth" | "totalAssets" | "totalLiabilities" | "asOf" | "byCategory"
+  >,
+  now: number,
+): NetWorthApiBody {
+  return {
+    object: "net_worth",
+    netWorth: roundMoney(netWorth.netWorth),
+    totalAssets: roundMoney(netWorth.totalAssets),
+    totalLiabilities: roundMoney(netWorth.totalLiabilities),
+    currency: "EUR",
+    asOf: new Date(now).toISOString(),
+    dataAsOf:
+      netWorth.asOf === null ? null : new Date(netWorth.asOf).toISOString(),
+    categories: netWorthApiBreakdown(netWorth),
+  };
 }
 
 /** The exact flows of the holdings held in the same category at both snapshots. */

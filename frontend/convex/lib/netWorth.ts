@@ -398,6 +398,7 @@ async function loadExactFlows(
  * snapshot (its breakdown and when it was taken), each entry also records
  * its net flow since then: exact for the holdings traded in between,
  * derived from values and costs for the rest.
+ * `asOf` is the data's freshness (the oldest pricedAt), not the call time.
  */
 export async function computeNetWorth(
   ctx: QueryCtx,
@@ -431,5 +432,7 @@ export async function computeNetWorth(
     totalCoveredValue,
     categoryBreakdown,
     asOf: aggregate.asOf,
+    // Every category with its subcategories and sources, for the public API
+    byCategory: aggregate.byCategory,
   };
 }

@@ -18,7 +18,7 @@ import {
   isApiKeyUsable,
   normalizeApiKeyName,
 } from "../../services/apiKeys/apiKeyService";
-import { roundMoney } from "../../services/finance/financeService";
+import { netWorthApiBody } from "../../services/portfolio/aggregate";
 
 /**
  * API keys for the public, user-scoped REST API (see convex/http.ts).
@@ -212,21 +212,9 @@ export const readNetWorthWithKey = internalMutation({
       rateWindowCount: limit.windowCount,
     });
 
-    const { netWorth, totalAssets, totalLiabilities } = await computeNetWorth(
-      ctx,
-      key.userId,
-    );
-
     return {
       status: "ok" as const,
-      body: {
-        object: "net_worth" as const,
-        netWorth: roundMoney(netWorth),
-        totalAssets: roundMoney(totalAssets),
-        totalLiabilities: roundMoney(totalLiabilities),
-        currency: "EUR" as const,
-        asOf: new Date(now).toISOString(),
-      },
+      body: netWorthApiBody(await computeNetWorth(ctx, key.userId), now),
     };
   },
 });

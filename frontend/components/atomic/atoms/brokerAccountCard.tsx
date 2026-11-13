@@ -10,6 +10,7 @@ import {
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Wallet, TrendingUp, Briefcase, PiggyBank } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
+import { formatCurrency } from "@/lib/utils/currency";
 
 // Type for broker account from Convex
 interface BrokerAccount {
@@ -28,14 +29,9 @@ interface BrokerAccountCardProps {
 }
 
 export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
-  const formatCurrency = (amount: number | undefined) => {
+  const formatAmount = (amount: number | undefined) => {
     if (amount === undefined || amount === null) return "—";
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: account.currency || "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
+    return formatCurrency(amount, account.currency || "USD");
   };
 
   // Get icon based on account type
@@ -96,7 +92,7 @@ export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
           {/* Total Value */}
           <div>
             <div className="text-2xl font-bold">
-              {formatCurrency(account.balance)}
+              {formatAmount(account.balance)}
             </div>
             <p className="text-xs text-muted-foreground">Total Value</p>
           </div>
@@ -106,7 +102,7 @@ export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
             <div className="flex justify-between items-center pt-2 border-t">
               <span className="text-sm text-muted-foreground">Cash</span>
               <span className="text-sm font-medium">
-                {formatCurrency(account.cash)}
+                {formatAmount(account.cash)}
               </span>
             </div>
           )}
@@ -116,7 +112,7 @@ export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Invested</span>
               <span className="text-sm font-medium">
-                {formatCurrency((account.balance || 0) - (account.cash || 0))}
+                {formatAmount((account.balance || 0) - (account.cash || 0))}
               </span>
             </div>
           )}

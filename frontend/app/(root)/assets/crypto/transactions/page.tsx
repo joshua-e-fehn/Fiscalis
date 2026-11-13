@@ -26,8 +26,7 @@ import {
   History,
 } from "lucide-react";
 import Link from "next/link";
-import { currencyCodes, formatCurrency } from "@/lib/utils/currency";
-import type { InvestmentCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 
 // Simple time ago function from an ISO date string
 function formatTimeAgo(dateIso: string): string {
@@ -58,19 +57,13 @@ export default function CryptoAssetsTransactionsPage() {
     currency: string | null | undefined,
   ) => {
     if (value === null || value === undefined) return "-";
-    const code = (currency ?? "").toLowerCase();
-    if (code in currencyCodes) {
-      return formatCurrency(value, code as InvestmentCurrency);
+    // An ISO 4217-shaped code ("EUR", "GBP"): the shared formatter, the
+    // symbol or code after the amount
+    if (currency && /^[a-z]{3}$/i.test(currency)) {
+      return formatCurrency(value, currency);
     }
-    try {
-      return new Intl.NumberFormat("de-CH", {
-        style: "currency",
-        currency: code.toUpperCase(),
-      }).format(value);
-    } catch {
-      // Not an ISO 4217 code (or none given): show the bare amount
-      return `${value.toLocaleString("de-CH")} ${currency ?? ""}`.trim();
-    }
+    // No code given, or not a currency code: show the bare amount
+    return `${value.toLocaleString("de-CH")} ${currency ?? ""}`.trim();
   };
 
   // Get transaction icon

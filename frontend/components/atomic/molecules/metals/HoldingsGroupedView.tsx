@@ -9,6 +9,7 @@ import { HoldingsCardGrid } from "./HoldingsCardGrid";
 import { HoldingsTable } from "./HoldingsTable";
 import { MetalIcon } from "@/components/atomic/atoms/metals";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
@@ -128,10 +129,7 @@ export function HoldingsGroupedView({
                 {groupItems.length === 1 ? "item" : "items"})
               </span>
               <span className="ml-auto text-muted-foreground">
-                {new Intl.NumberFormat("de-DE", {
-                  style: "currency",
-                  currency: currency.toUpperCase(),
-                }).format(totalValue)}
+                {formatCurrency(totalValue, currency)}
               </span>
             </Button>
 

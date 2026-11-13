@@ -81,6 +81,7 @@ import {
   CompareChart,
 } from "@/components/atomic/organisms/PriceChart";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import {
   Euro,
   DollarSign,
@@ -199,12 +200,6 @@ const MetalPriceCard = ({
 
   const isPositive = performancePercent !== null && performancePercent >= 0;
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("de-CH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-
   if (isLoading) {
     return (
       <Card
@@ -257,8 +252,7 @@ const MetalPriceCard = ({
       <CardContent>
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold">
-            {currency === "eur" ? "€" : "$"}
-            {formatCurrency(currentPrice!)}
+            {formatCurrency(currentPrice!, currency)}
           </span>
         </div>
 
@@ -940,11 +934,7 @@ export function MetalsPage({
                       ) : currentPrice ? (
                         <>
                           <span className="text-4xl font-bold">
-                            {priceCurrency === "eur" ? "€" : "$"}
-                            {new Intl.NumberFormat("de-CH", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            }).format(currentPrice)}
+                            {formatCurrency(currentPrice, priceCurrency)}
                           </span>
                           <span className="text-sm text-muted-foreground">
                             /oz

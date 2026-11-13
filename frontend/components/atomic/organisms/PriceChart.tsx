@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/shadcn/chart";
 import { MetalChartData } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { TimeRange } from "@/../services/finance/financeService";
 import { formatDate } from "@/lib/utils/date";
 import {
@@ -64,11 +65,7 @@ const CustomTooltipContent = ({
       </p>
       {hasPrice(data) ? (
         <p className="text-sm font-medium">
-          {currency === "eur" ? "€" : "$"}
-          {data.price!.toLocaleString("de-CH", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          {formatCurrency(data.price!, currency)}
         </p>
       ) : (
         <p className="text-xs text-muted-foreground italic">
@@ -147,9 +144,7 @@ export const PriceChart = memo(function PriceChart({
             axisLine={false}
             tickLine={false}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            tickFormatter={(value) =>
-              `${currency === "eur" ? "€" : "$"}${value.toFixed(2)}`
-            }
+            tickFormatter={(value) => formatCurrency(value, currency)}
           />
           {/* Recharts drops null values from the payload by default; a gap
               (price null) must reach the content to say no price was recorded */}

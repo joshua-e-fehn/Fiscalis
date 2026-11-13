@@ -30,6 +30,7 @@ import {
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
 import {
   saleProfitLoss,
@@ -242,12 +243,10 @@ export function BulkSellDialog({
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {entry.item.quantity} available • Sell price:{" "}
-                            {saleCurrency === "EUR"
-                              ? "€"
-                              : saleCurrency === "USD"
-                                ? "$"
-                                : "Fr."}
-                            {entry.item.currentSellPrice?.toFixed(2)}/unit
+                            {Number.isFinite(entry.item.currentSellPrice)
+                              ? formatCurrency(entry.item.currentSellPrice, saleCurrency)
+                              : "—"}
+                            /unit
                           </div>
                         </div>
                       </div>
@@ -263,13 +262,7 @@ export function BulkSellDialog({
                           ) : (
                             <TrendingDown className="h-3 w-3" />
                           )}
-                          {profit >= 0 ? "+" : ""}
-                          {saleCurrency === "EUR"
-                            ? "€"
-                            : saleCurrency === "USD"
-                              ? "$"
-                              : "Fr."}
-                          {profit.toFixed(2)}
+                          {formatCurrency(profit, saleCurrency, { showSign: true })}
                         </div>
                       )}
                     </div>
@@ -314,15 +307,7 @@ export function BulkSellDialog({
                       <div className="space-y-1">
                         <Label className="text-xs">Total</Label>
                         <div className="h-8 flex items-center text-sm font-medium">
-                          {saleCurrency === "EUR"
-                            ? "€"
-                            : saleCurrency === "USD"
-                              ? "$"
-                              : "Fr."}
-                          {saleValue.toLocaleString("de-CH", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
+                          {formatCurrency(saleValue, saleCurrency)}
                         </div>
                       </div>
                     </div>
@@ -343,15 +328,7 @@ export function BulkSellDialog({
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total Sale Value</span>
               <span className="font-semibold">
-                {saleCurrency === "EUR"
-                  ? "€"
-                  : saleCurrency === "USD"
-                    ? "$"
-                    : "Fr."}
-                {totals.totalSaleValue.toLocaleString("de-CH", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {formatCurrency(totals.totalSaleValue, saleCurrency)}
               </span>
             </div>
             {totals.profit !== null && (
@@ -370,16 +347,7 @@ export function BulkSellDialog({
                   ) : (
                     <TrendingDown className="h-3.5 w-3.5" />
                   )}
-                  {totals.profit >= 0 ? "+" : ""}
-                  {saleCurrency === "EUR"
-                    ? "€"
-                    : saleCurrency === "USD"
-                      ? "$"
-                      : "Fr."}
-                  {totals.profit.toLocaleString("de-CH", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(totals.profit, saleCurrency, { showSign: true })}
                   {totals.profitPercent !== null && (
                     <span className="text-xs">
                       ({totals.profitPercent >= 0 ? "+" : ""}

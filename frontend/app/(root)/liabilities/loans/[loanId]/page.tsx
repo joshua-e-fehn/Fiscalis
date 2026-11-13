@@ -12,6 +12,7 @@ import {
 import { Id } from "@/convex/_generated/dataModel";
 import { loanKpis } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
+import { formatCurrency as formatMoney } from "@/lib/utils/currency";
 import {
   Tabs,
   TabsContent,
@@ -84,24 +85,14 @@ import { EditLoanDialog } from "@/components/atomic/organisms/loans/edit-loan-di
 // ═══════════════════════════════════════════════════════════════
 
 function formatCurrency(value: number, currency: string = "USD"): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+  return formatMoney(value, currency, { fractionDigits: 0 });
 }
 
 function formatCurrencyPrecise(
   value: number,
   currency: string = "USD",
 ): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return formatMoney(value, currency);
 }
 
 // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/shadcn/select";
 import { Input } from "@/components/ui/shadcn/input";
 import { useBaseCurrency } from "@/hooks/convex/portfolio";
-import { currencyCodes } from "@/lib/utils/currency";
+import { currencyCodes, formatCurrency } from "@/lib/utils/currency";
 import { Label } from "@/components/ui/shadcn/label";
 import { Button } from "@/components/ui/shadcn/button";
 import { Textarea } from "@/components/ui/shadcn/textarea";
@@ -197,15 +197,6 @@ function calculateMissedPayments(
   }
 
   return { count: missed, nextDueDate: getDueDate(loan, missed + 1) };
-}
-
-function formatCurrency(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight

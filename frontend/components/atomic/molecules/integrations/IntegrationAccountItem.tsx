@@ -8,6 +8,7 @@
  */
 
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 
 interface IntegrationAccountItemProps {
   /** Account name (e.g., "Checking Account", "Individual Brokerage") */
@@ -42,12 +43,7 @@ export function IntegrationAccountItem({
   onClick,
 }: IntegrationAccountItemProps) {
   const formatAmount = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    formatCurrency(amount, currency, { fractionDigits: 0 });
 
   const formattedBalance = formatAmount(balance);
   // Show cash if it's > 0 (always show, even if equal to balance)

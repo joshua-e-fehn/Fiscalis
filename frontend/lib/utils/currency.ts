@@ -76,32 +76,51 @@ function formatCompactAmount(absValue: number, suffix: string): string {
 }
 
 /**
+ * Symbols for the other currencies a stored amount can carry (loans offer
+ * these, see add-loan-dialog.tsx CURRENCIES), written after the amount.
+ */
+const otherCurrencySuffixes: Record<string, string> = {
+  gbp: "£",
+  jpy: "¥",
+  cad: "C$",
+  aud: "A$",
+};
+
+/**
  * A display currency, or any other ISO 4217 code a stored amount carries
- * (a loan in "GBP"): the text written after the amount.
+ * (a loan in "GBP"): the text written after the amount. Only codes without
+ * a known symbol fall back to the code itself ("1'234.00 SEK").
  */
 function resolveSuffix(currency: string): string {
   const known = toInvestmentCurrency(currency);
-  return known ? currencySuffixes[known] : ` ${currency.toUpperCase()}`;
+  if (known) return currencySuffixes[known];
+  const lower = currency.toLowerCase();
+  return Object.hasOwn(otherCurrencySuffixes, lower)
+    ? otherCurrencySuffixes[lower]
+    : ` ${currency.toUpperCase()}`;
 }
 
 /**
  * Format a number as currency, the symbol after the amount: "-15'795.87€".
- * Takes a display currency or a stored ISO code ("EUR", "GBP"); codes
- * outside InvestmentCurrency are written as a code ("1'234.00 GBP").
+ * Takes a display currency or a stored ISO code ("EUR", "GBP"): "1'234.00£";
+ * only codes with no known symbol are written as a code ("1'234.00 SEK").
+ * `fractionDigits` (default 2) sets the decimals, e.g. 0 for whole-unit
+ * axis labels and summaries ("84'998€"); it is ignored when `compact`.
  */
 export function formatCurrency(
   value: number,
   currency: InvestmentCurrency | (string & {}),
-  options?: { compact?: boolean; showSign?: boolean },
+  options?: { compact?: boolean; showSign?: boolean; fractionDigits?: number },
 ): string {
-  const { compact = false, showSign = false } = options ?? {};
+  const { compact = false, showSign = false, fractionDigits = 2 } =
+    options ?? {};
   const suffix = resolveSuffix(currency);
 
   const formatted = compact
     ? formatCompactAmount(Math.abs(value), suffix)
     : `${new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
       }).format(Math.abs(value))}${suffix}`;
 
   if (showSign && value !== 0) {

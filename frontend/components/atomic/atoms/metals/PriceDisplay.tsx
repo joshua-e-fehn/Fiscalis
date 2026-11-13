@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
+import { currencySuffixes } from "@/lib/utils/currency";
 
 interface PriceDisplayProps {
   value: number;
@@ -11,11 +12,6 @@ interface PriceDisplayProps {
   showSign?: boolean;
 }
 
-const currencySymbols: Record<MetalsCurrency, string> = {
-  eur: "€",
-  usd: "$",
-  chf: "CHF ",
-};
 
 const sizeClasses = {
   sm: "text-sm",
@@ -31,7 +27,7 @@ export function PriceDisplay({
   className,
   showSign = false,
 }: PriceDisplayProps) {
-  const symbol = currencySymbols[currency];
+  const suffix = currencySuffixes[currency];
   const formattedValue = new Intl.NumberFormat("de-DE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -42,8 +38,8 @@ export function PriceDisplay({
   return (
     <span className={cn(sizeClasses[size], className)}>
       {sign}
-      {symbol}
       {formattedValue}
+      {suffix}
     </span>
   );
 }

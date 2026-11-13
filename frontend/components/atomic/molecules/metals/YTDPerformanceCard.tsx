@@ -9,6 +9,7 @@ import {
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { CalendarDays, TrendingUp, TrendingDown } from "lucide-react";
+import { currencySuffixes } from "@/lib/utils/currency";
 
 interface YTDPerformanceCardProps {
   ytdProfitLoss: number | null;
@@ -18,11 +19,6 @@ interface YTDPerformanceCardProps {
   className?: string;
 }
 
-const currencySymbols: Record<MetalsCurrency, string> = {
-  eur: "€",
-  usd: "$",
-  chf: "CHF ",
-};
 
 export function YTDPerformanceCard({
   ytdProfitLoss,
@@ -82,8 +78,8 @@ export function YTDPerformanceCard({
               )}
             >
               {isProfit ? "+" : "-"}
-              {currencySymbols[currency]}
               {formattedValue}
+              {currencySuffixes[currency]}
             </span>
             <span
               className={cn(

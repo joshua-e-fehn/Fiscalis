@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
+import { currencySuffixes } from "@/lib/utils/currency";
 
 interface ChangeIndicatorProps {
   value: number;
@@ -15,11 +16,6 @@ interface ChangeIndicatorProps {
   className?: string;
 }
 
-const currencySymbols: Record<MetalsCurrency, string> = {
-  eur: "€",
-  usd: "$",
-  chf: "CHF ",
-};
 
 const sizeClasses = {
   sm: "text-xs",
@@ -87,8 +83,8 @@ export function ChangeIndicator({
       {showValue && (
         <span>
           {isPositive ? "+" : isNegative ? "-" : ""}
-          {currencySymbols[currency]}
           {formattedValue}
+          {currencySuffixes[currency]}
         </span>
       )}
       {showPercentage && formattedPercent && (

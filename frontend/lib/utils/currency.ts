@@ -88,20 +88,23 @@ function resolveSuffix(currency: string): string {
  * Format a number as currency, the symbol after the amount: "-15'795.87€".
  * Takes a display currency or a stored ISO code ("EUR", "GBP"); codes
  * outside InvestmentCurrency are written as a code ("1'234.00 GBP").
+ * `fractionDigits` (default 2) sets the decimals, e.g. 0 for whole-unit
+ * axis labels and summaries ("84'998€"); it is ignored when `compact`.
  */
 export function formatCurrency(
   value: number,
   currency: InvestmentCurrency | (string & {}),
-  options?: { compact?: boolean; showSign?: boolean },
+  options?: { compact?: boolean; showSign?: boolean; fractionDigits?: number },
 ): string {
-  const { compact = false, showSign = false } = options ?? {};
+  const { compact = false, showSign = false, fractionDigits = 2 } =
+    options ?? {};
   const suffix = resolveSuffix(currency);
 
   const formatted = compact
     ? formatCompactAmount(Math.abs(value), suffix)
     : `${new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
       }).format(Math.abs(value))}${suffix}`;
 
   if (showSign && value !== 0) {

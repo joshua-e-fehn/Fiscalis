@@ -8,6 +8,7 @@ import {
   CardDescription,
 } from "@/components/ui/shadcn/card";
 import { Building, CreditCard, Wallet } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/currency";
 
 // Account type from Convex
 export interface ConvexAccount {
@@ -58,18 +59,12 @@ export function BankAccountCard({ account }: { account: ConvexAccount }) {
           {hasBalance && (
             <>
               <p className="font-semibold text-2xl">
-                {account.currentBalance!.toLocaleString(undefined, {
-                  style: "currency",
-                  currency,
-                })}
+                {formatCurrency(account.currentBalance!, currency)}
               </p>
               {account.availableBalance !== undefined && (
                 <p className="text-sm text-muted-foreground">
                   Available:{" "}
-                  {account.availableBalance.toLocaleString(undefined, {
-                    style: "currency",
-                    currency,
-                  })}
+                  {formatCurrency(account.availableBalance, currency)}
                 </p>
               )}
             </>

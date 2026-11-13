@@ -9,6 +9,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { Clock } from "lucide-react";
 import {
   IntegrationStatusBadge,
@@ -89,12 +90,7 @@ export function IntegrationConnectionCard({
   className,
 }: IntegrationConnectionCardProps) {
   const formatAmount = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency.toUpperCase(),
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    formatCurrency(amount, currency, { fractionDigits: 0 });
 
   const formattedValue = formatAmount(totalValue);
   // Show cash if it's > 0 (always show, even if equal to totalValue)

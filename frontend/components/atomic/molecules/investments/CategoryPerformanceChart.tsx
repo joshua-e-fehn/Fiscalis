@@ -20,7 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import type { ChartPoint } from "@/lib/performance";
-import { currencyCodes } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import { TrendingUp, Wallet } from "lucide-react";
 import {
   CHART_TIME_RANGES,
@@ -60,13 +60,9 @@ interface CategoryPerformanceChartProps {
   emptyHint?: string;
 }
 
-function formatCurrency(value: number, currency: InvestmentCurrency): string {
-  return new Intl.NumberFormat("de-CH", {
-    style: "currency",
-    currency: currencyCodes[currency],
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+/** Whole units for axis ticks and tooltip rows: "84'998€". */
+function formatWhole(value: number, currency: InvestmentCurrency): string {
+  return formatCurrency(value, currency, { fractionDigits: 0 });
 }
 
 function formatDate(timestamp: number, range: ChartTimeRange): string {
@@ -253,7 +249,7 @@ export function CategoryPerformanceChart({
                 tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => formatCurrency(value, currency)}
+                tickFormatter={(value) => formatWhole(value, currency)}
                 width={70}
               />
               <Tooltip
@@ -315,7 +311,7 @@ export function CategoryPerformanceChart({
                             {entry.dataKey === "value"
                               ? valueLabel
                               : "Cost Basis"}
-                            : {formatCurrency(entry.value as number, currency)}
+                            : {formatWhole(entry.value as number, currency)}
                           </p>
                         ))}
                     </div>

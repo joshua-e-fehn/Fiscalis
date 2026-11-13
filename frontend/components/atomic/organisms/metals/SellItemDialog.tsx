@@ -35,6 +35,7 @@ import {
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
 import { saleProfitLoss } from "@/../services/finance/metalsLedger";
 import { Loader2, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
@@ -274,15 +275,7 @@ export function SellItemDialog({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Total Sale Value</span>
                 <span className="font-semibold">
-                  {saleCurrency === "EUR"
-                    ? "€"
-                    : saleCurrency === "USD"
-                      ? "$"
-                      : "Fr."}
-                  {totalSaleValue.toLocaleString("de-CH", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatCurrency(totalSaleValue, saleCurrency)}
                 </span>
               </div>
               {saleProfit !== null && (
@@ -302,16 +295,7 @@ export function SellItemDialog({
                         saleProfit >= 0 ? "text-profit" : "text-loss",
                       )}
                     >
-                      {saleProfit >= 0 ? "+" : ""}
-                      {saleCurrency === "EUR"
-                        ? "€"
-                        : saleCurrency === "USD"
-                          ? "$"
-                          : "Fr."}
-                      {saleProfit.toLocaleString("de-CH", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      {formatCurrency(saleProfit, saleCurrency, { showSign: true })}
                       {saleProfitPercent !== null && (
                         <span className="text-xs ml-1">
                           ({saleProfitPercent >= 0 ? "+" : ""}

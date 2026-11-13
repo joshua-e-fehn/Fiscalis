@@ -85,6 +85,7 @@ import {
   type LoanType,
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
+import { formatCurrency as formatMoney } from "@/lib/utils/currency";
 
 // ============================================================================
 // Types
@@ -112,21 +113,11 @@ interface ExtraPaymentConfig {
 // ============================================================================
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+  return formatMoney(value, "USD", { fractionDigits: 0 });
 }
 
 function formatCurrencyPrecise(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return formatMoney(value, "USD");
 }
 
 const PAYMENT_INTERVALS: Record<
@@ -883,7 +874,7 @@ function PaymentBreakdownChart({
               tickFormatter={(value) => `Y${value}`}
             />
             <YAxis
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
             />
             <ChartTooltip
               content={
@@ -939,7 +930,7 @@ function PaymentBreakdownChart({
               tickFormatter={(value) => `Y${value}`}
             />
             <YAxis
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
             />
             <ChartTooltip
               content={
@@ -1055,7 +1046,7 @@ function LoanTypeChartsCard({
                 fontSize={10}
               />
               <YAxis
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
                 fontSize={10}
               />
               <ChartTooltip
@@ -1116,7 +1107,7 @@ function LoanTypeChartsCard({
                 fontSize={10}
               />
               <YAxis
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
                 fontSize={10}
               />
               <ChartTooltip
@@ -1775,7 +1766,7 @@ function LoanTypeComparison() {
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis
                       type="number"
-                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+                      tickFormatter={(v) => formatMoney(v, "USD", { compact: true })}
                     />
                     <YAxis type="category" dataKey="type" width={100} />
                     <ChartTooltip

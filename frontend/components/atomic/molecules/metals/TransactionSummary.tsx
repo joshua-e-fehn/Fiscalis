@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Transaction } from "./TransactionRow";
 import { transactionTotals } from "@/../services/finance/metalsLedger";
@@ -28,22 +29,6 @@ interface TransactionSummaryProps {
   unrealizedPL?: number | null;
   totalPL?: number | null;
   className?: string;
-}
-
-function formatCurrency(value: number, currency: string): string {
-  const currencyMap: Record<string, string> = {
-    eur: "EUR",
-    usd: "USD",
-    chf: "CHF",
-    EUR: "EUR",
-    USD: "USD",
-    CHF: "CHF",
-  };
-  return new Intl.NumberFormat("de-CH", {
-    style: "currency",
-    currency: currencyMap[currency] || "EUR",
-    minimumFractionDigits: 2,
-  }).format(value);
 }
 
 export function TransactionSummary({

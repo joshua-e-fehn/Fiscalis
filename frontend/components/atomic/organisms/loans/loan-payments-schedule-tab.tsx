@@ -17,6 +17,7 @@ import {
   type LoanScheduleRow,
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
+import { formatCurrency as formatMoney } from "@/lib/utils/currency";
 import {
   Card,
   CardContent,
@@ -96,12 +97,7 @@ interface LoanPaymentsScheduleTabProps {
 
 // Helper functions
 function formatCurrency(value: number, currency: string = "USD"): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return formatMoney(value, currency);
 }
 
 // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight

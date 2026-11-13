@@ -41,21 +41,17 @@ import { LoanCard } from "@/components/atomic/molecules/loans/loan-card";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import { Id } from "@/convex/_generated/dataModel";
 import { todayLocalISO } from "@/lib/utils/date";
+import { formatCurrency as formatMoney } from "@/lib/utils/currency";
 
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
 // ═══════════════════════════════════════════════════════════════
 
 function formatCurrency(value: number, currency: string = "USD"): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+  return formatMoney(value, currency, { fractionDigits: 0 });
 }
 
-// Totals are per currency (loans aren't converted): "€1,000 + $2,000"
+// Totals are per currency (loans aren't converted): "1'000€ + 2'000$"
 function formatTotals<T extends { currency: string }>(
   totals: T[],
   pick: (t: T) => number,

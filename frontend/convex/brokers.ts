@@ -8,11 +8,13 @@ import {
 import {
   classifySnaptradePosition,
   getClassificationFields,
-} from "./lib/classification";
+} from "../../services/classification";
 import { loadFxRates } from "./fxRates";
 import {
   brokerAccountBaseFields,
+  brokerAccountWithBaseFields,
   positionBaseFields,
+  positionWithBaseFields,
 } from "../../services/finance/currency";
 import {
   positionOverrideKeys,
@@ -133,19 +135,24 @@ export const getAccounts = query({
       if (!connection || connection.userId !== userId) {
         throw new Error("Connection not found or unauthorized");
       }
-
-      return await ctx.db
-        .query("brokerAccounts")
-        .withIndex("by_connection", (q) =>
-          q.eq("connectionId", args.connectionId!),
-        )
-        .collect();
     }
 
-    return await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const accounts = args.connectionId
+      ? await ctx.db
+          .query("brokerAccounts")
+          .withIndex("by_connection", (q) =>
+            q.eq("connectionId", args.connectionId!),
+          )
+          .collect()
+      : await ctx.db
+          .query("brokerAccounts")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+
+    // Stamp rows stored before sync-time stamping, as netWorth does, so the
+    // client totals read the same base-currency values the server counts.
+    const rates = await loadFxRates(ctx);
+    return accounts.map((a) => brokerAccountWithBaseFields(a, rates));
   },
 });
 
@@ -170,17 +177,20 @@ export const getPositions = query({
       if (!account || account.userId !== userId) {
         throw new Error("Account not found or unauthorized");
       }
-
-      return await ctx.db
-        .query("brokerPositions")
-        .withIndex("by_account", (q) => q.eq("accountId", args.accountId!))
-        .collect();
     }
 
-    return await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const positions = args.accountId
+      ? await ctx.db
+          .query("brokerPositions")
+          .withIndex("by_account", (q) => q.eq("accountId", args.accountId!))
+          .collect()
+      : await ctx.db
+          .query("brokerPositions")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect();
+
+    const rates = await loadFxRates(ctx);
+    return positions.map((p) => positionWithBaseFields(p, rates));
   },
 });
 
@@ -195,71 +205,15 @@ export const getPositionsBySymbol = query({
 
     const userId = identity.subject;
 
-    return await ctx.db
+    const positions = await ctx.db
       .query("brokerPositions")
       .withIndex("by_symbol", (q) =>
         q.eq("userId", userId).eq("symbol", args.symbol),
       )
       .collect();
-  },
-});
 
-/**
- * Get portfolio summary with total values by asset type
- */
-export const getPortfolioSummary = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const positions = await ctx.db
-      .query("brokerPositions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Group by asset type
-    const byAssetType: Record<
-      string,
-      { totalValue: number; totalPnl: number; positions: number }
-    > = {};
-
-    let totalMarketValue = 0;
-    let totalUnrealizedPnl = 0;
-    let totalCostBasis = 0;
-
-    for (const position of positions) {
-      const assetType = position.assetType || "unknown";
-      const marketValue = position.marketValue || 0;
-      const pnl = position.unrealizedPL || 0;
-      const costBasis = position.totalCostBasis || 0;
-
-      if (!byAssetType[assetType]) {
-        byAssetType[assetType] = { totalValue: 0, totalPnl: 0, positions: 0 };
-      }
-
-      byAssetType[assetType].totalValue += marketValue;
-      byAssetType[assetType].totalPnl += pnl;
-      byAssetType[assetType].positions += 1;
-
-      totalMarketValue += marketValue;
-      totalUnrealizedPnl += pnl;
-      totalCostBasis += costBasis;
-    }
-
-    return {
-      totalMarketValue,
-      totalUnrealizedPnl,
-      totalCostBasis,
-      totalReturnPercent:
-        totalCostBasis > 0
-          ? ((totalMarketValue - totalCostBasis) / totalCostBasis) * 100
-          : 0,
-      byAssetType,
-      positionCount: positions.length,
-    };
+    const rates = await loadFxRates(ctx);
+    return positions.map((p) => positionWithBaseFields(p, rates));
   },
 });
 
@@ -758,56 +712,67 @@ export const replaceAccountHoldings = internalMutation({
   },
 });
 
+/** The provider fields of a brokerTransactions row (snaptradeActivity.ts). */
+const activityFields = v.object({
+  snaptradeActivityId: v.string(),
+  type: v.string(),
+  symbol: v.optional(v.string()),
+  symbolId: v.optional(v.string()),
+  description: v.optional(v.string()),
+  quantity: v.optional(v.number()),
+  price: v.optional(v.number()),
+  amount: v.number(),
+  currency: v.string(),
+  fees: v.optional(v.number()),
+  settlementDate: v.optional(v.string()),
+  tradeDate: v.string(),
+});
+
 /**
- * Create broker transaction
+ * Store one page of an account's SnapTrade activities
+ * (services/brokers/snaptradeActivity.ts mapSnaptradeActivity). An
+ * activity already stored, by its SnapTrade id, is kept as it is, so the
+ * overlapping window of an incremental fetch writes nothing twice.
  */
-export const createTransaction = internalMutation({
+export const upsertTransactions = internalMutation({
   args: {
     userId: v.string(),
     accountId: v.id("brokerAccounts"),
-    snaptradeActivityId: v.string(),
-    type: v.string(),
-    symbol: v.optional(v.string()),
-    symbolId: v.optional(v.string()),
-    description: v.optional(v.string()),
-    quantity: v.optional(v.number()),
-    price: v.optional(v.number()),
-    amount: v.number(),
-    currency: v.string(),
-    fees: v.optional(v.number()),
-    settlementDate: v.optional(v.string()),
-    tradeDate: v.string(),
+    activities: v.array(activityFields),
   },
-  handler: async (ctx, args) => {
-    // Check if transaction already exists
-    const existing = await ctx.db
-      .query("brokerTransactions")
-      .withIndex("by_snaptrade_id", (q) =>
-        q.eq("snaptradeActivityId", args.snaptradeActivityId),
-      )
-      .first();
-
-    if (existing) {
-      return existing._id;
+  handler: async (ctx, { userId, accountId, activities }) => {
+    const now = Date.now();
+    let inserted = 0;
+    for (const activity of activities) {
+      const existing = await ctx.db
+        .query("brokerTransactions")
+        .withIndex("by_snaptrade_id", (q) =>
+          q.eq("snaptradeActivityId", activity.snaptradeActivityId),
+        )
+        .first();
+      if (existing) continue;
+      await ctx.db.insert("brokerTransactions", {
+        userId,
+        accountId,
+        ...activity,
+        createdAt: now,
+      });
+      inserted++;
     }
+    return { inserted };
+  },
+});
 
-    return await ctx.db.insert("brokerTransactions", {
-      userId: args.userId,
-      accountId: args.accountId,
-      snaptradeActivityId: args.snaptradeActivityId,
-      type: args.type,
-      symbol: args.symbol,
-      symbolId: args.symbolId,
-      description: args.description,
-      quantity: args.quantity,
-      price: args.price,
-      amount: args.amount,
-      currency: args.currency,
-      fees: args.fees,
-      settlementDate: args.settlementDate,
-      tradeDate: args.tradeDate,
-      createdAt: Date.now(),
-    });
+/** Trade date of an account's newest stored activity, for an incremental fetch. */
+export const getNewestTransactionDate = internalQuery({
+  args: { accountId: v.id("brokerAccounts") },
+  handler: async (ctx, { accountId }) => {
+    const newest = await ctx.db
+      .query("brokerTransactions")
+      .withIndex("by_account_date", (q) => q.eq("accountId", accountId))
+      .order("desc")
+      .first();
+    return newest?.tradeDate ?? null;
   },
 });
 

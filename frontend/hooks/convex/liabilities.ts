@@ -15,7 +15,6 @@ import { api } from "@/convex/_generated/api";
 import {
   CategorySummary,
   SubcategoryData,
-  PortfolioDataPoint,
   Holding,
 } from "@/lib/types/investments";
 import {
@@ -88,7 +87,6 @@ export function useLiabilitiesSummary(): {
 
     // Calculate totals - liabilities are shown as positive values for display
     const totalValue = dataSummary.totalLiabilities;
-    const historyDataPoints: PortfolioDataPoint[] = [];
 
     return {
       totalValue,
@@ -99,7 +97,6 @@ export function useLiabilitiesSummary(): {
       ytdProfitLossPercent: null,
       valueAtYearStart: null,
       subcategories,
-      historyDataPoints,
     };
   }, [liabilitiesData]);
 

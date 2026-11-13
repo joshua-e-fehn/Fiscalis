@@ -49,16 +49,6 @@ export interface SubcategoryData {
 }
 
 /**
- * A single data point in the portfolio history
- */
-export interface PortfolioDataPoint {
-  date: string;
-  timestamp: number;
-  value: number;
-  cost: number;
-}
-
-/**
  * Summary data for an entire investment category
  */
 export interface CategorySummary {
@@ -75,7 +65,6 @@ export interface CategorySummary {
   ytdProfitLossPercent: number | null;
   valueAtYearStart: number | null; // Value on Jan 1 of current year
   subcategories: SubcategoryData[];
-  historyDataPoints: PortfolioDataPoint[];
 }
 
 /**

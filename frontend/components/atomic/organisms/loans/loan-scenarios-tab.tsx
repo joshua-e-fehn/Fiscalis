@@ -7,7 +7,9 @@ import { useSaveScenario, useDeleteScenario } from "@/hooks/convex/loans";
 import {
   getMonthsPerPeriod,
   projectLoan,
+  resolveRecurringExtras,
   type LoanProjection,
+  type RecurringExtra,
   type PrepaymentEffect,
   type ProjectLoanOptions,
 } from "@/../services/finance/loanScheduleService";
@@ -56,7 +58,6 @@ import {
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { Button } from "@/components/ui/shadcn/button";
-import { Slider } from "@/components/ui/shadcn/slider";
 import { Badge } from "@/components/ui/shadcn/badge";
 import {
   Plus,
@@ -87,6 +88,24 @@ interface OneTimePrepayment {
   id: string;
   date: string;
   amount: number;
+}
+
+/** A recurring extra being edited; blank dates are unbounded. */
+interface RecurringExtraRow {
+  id: string;
+  amount: number;
+  from: string;
+  until: string;
+}
+
+function toRecurringExtras(rows: RecurringExtraRow[]): RecurringExtra[] {
+  return rows
+    .filter((row) => row.amount > 0)
+    .map(({ amount, from, until }) => ({
+      amount,
+      ...(from && { from }),
+      ...(until && { until }),
+    }));
 }
 
 interface ScenarioResult {
@@ -151,9 +170,13 @@ function getPaymentFrequencyLabel(frequency: string): string {
   }
 }
 
-// extraMonthlyPayment is the deprecated name of the same per-period extra
-function scenarioExtraPerPeriod(scenario: LoanScenario): number {
-  return scenario.extraPerPeriod ?? scenario.extraMonthlyPayment ?? 0;
+function recurringExtraRange(extra: RecurringExtra): string {
+  if (extra.from && extra.until) {
+    return ` (${formatDate(extra.from)} – ${formatDate(extra.until)})`;
+  }
+  if (extra.from) return ` (from ${formatDate(extra.from)})`;
+  if (extra.until) return ` (until ${formatDate(extra.until)})`;
+  return "";
 }
 
 // Chart configs
@@ -270,10 +293,11 @@ export function LoanScenariosTab({
   const { saveScenario } = useSaveScenario();
   const { deleteScenario } = useDeleteScenario();
 
-  // Extra principal per payment period (not per month)
-  const [extraPayment, setExtraPayment] = useState(0);
-  // First due date the extra applies to ("" = from the next due date)
-  const [extraPerPeriodFrom, setExtraPerPeriodFrom] = useState("");
+  // Extra principal per payment period (not per month), each between
+  // optional first/last due dates; the active ones add up
+  const [recurringExtras, setRecurringExtras] = useState<RecurringExtraRow[]>(
+    [],
+  );
   const [newRatePercent, setNewRatePercent] = useState("");
   const [prepaymentEffect, setPrepaymentEffect] =
     useState<PrepaymentEffect>("reduce_term");
@@ -301,8 +325,7 @@ export function LoanScenariosTab({
   const liveScenario = useMemo(
     () =>
       calculateScenario(loan, payments, {
-        extraPerPeriod: extraPayment,
-        extraPerPeriodFrom: extraPerPeriodFrom || undefined,
+        recurringExtras: toRecurringExtras(recurringExtras),
         oneTimePrepayments,
         newRate,
         prepaymentEffect,
@@ -310,8 +333,7 @@ export function LoanScenariosTab({
     [
       loan,
       payments,
-      extraPayment,
-      extraPerPeriodFrom,
+      recurringExtras,
       oneTimePrepayments,
       newRate,
       prepaymentEffect,
@@ -337,6 +359,26 @@ export function LoanScenariosTab({
     setOneTimePrepayments((prev) => prev.filter((p) => p.id !== id));
   };
 
+  const handleAddRecurringExtra = () => {
+    setRecurringExtras((prev) => [
+      ...prev,
+      { id: `extra-${Date.now()}`, amount: 0, from: "", until: "" },
+    ]);
+  };
+
+  const handleUpdateRecurringExtra = (
+    id: string,
+    updates: Partial<Omit<RecurringExtraRow, "id">>,
+  ) => {
+    setRecurringExtras((prev) =>
+      prev.map((row) => (row.id === id ? { ...row, ...updates } : row)),
+    );
+  };
+
+  const handleRemoveRecurringExtra = (id: string) => {
+    setRecurringExtras((prev) => prev.filter((row) => row.id !== id));
+  };
+
   const handleSaveScenario = async () => {
     if (!user?.id || !scenarioName) return;
 
@@ -345,11 +387,7 @@ export function LoanScenariosTab({
       await saveScenario({
         loanId: loan._id,
         name: scenarioName,
-        extraPerPeriod: extraPayment,
-        extraPerPeriodFrom:
-          extraPayment > 0 && extraPerPeriodFrom
-            ? extraPerPeriodFrom
-            : undefined,
+        recurringExtras: toRecurringExtras(recurringExtras),
         oneTimePrepayments: oneTimePrepayments.map(({ date, amount }) => ({
           date,
           amount,
@@ -381,8 +419,14 @@ export function LoanScenariosTab({
   };
 
   const handleLoadScenario = (scenario: LoanScenario) => {
-    setExtraPayment(scenarioExtraPerPeriod(scenario));
-    setExtraPerPeriodFrom(scenario.extraPerPeriodFrom ?? "");
+    setRecurringExtras(
+      resolveRecurringExtras(scenario).map((extra, i) => ({
+        id: `saved-extra-${i}`,
+        amount: extra.amount,
+        from: extra.from ?? "",
+        until: extra.until ?? "",
+      })),
+    );
     setOneTimePrepayments(
       (scenario.oneTimePrepayments ?? []).map((p, i) => ({
         id: `saved-${i}`,
@@ -397,12 +441,11 @@ export function LoanScenariosTab({
     setPrepaymentEffect(scenario.prepaymentEffect ?? "reduce_term");
   };
 
-  const maxExtraPayment = Math.max(
-    100,
-    Math.min(loan.scheduledPayment * 3, 5000),
-  );
+  const activeRecurringExtras = toRecurringExtras(recurringExtras);
   const hasChanges =
-    extraPayment > 0 || oneTimePrepayments.length > 0 || newRate !== undefined;
+    activeRecurringExtras.length > 0 ||
+    oneTimePrepayments.length > 0 ||
+    newRate !== undefined;
 
   return (
     <div className="space-y-6">
@@ -419,40 +462,104 @@ export function LoanScenariosTab({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Additional Principal Slider */}
+          {/* Recurring extra payments */}
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <Label>Additional Principal ({frequencyLabel})</Label>
-              <span className="text-2xl font-bold text-green-600">
-                {formatCurrency(extraPayment, loan.currency)}
-              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleAddRecurringExtra}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add recurring extra
+              </Button>
             </div>
-            <Slider
-              value={[extraPayment]}
-              onValueChange={(v: number[]) => setExtraPayment(v[0])}
-              max={maxExtraPayment}
-              step={25}
-              className="mb-2"
-            />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{formatCurrency(0, loan.currency)}</span>
-              <span>{formatCurrency(maxExtraPayment, loan.currency)}</span>
-            </div>
-            {extraPayment > 0 && (
-              <div className="mt-3 flex items-center gap-2">
-                <Label htmlFor="extra-from" className="text-sm">
-                  Starting from
-                </Label>
-                <Input
-                  id="extra-from"
-                  type="date"
-                  value={extraPerPeriodFrom}
-                  onChange={(e) => setExtraPerPeriodFrom(e.target.value)}
-                  className="w-auto"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {extraPerPeriodFrom ? "" : "Blank: from the next payment"}
-                </span>
+            {recurringExtras.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No recurring extras. Each one is paid with every{" "}
+                {frequencyLabel.toLowerCase()} payment in its date range; the
+                ones active together add up.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {recurringExtras.map((row) => (
+                  <div
+                    key={row.id}
+                    className="flex flex-wrap items-end gap-2 p-2 rounded-lg bg-muted"
+                  >
+                    <div className="relative w-36">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                        {loan.currency}
+                      </span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="25"
+                        aria-label="Amount per payment"
+                        value={row.amount || ""}
+                        placeholder="Amount"
+                        onChange={(e) =>
+                          handleUpdateRecurringExtra(row.id, {
+                            amount: Math.max(0, parseFloat(e.target.value) || 0),
+                          })
+                        }
+                        className="pl-12"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor={`${row.id}-from`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        From
+                      </Label>
+                      <Input
+                        id={`${row.id}-from`}
+                        type="date"
+                        value={row.from}
+                        onChange={(e) =>
+                          handleUpdateRecurringExtra(row.id, {
+                            from: e.target.value,
+                          })
+                        }
+                        className="w-auto"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor={`${row.id}-until`}
+                        className="text-xs text-muted-foreground"
+                      >
+                        Until
+                      </Label>
+                      <Input
+                        id={`${row.id}-until`}
+                        type="date"
+                        value={row.until}
+                        onChange={(e) =>
+                          handleUpdateRecurringExtra(row.id, {
+                            until: e.target.value,
+                          })
+                        }
+                        className="w-auto"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label="Remove recurring extra"
+                      onClick={() => handleRemoveRecurringExtra(row.id)}
+                    >
+                      <X className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground">
+                  Blank dates: from the next payment, to the end of the loan.
+                </p>
               </div>
             )}
           </div>
@@ -998,19 +1105,16 @@ export function LoanScenariosTab({
                   <CardContent className="pt-6">
                     <h4 className="font-semibold mb-4">{scenario.name}</h4>
                     <div className="space-y-2 text-sm">
-                      {scenarioExtraPerPeriod(scenario) > 0 && (
-                        <div className="flex items-center gap-2">
+                      {resolveRecurringExtras(scenario).map((extra, i) => (
+                        <div key={i} className="flex items-center gap-2">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            +
-                            {formatCurrency(
-                              scenarioExtraPerPeriod(scenario),
-                              loan.currency,
-                            )}{" "}
-                            per {frequencyLabel.toLowerCase()} payment
+                            +{formatCurrency(extra.amount, loan.currency)} per{" "}
+                            {frequencyLabel.toLowerCase()} payment
+                            {recurringExtraRange(extra)}
                           </span>
                         </div>
-                      )}
+                      ))}
                       {(scenario.oneTimePrepayments?.length ?? 0) > 0 && (
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -1084,7 +1188,7 @@ export function LoanScenariosTab({
               <Label htmlFor="scenario-name">Scenario Name</Label>
               <Input
                 id="scenario-name"
-                placeholder={`e.g., +${formatCurrency(extraPayment, loan.currency)} ${frequencyLabel.toLowerCase()}`}
+                placeholder={`e.g., +${formatCurrency(activeRecurringExtras[0]?.amount ?? 0, loan.currency)} ${frequencyLabel.toLowerCase()}`}
                 value={scenarioName}
                 onChange={(e) => setScenarioName(e.target.value)}
               />
@@ -1094,9 +1198,17 @@ export function LoanScenariosTab({
               <h4 className="font-medium mb-2">Scenario Summary</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  Additional Principal ({frequencyLabel}):
+                  Recurring extras ({frequencyLabel}):
                 </span>
-                <span>{formatCurrency(extraPayment, loan.currency)}</span>
+                <span>
+                  {activeRecurringExtras.length > 0
+                    ? activeRecurringExtras
+                        .map((extra) =>
+                          formatCurrency(extra.amount, loan.currency),
+                        )
+                        .join(" + ")
+                    : formatCurrency(0, loan.currency)}
+                </span>
                 {oneTimePrepayments.length > 0 && (
                   <>
                     <span className="text-muted-foreground">Prepayments:</span>

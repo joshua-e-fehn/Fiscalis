@@ -225,7 +225,11 @@ export interface PerformanceMetrics {
   insufficientHistory: boolean;
   /** Timestamp of the first point in the series, null without points */
   firstPointTimestamp: number | null;
-  /** Some held assets had no price series and are missing from the values */
+  /**
+   * Some values are incomplete: held assets without a price series, or the
+   * start or end value rests on a snapshot taken after a provider sync
+   * partly failed
+   */
   partial: boolean;
 
   // Time context
@@ -310,6 +314,8 @@ export interface SnapshotData {
   totalCoveredValue?: number;
   categoryBreakdown?: SnapshotCategoryBreakdown[];
   source?: string;
+  /** Taken after a provider sync partly failed: some values are stale */
+  partial?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -356,8 +362,10 @@ export interface HoldingData {
   costPerUnit?: number | null;
   /**
    * This holding's signed change to its item's cost pool, when it is a
-   * ledger lot: known EUR cost plus units of unknown cost, which the cost
-   * line takes at their value. Overrides costPerUnit on the cost line, so
+   * ledger lot: known cost (in the series' currency, see metalsLedger
+   * `ledgerHoldings`) plus units of unknown cost, which the cost line takes
+   * at their value. Undefined on a ledger lot whose cost cannot be
+   * converted: the lot is then at its value, never in another currency. Overrides costPerUnit on the cost line, so
    * a sale from a pool mixing known and unknown costs removes its share of
    * each and a sold-out item leaves no cost behind.
    */

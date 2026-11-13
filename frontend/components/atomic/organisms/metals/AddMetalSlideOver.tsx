@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { customItemPremiums } from "@/convex/lib/metalPremiums";
+import { resolvePremiums } from "@/../services/finance/metals";
 
 /** Parse a percent field ("2.5" → 0.025); empty/invalid → fallback (decimal). */
 function percentOrDefault(value: string, fallback: number): number {
@@ -134,6 +135,16 @@ export function AddMetalSlideOver({
     if (!selectedCatalogItem || !catalog) return null;
     return catalog.find((item) => item._id === selectedCatalogItem);
   }, [selectedCatalogItem, catalog]);
+  // The catalog defaults the server applies (vault.addVaultItemFromCatalog)
+  const selectedPremiums =
+    selectedItem &&
+    resolvePremiums({
+      buy: [
+        selectedItem.defaultBuyPremium,
+        (selectedItem as { defaultPremium?: number }).defaultPremium,
+      ],
+      sell: [selectedItem.defaultSellPremium],
+    });
 
   // Reset form
   const resetForm = () => {
@@ -317,14 +328,10 @@ export function AddMetalSlideOver({
                 <div className="font-medium">{selectedItem.name}</div>
                 <div className="text-sm text-muted-foreground">
                   {selectedItem.weightGrams}g · {selectedItem.purity}‰ · Buy +
-                  {(
-                    (selectedItem.defaultBuyPremium ??
-                      (selectedItem as any).defaultPremium ??
-                      0.03) * 100
-                  ).toFixed(1)}
+                  {(selectedPremiums!.buyPremium * 100).toFixed(1)}
                   % / Sell{" "}
-                  {(selectedItem.defaultSellPremium ?? 0) >= 0 ? "+" : ""}
-                  {((selectedItem.defaultSellPremium ?? 0) * 100).toFixed(1)}%
+                  {selectedPremiums!.sellPremium >= 0 ? "+" : ""}
+                  {(selectedPremiums!.sellPremium * 100).toFixed(1)}%
                 </div>
               </div>
             )}

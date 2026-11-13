@@ -12,6 +12,7 @@ import {
   summarizeHoldings,
   type HoldingValuation,
 } from "../portfolio/categorySummary";
+import type { ItemLedger, ToBaseAmount } from "./metalsLedger";
 
 // ============================================
 // Units
@@ -109,6 +110,50 @@ export function calculatePriceChange(
     absolute,
     percentage: previousPrice > 0 ? (absolute / previousPrice) * 100 : 0,
   };
+}
+
+// ============================================
+// Price history with gaps
+// ============================================
+
+/**
+ * A recorded close. The price-history API reports a missing close as null
+ * or 0; either is a gap, never a price.
+ */
+export function isRecordedClose(
+  price: number | null | undefined,
+): price is number {
+  return price !== null && price !== undefined && price > 0;
+}
+
+/**
+ * Change from the first to the last recorded close of a price history,
+ * skipping gaps at either end. null when fewer than two closes are recorded.
+ */
+export function recordedRangeChange(
+  history: readonly { price: number | null }[],
+): PriceChange | null {
+  const recorded = history.filter((p) => isRecordedClose(p.price));
+  if (recorded.length < 2) return null;
+  return calculatePriceChange(
+    recorded[recorded.length - 1].price!,
+    recorded[0].price!,
+  );
+}
+
+/**
+ * Each close as a percent change from the first recorded close, for
+ * comparing metals on one axis. Gaps stay null so the line breaks there.
+ */
+export function percentFromFirstClose(
+  history: readonly { price: number | null }[],
+): (number | null)[] {
+  const start = history.find((p) => isRecordedClose(p.price))?.price;
+  return history.map((p) =>
+    isRecordedClose(start) && isRecordedClose(p.price)
+      ? calculatePriceChange(p.price, start).percentage
+      : null,
+  );
 }
 
 // ============================================
@@ -218,10 +263,13 @@ export function convertAtSpotRates(
   if (source === target) return amount;
   const perEur = (currency: string): number | null => {
     const rate =
-      currency === "EUR" ? 1
-      : currency === "USD" ? rates?.eurToUsd
-      : currency === "CHF" ? rates?.eurToChf
-      : null;
+      currency === "EUR"
+        ? 1
+        : currency === "USD"
+          ? rates?.eurToUsd
+          : currency === "CHF"
+            ? rates?.eurToChf
+            : null;
     return rate != null && Number.isFinite(rate) && rate > 0 ? rate : null;
   };
   const sourceRate = perEur(source);
@@ -241,19 +289,34 @@ export interface MetalItemInput {
   purchasePricePerUnit?: number;
 }
 
+/** A vault item's value and cost, in the currency of the spot price. */
+export interface VaultItemValue {
+  /** At spot, else at cost; null with neither (unknown, never 0) */
+  value: number | null;
+  /** Null when the item has no purchase price */
+  cost: number | null;
+  /** Valued at a fresh spot price */
+  pricedAtSpot: boolean;
+}
+
 /**
  * Liquidation value of a vault item at spot:
  * `calculateSellPrice(spot, fineWeightGrams, sellPremium ?? 0, quantity)`.
  *
  * `cost` is null when the item has no purchase price. Without a fresh spot
- * price the item is valued at its cost (0 when unknown), so a price-feed
- * outage never silently zeroes a holding that has a cost.
+ * price the item is valued at its cost, flagged `pricedAtSpot: false`, so a
+ * price-feed outage never silently zeroes a holding that has a cost. This
+ * fallback is the shared policy of the server net worth, the snapshots and
+ * the vault pages (M-C6): a null there would drop the vault from net worth
+ * for the length of an outage. Only an item with neither a fresh spot nor a
+ * cost has no value (`value: null`, unknown rather than 0); totals count it
+ * as 0 and say how many such items they left out (`unvaluedCount`).
  */
 export function valueVaultItem(
   item: MetalItemInput,
   spot: Pick<SpotPrice, "eurPerOunce" | "sourceTimestamp"> | undefined,
   now: number,
-): { value: number; cost: number | null; pricedAtSpot: boolean } {
+): VaultItemValue {
   const cost =
     item.purchasePricePerUnit != null
       ? item.purchasePricePerUnit * item.quantity
@@ -264,7 +327,7 @@ export function valueVaultItem(
     now,
   );
   if (perOunce === null) {
-    return { value: cost ?? 0, cost, pricedAtSpot: false };
+    return { value: cost, cost, pricedAtSpot: false };
   }
   return {
     value: calculateSellPrice(
@@ -278,13 +341,54 @@ export function valueVaultItem(
   };
 }
 
+/** A stored vault item: its cached quantity and cost (see metalsLedger itemProjection). */
+export interface VaultItemRecord {
+  fineWeightGrams: number;
+  quantity: number;
+  sellPremium?: number;
+  purchasePricePerUnit?: number;
+  /** Currency of purchasePricePerUnit; EUR when absent */
+  purchaseCurrency?: string;
+}
+
+/**
+ * The one EUR valuation of a stored vault item at the spot mirror, used by
+ * the server net worth (lib/netWorth.ts) and the vault queries
+ * (vault.getUserVaultItems). Quantity and average cost come from the item's
+ * replayed ledger (EUR) when given, else from its cached fields, whose cost
+ * is converted to EUR (unknown without a rate).
+ */
+export function vaultItemValuation(
+  item: VaultItemRecord,
+  ledger: Pick<ItemLedger, "quantity" | "averageCost"> | null | undefined,
+  spot: Pick<SpotPrice, "eurPerOunce" | "sourceTimestamp"> | undefined,
+  now: number,
+  toBaseAmount: ToBaseAmount,
+): VaultItemValue {
+  const unitCost = ledger
+    ? ledger.averageCost
+    : item.purchasePricePerUnit == null
+      ? null
+      : toBaseAmount(item.purchasePricePerUnit, item.purchaseCurrency ?? "EUR");
+  return valueVaultItem(
+    {
+      fineWeightGrams: item.fineWeightGrams,
+      quantity: ledger ? ledger.quantity : item.quantity,
+      sellPremium: item.sellPremium,
+      purchasePricePerUnit: unitCost ?? undefined,
+    },
+    spot,
+    now,
+  );
+}
+
 export interface MetalItemValuation {
   /** Per-unit price to buy one item today (buy premium); 0 without spot. */
   currentBuyPrice: number;
   /** Per-unit price selling one item today (sell premium); 0 without spot. */
   currentSellPrice: number;
-  /** Liquidation value of the whole position (see valueVaultItem). */
-  marketValue: number;
+  /** Liquidation value of the whole position (see valueVaultItem); null unknown */
+  marketValue: number | null;
   meltValue: number;
   buyPremiumValue: number;
   sellPremiumValue: number;
@@ -295,32 +399,45 @@ export interface MetalItemValuation {
   pricedAtSpot: boolean;
 }
 
+/** A server valuation (vaultItemValuation, EUR) with the spot it used. */
+export interface BaseVaultValuation extends VaultItemValue {
+  /** The spot mirror row of the item's metal; null without one */
+  spot: { eurPerOunce: number; sourceTimestamp: number } | null;
+}
+
 /**
- * Full dashboard valuation of one vault item. `spotPerOunce` is in the
- * display currency; it goes through the same staleness policy as the server
- * (`freshSpotPerOunce`) and the market value is `valueVaultItem`'s.
+ * Full dashboard valuation of one vault item from its server valuation
+ * (`vault.getUserVaultItems`, EUR at the spot mirror): value and cost are
+ * the server's, converted to the display currency at the rates the spot
+ * prices are served with (`convertAtSpotRates`); the per-unit and melt
+ * figures are taken at the same spot. The client never revalues an item
+ * from a price feed of its own. Without a rate for the display currency the
+ * value is unknown (null) and the item is not counted as priced at spot.
  */
 export function valueMetalItem(
-  item: MetalItemInput & { buyPremium: number; sellPremium: number },
-  spot: { pricePerOunce: number | null; sourceTimestamp: number | null },
-  now: number,
+  item: {
+    fineWeightGrams: number;
+    quantity: number;
+    buyPremium: number;
+    sellPremium: number;
+  },
+  base: BaseVaultValuation,
+  currency: string,
+  rates: SpotExchangeRates | null | undefined,
 ): MetalItemValuation {
-  const perOunce = freshSpotPerOunce(
-    spot.pricePerOunce,
-    spot.sourceTimestamp,
-    now,
-  );
-  const { value, cost, pricedAtSpot } = valueVaultItem(
-    item,
-    perOunce === null
-      ? undefined
-      : { eurPerOunce: perOunce, sourceTimestamp: now },
-    now,
-  );
+  const toDisplay = (eur: number | null) =>
+    eur === null ? null : convertAtSpotRates(eur, "EUR", currency, rates);
+  const value = toDisplay(base.value);
+  const cost = toDisplay(base.cost);
+  const perOunce =
+    base.pricedAtSpot && base.spot ? toDisplay(base.spot.eurPerOunce) : null;
+  const pricedAtSpot = perOunce !== null && value !== null;
   const at = (fn: (spot: number) => number) =>
     perOunce === null ? 0 : fn(perOunce);
   const change =
-    pricedAtSpot && cost !== null ? calculatePriceChange(value, cost) : null;
+    pricedAtSpot && value !== null && cost !== null
+      ? calculatePriceChange(value, cost)
+      : null;
 
   return {
     currentBuyPrice: at((s) =>
@@ -364,7 +481,8 @@ export interface ValuedMetalItem {
   metalType: string;
   fineWeightGrams: number;
   quantity: number;
-  marketValue: number;
+  /** Null when neither a fresh spot nor a cost values it (valueVaultItem) */
+  marketValue: number | null;
   meltValue: number;
   totalCost: number | null;
   /** Valued at a fresh spot price (else at cost, see valueVaultItem) */
@@ -416,6 +534,8 @@ export interface MetalsPortfolioSummary {
   coverage: number | null;
   /** Every item is valued at a fresh spot price (none fell back to cost) */
   pricedAtSpot: boolean;
+  /** Items with neither a fresh spot nor a cost: counted as 0 in the totals */
+  unvaluedCount: number;
   /** Percent of totalMarketValue per metal */
   allocation: Record<SpotMetal, number>;
 }
@@ -424,11 +544,12 @@ export interface MetalsPortfolioSummary {
  * An item as a holding of the coverage policy. An item without a fresh spot
  * price is valued at its cost (valueVaultItem), so its P/L is unknown, not
  * break-even: like an item without a purchase price it counts in the value
- * but not in the cost and P/L, and lowers the coverage.
+ * but not in the cost and P/L, and lowers the coverage. An item with no
+ * value at all (neither spot nor cost) counts 0.
  */
 function metalHolding(i: ValuedMetalItem): HoldingValuation {
   return {
-    value: i.marketValue,
+    value: i.marketValue ?? 0,
     costBasis: i.pricedAtSpot === false ? null : i.totalCost,
   };
 }
@@ -476,7 +597,8 @@ export function summarizeMetalItems(
   const totalProfitLoss =
     unrealized !== null && realized !== null ? unrealized + realized : null;
   const invested =
-    (total.costBasis ?? 0) + items.reduce((sum, i) => sum + (i.soldCost ?? 0), 0);
+    (total.costBasis ?? 0) +
+    items.reduce((sum, i) => sum + (i.soldCost ?? 0), 0);
 
   return {
     gold,
@@ -497,6 +619,7 @@ export function summarizeMetalItems(
         : null,
     coverage: total.coverage,
     pricedAtSpot: items.every((i) => i.pricedAtSpot !== false),
+    unvaluedCount: items.filter((i) => i.marketValue === null).length,
     allocation: {
       gold: share(gold.marketValue),
       silver: share(silver.marketValue),

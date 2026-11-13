@@ -1,4 +1,4 @@
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
 import {
@@ -8,8 +8,14 @@ import {
   MetalsType,
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
-import { TimeRange, TimeInterval } from "@/../services/finance/financeService";
-import { interpolateMissingData } from "@/lib/utils/interpolate";
+import {
+  type TimeRange,
+  type PriceHistoryWindow,
+  getTimeRangeStartTimestamp,
+  priceHistoryWindow,
+  sliceFrom,
+} from "@/../services/finance/financeService";
+import type { PricePoint } from "@/lib/performance";
 
 import * as metalsApi from "@/lib/api/metals";
 
@@ -28,20 +34,17 @@ export const metalKeys = {
     timeRange: TimeRange,
     currency: MetalCurrency,
   ) => [...metalKeys.prices(metal), "historical", timeRange, currency] as const,
-  range: (
+  history: (
     metal: MetalType,
-    startDate: string,
-    endDate: string,
-    aggregationInterval: TimeInterval,
     currency: MetalCurrency,
+    window: PriceHistoryWindow,
   ) =>
     [
       ...metalKeys.prices(metal),
-      "range",
-      startDate,
-      endDate,
-      aggregationInterval,
+      "history",
       currency,
+      window.interval,
+      window.from,
     ] as const,
 };
 
@@ -57,8 +60,9 @@ export const metalsPriceKeys = {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Hook to fetch historical metal prices based on a predefined time range
- * Automatically interpolates missing/zero data points
+ * Hook to fetch historical metal prices based on a predefined time range,
+ * for the price charts. Missing closes stay gaps (null or 0); PriceChart
+ * breaks the line there.
  */
 export function useMetalPrices(
   metal: MetalType,
@@ -67,15 +71,8 @@ export function useMetalPrices(
 ) {
   return useQuery<MetalChartData[]>({
     queryKey: metalKeys.historical(metal, timeRange, currency),
-    queryFn: async () => {
-      const data = await metalsApi.getMetalPricesHistorical(
-        metal,
-        timeRange,
-        currency,
-      );
-      // Interpolate missing/zero values
-      return interpolateMissingData(data);
-    },
+    queryFn: () =>
+      metalsApi.getMetalPricesHistorical(metal, timeRange, currency),
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -98,88 +95,46 @@ export function useMetalPriceLatest(metal: MetalType, currency: MetalCurrency) {
 }
 
 /**
- * Hook to fetch metal prices for a custom date range with specified aggregation
- * Automatically interpolates missing/zero data points
+ * A metal's closes for a range, as price points (no gap filling: the
+ * performance strategies bridge gaps themselves).
+ *
+ * Every range with the same interval shares one fetch per metal and
+ * currency (priceHistoryWindow: the widest of those ranges, stable for the
+ * day), and each caller slices it to its own range start less `lookbackMs`.
  */
-export function useMetalPricesRange(
+export function useMetalPriceHistory(
   metal: MetalType,
-  startDate: Date,
-  endDate: Date,
-  aggregationInterval: TimeInterval,
+  timeRange: TimeRange,
   currency: MetalCurrency,
-  enabled = true,
+  options: { lookbackMs?: number; enabled?: boolean } = {},
 ) {
-  // Format dates for query key to ensure stable keys
-  const formattedStartDate = startDate.toISOString().split("T")[0];
-  const formattedEndDate = endDate.toISOString().split("T")[0];
+  const { lookbackMs = 0, enabled = true } = options;
+  const window = priceHistoryWindow(timeRange);
 
-  return useQuery<MetalChartData[]>({
-    queryKey: metalKeys.range(
-      metal,
-      formattedStartDate,
-      formattedEndDate,
-      aggregationInterval,
-      currency,
-    ),
-    queryFn: async () => {
+  return useQuery({
+    queryKey: metalKeys.history(metal, currency, window),
+    queryFn: async (): Promise<PricePoint[]> => {
       const data = await metalsApi.getMetalPricesRange(
         metal,
-        startDate,
-        endDate,
-        aggregationInterval,
+        new Date(window.from),
+        new Date(),
+        window.interval,
         currency,
       );
-      // Interpolate missing/zero values
-      return interpolateMissingData(data);
+      // A missing close comes back as null or 0: it is a gap, not a price
+      return data.flatMap((p) =>
+        p.date !== null && p.price !== null && p.price > 0
+          ? [{ timestamp: new Date(p.date).getTime(), price: p.price }]
+          : [],
+      );
     },
+    select: (points) =>
+      sliceFrom(points, getTimeRangeStartTimestamp(timeRange) - lookbackMs),
     staleTime: 1000 * 60 * 15, // 15 minutes (historical data changes less frequently)
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
-    enabled, // Allow disabling the query when needed
+    enabled,
   });
-}
-
-/**
- * Helper hook to fetch both latest price and historical data for a metal
- */
-export function useMetalComplete(
-  metal: MetalType,
-  timeRange: TimeRange = "Day",
-  currency: MetalCurrency = "usd",
-) {
-  const latestPrice = useMetalPriceLatest(metal, currency);
-  const historicalPrices = useMetalPrices(metal, timeRange, currency);
-
-  return {
-    latest: latestPrice.data,
-    historical: historicalPrices.data,
-    isLoading: latestPrice.isLoading || historicalPrices.isLoading,
-    isError: latestPrice.isError || historicalPrices.isError,
-    error: latestPrice.error || historicalPrices.error,
-    refetch: () => {
-      latestPrice.refetch();
-      historicalPrices.refetch();
-    },
-  };
-}
-
-/**
- * Hook to get the latest prices for multiple metals at once
- */
-export function useMultipleMetalPrices(
-  metals: MetalType[],
-  currency: MetalCurrency = "usd",
-) {
-  // Create individual queries for each metal
-  const queries = metals.map((metal) => ({
-    queryKey: metalKeys.latest(metal, currency),
-    queryFn: () => metalsApi.getMetalPriceLatest(metal, currency),
-    staleTime: 1000 * 60, // 1 minute
-    refetchInterval: 1000 * 60, // Refresh every minute
-  }));
-
-  // Return the results in an object keyed by metal type
-  return useQueries({ queries });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -284,17 +239,4 @@ export function getSpotPrice(
   const price = metalPrices[currency];
 
   return price ?? null;
-}
-
-/**
- * Get gold purity price per gram for specified purity and currency
- */
-export function getGoldPurityPrice(
-  prices: MetalsPrices | undefined,
-  purity: 333 | 585 | 750 | 833 | 900 | 916 | 999,
-  currency: MetalsCurrency,
-): number | null {
-  if (!prices?.goldExtended) return null;
-
-  return prices.goldExtended.purity[currency][purity] ?? null;
 }

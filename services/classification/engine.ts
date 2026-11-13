@@ -13,9 +13,9 @@ import type {
   BitpandaPositionContext,
   InvestmentCategory,
   InvestmentSubcategory,
-} from "../../../lib/types/classification";
+} from "../../frontend/lib/types/classification";
 
-import { BASE_CURRENCY } from "./currency";
+import { BASE_CURRENCY } from "../finance/currency";
 
 import { CLASSIFICATION_RULES } from "./rules";
 
@@ -414,62 +414,4 @@ export function getClassificationFields(result: ClassificationResult): {
     classificationSource: result.source,
     classificationRule: result.ruleId,
   };
-}
-
-/**
- * Re-classify all items of a given type (for migrations/bulk updates)
- */
-export function reclassifyPlaidAccounts(
-  accounts: Array<{
-    type: string;
-    subtype: string | null;
-    name: string;
-    userCategoryOverride?: string | null;
-    userSubcategoryOverride?: string | null;
-  }>,
-): Array<ClassificationResult> {
-  return accounts.map((account) => {
-    const result = classifyPlaidAccount({
-      type: account.type,
-      subtype: account.subtype,
-      name: account.name,
-    });
-
-    return applyUserOverride(result, {
-      category: account.userCategoryOverride as InvestmentCategory | null,
-      subcategory:
-        account.userSubcategoryOverride as InvestmentSubcategory | null,
-    });
-  });
-}
-
-/**
- * Re-classify all broker positions (for migrations/bulk updates)
- */
-export function reclassifyBrokerPositions(
-  positions: Array<{
-    assetType: string;
-    symbol: string;
-    name: string | null;
-    quantity: number;
-    marketValue: number | null;
-    userCategoryOverride?: string | null;
-    userSubcategoryOverride?: string | null;
-  }>,
-): Array<ClassificationResult> {
-  return positions.map((position) => {
-    const result = classifySnaptradePosition({
-      assetType: position.assetType,
-      symbol: position.symbol,
-      name: position.name,
-      quantity: position.quantity,
-      marketValue: position.marketValue,
-    });
-
-    return applyUserOverride(result, {
-      category: position.userCategoryOverride as InvestmentCategory | null,
-      subcategory:
-        position.userSubcategoryOverride as InvestmentSubcategory | null,
-    });
-  });
 }

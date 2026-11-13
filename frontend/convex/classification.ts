@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 import {
   classifyPlaidAccount,
   classifySnaptradePosition,
-} from "./lib/classification";
+} from "../../services/classification";
 import {
   parseClassificationOverride,
   type InvestmentCategory,

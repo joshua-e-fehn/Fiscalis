@@ -66,6 +66,22 @@ export function useCryptoPositions(): CategoryPosition[] | undefined {
   return useCryptoData()?.positions;
 }
 
+/**
+ * A Bitpanda position whose price did not come from the latest sync: stale
+ * (an earlier sync's price, as of `asOf`) or missing (never priced, so it
+ * has no value). Null for a live price and for broker positions.
+ */
+export function positionPriceIssue(
+  position: CategoryPosition,
+): { status: "stale"; asOf?: number } | { status: "missing" } | null {
+  if (position.provider !== "bitpanda") return null;
+  if (position.priceStatus === "stale") {
+    return { status: "stale", asOf: position.priceAsOf };
+  }
+  if (position.priceStatus === "missing") return { status: "missing" };
+  return null;
+}
+
 /** Whether the user holds any crypto. */
 export function useHasCryptoHoldings(): boolean {
   const data = useCryptoData();

@@ -21,7 +21,10 @@ import { MetalChartData } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { TimeRange } from "@/../services/finance/financeService";
 import { formatDate } from "@/lib/utils/date";
-import { hasInterpolatedData } from "@/lib/utils/interpolate";
+import {
+  isRecordedClose,
+  percentFromFirstClose,
+} from "@/../services/finance/metals";
 
 interface PriceChartProps {
   chartData: MetalChartData[];
@@ -31,25 +34,10 @@ interface PriceChartProps {
   dataKey: string;
 }
 
-// Custom dot component to show interpolated points differently
-const CustomDot = (props: any) => {
-  const { cx, cy, payload } = props;
-  if (!payload?.isInterpolated) return null;
+/** A missing close (null, or 0 from the API) is a gap, never a price */
+const hasPrice = (d: MetalChartData) => isRecordedClose(d.price);
 
-  return (
-    <circle
-      cx={cx}
-      cy={cy}
-      r={4}
-      fill="hsl(var(--muted-foreground))"
-      stroke="hsl(var(--background))"
-      strokeWidth={2}
-      opacity={0.7}
-    />
-  );
-};
-
-// Custom tooltip content that shows interpolation indicator
+// Custom tooltip content; a gap says so instead of showing a price
 const CustomTooltipContent = ({
   active,
   payload,
@@ -66,7 +54,6 @@ const CustomTooltipContent = ({
   if (!active || !payload || !payload[0]) return null;
 
   const data = payload[0].payload as MetalChartData;
-  const isInterpolated = data?.isInterpolated;
 
   return (
     <div className="bg-background border rounded-lg p-3 shadow-lg">
@@ -75,16 +62,17 @@ const CustomTooltipContent = ({
           ? formatDate(new Date(label), "short")
           : formatDate(new Date(label), "date")}
       </p>
-      <p className="text-sm font-medium">
-        {currency === "eur" ? "€" : "$"}
-        {data.price?.toLocaleString("de-CH", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })}
-      </p>
-      {isInterpolated && (
-        <p className="text-xs text-muted-foreground mt-1 italic">
-          ⚠️ Interpolated (missing data)
+      {hasPrice(data) ? (
+        <p className="text-sm font-medium">
+          {currency === "eur" ? "€" : "$"}
+          {data.price!.toLocaleString("de-CH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">
+          No price recorded
         </p>
       )}
     </div>
@@ -98,99 +86,92 @@ export const PriceChart = memo(function PriceChart({
   chartConfig,
   dataKey,
 }: PriceChartProps) {
-  // Calculate if price is up or down
-  const isPositive = useMemo(() => {
-    if (!chartData || chartData.length < 2) return true;
-    const firstPrice =
-      chartData.find((d) => d?.price && d.price > 0)?.price ?? 0;
-    const lastPrice = chartData[chartData.length - 1]?.price ?? 0;
-    return lastPrice >= firstPrice;
-  }, [chartData]);
-
-  const chartColor = isPositive ? "#22c55e" : "#ef4444";
-  const hasInterpolation = useMemo(
-    () => hasInterpolatedData(chartData || []),
+  // The raw closes, gaps as null so the line breaks there (no filling)
+  const plotted = useMemo(
+    () =>
+      (chartData ?? []).map((d) => (hasPrice(d) ? d : { ...d, price: null })),
     [chartData],
   );
+  const hasGaps = plotted.some((d) => d.price === null);
+
+  // Calculate if price is up or down, between the first and last prices
+  const isPositive = useMemo(() => {
+    const prices = plotted.filter(hasPrice);
+    if (prices.length < 2) return true;
+    return prices[prices.length - 1].price! >= prices[0].price!;
+  }, [plotted]);
+
+  const chartColor = isPositive ? "#22c55e" : "#ef4444";
 
   return (
-    <ChartContainer config={chartConfig}>
-      <AreaChart
-        accessibilityLayer
-        width={800}
-        height={250}
-        data={chartData}
-        margin={{ left: 12, right: 12 }}
-        className="p-2"
-      >
-        <defs>
-          <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
-            <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
-          </linearGradient>
-          {/* Gradient for interpolated sections - more muted */}
-          <linearGradient
-            id="priceGradientInterpolated"
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="1"
-          >
-            <stop
-              offset="5%"
-              stopColor="hsl(var(--muted-foreground))"
-              stopOpacity={0.15}
-            />
-            <stop
-              offset="95%"
-              stopColor="hsl(var(--muted-foreground))"
-              stopOpacity={0}
-            />
-          </linearGradient>
-        </defs>
-        <CartesianGrid
-          vertical={false}
-          strokeDasharray="3 3"
-          stroke="hsl(var(--border))"
-        />
-        <XAxis
-          dataKey={dataKey}
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-          tickFormatter={(value) =>
-            timeRange === "Hour" || timeRange === "Day"
-              ? formatDate(new Date(value), "short")
-              : formatDate(new Date(value), "date")
-          }
-        />
-        <YAxis
-          domain={["auto", "auto"]}
-          axisLine={false}
-          tickLine={false}
-          tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-          tickFormatter={(value) =>
-            `${currency === "eur" ? "€" : "$"}${value.toFixed(2)}`
-          }
-        />
-        <ChartTooltip
-          cursor={false}
-          content={
-            <CustomTooltipContent timeRange={timeRange} currency={currency} />
-          }
-        />
-        <Area
-          dataKey="price"
-          type="linear"
-          fill="url(#priceGradient)"
-          fillOpacity={1}
-          stroke={chartColor}
-          strokeWidth={2}
-          dot={hasInterpolation ? <CustomDot /> : false}
-        />
-      </AreaChart>
-    </ChartContainer>
+    <div className="relative h-full">
+      {hasGaps && (
+        <p className="absolute right-3 top-0 z-10 text-xs text-muted-foreground">
+          Gaps: no price recorded
+        </p>
+      )}
+      <ChartContainer config={chartConfig}>
+        <AreaChart
+          accessibilityLayer
+          width={800}
+          height={250}
+          data={plotted}
+          margin={{ left: 12, right: 12 }}
+          className="p-2"
+        >
+          <defs>
+            <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={chartColor} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={chartColor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid
+            vertical={false}
+            strokeDasharray="3 3"
+            stroke="hsl(var(--border))"
+          />
+          <XAxis
+            dataKey={dataKey}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+            tickFormatter={(value) =>
+              timeRange === "Hour" || timeRange === "Day"
+                ? formatDate(new Date(value), "short")
+                : formatDate(new Date(value), "date")
+            }
+          />
+          <YAxis
+            domain={["auto", "auto"]}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+            tickFormatter={(value) =>
+              `${currency === "eur" ? "€" : "$"}${value.toFixed(2)}`
+            }
+          />
+          {/* Recharts drops null values from the payload by default; a gap
+              (price null) must reach the content to say no price was recorded */}
+          <ChartTooltip
+            cursor={false}
+            filterNull={false}
+            content={
+              <CustomTooltipContent timeRange={timeRange} currency={currency} />
+            }
+          />
+          <Area
+            dataKey="price"
+            type="linear"
+            fill="url(#priceGradient)"
+            fillOpacity={1}
+            stroke={chartColor}
+            strokeWidth={2}
+            dot={false}
+          />
+        </AreaChart>
+      </ChartContainer>
+    </div>
   );
 });
 
@@ -221,22 +202,22 @@ export const CompareChart = memo(function CompareChart({
 
     if (!baseDataset.data || baseDataset.data.length === 0) return [];
 
-    // Create normalized data points
+    // Each metal as % change from its first recorded close; a gap leaves
+    // the key unset so that line breaks, as in PriceChart
+    const normalized = datasets.map((dataset) => ({
+      metal: dataset.metal,
+      percents: percentFromFirstClose(dataset.data ?? []),
+    }));
+
     return baseDataset.data.map((point, index) => {
       const result: Record<string, any> = {
         date: point.date,
       };
 
-      for (const dataset of datasets) {
-        if (!dataset.data || dataset.data.length === 0) continue;
-
-        const startPrice = dataset.data[0]?.price;
-        const currentPoint = dataset.data[index];
-
-        if (startPrice && currentPoint?.price) {
-          const percentChange =
-            ((currentPoint.price - startPrice) / startPrice) * 100;
-          result[dataset.metal] = percentChange;
+      for (const { metal, percents } of normalized) {
+        const percentChange = percents[index];
+        if (percentChange !== null && percentChange !== undefined) {
+          result[metal] = percentChange;
         }
       }
 

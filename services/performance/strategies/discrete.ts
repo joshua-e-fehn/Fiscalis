@@ -60,6 +60,12 @@ interface SnapshotValue {
   costIncludesContinuous: boolean;
 }
 
+interface SeriesValue extends SnapshotValue {
+  flow: NetFlow | null;
+  /** The snapshot was taken after a provider sync partly failed */
+  partial: boolean;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Snapshot value extraction
 // ═══════════════════════════════════════════════════════════════
@@ -196,11 +202,18 @@ export function snapshotMetricValue(
   if (metric.kind === "totalAssets") {
     return without(s.totalAssets, assetsCostLine);
   }
-  // Net worth: the same P/L against the cost line less the debt
-  return without(
-    s.netWorth,
-    assetsCostLine === null ? null : assetsCostLine - s.totalLiabilities,
-  );
+  return without(s.netWorth, netWorthCostLine(assetsCostLine, s.totalLiabilities));
+}
+
+/**
+ * Net worth's cost line: the assets' cost line less the debt, so the P/L
+ * against it is the assets' P/L. Null when the assets' cost line is.
+ */
+export function netWorthCostLine(
+  assetsCostLine: number | null,
+  totalLiabilities: number,
+): number | null {
+  return assetsCostLine === null ? null : assetsCostLine - totalLiabilities;
 }
 
 /**
@@ -253,13 +266,14 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     input: DiscretePerformanceInput,
     context: CalculationContext,
   ): DataPointGenerationResult {
-    const values: (SnapshotValue & { flow: NetFlow | null })[] = [];
+    const values: SeriesValue[] = [];
     let prev: SnapshotData | undefined;
     for (const s of sortByTimestamp(input.snapshots ?? [])) {
       const v = snapshotMetricValue(s, input.metric, input.excludeSources);
       if (!v) continue;
       values.push({
         ...v,
+        partial: s.partial === true,
         flow: prev
           ? snapshotMetricFlow(prev, s, input.metric, input.excludeSources)
           : null,
@@ -287,6 +301,8 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
     const dataPoints: PerformanceDataPoint[] = [];
     let observed = 0;
     let interpolated = 0;
+    // Whether each point's value rests on a partial snapshot
+    const pointPartial: boolean[] = [];
     const lookup = this.lookupOptions(context);
 
     for (const ts of this.generateTimestampSeries(context)) {
@@ -298,13 +314,20 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       // one that does not: the two values measure different scopes.
       // ... nor toward a snapshot that received a flow
       const next = values[lastIndexAtOrBefore(values, ts) + 1];
-      const value =
+      const interpolatesToNext =
         found.kind === "interpolated" &&
         next !== undefined &&
-        (next.includesContinuous !== includesContinuous ||
-          (next.flow !== null && next.flow.amount !== 0))
+        next.includesContinuous === includesContinuous &&
+        (next.flow === null || next.flow.amount === 0);
+      const value =
+        found.kind === "interpolated" && !interpolatesToNext
           ? found.point.value
           : found.value;
+      // The next snapshot's partial status counts only when its value
+      // enters this point
+      pointPartial.push(
+        found.point.partial || (interpolatesToNext && next.partial === true),
+      );
       const point =
         found.kind === "observed"
           ? this.createSnapshotPoint(ts, value, costBasis)
@@ -323,6 +346,8 @@ export class DiscretePerformanceStrategy extends BasePerformanceStrategy<Discret
       actualDataPoints: observed,
       interpolatedDataPoints: interpolated,
       dataQuality: assessDataQuality(observed, context.expectedDataPoints),
+      // The measured figures (start and end) rest on a partial snapshot
+      partial: pointPartial[0] === true || pointPartial.at(-1) === true,
       actualSnapshotTimestamps: values
         .map((s) => s.timestamp)
         .filter((t) => t <= context.endTimestamp),

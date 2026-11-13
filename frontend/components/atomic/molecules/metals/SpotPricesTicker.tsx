@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import {
   MetalsType,
   MetalsCurrency,
@@ -101,12 +102,6 @@ export function SpotPricesTicker({
             ? getSpotPrice(prices, metal, currency)
             : null;
 
-          const formatCurrency = (value: number) =>
-            new Intl.NumberFormat("de-CH", {
-              style: "currency",
-              currency: currency.toUpperCase(),
-              minimumFractionDigits: 2,
-            }).format(value);
 
           return (
             <div
@@ -121,7 +116,7 @@ export function SpotPricesTicker({
                   <>
                     <AnimatedNumber
                       value={spotPrice}
-                      formatFn={formatCurrency}
+                      formatFn={(value) => formatCurrency(value, currency)}
                       className="text-base font-semibold"
                       duration={400}
                     />

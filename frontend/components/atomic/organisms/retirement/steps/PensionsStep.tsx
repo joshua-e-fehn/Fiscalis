@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { Switch } from "@/components/ui/shadcn/switch";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import {
 	DEFAULT_PENSION_DEDUCTION_RATE,
 	netPensionMonthly,
@@ -13,7 +14,7 @@ import {
 	validatePensionSources,
 	validateRetirementDeductions,
 } from "@/lib/types/retirement";
-import { formatCurrency } from "@/lib/utils/currency";
+import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
@@ -24,6 +25,7 @@ export function PensionsStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
+	const currency = useBaseCurrency();
 	const sources = data.pensionSources;
 	const deductionRate =
 		data.pensionDeductionRate ?? DEFAULT_PENSION_DEDUCTION_RATE;
@@ -82,7 +84,7 @@ export function PensionsStep({
 							<div className="w-36 space-y-1.5">
 								{i === 0 && (
 									<Label className="text-xs text-muted-foreground">
-										€ / month (today)
+										{currencySymbols[currency].trim()} / month (today)
 									</Label>
 								)}
 								<Input
@@ -183,12 +185,12 @@ export function PensionsStep({
 					Total pension income, net (today&apos;s money)
 					{netTotal !== total && (
 						<span className="block text-xs">
-							{formatCurrency(total, "eur")}/mo as entered
+							{formatCurrency(total, currency)}/mo as entered
 						</span>
 					)}
 				</span>
 				<span className="text-lg font-semibold">
-					{formatCurrency(netTotal, "eur")}/mo
+					{formatCurrency(netTotal, currency)}/mo
 				</span>
 			</div>
 		</RetirementStepShell>

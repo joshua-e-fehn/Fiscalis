@@ -8,13 +8,16 @@ import {
   netWorthApiBody,
   netWorthApiBreakdown,
   categoryFlowFromHoldings,
+  collapseIntradaySnapshots,
   holdingNetFlow,
   snapshotCategoryFlow,
+  providerSyncSnapshot,
   snapshotPartial,
   withoutSnapshotHoldings,
   HOLDING_CATEGORIES,
   placeHolding,
   positionOwed,
+  profitLossCostBase,
   toHoldingCategory,
   type NormalizedHolding,
   type SnapshotCategoryEntry,
@@ -457,6 +460,65 @@ describe("netWorthApiBody", () => {
   });
 });
 
+describe("a vault item valued at cost (no fresh spot)", () => {
+  const atCost = holding({
+    key: "vault:gold",
+    source: "vault",
+    category: "commodities",
+    subcategory: "metals",
+    valueBase: 4_000,
+    costBase: 4_000,
+    valuedAtCost: true,
+  });
+  const atSpot = holding({
+    source: "vault",
+    category: "commodities",
+    subcategory: "metals",
+    valueBase: 1_200,
+    costBase: 1_000,
+  });
+
+  it("has no P/L cost basis, unlike one priced at spot", () => {
+    expect(profitLossCostBase(atCost)).toBeNull();
+    expect(profitLossCostBase(atSpot)).toBe(1_000);
+  });
+
+  it("counts in the value but not in the P/L or its coverage", () => {
+    const c = aggregateNetWorth([atCost, atSpot]).byCategory.commodities;
+    expect(c.value).toBe(5_200);
+    expect(c.costBasis).toBe(1_000);
+    expect(c.coveredValue).toBe(1_200);
+    expect(c.profitLoss).toBe(200);
+  });
+
+  it("leaves a vault-only category's P/L unknown, not break-even", () => {
+    const a = aggregateNetWorth([atCost]);
+    expect(a.byCategory.commodities).toMatchObject({
+      value: 4_000,
+      costBasis: null,
+      coveredValue: 0,
+      profitLoss: null,
+    });
+    expect(a.unrealized.profitLoss).toBeNull();
+  });
+
+  it("keeps its cost out of the snapshot cost line but in its holding entry", () => {
+    const b = buildSnapshotBreakdown(aggregateNetWorth([atCost, atSpot]), [atCost, atSpot]);
+    const vault = b.categoryBreakdown
+      .find((c) => c.category === "commodities")!
+      .sources!.find((s) => s.source === "vault")!;
+    expect(vault).toMatchObject({ value: 5_200, costBasis: 1_000, coveredValue: 1_200 });
+    expect(b.totalCostBasis).toBe(1_000);
+    expect(b.totalCoveredValue).toBe(1_200);
+    // The flow still reads the cost, so the outage is not taken for a sale
+    expect(vault.holdings!.find((h) => h.key === "vault:gold")).toEqual({
+      key: "vault:gold",
+      value: 4_000,
+      cost: 4_000,
+    });
+  });
+});
+
 describe("holdingNetFlow", () => {
   const h = (value: number, cost?: number, native?: { amount: number; currency: string }) => ({
     key: "k",
@@ -635,6 +697,94 @@ describe("snapshot flows", () => {
     expect(categoryFlowFromHoldings(prev, cur)).toBeNull();
   });
 
+  describe("exact flows from trade logs", () => {
+    const writeExact = (
+      hs: NormalizedHolding[],
+      previous: SnapshotCategoryEntry[],
+      exact: Map<string, number>,
+    ) => buildSnapshotBreakdown(aggregateNetWorth(hs), hs, previous, exact).categoryBreakdown;
+    const coin = (value: number, cost: number) =>
+      holding({ key: "coin", source: "vault", category: "commodities", valueBase: value, costBase: cost });
+    const commodities = (b: SnapshotCategoryEntry[]) => b.find((e) => e.category === "commodities")!;
+
+    it("takes a sale's actual proceeds instead of the previous value", () => {
+      // Half of a coin holding worth 2 000 (cost 1 600) sold for 1 100
+      const previous = write([coin(2_000, 1_600)]);
+      expect(commodities(write([coin(1_050, 800)], previous)).netFlow).toBe(-1_000);
+      const cur = commodities(writeExact([coin(1_050, 800)], previous, new Map([["coin", -1_100]])));
+      expect(cur.netFlow).toBe(-1_100);
+      expect(cur).not.toHaveProperty("netFlowEstimated");
+      expect(cur.sources![0]).toMatchObject({ source: "vault", netFlow: -1_100 });
+    });
+
+    it("makes a traded holding without cost basis exact, others keep the proxy", () => {
+      const previous = write([position("aapl", 5_000, 4_000), position("bp-btc", 1_000, null)]);
+      const cur = equitiesOf(
+        writeExact(
+          [position("aapl", 5_600, 4_500), position("bp-btc", 1_450, null)],
+          previous,
+          new Map([["bp-btc", 400]]),
+        ),
+      )!;
+      // aapl: cost +500 (proxy); bp-btc: 400 bought (exact), 50 gained
+      expect(cur.netFlow).toBe(900);
+      expect(cur).not.toHaveProperty("netFlowEstimated");
+      // Without the trade log, bp-btc's flow is assumed 0 and flagged
+      const proxy = equitiesOf(
+        write([position("aapl", 5_600, 4_500), position("bp-btc", 1_450, null)], previous),
+      )!;
+      expect(proxy).toMatchObject({ netFlow: 500, netFlowEstimated: true });
+    });
+
+    it("counts a holding sold out at its proceeds and a new one at its value", () => {
+      const previous = write([position("aapl", 5_000, 4_000)]);
+      const cur = equitiesOf(
+        writeExact(
+          [position("msft", 3_050, 3_000)],
+          previous,
+          new Map([["aapl", -5_200], ["msft", 3_000]]),
+        ),
+      )!;
+      // aapl: -5 200 (exact proceeds); msft: +3 050 (appeared, full value)
+      expect(cur.netFlow).toBe(-2_150);
+    });
+
+    it("counts a new holding at its full value despite a smaller exact buy", () => {
+      // A newly connected account: a BTC position worth 20 000 whose trade
+      // log in the interval holds only a 50 savings-plan buy
+      const previous = write([position("aapl", 5_000, 4_000)]);
+      const cur = equitiesOf(
+        writeExact(
+          [position("aapl", 5_000, 4_000), position("btc", 20_000, null)],
+          previous,
+          new Map([["btc", 50]]),
+        ),
+      )!;
+      expect(cur.netFlow).toBe(20_000);
+      expect(cur).not.toHaveProperty("netFlowEstimated");
+    });
+
+    it("ignores flows of keys held in neither snapshot", () => {
+      const previous = write([position("aapl", 5_000, 4_000)]);
+      const cur = equitiesOf(
+        writeExact([position("aapl", 5_100, 4_000)], previous, new Map([["gone", 700]])),
+      )!;
+      expect(cur.netFlow).toBe(0);
+    });
+
+    it("keeps the proxy for a holding that changed category", () => {
+      const previous = write([position("aapl", 5_000, 4_000), position("msft", 1_000, 900)]);
+      const breakdown = writeExact(
+        [position("aapl", 5_500, 4_500, { category: "bonds" }), position("msft", 1_000, 900)],
+        previous,
+        new Map([["aapl", 500]]),
+      );
+      // Out of equities at its last value, into bonds at its value now
+      expect(equitiesOf(breakdown)!.netFlow).toBe(-5_000);
+      expect(breakdown.find((e) => e.category === "bonds")!.netFlow).toBe(5_500);
+    });
+  });
+
   it("flow-adjusts the investment categories only", () => {
     expect(["equities", "crypto", "commodities", "collectibles"].every(isFlowAdjustedCategory)).toBe(true);
     expect(["cash", "liabilities", "unclassified"].some(isFlowAdjustedCategory)).toBe(false);
@@ -661,6 +811,70 @@ describe("loanMonthlyPaymentInBase", () => {
     expect(
       loanMonthlyPaymentInBase({ ...loan, status: "paid_off", paymentFrequency: "MONTHLY" }, rates),
     ).toBe(0);
+  });
+});
+
+describe("collapseIntradaySnapshots", () => {
+  const row = (id: string, userId: string, date: string, timestamp: number) => ({
+    id,
+    userId,
+    date,
+    timestamp,
+  });
+
+  it("keeps the newest row per user per day and drops the rest", () => {
+    const rows = [
+      row("a1", "u1", "2026-11-10", 1_000),
+      row("a2", "u1", "2026-11-10", 3_000),
+      row("a3", "u1", "2026-11-10", 2_000),
+      row("b1", "u1", "2026-11-11", 5_000),
+      row("c1", "u2", "2026-11-10", 1_500),
+      row("c2", "u2", "2026-11-10", 900),
+    ];
+    const { keep, drop } = collapseIntradaySnapshots(rows);
+    expect(keep.map((r) => r.id)).toEqual(["a2", "b1", "c1"]);
+    expect(drop.map((r) => r.id)).toEqual(["a1", "a3", "c2"]);
+  });
+
+  it("keeps the later row on a timestamp tie", () => {
+    const { keep, drop } = collapseIntradaySnapshots([
+      row("x", "u1", "2026-11-10", 1_000),
+      row("y", "u1", "2026-11-10", 1_000),
+    ]);
+    expect(keep.map((r) => r.id)).toEqual(["y"]);
+    expect(drop.map((r) => r.id)).toEqual(["x"]);
+  });
+
+  it("drops nothing when every day has one row", () => {
+    const rows = [
+      row("a", "u1", "2026-11-10", 1_000),
+      row("b", "u1", "2026-11-11", 2_000),
+    ];
+    expect(collapseIntradaySnapshots(rows)).toEqual({ keep: rows, drop: [] });
+  });
+});
+
+describe("providerSyncSnapshot", () => {
+  it("takes an untagged snapshot when nothing failed", () => {
+    expect(providerSyncSnapshot(3, 0)).toEqual({
+      take: true,
+      partial: undefined,
+    });
+    expect(providerSyncSnapshot(0, 0)).toEqual({
+      take: true,
+      partial: undefined,
+    });
+  });
+
+  it("tags the snapshot partial when only some items failed", () => {
+    expect(providerSyncSnapshot(2, 1)).toEqual({ take: true, partial: true });
+  });
+
+  it("takes no snapshot when every item failed", () => {
+    expect(providerSyncSnapshot(0, 2)).toEqual({
+      take: false,
+      partial: undefined,
+    });
   });
 });
 

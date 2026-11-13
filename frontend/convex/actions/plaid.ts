@@ -12,6 +12,7 @@ import {
 } from "plaid";
 import { encrypt, decrypt } from "../lib/encryption";
 import { NO_CURRENCY } from "../../../services/finance/currency";
+import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -506,29 +507,35 @@ export const refreshAccounts = action({
       },
     );
 
+    let failed = 0;
     for (const item of userItems) {
       try {
         await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {
           itemId: item.itemId,
         });
       } catch (error) {
+        failed++;
         console.error(`Error syncing item ${item.itemId}:`, error);
       }
     }
+    const synced = userItems.length - failed;
 
-    // Take a portfolio snapshot after sync (unless skipped)
-    if (!args.skipSnapshot) {
+    // Snapshot after sync (unless skipped): none when every item failed,
+    // tagged partial when only some did
+    const snapshot = providerSyncSnapshot(synced, failed);
+    if (!args.skipSnapshot && snapshot.take) {
       try {
         await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
           userId,
           source: "plaid",
+          partial: snapshot.partial,
         });
       } catch (snapshotError) {
         console.error("Failed to take portfolio snapshot:", snapshotError);
       }
     }
 
-    return { success: true, itemsSynced: userItems.length };
+    return { success: failed === 0, itemsSynced: synced };
   },
 });
 
@@ -552,6 +559,7 @@ export const syncAccountsForUserAdmin = internalAction({
 
     console.log(`Found ${userItems.length} items to sync`);
 
+    let failed = 0;
     for (const item of userItems) {
       try {
         await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {
@@ -559,11 +567,13 @@ export const syncAccountsForUserAdmin = internalAction({
         });
         console.log(`Synced accounts for item ${item.itemId}`);
       } catch (error) {
+        failed++;
         console.error(`Error syncing item ${item.itemId}:`, error);
       }
     }
 
-    return { success: true, itemsSynced: userItems.length };
+    // A failed item makes the daily snapshot partial (syncAll.ts)
+    return { success: failed === 0, itemsSynced: userItems.length - failed };
   },
 });
 

@@ -8,12 +8,30 @@ import { precious_metal_prices } from "@/db/drizzle/schema";
 import { and, lte, gte, desc, sql } from "drizzle-orm";
 
 import { TimeRange, TimeInterval } from "@/../services/finance/financeService";
-import {
-  MetalChartData,
-  MetalCurrency,
-  MetalType,
-  metalColumns,
-} from "@/lib/types/metals";
+import { metalPriceRangeQuery } from "@/../services/finance/metalPriceRangeSql";
+import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
+
+/** The price column of each metal and currency */
+const metalColumns = {
+  eur: {
+    gold: precious_metal_prices.gold_eur,
+    silver: precious_metal_prices.silver_eur,
+    platinum: precious_metal_prices.platinum_eur,
+    palladium: precious_metal_prices.palladium_eur,
+  },
+  usd: {
+    gold: precious_metal_prices.gold_usd,
+    silver: precious_metal_prices.silver_usd,
+    platinum: precious_metal_prices.platinum_usd,
+    palladium: precious_metal_prices.palladium_usd,
+  },
+  chf: {
+    gold: precious_metal_prices.gold_chf,
+    silver: precious_metal_prices.silver_chf,
+    platinum: precious_metal_prices.platinum_chf,
+    palladium: precious_metal_prices.palladium_chf,
+  },
+} satisfies Record<MetalCurrency, Record<MetalType, unknown>>;
 
 const timeRangeEnum = z.enum([
   "Hour",
@@ -418,83 +436,20 @@ const app = new Hono()
               ),
             )
             .orderBy(precious_metal_prices.timestamp);
-        } else if (aggregationInterval === "hour") {
-          // For hourly data, get the closing price of each hour (hh:59),
-          // the same last-price-in-bucket rule as the daily branch.
-          const rawPrices = await db.execute(sql`
-          WITH hour_intervals AS (
-            -- One bucket per hour, ending at hh:59
-            SELECT (hour_start + INTERVAL '59 minutes') AS timestamp
-            FROM generate_series(
-              date_trunc('hour', ${parsedStartDate}::timestamp),
-              date_trunc('hour', ${parsedEndDate}::timestamp),
-              INTERVAL '1 hour'
-            ) AS hour_start
-          ),
-          -- Pre-filter the prices to the relevant time window
-          filtered_prices AS (
-            SELECT
-              timestamp,
-              ${metalColumns[currency][metal]} AS price
-            FROM ${precious_metal_prices}
-            WHERE timestamp >= date_trunc('hour', ${parsedStartDate}::timestamp)
-              AND timestamp <= ${parsedEndDate}::timestamp
-          ),
-          bucketed AS (
-            SELECT
-              hi.timestamp,
-              (
-                SELECT price
-                FROM filtered_prices fp
-                WHERE date_trunc('hour', fp.timestamp) = date_trunc('hour', hi.timestamp)
-                ORDER BY fp.timestamp DESC -- Get last price in the hour
-                LIMIT 1
-              ) AS price
-            FROM hour_intervals hi
-          )
-          SELECT
-            b.timestamp AT TIME ZONE 'UTC' AS timestamp,
-            b.price
-          FROM bucketed b
-          WHERE b.price IS NOT NULL -- Skip hours without prices
-          ORDER BY b.timestamp
-        `);
-          prices = rawPrices.rows;
-        } else if (aggregationInterval === "day") {
-          // For daily data, get the closing price of each day (23:59)
-          const rawPrices = await db.execute(sql`
-          WITH day_intervals AS (
-            -- Generate timestamps at the end of each day (23:59)
-            SELECT (date_trunc('day', day) + INTERVAL '23 hours 59 minutes') AS timestamp
-            FROM generate_series(
-              date_trunc('day', ${parsedStartDate}::timestamp),
-              date_trunc('day', ${parsedEndDate}::timestamp),
-              INTERVAL '1 day'
-            ) AS day
-          ),
-          -- Pre-filter the prices to the relevant time window
-          filtered_prices AS (
-            SELECT 
-              timestamp,
-              ${metalColumns[currency][metal]} AS price
-            FROM ${precious_metal_prices}
-            WHERE timestamp >= ${parsedStartDate}::timestamp - INTERVAL '1 day'
-              AND timestamp <= ${parsedEndDate}::timestamp + INTERVAL '1 day'
-          )
-          SELECT 
-            di.timestamp AT TIME ZONE 'UTC' AS timestamp,
-            (
-              SELECT price
-              FROM filtered_prices fp
-              WHERE fp.timestamp::date = di.timestamp::date
-                AND fp.timestamp <= di.timestamp
-              ORDER BY fp.timestamp DESC -- Get last price before 23:59
-              LIMIT 1
-            ) AS price
-          FROM day_intervals di
-          ORDER BY di.timestamp
-        `);
-          prices = rawPrices.rows;
+        } else if (
+          aggregationInterval === "hour" ||
+          aggregationInterval === "day"
+        ) {
+          // The closing price of each hour (hh:59) or day (23:59), from the
+          // tested SQL in services/finance/metalPriceRangeSql.ts; the range
+          // is bound as parameters, never interpolated
+          const { text, params } = metalPriceRangeQuery(
+            aggregationInterval,
+            `${metal}_${currency}`,
+            parsedStartDate,
+            parsedEndDate,
+          );
+          prices = (await db.$client.query(text, params)).rows;
         } else if (aggregationInterval === "week") {
           // For weekly data, get the closing price (23:59) of each 7th day
           const rawPrices = await db.execute(sql`

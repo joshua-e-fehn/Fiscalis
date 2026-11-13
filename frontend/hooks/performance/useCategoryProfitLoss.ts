@@ -2,13 +2,15 @@
  * Category Profit/Loss Hook
  *
  * The P/L a category page shows, resolved once by
- * `resolveCategoryProfitLoss` (services/portfolio/categorySummary.ts) so the
- * KPI card and the chart's cost line always agree:
+ * `resolveCategoryProfitLoss` (services/portfolio/categorySummary.ts) for the
+ * P/L KPI card:
  * 1. the holdings' own cost basis (coverage-based, from the category summary);
  * 2. otherwise, for an investment category, its performance since tracking
  *    started from the one performance entry point: net of purchases and
  *    deposits where the snapshots show them (D2), else labelled a change.
  *    The first snapshot is never taken as a cost basis.
+ *
+ * The chart's cost line is the engine series' own (useCategoryChartData).
  */
 
 import { useMemo } from "react";

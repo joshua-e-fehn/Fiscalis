@@ -14,17 +14,12 @@ import {
   CardTitle,
 } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils/currency";
 import {
   MetalItemWithValuation,
   MetalsCurrency,
 } from "@/lib/types/metals-extended";
 import { TrendingUp, TrendingDown } from "lucide-react";
-
-const currencySymbols: Record<MetalsCurrency, string> = {
-  eur: "€",
-  usd: "$",
-  chf: "CHF ",
-};
 
 interface MetalsLargestHoldingsCardProps {
   items: MetalItemWithValuation[] | undefined;
@@ -121,11 +116,6 @@ export function MetalsLargestHoldingsCard({
     );
   }
 
-  const formatValue = (value: number) =>
-    new Intl.NumberFormat("de-CH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
 
   return (
     <Card className={cn("h-full", className)}>
@@ -176,10 +166,14 @@ export function MetalsLargestHoldingsCard({
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-medium">
-                        {currencySymbols[currency]}
-                        {formatValue(item.marketValue ?? 0)}
-                      </span>
+                      {/* No fresh spot and no cost: the value is unknown */}
+                      {item.marketValue === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="font-medium">
+                          {formatCurrency(item.marketValue, currency)}
+                        </span>
+                      )}
                       {item.profitLossPercent !== null && (
                         <span
                           className={cn(

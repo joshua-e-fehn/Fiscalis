@@ -1,6 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { catalogPremiums } from "./lib/metalPremiums";
-import { TROY_OUNCE_GRAMS } from "./lib/priceCalculations";
+import { TROY_OUNCE_GRAMS } from "../../services/finance/metals";
 
 /**
  * Seed the metal catalog with popular coins and bars

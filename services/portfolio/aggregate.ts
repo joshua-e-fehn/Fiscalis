@@ -85,6 +85,14 @@ export interface NormalizedHolding {
   /** Cost basis in the base currency; null when unknown (never 0 for that) */
   costBase: number | null;
   /**
+   * The value is the cost fallback, not a market price (a vault item
+   * without a fresh spot price, metals.ts valueVaultItem): it counts in the
+   * totals, but its P/L is unknown, so it is left out of the cost-covered
+   * P/L (profitLossCostBase). Its costBase still feeds the snapshot flows,
+   * so a price outage is not taken for a sale.
+   */
+  valuedAtCost?: boolean;
+  /**
    * The cost basis in the currency it was paid in, when that is not the
    * base currency (a USD broker position). Its base value moves with the
    * exchange rate; a flow is derived from the native cost so an FX move is
@@ -100,6 +108,15 @@ export interface NormalizedHolding {
   pricedAt: number | null;
   /** Monthly-equivalent scheduled payment of a loan, in the base currency */
   monthlyPaymentBase?: number;
+}
+
+/**
+ * The cost basis a holding's P/L is measured against: its costBase, but
+ * none when its value is the cost fallback (valuedAtCost), whose P/L is
+ * unknown rather than break-even.
+ */
+export function profitLossCostBase(h: NormalizedHolding): number | null {
+  return h.valuedAtCost ? null : h.costBase;
 }
 
 /** Map a stored investmentCategory to a category; unknown → unclassified. */
@@ -196,7 +213,7 @@ export function aggregateNetWorth(
         subcategory: at.subcategory,
         value: at.value,
         // A loan's principal is not a cost basis
-        costBasis: isLiability ? null : h.costBase,
+        costBasis: isLiability ? null : profitLossCostBase(h),
       })),
     );
     const bySource: Partial<Record<HoldingSource, number>> = {};
@@ -327,7 +344,10 @@ export interface SnapshotCategoryEntry {
   netFlowEstimated?: boolean;
 }
 
-/** A holding's snapshot entry at its placed value. */
+/**
+ * A holding's snapshot entry at its placed value. Its cost is the costBase
+ * even when the value is the cost fallback: the flow reads cost changes.
+ */
 function toHoldingEntry(h: NormalizedHolding, value: number): SnapshotHoldingEntry {
   if (h.costBase === null) return { key: h.key ?? h.id, value };
   return {
@@ -371,7 +391,7 @@ function sourceCosts(
     grouped.set(at.category, bySource);
     const list = bySource.get(h.source) ?? [];
     bySource.set(h.source, list);
-    list.push({ value: at.value, costBasis: h.costBase });
+    list.push({ value: at.value, costBasis: profitLossCostBase(h) });
   }
   return new Map(
     [...grouped].map(([category, bySource]) => [
@@ -422,12 +442,17 @@ function snapshotHoldings(
  * With the previous day's breakdown (`previous`; an empty array when that
  * snapshot held nothing), each flow-adjusted entry and its sources also
  * record their net external flow since then (categoryFlowFromHoldings),
- * unless the previous row has no holdings to compare with.
+ * unless the previous row has no holdings to compare with. `exactFlows`
+ * (flows.ts tradeFlowsBetween) holds the flow per holding key from the
+ * providers' trade logs over the same interval; a holding that changed
+ * category since then keeps the cost proxy, since its trades cannot be
+ * split between the two.
  */
 export function buildSnapshotBreakdown(
   aggregate: NetWorthAggregate,
   holdings: readonly NormalizedHolding[],
   previous?: readonly SnapshotCategoryEntry[],
+  exactFlows?: ReadonlyMap<string, number>,
 ): {
   categoryBreakdown: SnapshotCategoryEntry[];
   totalCostBasis: number | undefined;
@@ -438,6 +463,10 @@ export function buildSnapshotBreakdown(
   let totalCoveredValue: number | undefined;
   const holdingsByCategory = snapshotHoldings(holdings);
   const costsByCategory = sourceCosts(holdings);
+  const exact =
+    previous && exactFlows
+      ? sameCategoryFlows(exactFlows, previous, holdingsByCategory)
+      : undefined;
 
   for (const category of ASSET_CATEGORIES) {
     const c = aggregate.byCategory[category];
@@ -474,6 +503,7 @@ export function buildSnapshotBreakdown(
       const flow = categoryFlowFromHoldings(
         previous.find((p) => p.category === category),
         entry,
+        exact,
       );
       if (flow) {
         entry.netFlow = flow.total.amount;
@@ -579,21 +609,85 @@ export function netWorthApiBody(
   };
 }
 
+/** The exact flows of the holdings held in the same category at both snapshots. */
+function sameCategoryFlows(
+  exactFlows: ReadonlyMap<string, number>,
+  previous: readonly SnapshotCategoryEntry[],
+  current: ReadonlyMap<string, ReadonlyMap<string, SnapshotHoldingEntry[]>>,
+): Map<string, number> {
+  const categoryOf = new Map<string, string>();
+  for (const e of previous) {
+    for (const s of e.sources ?? []) {
+      for (const h of s.holdings ?? []) categoryOf.set(h.key, e.category);
+    }
+  }
+  const moved = new Set<string>();
+  for (const [category, bySource] of current) {
+    for (const list of bySource.values()) {
+      for (const h of list) {
+        const before = categoryOf.get(h.key);
+        if (before !== undefined && before !== category) moved.add(h.key);
+      }
+    }
+  }
+  return new Map([...exactFlows].filter(([key]) => !moved.has(key)));
+}
+
 /**
  * The `partial` flag of today's snapshot row after an upsert.
  *
  * Only a full sync of every provider knows whether the day's provider data
  * is complete, so it passes `requested` (true when a provider failed) and
- * that verdict replaces the row's. Any other write (a vault or loan change,
- * a single provider's sync) passes undefined and keeps the row's flag: a
- * provider that failed earlier today still holds its last successful sync's
- * values until a full sync refreshes it.
+ * that verdict replaces the row's. A single provider's sync passes true
+ * when only some of its items failed (providerSyncSnapshot) and otherwise
+ * undefined; any other write (a vault or loan change) passes undefined.
+ * Undefined keeps the row's flag: a provider that failed earlier today
+ * still holds its last successful sync's values until a full sync
+ * refreshes it.
  */
 export function snapshotPartial(
   existing: boolean | undefined,
   requested: boolean | undefined,
 ): true | undefined {
   return (requested ?? existing) ? true : undefined;
+}
+
+/**
+ * Whether one provider's sync takes today's snapshot, and its `partial`
+ * request (snapshotPartial). A sync where nothing failed takes it; one
+ * where only some items (bank items, connections, accounts) failed takes
+ * it tagged partial; one where everything failed takes none, since the
+ * provider's stored data is still the last successful sync's.
+ */
+export function providerSyncSnapshot(
+  synced: number,
+  failed: number,
+): { take: boolean; partial: true | undefined } {
+  if (failed === 0) return { take: true, partial: undefined };
+  if (synced > 0) return { take: true, partial: true };
+  return { take: false, partial: undefined };
+}
+
+/**
+ * One snapshot per user per day: the newest row of each day by timestamp
+ * (a tie goes to the later row in `rows`) is kept, the rest are dropped.
+ * takeSnapshot upserts one row a day; rows written before that policy can
+ * hold several, which double-count a day in the history.
+ */
+export function collapseIntradaySnapshots<
+  T extends { userId: string; date: string; timestamp: number },
+>(rows: readonly T[]): { keep: T[]; drop: T[] } {
+  const newest = new Map<string, T>();
+  for (const row of rows) {
+    const day = `${row.userId}|${row.date}`;
+    const current = newest.get(day);
+    if (!current || row.timestamp >= current.timestamp) newest.set(day, row);
+  }
+  const kept = new Set(newest.values());
+  return {
+    keep: rows.filter((row) => kept.has(row)),
+    drop: rows.filter((row) => !kept.has(row)),
+  };
 }
 
 /** A breakdown without the holdings kept for the next day's flows. */
@@ -618,10 +712,11 @@ export function withoutSnapshotHoldings(
 // External flows between snapshots
 // ═══════════════════════════════════════════════════════════════
 // Investment categories report performance net of money moved in and out
-// (D2): P/L = change in value − net flows. Provider data carries no cash
-// ledger, so the flow between two snapshots is derived holding by holding
-// from what the snapshot writer stores; readers use the stored flows and
-// only estimate where a row has none.
+// (D2): P/L = change in value − net flows. A holding traded in between takes
+// its exact flow from its provider's trade log (flows.ts); every other
+// holding's flow is derived from what the snapshot writer stores (values
+// and costs). Readers use the stored flows and only estimate where a row
+// has none. Rows written before the trade logs keep their proxy flows.
 
 /**
  * Categories whose performance is flow-adjusted (D2). Net worth, cash and
@@ -697,10 +792,19 @@ export function holdingNetFlow(
   };
 }
 
-/** Sum of the holdings' flows of one source, null without holdings at an end. */
+/**
+ * Sum of the holdings' flows of one source, null without holdings at an
+ * end. A holding held with a value at the previous snapshot and with an
+ * exact flow from its trade log (flows.ts) takes it; the others are derived
+ * from their values and costs (holdingNetFlow). A holding that appears
+ * always counts its whole value as money in: its trade log may cover only
+ * the latest trades of a position held long before (a newly connected
+ * account with a savings plan), never its full cost.
+ */
 function sourceFlowFromHoldings(
   prev: SnapshotSourceEntry | undefined,
   cur: SnapshotSourceEntry | undefined,
+  exact?: ReadonlyMap<string, number>,
 ): NetFlow | null {
   if ((prev && !prev.holdings) || (cur && !cur.holdings)) return null;
   const keys = new Set(
@@ -709,10 +813,16 @@ function sourceFlowFromHoldings(
   let amount = 0;
   let estimated = false;
   for (const key of keys) {
-    const flow = holdingNetFlow(
-      prev?.holdings?.find((h) => h.key === key),
-      cur?.holdings?.find((h) => h.key === key),
-    );
+    const before = prev?.holdings?.find((h) => h.key === key);
+    const traded =
+      before && before.value !== 0 ? exact?.get(key) : undefined;
+    const flow =
+      traded !== undefined
+        ? { amount: traded, estimated: false }
+        : holdingNetFlow(
+            before,
+            cur?.holdings?.find((h) => h.key === key),
+          );
     amount += flow.amount;
     estimated ||= flow.estimated;
   }
@@ -721,13 +831,17 @@ function sourceFlowFromHoldings(
 
 /**
  * Net external flow into a category between two snapshots, in total and per
- * source, from the holdings both rows store. Null when the previous row
- * (or a source in it) stores none: a row written before flows existed is
- * never compared with a new one, whose cost coverage it cannot match.
+ * source, from the holdings both rows store and, where a holding was
+ * traded in between, its exact flow by key (`exact`). Null when the
+ * previous row (or a source in it) stores none: a row written before flows
+ * existed is never compared with a new one, whose cost coverage it cannot
+ * match. A flow is flagged estimated only where a holding without an exact
+ * flow had its flow assumed (holdingNetFlow).
  */
 export function categoryFlowFromHoldings(
   prev: SnapshotCategoryEntry | undefined,
   cur: SnapshotCategoryEntry | undefined,
+  exact?: ReadonlyMap<string, number>,
 ): { total: NetFlow; bySource: Map<string, NetFlow> } | null {
   if ((prev && !prev.sources) || (cur && !cur.sources)) return null;
   const names = new Set(
@@ -739,6 +853,7 @@ export function categoryFlowFromHoldings(
     const flow = sourceFlowFromHoldings(
       prev?.sources?.find((s) => s.source === name),
       cur?.sources?.find((s) => s.source === name),
+      exact,
     );
     if (!flow) return null;
     bySource.set(name, flow);

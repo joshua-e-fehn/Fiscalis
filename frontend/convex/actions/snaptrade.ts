@@ -17,6 +17,14 @@ import {
   mapSnaptradeHoldings,
   snaptradeHoldingsCurrency,
 } from "../../../services/brokers/snaptradePosition";
+import {
+  ACTIVITY_PAGE_SIZE,
+  activitiesStartDate,
+  fetchActivityPagesOldestFirst,
+  mapSnaptradeActivity,
+  type StoredSnaptradeActivity,
+} from "../../../services/brokers/snaptradeActivity";
+import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -347,11 +355,14 @@ export const handleCallback = action({
         connectionId,
       });
 
-      // Snapshot only data that synced completely
-      if (syncResult && syncResult.errors.length === 0) {
+      // No snapshot when nothing synced; tagged partial when only some
+      // accounts did
+      const snapshot = syncResult && snaptradeSyncSnapshot(syncResult);
+      if (snapshot?.take) {
         await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
           userId,
           source: "snaptrade-connect",
+          partial: snapshot.partial,
         });
       }
 
@@ -507,6 +518,11 @@ interface SnaptradeSyncResult {
   errors: string[];
 }
 
+/** Whether a sync takes a snapshot: accounts stored vs failures reported. */
+function snaptradeSyncSnapshot(result: SnaptradeSyncResult) {
+  return providerSyncSnapshot(result.accountsProcessed, result.errors.length);
+}
+
 /** What a sync covers: every connection, one connection, or one account. */
 type SnaptradeSyncScope =
   | { kind: "all" }
@@ -554,6 +570,10 @@ async function refreshConnectionLogo(
  *   mutation (brokers.replaceAccountHoldings). A failed fetch leaves that
  *   account's stored positions, balance and cash as they were and is
  *   reported in `errors`.
+ * - After its holdings, each account's new activities are fetched
+ *   incrementally (syncAccountActivities) for exact snapshot flows. A
+ *   failure there is logged, not reported: the holdings are current and
+ *   the snapshot falls back to the cost proxy.
  *
  * Returns null when the user is not registered with SnapTrade.
  */
@@ -720,6 +740,25 @@ async function syncSnaptrade(
             ...mapped,
           });
 
+          // The account's trade log, for exact snapshot flows. Holdings
+          // are already stored: a failure here keeps the cost proxy
+          try {
+            await syncAccountActivities(
+              ctx,
+              snaptrade,
+              credentials,
+              userId,
+              stored.accountId,
+              apiAccount.id,
+              stored.currency,
+            );
+          } catch (activityError) {
+            console.warn(
+              `[SNAPTRADE SYNC] Activities of account ${apiAccount.id} not synced:`,
+              parseSnapTradeError(activityError).userMessage,
+            );
+          }
+
           result.accountsProcessed++;
           result.positionsProcessed += mapped.positions.length;
         } catch (accountError) {
@@ -779,6 +818,54 @@ async function syncSnaptrade(
   }
 
   return result;
+}
+
+/**
+ * Fetch an account's activities (its transaction history) since a week
+ * before the newest one stored, or the whole history the first time, page
+ * by page, and store the new ones (brokers.upsertTransactions). Pages are
+ * stored only once all have arrived, oldest first
+ * (fetchActivityPagesOldestFirst), so a failed page (a rate limit) never
+ * advances the newest stored date past history not yet stored: the next
+ * sync fetches the same window again.
+ */
+async function syncAccountActivities(
+  ctx: ActionCtx,
+  snaptrade: ReturnType<typeof getSnaptradeClient>,
+  credentials: { userId: string; userSecret: string },
+  userId: string,
+  accountId: Id<"brokerAccounts">,
+  snaptradeAccountId: string,
+  accountCurrency: string,
+): Promise<void> {
+  const newest: string | null = await ctx.runQuery(
+    internal.brokers.getNewestTransactionDate,
+    { accountId },
+  );
+  const startDate = activitiesStartDate(newest);
+  const pages = await fetchActivityPagesOldestFirst(async (offset) => {
+    const page = (
+      await snaptrade.accountInformation.getAccountActivities({
+        ...credentials,
+        accountId: snaptradeAccountId,
+        ...(startDate ? { startDate } : {}),
+        offset,
+        limit: ACTIVITY_PAGE_SIZE,
+      })
+    ).data;
+    return { rows: page.data ?? [], total: page.pagination?.total };
+  });
+  for (const rows of pages) {
+    const activities = rows
+      .map((a) => mapSnaptradeActivity(a, accountCurrency))
+      .filter((a): a is StoredSnaptradeActivity => a !== null);
+    if (activities.length === 0) continue;
+    await ctx.runMutation(internal.brokers.upsertTransactions, {
+      userId,
+      accountId,
+      activities,
+    });
+  }
 }
 
 /**
@@ -946,8 +1033,9 @@ export const updateAllBrokerLogos = action({
 
 
 /**
- * Sync all data for all connections. The snapshot is skipped when any
- * connection or account failed (its stored data is then a previous sync's).
+ * Sync all data for all connections. The snapshot is skipped when nothing
+ * synced and tagged partial when some connection or account failed (its
+ * stored data is then a previous sync's).
  * @param skipSnapshot - If true, don't create a snapshot (used by syncAll to avoid duplicates)
  */
 export const syncAll = action({
@@ -965,11 +1053,13 @@ export const syncAll = action({
       return { success: true, message: "No SnapTrade user registered" };
     }
 
-    if (!args.skipSnapshot && result.errors.length === 0) {
+    const snapshot = snaptradeSyncSnapshot(result);
+    if (!args.skipSnapshot && snapshot.take) {
       try {
         await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
           userId,
           source: "snaptrade",
+          partial: snapshot.partial,
         });
       } catch (snapshotError) {
         console.error("Failed to take portfolio snapshot:", snapshotError);

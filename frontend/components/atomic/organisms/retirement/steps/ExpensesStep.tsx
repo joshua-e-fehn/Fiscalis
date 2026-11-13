@@ -3,12 +3,13 @@
 import { Wallet } from "lucide-react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import {
 	inflateToFuture,
 	retirementTimeline,
 	validateRetirementInputs,
 } from "@/lib/types/retirement";
-import { formatCurrency, formatRate } from "@/lib/utils/currency";
+import { currencySymbols, formatCurrency, formatRate } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
@@ -19,6 +20,7 @@ export function ExpensesStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
+	const currency = useBaseCurrency();
 	const years = Math.max(0, retirementTimeline(data).yearsToRetirement);
 	const future = inflateToFuture(
 		data.monthlyExpensesToday,
@@ -41,7 +43,7 @@ export function ExpensesStep({
 				<Label htmlFor="expenses">Monthly living expenses (today)</Label>
 				<div className="relative">
 					<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-						€
+						{currencySymbols[currency].trim()}
 					</span>
 					<Input
 						id="expenses"
@@ -67,7 +69,7 @@ export function ExpensesStep({
 						After {years} years of {formatRate(data.inflationRate)} inflation,
 						that&apos;s about{" "}
 						<span className="font-semibold text-foreground">
-							{formatCurrency(future, "eur")}/mo
+							{formatCurrency(future, currency)}/mo
 						</span>{" "}
 						when you retire — the same lifestyle just costs more.
 					</p>

@@ -17,12 +17,19 @@ interface TransactionListProps {
   className?: string;
 }
 
+const UNKNOWN_DATE = "Date unknown";
+
 function groupTransactionsByMonth(
   transactions: Transaction[],
 ): Record<string, Transaction[]> {
   const groups: Record<string, Transaction[]> = {};
 
   for (const tx of transactions) {
+    // Opening balances of unknown date: held since before any range
+    if (tx.transactionDate === null) {
+      (groups[UNKNOWN_DATE] ??= []).push(tx);
+      continue;
+    }
     const date = new Date(tx.transactionDate);
     const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const monthLabel = new Intl.DateTimeFormat("en-US", {
@@ -36,6 +43,12 @@ function groupTransactionsByMonth(
     groups[monthLabel].push(tx);
   }
 
+  // Before any dated transaction: last in the newest-first list
+  if (groups[UNKNOWN_DATE]) {
+    const undated = groups[UNKNOWN_DATE];
+    delete groups[UNKNOWN_DATE];
+    groups[UNKNOWN_DATE] = undated;
+  }
   return groups;
 }
 

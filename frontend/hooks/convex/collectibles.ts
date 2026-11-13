@@ -12,7 +12,6 @@ import { useAuth } from "@clerk/nextjs";
 import {
   CategorySummary,
   SubcategoryData,
-  PortfolioDataPoint,
 } from "@/lib/types/investments";
 import {
   collectiblesSubcategoryUI,
@@ -37,7 +36,6 @@ export function useCollectiblesSummary(): {
     ).map(([slug, meta]) => makeSubcategoryBase(slug, meta));
 
     const totalValue = subcategories.reduce((sum, s) => sum + s.totalValue, 0);
-    const historyDataPoints: PortfolioDataPoint[] = [];
 
     return {
       totalValue,
@@ -48,7 +46,6 @@ export function useCollectiblesSummary(): {
       ytdProfitLossPercent: null,
       valueAtYearStart: null,
       subcategories,
-      historyDataPoints,
     };
   }, [userId]);
 

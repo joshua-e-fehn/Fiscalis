@@ -7,7 +7,10 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
-import { resolvePremiums } from "../../services/finance/metals";
+import {
+  resolvePremiums,
+  vaultItemValuation,
+} from "../../services/finance/metals";
 import {
   normalizeCurrency,
   toBase,
@@ -18,6 +21,7 @@ import {
   itemProjection,
   ledgerOverCounts,
   missingOpeningTransaction,
+  nextOpeningQuantity,
   replayLedger,
   retainedBasePrice,
   transactionUnitAmount,
@@ -27,6 +31,7 @@ import {
   type ToBaseAmount,
 } from "../../services/finance/metalsLedger";
 import { loadFxRates } from "./fxRates";
+import { loadSpotPrices } from "./lib/netWorth";
 import { scheduleSnapshot } from "./portfolioSnapshots";
 
 // ═══════════════════════════════════════════════════════════════
@@ -136,6 +141,42 @@ function readItemLedger(
     if (error instanceof LedgerError) return null;
     throw error;
   }
+}
+
+/**
+ * An item as the vault pages read it: catalog data, its replayed ledger and
+ * its EUR valuation at the spot mirror (vaultItemValuation, the valuation
+ * net worth uses), with the spot price it was valued at so the client can
+ * show it in another currency (convertAtSpotRates).
+ */
+async function vaultItemView(
+  ctx: QueryCtx,
+  item: VaultItemDoc,
+  toBaseAmount: ToBaseAmount,
+  spotByMetal: Awaited<ReturnType<typeof loadSpotPrices>>,
+  now: number,
+) {
+  const catalogItem = item.catalogItemId
+    ? await ctx.db.get(item.catalogItemId)
+    : null;
+  const ledger = readItemLedger(
+    item,
+    await itemTransactions(ctx, item._id),
+    toBaseAmount,
+  );
+  const spot = spotByMetal.get(item.metalType);
+  return {
+    ...item,
+    catalogItem,
+    displayName: item.customName || catalogItem?.name || "Unknown Item",
+    ledger,
+    valuation: {
+      ...vaultItemValuation(item, ledger, spot, now, toBaseAmount),
+      spot: spot
+        ? { eurPerOunce: spot.eurPerOunce, sourceTimestamp: spot.sourceTimestamp }
+        : null,
+    },
+  };
 }
 
 /** A LedgerError as an error the client can show; anything else rethrown. */
@@ -255,29 +296,6 @@ export const getMetalCatalog = query({
   },
 });
 
-/**
- * Get popular catalog items for quick-add
- */
-export const getPopularCatalogItems = query({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db
-      .query("metalCatalog")
-      .withIndex("by_popular", (q) => q.eq("isPopular", true))
-      .collect();
-  },
-});
-
-/**
- * Get a single catalog item by ID
- */
-export const getCatalogItem = query({
-  args: { catalogItemId: v.id("metalCatalog") },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.catalogItemId);
-  },
-});
-
 // ═══════════════════════════════════════════════════════════════
 // QUERIES - Vault Items
 // ═══════════════════════════════════════════════════════════════
@@ -295,50 +313,17 @@ export const getUserVaultItems = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
     const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
+    const spotByMetal = await loadSpotPrices(ctx);
+    const now = Date.now();
 
-    // Enrich with catalog data and the item's replayed ledger (quantity over
-    // time, average cost, realized P/L; null when it cannot be replayed)
-    const enrichedItems = await Promise.all(
-      items.map(async (item) => {
-        let catalogItem = null;
-        if (item.catalogItemId) {
-          catalogItem = await ctx.db.get(item.catalogItemId);
-        }
-        const txs = await itemTransactions(ctx, item._id);
-        return {
-          ...item,
-          catalogItem,
-          displayName: item.customName || catalogItem?.name || "Unknown Item",
-          ledger: readItemLedger(item, txs, toBaseAmount),
-        };
-      }),
+    // Enrich with catalog data, the item's replayed ledger (quantity over
+    // time, average cost, realized P/L; null when it cannot be replayed) and
+    // its server valuation
+    return await Promise.all(
+      items.map((item) =>
+        vaultItemView(ctx, item, toBaseAmount, spotByMetal, now),
+      ),
     );
-
-    return enrichedItems;
-  },
-});
-
-/**
- * Get vault items filtered by metal type
- */
-export const getUserVaultItemsByMetal = query({
-  args: {
-    metalType: v.union(
-      v.literal("gold"),
-      v.literal("silver"),
-      v.literal("platinum"),
-      v.literal("palladium"),
-    ),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getUserId(ctx);
-    if (!userId) return [];
-    return await ctx.db
-      .query("vaultItems")
-      .withIndex("by_user_metal", (q) =>
-        q.eq("userId", userId).eq("metalType", args.metalType),
-      )
-      .collect();
   },
 });
 
@@ -352,56 +337,13 @@ export const getVaultItem = query({
     if (!userId) return null;
     const item = await getOwnedDoc(ctx, userId, args.vaultItemId);
     if (!item) return null;
-
-    let catalogItem = null;
-    if (item.catalogItemId) {
-      catalogItem = await ctx.db.get(item.catalogItemId);
-    }
-
-    return {
-      ...item,
-      catalogItem,
-      displayName: item.customName || catalogItem?.name || "Unknown Item",
-      ledger: readItemLedger(
-        item,
-        await itemTransactions(ctx, item._id),
-        toBaseAmountWith(await loadFxRates(ctx)),
-      ),
-    };
-  },
-});
-
-/**
- * Get aggregated summary by metal type for a user
- */
-export const getUserVaultSummary = query({
-  args: {},
-  handler: async (ctx) => {
-    const userId = await getUserId(ctx);
-    const items = userId
-      ? await ctx.db
-          .query("vaultItems")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .collect()
-      : [];
-
-    // Aggregate by metal type
-    const summary = {
-      gold: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-      silver: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-      platinum: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-      palladium: { totalFineWeightGrams: 0, totalItems: 0, itemCount: 0 },
-    };
-
-    for (const item of items) {
-      const metal = item.metalType as keyof typeof summary;
-      summary[metal].totalFineWeightGrams +=
-        item.fineWeightGrams * item.quantity;
-      summary[metal].totalItems += item.quantity;
-      summary[metal].itemCount += 1;
-    }
-
-    return summary;
+    return await vaultItemView(
+      ctx,
+      item,
+      toBaseAmountWith(await loadFxRates(ctx)),
+      await loadSpotPrices(ctx),
+      Date.now(),
+    );
   },
 });
 
@@ -418,11 +360,13 @@ export const getVaultItemTransactions = query({
     const userId = await getUserId(ctx);
     if (!userId) return [];
     if (!(await getOwnedDoc(ctx, userId, args.vaultItemId))) return [];
-    return await ctx.db
+    const txs = await ctx.db
       .query("vaultTransactions")
       .withIndex("by_item", (q) => q.eq("vaultItemId", args.vaultItemId))
       .order("desc")
       .collect();
+    // The opening balance is what the item edit dialog changes
+    return txs.map((tx) => ({ ...tx, isOpening: isOpeningTransaction(tx) }));
   },
 });
 
@@ -458,6 +402,8 @@ export const getUserTransactions = query({
           itemName:
             vaultItem?.customName || catalogItem?.name || "Unknown Item",
           metalType: vaultItem?.metalType,
+          // Listed in the history with its unknown cost or date shown as such
+          isOpening: isOpeningTransaction(tx),
         };
       }),
     );
@@ -650,14 +596,18 @@ export const addCustomVaultItem = mutation({
 
 /**
  * Update a vault item. Quantity, purchase price, date and currency are
- * ledger fields: they edit the item's opening balance (the quantity is the
- * new total held, the price is per unit in purchaseCurrency), and the
- * edit is rejected when the ledger would then hold a negative quantity.
+ * ledger fields: they edit the item's opening balance (openingQuantity sets
+ * the opening's own quantity; quantity is instead a new total held and moves
+ * the opening by the difference; the price is per unit in purchaseCurrency),
+ * and the edit is rejected when the ledger would then hold a negative
+ * quantity. openingQuantity is resolved against the ledger read in this
+ * transaction, so a client holding a stale total cannot undo an earlier edit.
  */
 export const updateVaultItem = mutation({
   args: {
     vaultItemId: v.id("vaultItems"),
     quantity: v.optional(v.number()),
+    openingQuantity: v.optional(v.number()),
     buyPremium: v.optional(v.number()),
     sellPremium: v.optional(v.number()),
     purchasePricePerUnit: v.optional(v.number()),
@@ -671,6 +621,7 @@ export const updateVaultItem = mutation({
     const {
       vaultItemId,
       quantity,
+      openingQuantity: newOpeningQuantity,
       purchasePricePerUnit,
       purchaseDate,
       purchaseCurrency,
@@ -697,6 +648,7 @@ export const updateVaultItem = mutation({
 
     const editsLedger =
       quantity !== undefined ||
+      newOpeningQuantity !== undefined ||
       purchasePricePerUnit !== undefined ||
       purchaseDate !== undefined ||
       purchaseCurrency !== undefined;
@@ -709,14 +661,17 @@ export const updateVaultItem = mutation({
         );
       }
       const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
-      let held: number;
+      let openingQuantity: number;
       try {
-        held = replayLedger(txs.map(asLedgerTransaction), toBaseAmount).quantity;
+        const held = replayLedger(txs.map(asLedgerTransaction), toBaseAmount).quantity;
+        openingQuantity = nextOpeningQuantity(opening.quantity, {
+          openingQuantity: newOpeningQuantity,
+          quantity,
+          held,
+        });
       } catch (error) {
         throw asUserError(error);
       }
-      const openingQuantity =
-        opening.quantity + (quantity === undefined ? 0 : quantity - held);
       const next = {
         quantity: openingQuantity,
         pricePerUnit: purchasePricePerUnit ?? opening.pricePerUnit,

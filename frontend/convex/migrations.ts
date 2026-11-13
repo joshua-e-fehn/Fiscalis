@@ -2,13 +2,14 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import {
   isLegacyInterestOnlyThenPayment,
+  loanBalanceAdjustment,
   rederiveScheduledPayment,
 } from "../../services/finance/loanScheduleService";
 import {
   classifyPlaidAccount,
   classifySnaptradePosition,
   getClassificationFields,
-} from "./lib/classification";
+} from "../../services/classification";
 import { loadFxRates } from "./fxRates";
 import {
   asLedgerTransaction,
@@ -20,6 +21,7 @@ import {
   toBaseAmountWith,
 } from "./vault";
 import { ledgerOverCounts } from "../../services/finance/metalsLedger";
+import { collapseIntradaySnapshots as intradayRowsToDrop } from "../../services/portfolio/aggregate";
 import {
   bankAccountBaseFields,
   brokerAccountBaseFields,
@@ -676,5 +678,76 @@ export const backfillInterestOnlyScheduledPayments = internalMutation({
       }
     }
     return { scanned: loans.length, changed, skipped };
+  },
+});
+
+/**
+ * Migration: loans now derive currentBalance from originalPrincipal, the
+ * principal repaid and `balanceAdjustment` (deriveLoanBalance). Stores
+ * stored balance minus the derived one as the adjustment of every loan
+ * without one, so the derived balance equals today's stored balance.
+ * Leaves currentBalance unchanged. Payment mutations already use the same
+ * fallback (loanBalanceAdjustment), so this only makes it explicit.
+ * Idempotent. NOT RUN. Dry run first:
+ *   npx convex run migrations:backfillLoanBalanceAdjustment '{"dryRun": true}'
+ */
+export const backfillLoanBalanceAdjustment = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const loans = await ctx.db.query("loans").collect();
+    const changed = [];
+    for (const loan of loans) {
+      if (loan.balanceAdjustment !== undefined) continue;
+      const payments = await ctx.db
+        .query("loanPayments")
+        .withIndex("by_loan", (q) => q.eq("loanId", loan._id))
+        .collect();
+      const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+      changed.push({
+        loanId: loan._id,
+        currentBalance: loan.currentBalance,
+        balanceAdjustment,
+      });
+      if (!args.dryRun) {
+        await ctx.db.patch(loan._id, { balanceAdjustment });
+      }
+    }
+    return { scanned: loans.length, changed };
+  },
+});
+
+/**
+ * Migration: portfolio snapshots written before the one-row-a-day upsert
+ * (portfolioSnapshots.takeSnapshot) can hold several rows for one user and
+ * day. Keeps each day's newest row and deletes the others
+ * (services/portfolio/aggregate.ts collapseIntradaySnapshots). The kept row
+ * is the one takeSnapshot already reads as the previous day. Idempotent.
+ * NOT RUN: deletes rows, so it waits for the owner's OK. Dry run first, one
+ * user at a time if the table is large:
+ *   npx convex run migrations:collapseIntradaySnapshots '{"dryRun": true}'
+ */
+export const collapseIntradaySnapshots = internalMutation({
+  args: { dryRun: v.optional(v.boolean()), userId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = args.userId;
+    const rows = userId
+      ? await ctx.db
+          .query("portfolioSnapshots")
+          .withIndex("by_user_date", (q) => q.eq("userId", userId))
+          .collect()
+      : await ctx.db.query("portfolioSnapshots").collect();
+    const { drop } = intradayRowsToDrop(rows);
+    if (!args.dryRun) {
+      for (const row of drop) await ctx.db.delete(row._id);
+    }
+    return {
+      scanned: rows.length,
+      dropped: drop.map((row) => ({
+        snapshotId: row._id,
+        userId: row.userId,
+        date: row.date,
+        timestamp: row.timestamp,
+      })),
+    };
   },
 });

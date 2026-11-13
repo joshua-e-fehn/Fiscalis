@@ -7,7 +7,11 @@
  * Uses: inventory (holdings) + historical prices = value at any timestamp
  */
 
-import { calculateSellPrice, valueVaultItem } from "../../finance/metals";
+import {
+  DEFAULT_SELL_PREMIUM,
+  calculateSellPrice,
+  valueVaultItem,
+} from "../../finance/metals";
 
 const DAY_MS = 86_400_000;
 
@@ -258,7 +262,8 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
       },
       { eurPerOunce: live.price, sourceTimestamp: live.timestamp },
       now,
-    ).value;
+      // Unknown (stale spot, no cost) adds nothing, as in the totals
+    ).value ?? 0;
   }
 
   /**
@@ -274,7 +279,7 @@ export class ContinuousPerformanceStrategy extends BasePerformanceStrategy<Conti
       return calculateSellPrice(
         price,
         holding.fineWeightGrams,
-        holding.sellPremium ?? 0,
+        holding.sellPremium ?? DEFAULT_SELL_PREMIUM,
         holding.quantity,
       );
     }

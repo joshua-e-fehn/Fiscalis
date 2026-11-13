@@ -16,8 +16,11 @@ import { api } from "@/convex/_generated/api";
 import {
   continuousSourcesFor,
   getHybridStrategy,
+  netWorthCostLine,
+  type LiveEnd,
   type PerformanceCalculationOptions,
   type PerformanceDataPoint,
+  type PerformanceMeasure,
   type PerformanceMetrics,
   type SnapshotData,
   type SnapshotMetric,
@@ -88,6 +91,7 @@ export function useSnapshots(
           netFlowEstimated: c.netFlowEstimated,
         })),
         source: s.source,
+        partial: s.partial,
       })),
     [raw],
   );
@@ -105,6 +109,8 @@ export interface UseCategoryPerformanceOptions {
   enabled?: boolean;
   /** "firstPoint": measure since tracking started when that is later */
   baseline?: PerformanceCalculationOptions["baseline"];
+  /** End the series at this live value (portfolioLiveEnd) */
+  liveEnd?: LiveEnd;
 }
 
 export interface CategoryPerformanceResult {
@@ -116,7 +122,7 @@ export interface CategoryPerformanceResult {
 }
 
 export function useCategoryPerformance(
-  measure: SnapshotMetric,
+  measure: PerformanceMeasure,
   timeRange: TimeRange,
   options: UseCategoryPerformanceOptions = {},
 ): CategoryPerformanceResult {
@@ -125,15 +131,26 @@ export function useCategoryPerformance(
     currency = "eur",
     enabled = true,
     baseline,
+    liveEnd,
   } = options;
 
-  const scope =
-    measure.kind === "category" ? (measure.category as HoldingCategory) : "all";
-  const continuousSources = useMemo(() => continuousSourcesFor(scope), [scope]);
+  // A source measure (the vault alone) has no snapshot part
+  const measureKey = JSON.stringify(measure);
+  const needsSnapshots = measure.kind !== "source";
+  const continuousSources = useMemo(() => {
+    const m = JSON.parse(measureKey) as PerformanceMeasure;
+    return continuousSourcesFor(
+      m.kind === "category"
+        ? (m.category as HoldingCategory)
+        : m.kind === "source"
+          ? { source: m.source }
+          : "all",
+    );
+  }, [measureKey]);
   const needsVault = continuousSources.some((s) => s.source === "vault");
 
   const { snapshots, isLoading: snapshotsLoading } = useSnapshots(timeRange, {
-    enabled,
+    enabled: enabled && needsSnapshots,
   });
   const vault = useVaultPerformanceInput({
     timeRange,
@@ -142,19 +159,31 @@ export function useCategoryPerformance(
   });
   const isLoading = snapshotsLoading || (needsVault && vault.isLoading);
 
-  const measureKey = JSON.stringify(measure);
+  const liveValue = liveEnd?.value;
+  const liveCost = liveEnd?.costBasis;
   const result = useMemo(() => {
     if (!enabled || isLoading) return null;
-    const metric = JSON.parse(measureKey) as SnapshotMetric;
+    const measured = JSON.parse(measureKey) as PerformanceMeasure;
+    const metric: SnapshotMetric | null =
+      measured.kind === "source" ? null : measured;
     return getHybridStrategy().calculate(
       {
-        // Always given, even empty: the hybrid strategy then decides whether
-        // the vault alone covers the measure (it does not for net worth)
-        discrete: { snapshots, metric },
+        // Always given for a snapshot metric, even empty: the hybrid
+        // strategy then decides whether the vault alone covers the measure
+        // (it does not for net worth)
+        discrete: metric ? { snapshots, metric } : undefined,
         continuous: needsVault ? vault.input : undefined,
         continuousSources,
       },
-      { timeRange, includeDataPoints, baseline },
+      {
+        timeRange,
+        includeDataPoints,
+        baseline,
+        liveEnd:
+          liveValue === undefined
+            ? undefined
+            : { value: liveValue, costBasis: liveCost ?? null },
+      },
     );
   }, [
     enabled,
@@ -167,6 +196,8 @@ export function useCategoryPerformance(
     timeRange,
     includeDataPoints,
     baseline,
+    liveValue,
+    liveCost,
   ]);
 
   return {
@@ -175,6 +206,31 @@ export function useCategoryPerformance(
     actualSnapshotTimestamps: result?.actualSnapshotTimestamps ?? [],
     isLoading,
   };
+}
+
+/** The overview's live totals (usePortfolioOverview's summary) */
+export interface LivePortfolioTotals {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+  /** Cost line of the assets; null when unknown */
+  costLine: number | null;
+}
+
+/**
+ * The live end of a total-assets or net-worth series (PF-05): the figure
+ * the headline cards show, so a card or chart over the series ends there.
+ */
+export function portfolioLiveEnd(
+  kind: "totalAssets" | "netWorth",
+  live: LivePortfolioTotals,
+): LiveEnd {
+  return kind === "netWorth"
+    ? {
+        value: live.netWorth,
+        costBasis: netWorthCostLine(live.costLine, live.totalLiabilities),
+      }
+    : { value: live.totalAssets, costBasis: live.costLine };
 }
 
 /**

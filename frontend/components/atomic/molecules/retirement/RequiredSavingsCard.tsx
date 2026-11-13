@@ -8,6 +8,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { isOnTrack, type RetirementResults } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRate } from "@/lib/utils/currency";
@@ -17,9 +19,9 @@ interface Props {
 	className?: string;
 }
 
-function monthly(value: number): string {
+function monthly(value: number, currency: InvestmentCurrency): string {
 	if (!Number.isFinite(value)) return "—";
-	return formatCurrency(value, "eur");
+	return formatCurrency(value, currency);
 }
 
 /** "assumes 7.18% / yr — a portfolio that doubles roughly every 10 years" */
@@ -34,6 +36,7 @@ function expectedHint(annualReturn: number): string {
 }
 
 export function RequiredSavingsCard({ results, className }: Props) {
+	const currency = useBaseCurrency();
 	const onTrack = isOnTrack(results);
 
 	return (
@@ -57,37 +60,51 @@ export function RequiredSavingsCard({ results, className }: Props) {
 							<ScenarioBox
 								label="Expected case"
 								hint={expectedHint(results.optimistic.annualReturn)}
-								value={monthly(results.optimistic.monthlyContribution)}
+								value={monthly(results.optimistic.monthlyContribution, currency)}
 								accent="primary"
 							/>
 							<ScenarioBox
 								label="Conservative case"
 								hint={`assumes a cautious ${formatRate(results.conservative.annualReturn)} / yr`}
-								value={monthly(results.conservative.monthlyContribution)}
+								value={monthly(results.conservative.monthlyContribution, currency)}
 								accent="muted"
 							/>
 						</div>
 						<p className="text-xs text-muted-foreground">
 							{results.contributionsIndexed
-								? `First month's amount, rising with inflation — to ${monthly(results.optimistic.finalMonthlyContribution)} (expected) by retirement.`
-								: "A flat amount in nominal euros each month until retirement; inflation makes the later payments worth less."}
+								? `First month's amount, rising with inflation — to ${monthly(results.optimistic.finalMonthlyContribution, currency)} (expected) by retirement.`
+								: "A flat nominal amount each month until retirement; inflation makes the later payments worth less."}
 						</p>
 						{results.hasNetDebt && (
 							<p className="text-xs text-muted-foreground">
-								These amounts start from €0 and don&apos;t include paying down
+								These amounts start from{" "}
+								{formatCurrency(0, currency, { compact: true })} and don&apos;t include paying down
 								your current debt.
 							</p>
 						)}
 					</div>
 				)}
 				{results.residenceMortgage &&
+					!results.residenceMortgage.balanceProjected && (
+						<p className="mt-3 text-xs text-muted-foreground">
+							Your home mortgage&apos;s full balance of{" "}
+							{formatCurrency(
+								results.residenceMortgage.balanceAtRetirement,
+								currency,
+							)}{" "}
+							counts as still owed at retirement and is part of your target:
+							add its rate and repayment in the plan to project it.
+						</p>
+					)}
+				{results.residenceMortgage &&
+					results.residenceMortgage.balanceProjected &&
 					results.residenceMortgage.monthlyPayment > 0 && (
 						<p className="mt-3 text-xs text-muted-foreground">
 							On top of this, your home mortgage repayments of{" "}
-							{formatCurrency(results.residenceMortgage.monthlyPayment, "eur")}
+							{formatCurrency(results.residenceMortgage.monthlyPayment, currency)}
 							/mo continue from your income
 							{results.residenceMortgage.balanceAtRetirement > 0
-								? `; the ${formatCurrency(results.residenceMortgage.balanceAtRetirement, "eur")} still owed at retirement is part of your target.`
+								? `; the ${formatCurrency(results.residenceMortgage.balanceAtRetirement, currency)} still owed at retirement is part of your target.`
 								: " until the loan is repaid."}
 						</p>
 					)}

@@ -156,11 +156,16 @@ export function HoldingCard({
               <div className="text-xs text-muted-foreground">Fine Weight</div>
             </div>
             <div className="text-right">
-              <PriceDisplay
-                value={item.marketValue ?? 0}
-                currency={currency}
-                size="lg"
-              />
+              {/* No fresh spot and no cost: the value is unknown */}
+              {item.marketValue === null ? (
+                <span className="text-lg text-muted-foreground">—</span>
+              ) : (
+                <PriceDisplay
+                  value={item.marketValue}
+                  currency={currency}
+                  size="lg"
+                />
+              )}
               {item.profitLoss !== null && item.profitLossPercent !== null && (
                 <ChangeIndicator
                   value={item.profitLoss}
@@ -217,11 +222,15 @@ export function HoldingCardCompact({
         </div>
       </div>
       <div className="text-right">
-        <PriceDisplay
-          value={item.marketValue ?? 0}
-          currency={currency}
-          size="md"
-        />
+        {item.marketValue === null ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <PriceDisplay
+            value={item.marketValue}
+            currency={currency}
+            size="md"
+          />
+        )}
       </div>
     </motion.div>
   );

@@ -68,42 +68,18 @@ export type TimeInterval =
   | "quarter"
   | "year";
 
-export function getTimeRangeInMilliseconds(timeRange: TimeRange) {
-  const now = new Date();
+/** Start of the "ALL" range: 1 January 2024 (UTC), the platform launch. */
+export const PLATFORM_LAUNCH_TIMESTAMP = Date.UTC(2024, 0, 1);
 
-  switch (timeRange) {
-    case "Hour":
-      return MS_PER_HOUR;
-    case "Day":
-      return MS_PER_DAY;
-    case "Week":
-      return MS_PER_WEEK;
-    case "Month":
-      return MS_PER_MONTH;
-    case "3Month":
-      return MS_PER_3_MONTHS;
-    case "6Month":
-      return MS_PER_6_MONTHS;
-    case "Year":
-      return MS_PER_YEAR;
-    case "3Year":
-      return MS_PER_3_YEARS;
-    case "5Year":
-      return MS_PER_5_YEARS;
-    case "YTD": {
-      // Time from start of year until now in UTC
-      const currentYear = now.getUTCFullYear();
-      const startOfYearUTC = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
-      return now.getTime() - startOfYearUTC.getTime();
-    }
-    case "ALL": {
-      // From January 1, 2024 (UTC) until now (platform launch)
-      const startOf2024UTC = new Date(Date.UTC(2024, 0, 1, 0, 0, 0, 0));
-      return now.getTime() - startOf2024UTC.getTime();
-    }
-    default:
-      return MS_PER_DAY; // Default to 1 day
-  }
+/**
+ * Length of a time range ending at `now` (default: Date.now()), in ms:
+ * `now − getTimeRangeStartTimestamp(timeRange, now)`.
+ */
+export function getTimeRangeInMilliseconds(
+  timeRange: TimeRange,
+  now: number = Date.now(),
+): number {
+  return now - getTimeRangeStartTimestamp(timeRange, now);
 }
 
 /**
@@ -140,8 +116,7 @@ export function getTimeRangeStartTimestamp(
       return new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0)).getTime();
     }
     case "ALL":
-      // Platform launch date
-      return new Date(Date.UTC(2024, 0, 1, 0, 0, 0, 0)).getTime();
+      return PLATFORM_LAUNCH_TIMESTAMP;
     default:
       return now - MS_PER_DAY;
   }
@@ -172,6 +147,71 @@ export function getDefaultIntervalForRange(timeRange: TimeRange): TimeInterval {
     default:
       return "day";
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Price history windows (one fetch per metal, sliced per range)
+// ═══════════════════════════════════════════════════════════════
+
+const ALL_TIME_RANGES: readonly TimeRange[] = [
+  "Hour",
+  "Day",
+  "Week",
+  "Month",
+  "3Month",
+  "6Month",
+  "Year",
+  "3Year",
+  "5Year",
+  "YTD",
+  "ALL",
+];
+
+/**
+ * How far before a range's start prices are needed, so the start takes the
+ * last close at or before it (31 Dec for YTD, Friday over a weekend).
+ */
+export const PRICE_LOOKBACK_MS = 7 * MS_PER_DAY;
+
+export interface PriceHistoryWindow {
+  /** Aggregation interval: the range's default interval */
+  interval: TimeInterval;
+  /** Fetch start (ms): a UTC midnight, so it is stable within a day */
+  from: number;
+}
+
+/**
+ * The one price-history fetch that serves a range: every range with the
+ * same default interval shares it, so it starts at the widest of their
+ * starts less PRICE_LOOKBACK_MS, floored to UTC midnight (the same window
+ * all day). Callers slice it with sliceFrom instead of fetching each range.
+ */
+export function priceHistoryWindow(
+  timeRange: TimeRange,
+  now: number = Date.now(),
+): PriceHistoryWindow {
+  const interval = getDefaultIntervalForRange(timeRange);
+  // Starts measured from today's UTC midnight lie at or before the real
+  // ones, and do not move during the day
+  const today = utcMidnight(now);
+  const widestStart = Math.min(
+    ...ALL_TIME_RANGES.filter(
+      (r) => getDefaultIntervalForRange(r) === interval,
+    ).map((r) => getTimeRangeStartTimestamp(r, today)),
+  );
+  return { interval, from: utcMidnight(widestStart - PRICE_LOOKBACK_MS) };
+}
+
+function utcMidnight(ms: number): number {
+  return ms - (((ms % MS_PER_DAY) + MS_PER_DAY) % MS_PER_DAY);
+}
+
+/** The points at or after `from` (ms), in their order. */
+export function sliceFrom<T extends { timestamp: number }>(
+  points: readonly T[],
+  from: number,
+): T[] {
+  return points.filter((p) => p.timestamp >= from);
 }
 
 export function getTimeIntervalInMilliseconds(timeRange: TimeInterval) {

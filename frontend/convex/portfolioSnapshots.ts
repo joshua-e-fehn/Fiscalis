@@ -89,8 +89,10 @@ export const takeSnapshot = internalMutation({
     }
 
     // The newest row of an earlier day: each category's netFlow is the
-    // money moved in or out since then, derived from the holdings both rows
-    // keep (aggregate.ts categoryFlowFromHoldings)
+    // money moved in or out since then, exact for the holdings traded in
+    // between (the providers' trade logs, lib/netWorth.ts loadExactFlows)
+    // and derived from the holdings both rows keep for the rest
+    // (aggregate.ts categoryFlowFromHoldings)
     const previous = await ctx.db
       .query("portfolioSnapshots")
       .withIndex("by_user_date", (q) =>
@@ -107,7 +109,7 @@ export const takeSnapshot = internalMutation({
       totalCoveredValue,
       categoryBreakdown,
       asOf,
-    } = await computeNetWorth(ctx, userId, previous?.categoryBreakdown);
+    } = await computeNetWorth(ctx, userId, previous ?? undefined);
 
     const fields = {
       timestamp: now,

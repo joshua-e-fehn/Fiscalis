@@ -7,11 +7,13 @@ import {
   ledgerHoldings,
   ledgerOverCounts,
   missingOpeningTransaction,
+  nextOpeningQuantity,
   replayLedger,
   retainedBasePrice,
   saleProfitLoss,
   sortLedger,
   sumSaleProfitLoss,
+  transactionTotals,
   transactionUnitAmount,
   validateTransactionInput,
 } from "./metalsLedger";
@@ -394,6 +396,102 @@ describe("ledger lots in the continuous strategy", () => {
   });
 });
 
+describe("ledgerHoldings in another currency (PF-13)", () => {
+  const item = { id: "coin", metalType: "gold", fineWeightGrams: TROY_OUNCE_GRAMS, sellPremium: 0 };
+  const rates = { eurToUsd: 2, eurToChf: 0.5 };
+
+  it("keeps EUR lots as they are", () => {
+    const ledger = replayLedger([buy(2, 100, "2026-02-01")], eurOnly);
+    const [lot] = ledgerHoldings(item, ledger.lots);
+    expect(lot.purchaseCurrency).toBe("EUR");
+    expect(lot.purchasePricePerUnit).toBe(100);
+    expect(lot.costPerUnit).toBe(100);
+    expect(lot.costLine).toEqual({ knownCost: 200, unknownQuantity: 0 });
+  });
+
+  it("converts each lot's price and cost into the series currency", () => {
+    const ledger = replayLedger(
+      [buy(1, null, null), buy(1, 100, "2026-02-01"), sell(1, 150, "2026-04-01")],
+      eurOnly,
+    );
+    const lots = ledgerHoldings(item, ledger.lots, { currency: "usd", rates });
+    expect(lots.map((l) => l.purchaseCurrency)).toEqual(["USD", "USD", "USD"]);
+    expect(lots.map((l) => l.purchasePricePerUnit)).toEqual([undefined, 200, 300]);
+    expect(lots.map((l) => l.costLine)).toEqual([
+      { knownCost: 0, unknownQuantity: 1 },
+      { knownCost: 200, unknownQuantity: 0 },
+      // Half the pool (100 € known, 1 unit unknown) leaves
+      { knownCost: -100, unknownQuantity: -0.5 },
+    ]);
+    const chf = ledgerHoldings(item, ledger.lots, { currency: "CHF", rates });
+    expect(chf[1].costLine).toEqual({ knownCost: 50, unknownQuantity: 0 });
+    expect(chf[1].costPerUnit).toBe(50);
+  });
+
+  it("leaves the cost unknown without a rate, never in EUR", () => {
+    const ledger = replayLedger([buy(2, 100, "2026-02-01")], eurOnly);
+    const [lot] = ledgerHoldings(item, ledger.lots, {
+      currency: "USD",
+      rates: { eurToUsd: null, eurToChf: 0.5 },
+    });
+    expect(lot.purchaseCurrency).toBe("USD");
+    expect(lot.purchasePricePerUnit).toBeUndefined();
+    expect(lot.costPerUnit).toBeNull();
+    expect(lot.costLine).toBeUndefined();
+  });
+});
+
+describe("transactionTotals (M-C5)", () => {
+  const rates = { eurToUsd: 2, eurToChf: 0.5 };
+  const txs = [
+    // EUR buy: 2 × 100 €
+    { ...buy(2, 100, "2026-01-05"), pricePerUnitBase: 100 },
+    // USD buy stored at 50 € per unit on its date: 1 × 120 $
+    { ...buy(1, 120, "2026-02-05", "USD"), pricePerUnitBase: 50 },
+    // EUR sale: 1 × 150 €
+    { ...sell(1, 150, "2026-03-05"), pricePerUnitBase: 150 },
+    // Opening balance of unknown cost
+    buy(3, null, null),
+  ];
+
+  it("sums EUR rows and converts the others' EUR price", () => {
+    expect(transactionTotals(txs, "eur", rates)).toEqual({
+      totalBought: 250,
+      totalSold: 150,
+      buyCount: 3,
+      sellCount: 1,
+      notConverted: 0,
+      unknownCost: 1,
+    });
+  });
+
+  it("takes a row in the display currency at its own price", () => {
+    // 200 € × 2 + 120 $ (own price) ; sale 150 € × 2
+    expect(transactionTotals(txs, "usd", rates)).toMatchObject({
+      totalBought: 520,
+      totalSold: 300,
+      notConverted: 0,
+    });
+  });
+
+  it("converts an older row without an EUR price from its own currency", () => {
+    const older = [buy(1, 100, "2026-01-05", "USD")];
+    expect(transactionTotals(older, "CHF", rates).totalBought).toBe(25);
+  });
+
+  it("counts rows without a rate instead of mixing currencies", () => {
+    const noUsd = { eurToUsd: null, eurToChf: 0.5 };
+    expect(transactionTotals(txs, "usd", noUsd)).toEqual({
+      totalBought: 120,
+      totalSold: 0,
+      buyCount: 3,
+      sellCount: 1,
+      notConverted: 2,
+      unknownCost: 1,
+    });
+  });
+});
+
 describe("retainedBasePrice", () => {
   const opening = {
     pricePerUnit: 200,
@@ -420,5 +518,26 @@ describe("retainedBasePrice", () => {
     expect(
       retainedBasePrice({ ...opening, pricePerUnitBase: undefined }, opening),
     ).toBeUndefined();
+  });
+});
+
+describe("nextOpeningQuantity", () => {
+  it("sets the opening directly, independent of the total held", () => {
+    // Opening 5 → 7 saved, held 10 → 12; a second edit to 9 stays 9
+    expect(nextOpeningQuantity(7, { openingQuantity: 9, held: 12 })).toBe(9);
+  });
+
+  it("moves the opening by the change in total held", () => {
+    expect(nextOpeningQuantity(5, { quantity: 12, held: 10 })).toBe(7);
+  });
+
+  it("keeps the opening when neither is given", () => {
+    expect(nextOpeningQuantity(5, { held: 10 })).toBe(5);
+  });
+
+  it("rejects both at once", () => {
+    expect(() =>
+      nextOpeningQuantity(5, { openingQuantity: 6, quantity: 12, held: 10 }),
+    ).toThrow(LedgerError);
   });
 });

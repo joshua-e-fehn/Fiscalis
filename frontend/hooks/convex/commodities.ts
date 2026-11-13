@@ -1,155 +1,29 @@
 /**
- * Commodities Category Summary Hook
- *
- * Aggregates data from all commodity subcategories (Precious Metals, Energy, etc.)
- * to provide a unified summary for the category dashboard.
+ * Commodities category summary: vault metals (valued at the Convex spot
+ * mirror) plus Bitpanda and broker metals and other commodities, from the
+ * server aggregate (categories.getCommodities), so the page covers the
+ * same holdings as the dashboard and the snapshots (M-A1). Values in EUR.
+ * A vault item valued at cost (no fresh spot) counts in the value but not
+ * in the P/L or its coverage (aggregate.ts profitLossCostBase).
+ * The chart's history comes from the one performance entry point
+ * (InvestmentDashboardSection, useCategoryChartData).
  */
 
-import { useMemo } from "react";
-import { useAuth } from "@clerk/nextjs";
-import { useMetalsSummary, useMetals } from "./metals";
-import { useVaultPerformance } from "@/hooks/performance/useContinuousPerformance";
-import { useMetalsYTD } from "@/hooks/performance/useMetalsYTD";
-import {
-  CategorySummary,
-  SubcategoryData,
-  PortfolioDataPoint,
-  Holding,
-} from "@/lib/types/investments";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
-import {
-  commoditiesSubcategoryUI,
-  makeSubcategoryBase,
-} from "@/lib/config/categoryUI";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { CategorySummary } from "@/lib/types/investments";
+import { commoditiesSubcategoryUI } from "@/lib/config/categoryUI";
+import { subcategoryCards, useCategorySummary } from "./categorySummary";
 
-/**
- * Hook to get the commodities category summary
- *
- * This aggregates data from:
- * - Precious Metals (implemented)
- * - Energy (not yet implemented)
- * - Industrial Metals (not yet implemented)
- * - Agricultural (not yet implemented)
- * - Rare Earth (not yet implemented)
- * - Gemstones (not yet implemented)
- */
-export function useCommoditiesSummary(currency: MetalsCurrency = "eur"): {
+const SUBCATEGORIES = subcategoryCards(commoditiesSubcategoryUI);
+
+export function useCommoditiesSummary(): {
   summary: CategorySummary | null;
   isLoading: boolean;
 } {
-  const { userId } = useAuth();
-
-  // Get metals data
-  const { summary: metalsSummary, isLoading: metalsLoading } = useMetalsSummary(currency);
-
-  const { items: metalsItems } = useMetals(currency);
-
-  // History and YTD from the one vault engine: ledger quantities at
-  // historical spot, sales as outflows (useVaultPerformance / useMetalsYTD)
-  const history = useVaultPerformance("Year", {
-    currency,
-    includeDataPoints: true,
-  });
-  const ytd = useMetalsYTD(currency);
-
-  // Build category summary
-  const summary = useMemo<CategorySummary | null>(() => {
-    if (!userId) return null;
-
-    // Without a fresh spot price items are valued at cost, so their P/L
-    // is unknown rather than 0 (as MetalsPage shows it)
-    const metalsPriced = metalsSummary?.pricedAtSpot !== false;
-    const metalsProfitLoss = metalsPriced
-      ? (metalsSummary?.unrealizedProfitLoss ?? null)
-      : null;
-    const metalsProfitLossPercent = metalsPriced
-      ? (metalsSummary?.unrealizedProfitLossPercent ?? null)
-      : null;
-
-    // Build subcategories array from centralized config
-    const subcategories: SubcategoryData[] = [];
-
-    for (const [slug, meta] of Object.entries(commoditiesSubcategoryUI)) {
-      if (slug === "metals") {
-        // Precious Metals — has real data
-        const metalsTopHoldings: Holding[] = metalsItems
-          ? metalsItems
-              .sort((a, b) => (b.marketValue ?? 0) - (a.marketValue ?? 0))
-              .slice(0, 5)
-              .map((item) => ({
-                id: item._id,
-                name: item.displayName,
-                subcategoryId: "metals",
-                value: item.marketValue ?? 0,
-                costBasis: item.totalCost ?? null,
-                profitLoss: item.profitLoss ?? null,
-                profitLossPercent: item.profitLossPercent ?? null,
-                allocationPercent:
-                  metalsSummary && metalsSummary.totalMarketValue > 0
-                    ? ((item.marketValue ?? 0) /
-                        metalsSummary.totalMarketValue) *
-                      100
-                    : 0,
-              }))
-          : [];
-
-        subcategories.push({
-          ...makeSubcategoryBase(slug, meta),
-          totalValue: metalsSummary?.totalMarketValue ?? 0,
-          costBasis: metalsSummary?.totalCost ?? null,
-          profitLoss: metalsProfitLoss,
-          profitLossPercent: metalsProfitLossPercent,
-          topHoldings: metalsTopHoldings,
-          holdingsCount: metalsItems?.length ?? 0,
-          implemented: true,
-        });
-      } else {
-        // Other commodities — placeholder
-        subcategories.push(makeSubcategoryBase(slug, meta));
-      }
-    }
-
-    // Calculate totals
-    const totalValue = subcategories.reduce((sum, s) => sum + s.totalValue, 0);
-
-    // Only precious metals carry data. Their cost and unrealized P/L cover
-    // just the items with a cost (summarizeMetalItems), so the P/L is taken
-    // from the summary rather than recomputed against the full value.
-    const totalCost = metalsSummary?.totalCost ?? null;
-    const profitLoss = metalsProfitLoss;
-    const profitLossPercent = metalsProfitLossPercent;
-
-    // The chart's cost line: the lots' cost, or the value where unknown
-    const historyDataPoints: PortfolioDataPoint[] = history.dataPoints.map(
-      (dp) => ({
-        date: new Date(dp.timestamp).toLocaleDateString("de-DE"),
-        timestamp: dp.timestamp,
-        value: dp.value,
-        cost: dp.costBasis ?? dp.value,
-      }),
-    );
-
-    // YTD net of this year's purchases and sales; null without a value at 1 Jan
-    const ytdProfitLoss = ytd.ytdProfitLoss;
-    const ytdProfitLossPercent = ytd.ytdProfitLossPercent;
-    const valueAtYearStart = ytd.valueAtStartOfYear;
-
-    return {
-      totalValue,
-      totalCost,
-      profitLoss,
-      profitLossPercent,
-      profitLossCoverage: metalsPriced ? (metalsSummary?.coverage ?? null) : null,
-      ytdProfitLoss,
-      ytdProfitLossPercent,
-      valueAtYearStart,
-      subcategories,
-      historyDataPoints,
-    };
-  }, [userId, metalsSummary, metalsItems, history.dataPoints, ytd]);
-
-  return {
-    summary,
-    isLoading: metalsLoading || history.isLoading || ytd.isLoading,
-  };
+  return useCategorySummary(
+    useQuery(api.categories.getCommodities),
+    SUBCATEGORIES,
+    5,
+  );
 }

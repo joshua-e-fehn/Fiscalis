@@ -4,12 +4,24 @@ import {
 	DEFAULT_INFLATION_RATE,
 	DEFAULT_OPTIMISTIC_RETURN,
 	DEFAULT_WITHDRAWAL_RATE,
+	computeRetirementResults,
 	firstRetirementInputError,
+	mortgageAccountHoldings,
+	planToInputs,
+	type ResidenceMortgage,
+	type RetirementFundingBase,
 	type RetirementInputs,
+	residenceMortgageFromAccount,
+	residenceMortgageFromLoan,
+	retirementFundingBase,
+	retirementValuationDay,
 } from "../../services/finance/retirementService";
+import { aggregateNetWorth } from "../../services/portfolio/aggregate";
 import { validateBirthDate } from "../lib/utils/date";
-import { mutation, query } from "./_generated/server";
-import { getOwnedDoc } from "./lib/auth";
+import type { Id } from "./_generated/dataModel";
+import { mutation, type QueryCtx, query } from "./_generated/server";
+import { getOwnedDoc, getUserId } from "./lib/auth";
+import { loadHoldings } from "./lib/netWorth";
 import {
 	retirementFundingTreatmentValidator,
 	retirementPensionSourceValidator,
@@ -19,12 +31,13 @@ import {
 // RETIREMENT PLANNER ("Rentenplaner") — persistence layer
 // ═══════════════════════════════════════════════════════════════
 //
-// This module only stores/serves the user's plan. The financial computation
-// lives in services/finance/retirementService.ts and is composed client-side
-// (see hooks/convex/retirement.ts → useRetirementResults). Defaults and input
-// validation are imported from that same pure service (relative path: the
-// `@/` alias is not configured for Convex), so the wizard UI and the server
-// accept exactly the same inputs.
+// This module stores the user's plan and computes its results. The financial
+// computation lives in services/finance/retirementService.ts; the funding base
+// is the net worth's own aggregate (lib/netWorth.ts loadHoldings →
+// aggregateNetWorth, FX-normalised), so the plan and the dashboard always
+// agree. Defaults and input validation are imported from that same pure
+// service (relative path: the `@/` alias is not configured for Convex), so the
+// wizard UI and the server accept exactly the same inputs.
 
 /** Wizard steps are 1 (intro) … 8 (results) — RetirementStep in lib/types/retirement.ts. */
 const MIN_STEP = 1;
@@ -36,6 +49,69 @@ function assertValidStep(step: number) {
 			`Step must be a whole number between ${MIN_STEP} and ${MAX_STEP}`,
 		);
 	}
+}
+
+// ───────────────────────────────────────────────────────────────
+// Funding base
+// ───────────────────────────────────────────────────────────────
+
+/** How the plan links the mortgage on the home the user lives in. */
+interface ResidenceMortgageLink {
+	primaryResidenceLoanId?: Id<"loans">;
+	primaryResidenceAccountId?: Id<"plaidAccounts">;
+	primaryResidenceMortgageRate?: number;
+	primaryResidenceMortgagePayment?: number;
+}
+
+/**
+ * The funding base: the net worth's per-category assets and liabilities plus
+ * the linked residence mortgage. A tracked loan is projected by its own
+ * schedule and payments (only one the liabilities count, D1); a Plaid
+ * mortgage account from the plan's optional rate and repayment, both from
+ * `today` (`YYYY-MM-DD`).
+ */
+async function loadFundingBase(
+	ctx: QueryCtx,
+	userId: string,
+	link: ResidenceMortgageLink,
+	today: string,
+): Promise<RetirementFundingBase> {
+	const holdings = await loadHoldings(ctx, userId);
+	let mortgage: ResidenceMortgage | null = null;
+	if (link.primaryResidenceLoanId) {
+		const holding = holdings.find(
+			(h) => h.source === "loan" && h.id === link.primaryResidenceLoanId,
+		);
+		if (holding?.source === "loan") {
+			const loan = holding.doc;
+			const payments = await ctx.db
+				.query("loanPayments")
+				.withIndex("by_loan", (q) => q.eq("loanId", loan._id))
+				.collect();
+			mortgage = residenceMortgageFromLoan(
+				loan,
+				payments,
+				today,
+				loan.currentBalance > 0 ? holding.valueBase / loan.currentBalance : 1,
+			);
+		}
+	} else if (link.primaryResidenceAccountId) {
+		const account = mortgageAccountHoldings(holdings).find(
+			(h) => h.id === link.primaryResidenceAccountId,
+		);
+		if (account) {
+			mortgage = residenceMortgageFromAccount(
+				account.valueBase,
+				{
+					annualInterestRate: link.primaryResidenceMortgageRate,
+					monthlyPayment: link.primaryResidenceMortgagePayment,
+				},
+				true,
+				today,
+			);
+		}
+	}
+	return retirementFundingBase(aggregateNetWorth(holdings), mortgage);
 }
 
 // ───────────────────────────────────────────────────────────────
@@ -53,6 +129,83 @@ export const getRetirementPlan = query({
 			.query("retirementPlans")
 			.withIndex("by_user", (q) => q.eq("userId", identity.subject))
 			.first();
+	},
+});
+
+/**
+ * The valuation day argument of the date-dependent queries: the viewer's
+ * local `YYYY-MM-DD`. A query result is cached per argument set and the
+ * clock is not a dependency, so the day must be an argument for the age,
+ * horizon and mortgage projection to advance (retirementValuationDay).
+ */
+const valuationDayArg = v.optional(v.string());
+
+/**
+ * The stored plan's results on `today`, computed from the user's current net
+ * worth. null when signed out or without a plan.
+ */
+export const getResults = query({
+	args: { today: valuationDayArg },
+	handler: async (ctx, args) => {
+		const userId = await getUserId(ctx);
+		if (!userId) return null;
+		const plan = await ctx.db
+			.query("retirementPlans")
+			.withIndex("by_user", (q) => q.eq("userId", userId))
+			.first();
+		if (!plan) return null;
+		const settings = await ctx.db
+			.query("userSettings")
+			.withIndex("by_user", (q) => q.eq("userId", userId))
+			.first();
+		const day = retirementValuationDay(args.today);
+		return computeRetirementResults(
+			planToInputs(plan, settings?.birthDate, day.date),
+			await loadFundingBase(ctx, userId, plan, day.iso),
+			day.date,
+		);
+	},
+});
+
+/**
+ * The funding base for a residence-mortgage link on `today`, for the
+ * wizard's preview of unsaved inputs. null when signed out.
+ */
+export const getFundingBase = query({
+	args: {
+		today: valuationDayArg,
+		primaryResidenceLoanId: v.optional(v.id("loans")),
+		primaryResidenceAccountId: v.optional(v.id("plaidAccounts")),
+		primaryResidenceMortgageRate: v.optional(v.number()),
+		primaryResidenceMortgagePayment: v.optional(v.number()),
+	},
+	handler: async (ctx, args) => {
+		const userId = await getUserId(ctx);
+		if (!userId) return null;
+		const { today, ...link } = args;
+		return await loadFundingBase(
+			ctx,
+			userId,
+			link,
+			retirementValuationDay(today).iso,
+		);
+	},
+});
+
+/** Bank (Plaid) mortgage accounts the residence can be linked to. */
+export const getResidenceMortgageAccounts = query({
+	args: {},
+	handler: async (ctx) => {
+		const userId = await getUserId(ctx);
+		if (!userId) return [];
+		return mortgageAccountHoldings(await loadHoldings(ctx, userId)).map(
+			(h) => ({
+				_id: h.id as Id<"plaidAccounts">,
+				name: h.name,
+				/** Amount owed today, base currency */
+				balance: h.valueBase,
+			}),
+		);
 	},
 });
 
@@ -79,6 +232,15 @@ export const saveRetirementPlan = mutation({
 		ownsPrimaryResidence: v.optional(v.boolean()),
 		// null unlinks the residence mortgage.
 		primaryResidenceLoanId: v.optional(v.union(v.id("loans"), v.null())),
+		// Or a Plaid mortgage account (null unlinks); linking one unlinks the
+		// other. Rate and repayment: null clears.
+		primaryResidenceAccountId: v.optional(
+			v.union(v.id("plaidAccounts"), v.null()),
+		),
+		primaryResidenceMortgageRate: v.optional(v.union(v.number(), v.null())),
+		primaryResidenceMortgagePayment: v.optional(
+			v.union(v.number(), v.null()),
+		),
 		fundableRealEstateEquity: v.optional(v.number()),
 		fundingTreatments: v.optional(
 			v.record(v.string(), retirementFundingTreatmentValidator),
@@ -124,6 +286,16 @@ export const saveRetirementPlan = mutation({
 				args.ownsPrimaryResidence ?? existing?.ownsPrimaryResidence ?? false,
 			fundableRealEstateEquity:
 				args.fundableRealEstateEquity ?? existing?.fundableRealEstateEquity,
+			primaryResidenceMortgageRate:
+				args.primaryResidenceMortgageRate === null
+					? undefined
+					: (args.primaryResidenceMortgageRate ??
+						existing?.primaryResidenceMortgageRate),
+			primaryResidenceMortgagePayment:
+				args.primaryResidenceMortgagePayment === null
+					? undefined
+					: (args.primaryResidenceMortgagePayment ??
+						existing?.primaryResidenceMortgagePayment),
 			fundingTreatments:
 				args.fundingTreatments ?? existing?.fundingTreatments,
 			pensionSources: args.pensionSources ?? existing?.pensionSources ?? [],
@@ -169,7 +341,25 @@ export const saveRetirementPlan = mutation({
 			const loan = await getOwnedDoc(ctx, userId, args.primaryResidenceLoanId);
 			if (!loan) throw new Error("Loan not found");
 		}
-		const primaryResidenceLoanId = args.primaryResidenceLoanId ?? undefined;
+		if (args.primaryResidenceAccountId) {
+			if (args.primaryResidenceLoanId)
+				throw new Error("Link either a loan or an account, not both");
+			const account = await getOwnedDoc(
+				ctx,
+				userId,
+				args.primaryResidenceAccountId,
+			);
+			if (!account) throw new Error("Account not found");
+		}
+		// Linking one kind of mortgage unlinks the other.
+		const loanArg = args.primaryResidenceAccountId
+			? null
+			: args.primaryResidenceLoanId;
+		const accountArg = args.primaryResidenceLoanId
+			? null
+			: args.primaryResidenceAccountId;
+		const primaryResidenceLoanId = loanArg ?? undefined;
+		const primaryResidenceAccountId = accountArg ?? undefined;
 
 		if (!existing) {
 			const id = await ctx.db.insert("retirementPlans", {
@@ -179,6 +369,7 @@ export const saveRetirementPlan = mutation({
 				birthDate,
 				...merged,
 				primaryResidenceLoanId,
+				primaryResidenceAccountId,
 				createdAt: now,
 				updatedAt: now,
 			});
@@ -198,8 +389,15 @@ export const saveRetirementPlan = mutation({
 		if (args.ownsPrimaryResidence !== undefined)
 			updates.ownsPrimaryResidence = args.ownsPrimaryResidence;
 		// null → undefined removes the field (unlinks the mortgage).
-		if (args.primaryResidenceLoanId !== undefined)
+		if (loanArg !== undefined)
 			updates.primaryResidenceLoanId = primaryResidenceLoanId;
+		if (accountArg !== undefined)
+			updates.primaryResidenceAccountId = primaryResidenceAccountId;
+		if (args.primaryResidenceMortgageRate !== undefined)
+			updates.primaryResidenceMortgageRate = merged.primaryResidenceMortgageRate;
+		if (args.primaryResidenceMortgagePayment !== undefined)
+			updates.primaryResidenceMortgagePayment =
+				merged.primaryResidenceMortgagePayment;
 		if (args.fundableRealEstateEquity !== undefined)
 			updates.fundableRealEstateEquity = args.fundableRealEstateEquity;
 		if (args.fundingTreatments !== undefined)

@@ -5,10 +5,13 @@ import {
   BASE_CURRENCY,
   bankAccountWithBaseFields,
   brokerAccountWithBaseFields,
+  normalizeCurrency,
   positionWithBaseFields,
   toBase,
+  type FxRates,
 } from "../../../services/finance/currency";
-import { valueVaultItem } from "../../../services/finance/metals";
+import { vaultItemValuation } from "../../../services/finance/metals";
+import type { ToBaseAmount } from "../../../services/finance/metalsLedger";
 import {
   averageCostPerUnit,
   bankAccountValue,
@@ -30,6 +33,17 @@ import {
   type NormalizedHolding,
   type SnapshotCategoryEntry,
 } from "../../../services/portfolio/aggregate";
+import {
+  bitpandaHoldingKey,
+  bitpandaTradeFlow,
+  bitpandaTradeKeys,
+  brokerPositionKey,
+  snaptradeActivityFlow,
+  tradeFlowsBetween,
+  vaultLedgerFlows,
+  type ToBaseOn,
+  type TradeFlow,
+} from "../../../services/portfolio/flows";
 
 /**
  * The one loader behind every net-worth figure: it reads each provider table
@@ -50,14 +64,19 @@ import {
  *   credit/loan balance as reported, a provider position's absolute value
  *   (positionOwed), a broker account's margin debit, a loan's balance.
  * - Vault items are valued at live spot (metalSpotPrices) with the shared
- *   metals valuation, falling back to cost when no fresh spot price exists.
+ *   metals valuation (vaultItemValuation), falling back to cost when no
+ *   fresh spot price exists. An item with neither counts 0 (M-C6: its value
+ *   is unknown); the cost fallback stays so that a price outage does not
+ *   drop the vault from net worth and the snapshots.
  * - A Bitpanda holding's cost basis is the average cost of its symbol from
  *   the synced trades (rewards at no cost) times the quantity held, and
  *   none when more is held than the trades account for (categorySummary.ts
  *   averageCostPerUnit, bitpandaCostBasis); Bitpanda reports none itself.
  * - Each holding carries a key that survives provider re-syncs, and a
  *   foreign-currency position its native cost, for the snapshot flows
- *   (aggregate.ts holdingNetFlow).
+ *   (aggregate.ts holdingNetFlow). A holding traded since the previous
+ *   snapshot takes its exact flow from the trade logs instead
+ *   (loadExactFlows).
  * - Loans count when active or defaulted (D1).
  */
 
@@ -78,11 +97,27 @@ export type LoadedHolding =
   | (NormalizedHolding & { source: "vault"; doc: Doc<"vaultItems"> })
   | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> });
 
+/** The spot-price mirror (metalPrices.ts), by metal. */
+export async function loadSpotPrices(
+  ctx: QueryCtx,
+): Promise<Map<string, Doc<"metalSpotPrices">>> {
+  return new Map(
+    (await ctx.db.query("metalSpotPrices").collect()).map((p) => [
+      p.metalType,
+      p,
+    ]),
+  );
+}
+
 export async function loadHoldings(
   ctx: QueryCtx,
   userId: string,
 ): Promise<LoadedHolding[]> {
   const rates = await loadFxRates(ctx);
+  const toBaseAmount: ToBaseAmount = (amount, currency) => {
+    const converted = toBase(amount, currency, rates);
+    return converted.ok ? converted.value : null;
+  };
   const now = Date.now();
   const holdings: LoadedHolding[] = [];
 
@@ -122,8 +157,7 @@ export async function loadHoldings(
     const costBase = positionCostBasis(doc);
     holdings.push({
       id: doc._id,
-      // Positions are replaced on every sync; the account and symbol stay
-      key: `brokerPosition:${doc.accountId}:${doc.symbol}`,
+      key: brokerPositionKey(doc.accountId, doc.symbol),
       provider: "snaptrade",
       source: "brokerPosition",
       category,
@@ -177,10 +211,7 @@ export async function loadHoldings(
             .query("bitpandaTransactions")
             .withIndex("by_user", (q) => q.eq("userId", userId))
             .collect(),
-          (amount, currency) => {
-            const converted = toBase(amount, currency, rates);
-            return converted.ok ? converted.value : null;
-          },
+          toBaseAmount,
         )
       : new Map<string, AverageCost>();
   for (const raw of bitpandaHoldings) {
@@ -192,8 +223,7 @@ export async function loadHoldings(
       cost === undefined ? raw : { ...raw, costBasisInBaseCurrency: cost.base };
     holdings.push({
       id: doc._id,
-      // Holdings are replaced on every sync; the connection and asset stay
-      key: `bitpanda:${doc.connectionId}:${doc.assetType}:${doc.symbol.toUpperCase()}`,
+      key: bitpandaHoldingKey(doc.connectionId, doc.assetType, doc.symbol),
       provider: "bitpanda",
       source: "bitpanda",
       category,
@@ -204,7 +234,13 @@ export async function loadHoldings(
       // A foreign-currency cost stays put when the rate moves, so the
       // snapshot flow is read from it (holdingNetFlow)
       ...(cost?.native ? { costNative: cost.native } : {}),
-      pricedAt: doc.lastSyncAt ?? doc.createdAt,
+      // When the price was taken, so a stale price (kept from an earlier
+      // sync, holdingPrice.ts) pulls asOf back; null when never priced.
+      // Rows synced before priceStatus fall back to their sync time.
+      pricedAt:
+        doc.priceStatus === "missing"
+          ? null
+          : (doc.priceAsOf ?? doc.lastSyncAt ?? doc.createdAt),
       doc,
     });
   }
@@ -215,15 +251,18 @@ export async function loadHoldings(
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
   if (vaultItems.length > 0) {
-    const spotByMetal = new Map(
-      (await ctx.db.query("metalSpotPrices").collect()).map((p) => [
-        p.metalType,
-        p,
-      ]),
-    );
+    const spotByMetal = await loadSpotPrices(ctx);
     for (const doc of vaultItems) {
       const spot = spotByMetal.get(doc.metalType);
-      const { value, cost } = valueVaultItem(doc, spot, now);
+      // The cached quantity and cost (rewritten from the ledger on every
+      // change, vault.ts syncProjection)
+      const { value, cost, pricedAtSpot } = vaultItemValuation(
+        doc,
+        undefined,
+        spot,
+        now,
+        toBaseAmount,
+      );
       holdings.push({
         id: doc._id,
         provider: "manual",
@@ -231,8 +270,11 @@ export async function loadHoldings(
         category: "commodities",
         subcategory: "metals",
         name: doc.customName ?? doc.metalType,
-        valueBase: value,
+        valueBase: value ?? 0,
         costBase: cost,
+        // Valued at cost without a fresh spot: its P/L is unknown, not
+        // break-even (aggregate.ts profitLossCostBase)
+        ...(!pricedAtSpot && value !== null ? { valuedAtCost: true } : {}),
         // The spot row's timestamp even when it is stale and the item fell
         // back to cost, so a stale price pulls asOf back; null only without
         // any spot row
@@ -268,20 +310,119 @@ export async function loadHoldings(
 }
 
 /**
+ * Exact flow per holding key since the previous snapshot (`from`, ms) from
+ * the trade logs: Bitpanda transactions, the vault ledger and the synced
+ * SnapTrade activities (brokerTransactions), each amount at the rate of
+ * its own date (services/portfolio/flows.ts). Provider rows are read from
+ * the day of `from`, the vault ledger whole; tradeFlowsBetween keeps the
+ * ones after `from`.
+ */
+async function loadExactFlows(
+  ctx: QueryCtx,
+  userId: string,
+  holdings: readonly NormalizedHolding[],
+  previous: readonly SnapshotCategoryEntry[],
+  from: number,
+  to: number,
+): Promise<Map<string, number>> {
+  const since = new Date(from).toISOString().slice(0, 10);
+  const [bitpanda, vault, broker] = await Promise.all([
+    ctx.db
+      .query("bitpandaTransactions")
+      .withIndex("by_date", (q) =>
+        q.eq("userId", userId).gte("transactionDate", since),
+      )
+      .collect(),
+    // The whole ledger: a row written since `from` may be dated before it
+    // (vaultLedgerFlows). A vault is small.
+    ctx.db
+      .query("vaultTransactions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect(),
+    ctx.db
+      .query("brokerTransactions")
+      .withIndex("by_date", (q) => q.eq("userId", userId).gte("tradeDate", since))
+      .collect(),
+  ]);
+
+  // One rate table per trade day, for the currencies traded that day
+  const dayOf = (date: string) => {
+    const t = Date.parse(date);
+    return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : null;
+  };
+  const currenciesByDay = new Map<string, Set<string>>();
+  for (const { date, currency } of [
+    ...bitpanda.map((t) => ({ date: t.transactionDate, currency: t.currency })),
+    ...broker.map((t) => ({ date: t.tradeDate, currency: t.currency })),
+  ]) {
+    const day = dayOf(date);
+    const code = normalizeCurrency(currency)?.code;
+    if (!day || !code || code === BASE_CURRENCY) continue;
+    currenciesByDay.set(day, (currenciesByDay.get(day) ?? new Set()).add(code));
+  }
+  const ratesByDay = new Map<string, FxRates>(
+    await Promise.all(
+      [...currenciesByDay].map(
+        async ([day, codes]) =>
+          [day, await loadFxRates(ctx, { asOf: day, currencies: [...codes] })] as const,
+      ),
+    ),
+  );
+  const toBaseOn: ToBaseOn = (amount, currency, date) => {
+    const day = dayOf(date);
+    const converted = toBase(
+      amount,
+      currency,
+      (day && ratesByDay.get(day)) || {},
+    );
+    return converted.ok ? converted.value : null;
+  };
+
+  const bitpandaKeys = bitpandaTradeKeys([
+    ...holdings.map((h) => h.key ?? h.id),
+    ...previous.flatMap((e) =>
+      (e.sources ?? []).flatMap((s) => (s.holdings ?? []).map((h) => h.key)),
+    ),
+  ]);
+  const flows = [
+    ...bitpanda.map((t) => bitpandaTradeFlow(t, bitpandaKeys, toBaseOn)),
+    ...vaultLedgerFlows(vault, from, to),
+    ...broker.map((t) => snaptradeActivityFlow(t, toBaseOn)),
+  ].filter((f): f is TradeFlow => f !== null);
+  return tradeFlowsBetween(flows, from, to);
+}
+
+/**
  * Server-side net worth for one user: the aggregate of loadHoldings plus
  * the snapshot's category breakdown and cost totals. With the previous
- * snapshot's breakdown, each entry also records its net flow since then.
+ * snapshot (its breakdown and when it was taken), each entry also records
+ * its net flow since then: exact for the holdings traded in between,
+ * derived from values and costs for the rest.
  * `asOf` is the data's freshness (the oldest pricedAt), not the call time.
  */
 export async function computeNetWorth(
   ctx: QueryCtx,
   userId: string,
-  previousBreakdown?: readonly SnapshotCategoryEntry[],
+  previous?: {
+    categoryBreakdown?: readonly SnapshotCategoryEntry[];
+    timestamp: number;
+  },
 ) {
   const holdings = await loadHoldings(ctx, userId);
   const aggregate = aggregateNetWorth(holdings);
+  const previousBreakdown = previous?.categoryBreakdown;
+  const exactFlows = previousBreakdown
+    ? await loadExactFlows(
+        ctx,
+        userId,
+        holdings,
+        previousBreakdown,
+        previous.timestamp,
+        Date.now(),
+      )
+    : undefined;
   const { categoryBreakdown, totalCostBasis, totalCoveredValue } =
-    buildSnapshotBreakdown(aggregate, holdings, previousBreakdown);
+    buildSnapshotBreakdown(aggregate, holdings, previousBreakdown, exactFlows);
 
   return {
     totalAssets: aggregate.totalAssets,

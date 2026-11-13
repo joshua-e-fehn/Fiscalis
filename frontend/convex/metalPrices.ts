@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import {
   SPOT_PRICE_MAX_FUTURE_SKEW_MS,
   parseLatestMetalPrices,
-} from "./lib/priceCalculations";
+} from "../../services/finance/metals";
 
 /**
  * Mirror of the latest precious-metal spot prices into Convex.

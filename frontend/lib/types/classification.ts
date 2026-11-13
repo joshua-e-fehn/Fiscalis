@@ -23,20 +23,6 @@ export type InvestmentCategory =
   | "collectibles"
   | "liabilities";
 
-/**
- * Display names for categories
- */
-export const categoryDisplayNames: Record<InvestmentCategory, string> = {
-  cash: "Cash & Money Markets",
-  equities: "Equities",
-  bonds: "Bonds",
-  crypto: "Crypto",
-  commodities: "Commodities",
-  "real-estate": "Real Estate",
-  collectibles: "Collectibles",
-  liabilities: "Liabilities",
-};
-
 // ═══════════════════════════════════════════════════════════════
 // SUBCATEGORIES BY CATEGORY
 // ═══════════════════════════════════════════════════════════════
@@ -246,15 +232,6 @@ export const subcategoryDisplayNames: Record<InvestmentSubcategory, string> = {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Data providers that feed into classification
- */
-export type ClassificationProvider =
-  | "plaid"
-  | "snaptrade"
-  | "bitpanda"
-  | "manual";
-
-/**
  * Rule matcher for account type-based classification (Plaid)
  */
 export interface AccountTypeMatcher {
@@ -416,7 +393,7 @@ export interface SnaptradePositionContext {
  *
  * Bitpanda holds a mix of asset classes (crypto, metals, commodities,
  * stocks/ETFs, indices, fiat) behind a single read-only API key.
- * `assetType` is the normalized Bitpanda asset class (see convex/lib/bitpanda.ts).
+ * `assetType` is the normalized Bitpanda asset class (see services/bitpanda/normalize.ts).
  */
 export interface BitpandaPositionContext {
   provider: "bitpanda";
@@ -428,113 +405,9 @@ export interface BitpandaPositionContext {
   name: string | null;
 }
 
-/**
- * Union of all classification contexts
- */
-export type ClassificationContext =
-  | PlaidAccountContext
-  | SnaptradePositionContext
-  | BitpandaPositionContext;
-
-// ═══════════════════════════════════════════════════════════════
-// CURRENCY CONVERSION
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Supported currencies for conversion
- */
-export type SupportedCurrency =
-  | "EUR"
-  | "USD"
-  | "CHF"
-  | "GBP"
-  | "JPY"
-  | "CAD"
-  | "AUD";
-
-/**
- * Base currency for all conversions
- */
-export const BASE_CURRENCY: SupportedCurrency = "EUR";
-
-/**
- * Currency conversion result
- */
-export interface CurrencyConversion {
-  /** Original currency code */
-  originalCurrency: string;
-  /** Original value in original currency */
-  originalValue: number;
-  /** Base currency (always EUR) */
-  baseCurrency: SupportedCurrency;
-  /** Value converted to base currency */
-  baseValue: number;
-  /** Exchange rate used (original → base) */
-  exchangeRate: number;
-  /** Timestamp when rate was fetched */
-  rateTimestamp: number;
-}
-
-/**
- * Exchange rate entry
- */
-export interface ExchangeRate {
-  /** Source currency */
-  from: string;
-  /** Target currency */
-  to: string;
-  /** Exchange rate */
-  rate: number;
-  /** Timestamp of rate */
-  timestamp: number;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// CLASSIFICATION METADATA (for DB storage)
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Classification fields to be stored in database records
- */
-export interface ClassificationFields {
-  /** Investment category */
-  investmentCategory: InvestmentCategory | null;
-  /** Investment subcategory */
-  investmentSubcategory: InvestmentSubcategory | null;
-  /** How was this classified */
-  classificationSource: ClassificationSource | null;
-  /** Which rule was used */
-  classificationRule: string | null;
-  /** User's manual override for category */
-  userCategoryOverride: InvestmentCategory | null;
-  /** User's manual override for subcategory */
-  userSubcategoryOverride: InvestmentSubcategory | null;
-}
-
-/**
- * Currency conversion fields to be stored in database records
- */
-export interface CurrencyConversionFields {
-  /** Value converted to base currency (EUR) */
-  valueInBaseCurrency: number | null;
-  /** Exchange rate used for conversion */
-  exchangeRateUsed: number | null;
-  /** When the exchange rate was fetched */
-  exchangeRateTimestamp: number | null;
-  /** Base currency code */
-  baseCurrency: string | null;
-}
-
 // ═══════════════════════════════════════════════════════════════
 // HELPER TYPES
 // ═══════════════════════════════════════════════════════════════
-
-/**
- * Check if a category is an asset (not liability)
- */
-export function isAssetCategory(category: InvestmentCategory): boolean {
-  return category !== "liabilities";
-}
 
 /**
  * Check if a subcategory belongs to a category
@@ -574,20 +447,4 @@ export function parseClassificationOverride(
     );
   }
   return { category: typedCategory, subcategory: typedSubcategory };
-}
-
-/**
- * Get the parent category for a subcategory
- */
-export function getCategoryForSubcategory(
-  subcategory: InvestmentSubcategory,
-): InvestmentCategory | null {
-  for (const [category, subcategories] of Object.entries(
-    subcategoriesByCategory,
-  )) {
-    if (subcategories.includes(subcategory)) {
-      return category as InvestmentCategory;
-    }
-  }
-  return null;
 }

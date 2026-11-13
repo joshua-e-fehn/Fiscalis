@@ -42,6 +42,20 @@ export interface PerformanceCalculationOptions {
   maxInterpolationGap?: number;
   /** Where the changes are measured from (default "rangeStart") */
   baseline?: Baseline;
+  /**
+   * The measure's live value now (the overview the headline cards show).
+   * The hybrid strategy ends the series at it: the point at the range end
+   * is replaced by this value, so a card and a chart over the series end
+   * where the live figure stands rather than at the last snapshot.
+   */
+  liveEnd?: LiveEnd;
+}
+
+/** A measure's live value and cost line at the range end. */
+export interface LiveEnd {
+  value: number;
+  /** Cost line (PerformanceDataPoint.costBasis); null when unknown */
+  costBasis: number | null;
 }
 
 /**
@@ -61,6 +75,16 @@ export type SnapshotMetric =
   | { kind: "netWorth" }
   | { kind: "totalAssets" }
   | { kind: "category"; category: string };
+
+/**
+ * What a performance widget measures: a snapshot metric, or one
+ * continuously valued holding source alone (`{ kind: "source", source:
+ * "vault" }`: the vault items without the rest of their category), which
+ * has no snapshot part.
+ */
+export type PerformanceMeasure =
+  | SnapshotMetric
+  | { kind: "source"; source: string };
 
 /**
  * Input for discrete (snapshot-based) performance calculation
@@ -192,6 +216,8 @@ export interface CalculationContext {
   maxInterpolationGap?: number;
   /** Where the changes are measured from (default "rangeStart") */
   baseline?: Baseline;
+  /** Live value the series ends at (PerformanceCalculationOptions.liveEnd) */
+  liveEnd?: LiveEnd;
 }
 
 /**
@@ -203,7 +229,11 @@ export interface DataPointGenerationResult {
   actualDataPoints: number;
   interpolatedDataPoints: number;
   dataQuality: DataQuality;
-  /** Some held assets had no price series (continuous) */
+  /**
+   * Some values are incomplete: held assets without a price series
+   * (continuous), or the first or last point rests on a snapshot taken
+   * after a provider sync partly failed (discrete)
+   */
   partial?: boolean;
   /**
    * Timestamps of the real snapshots (not grid points) the series was built

@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
+	DAY_COUNT_CONVENTIONS,
 	LOAN_PAYMENT_FREQUENCIES,
 	LOAN_PAYMENT_TYPES,
 	LOAN_STATUSES,
@@ -17,6 +18,7 @@ export const loanPaymentFrequencyValidator = oneOf(LOAN_PAYMENT_FREQUENCIES);
 export const loanStatusValidator = oneOf(LOAN_STATUSES);
 export const loanPaymentTypeValidator = oneOf(LOAN_PAYMENT_TYPES);
 export const prepaymentEffectValidator = oneOf(PREPAYMENT_EFFECTS);
+export const dayCountValidator = oneOf(DAY_COUNT_CONVENTIONS);
 
 /** Retirement plan: how a funding category grows (FundingTreatment in retirementService). */
 export const retirementFundingTreatmentValidator = v.union(
@@ -230,8 +232,8 @@ export default defineSchema({
 		// P&L
 		unrealizedPL: v.optional(v.number()), // Unrealized profit/loss
 		unrealizedPLPercent: v.optional(v.number()), // Unrealized P&L percentage
-		dayPL: v.optional(v.number()), // Today's P&L
-		dayPLPercent: v.optional(v.number()), // Today's P&L percentage
+		dayPL: v.optional(v.number()), // DEPRECATED - never written or read; kept so stored docs validate
+		dayPLPercent: v.optional(v.number()), // DEPRECATED - never written or read; kept so stored docs validate
 		// Classification fields
 		investmentCategory: v.optional(v.string()), // "equities", "cash", "bonds", etc.
 		investmentSubcategory: v.optional(v.string()), // "stocks", "etfs", "broker-cash", etc.
@@ -271,7 +273,9 @@ export default defineSchema({
 			"investmentSubcategory",
 		]),
 
-	// Broker transactions/activities
+	// Broker transactions/activities, synced from SnapTrade's account
+	// activities (actions/snaptrade.ts syncAccountActivities); the snapshot
+	// writer reads BUY/SELL rows as exact flows (services/portfolio/flows.ts)
 	brokerTransactions: defineTable({
 		userId: v.string(), // Clerk user ID
 		accountId: v.id("brokerAccounts"), // Reference to account
@@ -291,6 +295,8 @@ export default defineSchema({
 	})
 		.index("by_user", ["userId"])
 		.index("by_account", ["accountId"])
+		// Newest activity per account: the start of an incremental fetch
+		.index("by_account_date", ["accountId", "tradeDate"])
 		.index("by_date", ["userId", "tradeDate"])
 		.index("by_snaptrade_id", ["snaptradeActivityId"]),
 
@@ -307,7 +313,11 @@ export default defineSchema({
 
 		// Financial Details
 		originalPrincipal: v.number(), // Original loan amount
-		currentBalance: v.number(), // Current outstanding balance
+		currentBalance: v.number(), // Current outstanding balance (derived, see balanceAdjustment)
+		// Manual balance edits on top of the recorded payments:
+		// currentBalance = originalPrincipal - Σ principal repaid + balanceAdjustment
+		// (deriveLoanBalance). Unset until migrations:backfillLoanBalanceAdjustment.
+		balanceAdjustment: v.optional(v.number()),
 		annualInterestRate: v.number(), // Interest rate as decimal (e.g., 0.05 for 5%)
 		currency: v.string(), // ISO currency code
 
@@ -315,6 +325,9 @@ export default defineSchema({
 		termMonths: v.number(), // Original loan term in months
 		paymentFrequency: loanPaymentFrequencyValidator,
 		scheduledPayment: v.number(), // Regular payment amount (INTEREST_ONLY_THEN: the post-grace payment)
+		// Interest accrual convention of each period; unset = flat periods
+		// (rate / payments per year, as 30/360)
+		dayCount: v.optional(dayCountValidator),
 
 		// Dates
 		startDate: v.string(), // Loan start date (ISO)
@@ -390,7 +403,20 @@ export default defineSchema({
 		description: v.optional(v.string()),
 
 		// Scenario Configuration
-		// Extra principal paid with every regular payment (per payment period)
+		// Extra principal paid with the regular payments (per payment period),
+		// each between optional first/last due dates (YYYY-MM-DD, inclusive).
+		// Read through resolveRecurringExtras, which maps the legacy fields.
+		recurringExtras: v.optional(
+			v.array(
+				v.object({
+					amount: v.number(),
+					from: v.optional(v.string()),
+					until: v.optional(v.string()),
+				}),
+			),
+		),
+		// Legacy single extra (a scenario saved before recurringExtras): read
+		// as a one-entry recurringExtras, cleared when the extras are saved
 		extraPerPeriod: v.optional(v.number()),
 		// First due date the extra applies to (YYYY-MM-DD); from now when unset
 		extraPerPeriodFrom: v.optional(v.string()),
@@ -486,6 +512,13 @@ export default defineSchema({
 		// The tracked loan on the home the user lives in: taken out of the
 		// funding base, its repayments are a pre-retirement expense.
 		primaryResidenceLoanId: v.optional(v.id("loans")),
+		// Or a linked bank (Plaid) mortgage account instead of a tracked loan,
+		// with its optional annual rate and monthly repayment (base currency)
+		// to project the balance at retirement; without them the full balance
+		// counts as owed then.
+		primaryResidenceAccountId: v.optional(v.id("plaidAccounts")),
+		primaryResidenceMortgageRate: v.optional(v.number()),
+		primaryResidenceMortgagePayment: v.optional(v.number()),
 		// Sellable property equity the user wants to count toward funding.
 		fundableRealEstateEquity: v.optional(v.number()),
 		// Growth treatment per funding category id (absent = service defaults).
@@ -744,6 +777,13 @@ export default defineSchema({
 		currentPrice: v.optional(v.number()), // EUR price per unit
 		marketValue: v.optional(v.number()), // EUR value
 		currency: v.string(), // "EUR"
+		// live: this sync's ticker price; stale: an earlier sync's price kept
+		// when the ticker had none; missing: never priced (value unset)
+		// (services/bitpanda/holdingPrice.ts). Unset on rows synced before it.
+		priceStatus: v.optional(
+			v.union(v.literal("live"), v.literal("stale"), v.literal("missing")),
+		),
+		priceAsOf: v.optional(v.number()), // when currentPrice was priced (ms)
 
 		// Classification fields
 		investmentCategory: v.optional(v.string()),

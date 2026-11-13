@@ -265,11 +265,16 @@ export function HoldingsTable({
                 />
               </TableCell>
               <TableCell className="text-right">
-                <PriceDisplay
-                  value={item.marketValue ?? 0}
-                  currency={currency}
-                  size="md"
-                />
+                {/* No fresh spot and no cost: the value is unknown */}
+                {item.marketValue === null ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  <PriceDisplay
+                    value={item.marketValue}
+                    currency={currency}
+                    size="md"
+                  />
+                )}
               </TableCell>
               <TableCell className="text-right">
                 {item.profitLoss !== null && item.profitLossPercent !== null ? (

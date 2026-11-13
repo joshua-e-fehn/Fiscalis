@@ -9,6 +9,7 @@
  *   twice;
  * - a grid point is kept only where every part present has a value, so a
  *   series of one scope is never spliced onto a series of another;
+ * - the merged series ends at the live value when one is given (liveEnd);
  * - metrics, including high and low, come from the merged series;
  * - flows are the parts' flows, only for a flow-adjusted measure (D2: the
  *   vault's purchases are not flows of net worth).
@@ -21,7 +22,11 @@ import type {
   PerformanceResult,
 } from "../types";
 
-import { BasePerformanceStrategy, assessDataQuality } from "./base";
+import {
+  BasePerformanceStrategy,
+  assessDataQuality,
+  withLiveEnd,
+} from "./base";
 import { DiscretePerformanceStrategy, getDiscreteStrategy } from "./discrete";
 import {
   ContinuousPerformanceStrategy,
@@ -141,9 +146,12 @@ export class HybridPerformanceStrategy extends BasePerformanceStrategy<HybridPer
         : [discrete, continuous].filter(
             (r): r is PerformanceResult => r !== undefined && r.dataPoints.length > 0,
           );
-    const dataPoints = mergeOnGrid(
-      parts.map((r) => r.dataPoints),
-      parts[0] !== undefined && parts[0] === discrete,
+    const dataPoints = withLiveEnd(
+      mergeOnGrid(
+        parts.map((r) => r.dataPoints),
+        parts[0] !== undefined && parts[0] === discrete,
+      ),
+      context,
     );
     const observed = dataPoints.filter((p) => p.source !== "interpolated").length;
 

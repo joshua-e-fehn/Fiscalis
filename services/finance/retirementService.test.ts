@@ -17,14 +17,23 @@ import {
   DEFAULT_CONSERVATIVE_RETURN,
   futureValueOfMonthlyContributions,
   monthlyRateFromAnnual,
+  mortgageAccountHoldings,
   mortgageBalanceOn,
+  planToInputs,
+  residenceMortgageFromAccount,
   residenceMortgageFromLoan,
+  retirementFundingBase,
   retirementTimeline,
+  retirementValuationDay,
   type RetirementFundingBase,
   type RetirementInputs,
 } from "./retirementService";
 import { calculateEndCapitalValueWithCompoundInterest } from "./financeService";
 import type { ScheduleLoan } from "./loanScheduleService";
+import {
+  aggregateNetWorth,
+  type NormalizedHolding,
+} from "../portfolio/aggregate";
 
 /** A funding base equal to `netWorth`, all of it growing at the scenario return. */
 function nw(netWorth: number): RetirementFundingBase {
@@ -740,6 +749,19 @@ describe("primary residence mortgage", () => {
     expect(mortgageBalanceOn(anchored, "2026-01-20")).toBe(244000);
   });
 
+  it("projects the mortgage balance by the loan's day-count convention", () => {
+    const owedOn = (dayCount?: ScheduleLoan["dayCount"]) =>
+      mortgageBalanceOn(
+        residenceMortgageFromLoan({ ...loan, dayCount }, [], "2026-01-15"),
+        "2031-01-15",
+      );
+    expect(owedOn()).toBe(213763.62);
+    expect(owedOn("30/360")).toBe(213763.62);
+    // More interest per year (365/360) leaves less principal repaid
+    expect(owedOn("ACT/360")).toBe(214303.66);
+    expect(owedOn("ACT/365")).toBe(213779.65);
+  });
+
   it("normalises the next payment to monthly", () => {
     const quarterly = residenceMortgageFromLoan(
       {
@@ -1006,5 +1028,293 @@ describe("deduction rate validation", () => {
     });
     expect(errors.pensionDeductionRate).toMatch(/between 0% and 60%/);
     expect(errors.withdrawalTaxRate).toMatch(/between 0% and 60%/);
+  });
+});
+
+describe("linked bank mortgage account (RD-6)", () => {
+  const today = new Date(2026, 0, 15);
+  const owns = { ...baseInputs, ownsPrimaryResidence: true }; // retires 2031-01-15
+
+  it("without rate and repayment owes the full balance at retirement", () => {
+    const m = residenceMortgageFromAccount(200000, {}, true, "2026-01-15");
+    expect(m).toEqual({
+      balance: 200000,
+      monthlyPayment: 0,
+      balanceSchedule: [],
+      countedInLiabilities: true,
+      balanceProjected: false,
+    });
+    const r = computeRetirementResults(
+      owns,
+      {
+        assetsByCategory: { equities: 100000 },
+        totalLiabilities: 210000,
+        primaryResidenceMortgage: m,
+      },
+      today,
+    );
+    expect(r.liabilitiesCounted).toBe(10000);
+    expect(r.fundableNow).toBe(90000);
+    expect(r.residenceMortgage).toEqual({
+      balance: 200000,
+      monthlyPayment: 0,
+      balanceAtRetirement: 200000,
+      balanceProjected: false,
+    });
+  });
+
+  it("keeps an entered repayment but projects nothing without a rate", () => {
+    const m = residenceMortgageFromAccount(
+      200000,
+      { monthlyPayment: 900 },
+      true,
+      "2026-01-15",
+    );
+    expect(m.monthlyPayment).toBe(900);
+    expect(m.balanceProjected).toBe(false);
+    expect(mortgageBalanceOn(m, "2031-01-15")).toBe(200000);
+  });
+
+  it("amortises a 0% balance by the entered repayment", () => {
+    const m = residenceMortgageFromAccount(
+      12000,
+      { annualInterestRate: 0, monthlyPayment: 1000 },
+      true,
+      "2026-01-15",
+    );
+    expect(m.balanceProjected).toBe(true);
+    expect(m.monthlyPayment).toBe(1000);
+    expect(m.balanceSchedule).toHaveLength(12);
+    expect(m.balanceSchedule[0]).toEqual({
+      date: "2026-02-15",
+      closingBalance: 11000,
+    });
+    expect(mortgageBalanceOn(m, "2026-07-15")).toBe(6000);
+    expect(mortgageBalanceOn(m, "2027-01-15")).toBe(0);
+  });
+
+  it("projects like the equivalent tracked annuity loan", () => {
+    const loan: ScheduleLoan = {
+      loanType: "ANNUITY",
+      originalPrincipal: 250000,
+      currentBalance: 250000,
+      annualInterestRate: 0.03,
+      termMonths: 300,
+      paymentFrequency: "MONTHLY",
+      scheduledPayment: 1185.53,
+      startDate: "2026-01-15",
+      status: "active",
+    };
+    const fromLoan = residenceMortgageFromLoan(loan, [], "2026-01-15");
+    const fromAccount = residenceMortgageFromAccount(
+      250000,
+      { annualInterestRate: 0.03, monthlyPayment: 1185.53 },
+      true,
+      "2026-01-15",
+    );
+    expect(mortgageBalanceOn(fromAccount, "2031-01-15")).toBe(
+      mortgageBalanceOn(fromLoan, "2031-01-15"),
+    );
+    expect(fromAccount.monthlyPayment).toBe(1185.53);
+  });
+
+  it("lists only bank liabilities in the mortgages subcategory", () => {
+    const holding = (
+      id: string,
+      source: NormalizedHolding["source"],
+      category: NormalizedHolding["category"],
+      subcategory: string,
+      valueBase: number,
+    ): NormalizedHolding => ({
+      id,
+      provider: source === "bank" ? "plaid" : "manual",
+      source,
+      category,
+      subcategory,
+      name: id,
+      valueBase,
+      costBase: null,
+      pricedAt: null,
+    });
+    const ids = mortgageAccountHoldings([
+      holding("m", "bank", "liabilities", "mortgages", 180000),
+      holding("credit", "bank", "liabilities", "mortgages", -50), // a credit balance is cash
+      holding("card", "bank", "liabilities", "credit-cards", 900),
+      holding("loan", "loan", "liabilities", "mortgages", 1000),
+      holding("cash", "bank", "cash", "checking", 5000),
+    ]).map((h) => h.id);
+    expect(ids).toEqual(["m"]);
+  });
+});
+
+describe("tracked loan in a foreign currency", () => {
+  it("converts the mortgage to the base currency", () => {
+    const loan: ScheduleLoan = {
+      loanType: "BULLET",
+      originalPrincipal: 100000,
+      currentBalance: 100000,
+      annualInterestRate: 0.0,
+      termMonths: 12,
+      paymentFrequency: "MONTHLY",
+      scheduledPayment: 0,
+      startDate: "2026-01-15",
+      status: "active",
+    };
+    const m = residenceMortgageFromLoan(loan, [], "2026-01-15", 0.9);
+    expect(m.balance).toBe(90000);
+    expect(mortgageBalanceOn(m, "2026-12-15")).toBe(90000);
+    expect(mortgageBalanceOn(m, "2027-01-15")).toBe(0);
+  });
+});
+
+describe("funding base from the net-worth aggregate (RD-4)", () => {
+  const holding = (
+    id: string,
+    source: NormalizedHolding["source"],
+    category: NormalizedHolding["category"],
+    valueBase: number,
+  ): NormalizedHolding => ({
+    id,
+    provider: "manual",
+    source,
+    category,
+    subcategory: "x",
+    name: id,
+    valueBase,
+    costBase: null,
+    pricedAt: null,
+  });
+  const holdings = [
+    holding("etf", "brokerPosition", "equities", 50000),
+    holding("btc", "bitpanda", "crypto", 8000),
+    holding("gold", "vault", "commodities", 4000),
+    holding("giro", "bank", "cash", 12000),
+    holding("card", "bank", "liabilities", 1500),
+    holding("overpaid", "bank", "liabilities", -200), // a credit balance → cash
+    holding("car", "loan", "liabilities", 9000),
+  ];
+
+  it("equals the aggregator's per-category values and liabilities", () => {
+    const aggregate = aggregateNetWorth(holdings);
+    const base = retirementFundingBase(aggregate, null);
+    expect(base).toEqual({
+      assetsByCategory: {
+        cash: 12200,
+        equities: 50000,
+        bonds: 0,
+        crypto: 8000,
+        commodities: 4000,
+        "real-estate": 0,
+        collectibles: 0,
+        unclassified: 0,
+      },
+      totalLiabilities: 10500,
+      primaryResidenceMortgage: null,
+    });
+    const assets = Object.values(base.assetsByCategory).reduce(
+      (s, v) => s + v,
+      0,
+    );
+    expect(assets).toBe(aggregate.totalAssets);
+    expect(assets - base.totalLiabilities).toBe(aggregate.netWorth);
+  });
+});
+
+describe("planToInputs", () => {
+  const plan: RetirementInputs = {
+    ...baseInputs,
+    currentAge: 30,
+    birthDate: "1900-01-01", // out of range: ignored for the age
+    primaryResidenceAccountId: "acc1",
+    primaryResidenceMortgageRate: 0.035,
+    primaryResidenceMortgagePayment: 1200,
+    fundableRealEstateEquity: undefined,
+  };
+
+  it("passes the mortgage link through and defaults the property equity", () => {
+    const inputs = planToInputs(plan, undefined);
+    expect(inputs.currentAge).toBe(30);
+    expect(inputs.birthDate).toBe("1900-01-01");
+    expect(inputs.primaryResidenceAccountId).toBe("acc1");
+    expect(inputs.primaryResidenceMortgageRate).toBe(0.035);
+    expect(inputs.primaryResidenceMortgagePayment).toBe(1200);
+    expect(inputs.fundableRealEstateEquity).toBe(0);
+  });
+
+  it("derives the age from the profile date of birth first", () => {
+    const year = new Date().getFullYear() - 41;
+    const inputs = planToInputs(plan, `${year}-01-01`);
+    expect(inputs.currentAge).toBe(41);
+    expect(inputs.birthDate).toBe(`${year}-01-01`);
+  });
+
+  it("takes the age on the given day, so a birthday moves it", () => {
+    const withDob = { ...plan, birthDate: "1985-06-15" };
+    expect(
+      planToInputs(withDob, undefined, new Date(2026, 5, 14)).currentAge,
+    ).toBe(40);
+    expect(
+      planToInputs(withDob, undefined, new Date(2026, 5, 15)).currentAge,
+    ).toBe(41);
+  });
+});
+
+describe("retirementValuationDay", () => {
+  const now = new Date(Date.UTC(2026, 10, 12, 23, 30)); // 2026-11-12 23:30 UTC
+
+  it("uses the viewer's local day when it is within a day of the server's", () => {
+    expect(retirementValuationDay("2026-11-13", now).iso).toBe("2026-11-13");
+    expect(retirementValuationDay("2026-11-11", now).iso).toBe("2026-11-11");
+    const { date } = retirementValuationDay(" 2026-11-13 ", now);
+    expect([date.getFullYear(), date.getMonth(), date.getDate()]).toEqual([
+      2026, 10, 13,
+    ]);
+  });
+
+  it("falls back to the server's UTC day when absent, invalid or far off", () => {
+    expect(retirementValuationDay(undefined, now).iso).toBe("2026-11-12");
+    expect(retirementValuationDay("2026-11-14", now).iso).toBe("2026-11-12");
+    expect(retirementValuationDay("2026-02-30", now).iso).toBe("2026-11-12");
+    expect(retirementValuationDay("12.11.2026", now).iso).toBe("2026-11-12");
+  });
+
+  it("gives a different result key each day: the horizon moves", () => {
+    const inputs = { ...baseInputs, birthDate: "1990-01-01", retirementAge: 67 };
+    const day1 = retirementTimeline(
+      inputs,
+      retirementValuationDay("2026-11-12", now).date,
+    );
+    const day2 = retirementTimeline(
+      inputs,
+      retirementValuationDay("2026-11-13", now).date,
+    );
+    expect(day1.retirementDate).toBe("2057-01-01");
+    expect((day1.yearsToRetirement - day2.yearsToRetirement) * 365.25).toBeCloseTo(
+      1,
+      10,
+    );
+  });
+});
+
+describe("linked account mortgage validation", () => {
+  it("rejects a rate outside 0–20% and a negative repayment", () => {
+    expect(
+      validateRetirementInputs({
+        ...baseInputs,
+        primaryResidenceMortgageRate: 0.2,
+        primaryResidenceMortgagePayment: 0,
+      }),
+    ).toEqual({});
+    const errors = validateRetirementInputs({
+      ...baseInputs,
+      primaryResidenceMortgageRate: 0.25,
+      primaryResidenceMortgagePayment: -1,
+    });
+    expect(errors.primaryResidenceMortgageRate).toBe(
+      "Mortgage rate must be between 0% and 20%",
+    );
+    expect(errors.primaryResidenceMortgagePayment).toBe(
+      "Mortgage repayment must be zero or more",
+    );
   });
 });

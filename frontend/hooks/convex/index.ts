@@ -53,7 +53,6 @@ export {
   // Position queries
   useBrokerPositions,
   useBrokerPositionsBySymbol,
-  usePortfolioSummary,
   // Transaction queries
   useBrokerTransactions,
   // Sync hooks
@@ -63,12 +62,6 @@ export {
   // Broker discovery hooks
   useListBrokers,
   useSearchBrokers,
-  // Legacy hooks (deprecated, will be removed in Phase 6)
-  useCreateBrokerConnection,
-  useDeleteBrokerConnection,
-  useUpdateConnectionStatus,
-  useRenameBrokerConnection,
-  useBrokerPositionsByConnection,
 } from "./brokers";
 
 // Re-export all Convex loans hooks

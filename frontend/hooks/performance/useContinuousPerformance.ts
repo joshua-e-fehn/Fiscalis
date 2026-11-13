@@ -1,6 +1,9 @@
 /**
  * Continuous (price-based) performance of the vault: the one history engine
- * for the metals pages, the commodities summary and metals YTD.
+ * for the vault. The metals page chart (useVaultPerformance) runs it alone;
+ * every other measure that includes the vault, such as the commodities
+ * category or the vault source alone (useMetalsYTD), gets it through
+ * useCategoryPerformance.
  *
  * useVaultPerformanceInput loads what the continuous strategy values the
  * vault from: each item's ledger lots as holdings (quantity held at t, sales
@@ -24,21 +27,12 @@ import {
   type PerformanceDataPoint,
   type PerformanceMetrics,
 } from "@/lib/performance";
-import {
-  MS,
-  getDefaultIntervalForRange,
-  getTimeRangeStartTimestamp,
-} from "@/../services/finance/financeService";
+import { PRICE_LOOKBACK_MS } from "@/../services/finance/financeService";
 import { resolvePremiums } from "@/../services/finance/metals";
 import { ledgerHoldings } from "@/../services/finance/metalsLedger";
 
-import { getSpotPrice, useMetalPricesRange, useMetalsPrices } from "@/hooks/metals";
-import type { MetalCurrency, MetalType } from "@/lib/types/metals";
+import { getSpotPrice, useMetalPriceHistory, useMetalsPrices } from "@/hooks/metals";
 import type { MetalsCurrency, MetalsType } from "@/lib/types/metals-extended";
-
-/** Prices are fetched from this long before the range start, so the start
- * takes the last close at or before it (31 Dec for YTD), not a later one. */
-const PRICE_LOOKBACK_MS = 7 * MS.DAY;
 
 const METALS: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
 
@@ -61,16 +55,6 @@ export function useVaultPerformanceInput(
   const { timeRange, currency = "eur", enabled = true } = options;
   const { userId } = useAuth();
 
-  // Fixed per range so query keys do not churn
-  const { startDate, endDate, interval } = useMemo(() => {
-    const now = Date.now();
-    return {
-      startDate: new Date(getTimeRangeStartTimestamp(timeRange, now) - PRICE_LOOKBACK_MS),
-      endDate: new Date(now),
-      interval: getDefaultIntervalForRange(timeRange),
-    };
-  }, [timeRange]);
-
   const vaultItems = useQuery(
     api.vault.getUserVaultItems,
     enabled && userId ? {} : "skip",
@@ -80,13 +64,20 @@ export function useVaultPerformanceInput(
     [vaultItems],
   );
 
-  // One query per metal (fixed hook order); disabled for metals not held
-  const args = [startDate, endDate, interval, currency as MetalCurrency] as const;
-  const series: Record<MetalsType, ReturnType<typeof useMetalPricesRange>> = {
-    gold: useMetalPricesRange("gold" as MetalType, ...args, enabled && held.has("gold")),
-    silver: useMetalPricesRange("silver" as MetalType, ...args, enabled && held.has("silver")),
-    platinum: useMetalPricesRange("platinum" as MetalType, ...args, enabled && held.has("platinum")),
-    palladium: useMetalPricesRange("palladium" as MetalType, ...args, enabled && held.has("palladium")),
+  // One shared history per metal (fixed hook order); disabled for metals
+  // not held
+  const history = (metal: MetalsType) =>
+    [
+      metal,
+      timeRange,
+      currency,
+      { lookbackMs: PRICE_LOOKBACK_MS, enabled: enabled && held.has(metal) },
+    ] as const;
+  const series: Record<MetalsType, ReturnType<typeof useMetalPriceHistory>> = {
+    gold: useMetalPriceHistory(...history("gold")),
+    silver: useMetalPriceHistory(...history("silver")),
+    platinum: useMetalPriceHistory(...history("platinum")),
+    palladium: useMetalPriceHistory(...history("palladium")),
   };
   const live = useMetalsPrices();
 
@@ -117,6 +108,8 @@ export function useVaultPerformanceInput(
             sellPremium,
           },
           item.ledger.lots,
+          // EUR lots in the series' currency, at the spot rates
+          { currency, rates: live.data?.all?.exchangeRates },
         );
       }
       // A ledger that cannot be replayed: the cached quantity, held since
@@ -137,24 +130,17 @@ export function useVaultPerformanceInput(
       ];
     });
 
-    // Per-ounce closes; the client's gap-filled points are dropped so the
-    // strategy's own lookup decides how gaps are bridged. A metal whose
-    // fetch failed has no series, and the strategy flags the result partial.
+    // Per-ounce closes, gaps left for the strategy's own lookup to bridge.
+    // A metal whose fetch failed has no series, and the strategy flags the
+    // result partial.
     const data = { gold: goldData, silver: silverData, platinum: platinumData, palladium: palladiumData };
     const prices: PriceData = {};
     const livePrices: Partial<Record<string, PricePoint>> = {};
     const liveTs = live.data?.all?.timestamp ? Date.parse(live.data.all.timestamp) : null;
     for (const metal of METALS) {
       if (!held.has(metal)) continue;
-      const points = (data[metal] ?? []).filter(
-        (p) => p.price !== null && p.date !== null && !p.isInterpolated,
-      );
-      if (points.length > 0) {
-        prices[metal] = points.map((p) => ({
-          timestamp: new Date(p.date!).getTime(),
-          price: p.price!,
-        }));
-      }
+      const points = data[metal];
+      if (points && points.length > 0) prices[metal] = points;
       const spot = getSpotPrice(live.data, metal, currency);
       if (spot !== null && liveTs !== null) {
         livePrices[metal] = { timestamp: liveTs, price: spot };

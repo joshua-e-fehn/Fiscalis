@@ -7,6 +7,7 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/shadcn/collapsible";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import {
 	DEFAULT_WITHDRAWAL_RATE,
 	formatYears,
@@ -38,6 +39,7 @@ export function FourPercentRuleExplainer({
 	assumptions,
 	className,
 }: Props) {
+	const currency = useBaseCurrency();
 	// Only call out the plan's own withdrawal rate when it isn't the 4% default.
 	const withdrawal =
 		assumptions &&
@@ -110,7 +112,7 @@ export function FourPercentRuleExplainer({
 									For your plan, using today&apos;s expenses and today&apos;s
 									pensions (no inflation) the target would be{" "}
 									<span className="font-medium">
-										{formatCurrency(results.simpleTargetPortfolio, "eur", {
+										{formatCurrency(results.simpleTargetPortfolio, currency, {
 											compact: true,
 										})}
 									</span>
@@ -118,7 +120,7 @@ export function FourPercentRuleExplainer({
 									{inflation ? ` ${inflation}` : ""} inflation, the realistic
 									target is{" "}
 									<span className="font-medium">
-										{formatCurrency(results.targetPortfolio, "eur", {
+										{formatCurrency(results.targetPortfolio, currency, {
 											compact: true,
 										})}
 									</span>

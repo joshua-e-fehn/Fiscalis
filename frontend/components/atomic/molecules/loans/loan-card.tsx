@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/shadcn/card";
 import { Badge } from "@/components/ui/shadcn/badge";
+import { formatCurrency } from "@/lib/utils/currency";
 import {
   Home,
   Car,
@@ -39,15 +40,6 @@ interface LoanCardProps {
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
 // ═══════════════════════════════════════════════════════════════
-
-function formatCurrency(value: number, currency: string = "USD"): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;

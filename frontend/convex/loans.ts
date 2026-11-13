@@ -9,19 +9,28 @@ import {
 import { Doc, Id } from "./_generated/dataModel";
 import {
   addMonthsToISODate,
+  adjustmentForBalance,
   computeNextPaymentDate,
+  deriveLoanBalance,
   getPaymentsPerYear,
   initialScheduledPayment,
   isExtraPaymentType,
+  loanBalanceAdjustment,
   loanKpis,
   paymentSplitBasis,
+  periodicRateAt,
+  resolveRecurringExtras,
   scheduledPaymentAfterEdit,
   settleLoanBalance,
   splitLoanPayment,
 } from "../../services/finance/loanScheduleService";
-import type { LoanStatus } from "../../services/finance/loanScheduleService";
+import type {
+  LoanStatus,
+  RecurringExtrasSource,
+} from "../../services/finance/loanScheduleService";
 import { roundMoney } from "../../services/finance/financeService";
 import {
+  dayCountValidator,
   loanPaymentFrequencyValidator,
   loanPaymentTypeValidator,
   loanStatusValidator,
@@ -259,10 +268,15 @@ export const getLoanScenarios = query({
     const userId = await getUserId(ctx);
     if (!userId) return [];
     if (!(await getOwnedDoc(ctx, userId, args.loanId))) return [];
-    return await ctx.db
+    const scenarios = await ctx.db
       .query("loanScenarios")
       .withIndex("by_loan", (q) => q.eq("loanId", args.loanId))
       .collect();
+    // A legacy single extra reads as a one-entry list
+    return scenarios.map((scenario) => ({
+      ...scenario,
+      recurringExtras: resolveRecurringExtras(scenario),
+    }));
   },
 });
 
@@ -346,6 +360,14 @@ const oneTimePrepaymentsValidator = v.array(
   }),
 );
 
+const recurringExtrasValidator = v.array(
+  v.object({
+    amount: v.number(),
+    from: v.optional(v.string()),
+    until: v.optional(v.string()),
+  }),
+);
+
 const PLANNED_PREPAYMENTS_SCENARIO = "Planned extra payments";
 
 // Create a new loan, with the payments already made (import) and the
@@ -366,6 +388,7 @@ export const createLoan = mutation({
     // Ignored (derived from the payments); kept for older clients
     nextPaymentDate: v.optional(v.string()),
     gracePeriods: v.optional(v.number()),
+    dayCount: v.optional(dayCountValidator),
     maxAnnualPrepaymentRate: v.optional(v.number()),
     prepaymentPenaltyRate: v.optional(v.number()),
     lender: v.optional(v.string()),
@@ -379,6 +402,8 @@ export const createLoan = mutation({
     // Saved as the loan's "Planned extra payments" scenario
     plannedPrepayments: v.optional(
       v.object({
+        recurringExtras: v.optional(recurringExtrasValidator),
+        // Legacy single extra, accepted from older clients
         extraPerPeriod: v.optional(v.number()),
         extraPerPeriodFrom: v.optional(v.string()),
         oneTimePrepayments: v.optional(oneTimePrepaymentsValidator),
@@ -406,9 +431,17 @@ export const createLoan = mutation({
     const splits = [...historicalPayments]
       .sort((a, b) => a.paymentDate.localeCompare(b.paymentDate))
       .filter((p) => p.amount > 0)
-      .map((p) => {
+      .map((p, index) => {
         const split = splitLoanPayment(
-          { ...terms, balance },
+          {
+            ...terms,
+            balance,
+            periodRate: periodicRateAt(
+              terms,
+              terms.annualInterestRate,
+              index + 1,
+            ),
+          },
           p.amount,
           "scheduled",
         );
@@ -416,10 +449,25 @@ export const createLoan = mutation({
         return { paymentDate: p.paymentDate, split };
       });
 
+    // A balance entered by hand is kept as an adjustment on the payments
+    const historicalSplits = splits.map(({ split }) => split);
+    const balanceAdjustment =
+      terms.currentBalance === undefined
+        ? 0
+        : adjustmentForBalance(
+            terms.originalPrincipal,
+            historicalSplits,
+            terms.currentBalance,
+          );
     const loan = {
       userId,
       ...terms,
-      currentBalance: settleLoanBalance(terms.currentBalance ?? balance),
+      balanceAdjustment,
+      currentBalance: deriveLoanBalance(
+        terms,
+        historicalSplits,
+        balanceAdjustment,
+      ),
       scheduledPayment,
       expectedEndDate: addMonthsToISODate(terms.startDate, terms.termMonths),
       status: "active" as const,
@@ -452,16 +500,15 @@ export const createLoan = mutation({
       });
     }
 
-    const { extraPerPeriod, extraPerPeriodFrom, oneTimePrepayments } =
-      plannedPrepayments ?? {};
-    if ((extraPerPeriod ?? 0) > 0 || (oneTimePrepayments?.length ?? 0) > 0) {
+    const { oneTimePrepayments, ...extras } = plannedPrepayments ?? {};
+    const recurringExtras = resolveRecurringExtras(extras);
+    if (recurringExtras.length > 0 || (oneTimePrepayments?.length ?? 0) > 0) {
       await ctx.db.insert("loanScenarios", {
         userId,
         loanId,
         name: PLANNED_PREPAYMENTS_SCENARIO,
         description: "Entered when the loan was added",
-        extraPerPeriod,
-        extraPerPeriodFrom,
+        recurringExtras,
         oneTimePrepayments,
         createdAt: now,
         updatedAt: now,
@@ -488,11 +535,18 @@ export const updateLoan = mutation({
     notes: v.optional(v.string()),
     maxAnnualPrepaymentRate: v.optional(v.number()),
     prepaymentPenaltyRate: v.optional(v.number()),
+    // null clears it (back to flat periods)
+    dayCount: v.optional(v.union(dayCountValidator, v.null())),
   },
   handler: async (ctx, args) => {
     // nextPaymentDate is derived from the payments, so a sent one is ignored
     // (kept as an arg for older clients)
-    const { loanId, nextPaymentDate: _nextPaymentDate, ...updates } = args;
+    const {
+      loanId,
+      nextPaymentDate: _nextPaymentDate,
+      dayCount,
+      ...updates
+    } = args;
 
     const { loan } = await requireOwnedLoan(ctx, loanId);
 
@@ -500,12 +554,32 @@ export const updateLoan = mutation({
     const filteredUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined),
     ) as Partial<Loan>;
+    if (dayCount !== undefined) {
+      filteredUpdates.dayCount = dayCount ?? undefined;
+    }
+
+    const payments = await getLoanPaymentDocs(ctx, loanId);
+
+    // A balance edit is stored as the difference from the balance the
+    // payments leave, so later payment edits keep it
+    if (updates.currentBalance !== undefined) {
+      filteredUpdates.balanceAdjustment = adjustmentForBalance(
+        loan.originalPrincipal,
+        payments,
+        updates.currentBalance,
+      );
+      filteredUpdates.currentBalance = deriveLoanBalance(
+        loan,
+        payments,
+        filteredUpdates.balanceAdjustment,
+      );
+    }
 
     // A rate or balance edit re-derives the regular payment over the
     // remaining periods, unless the user changed the payment too
     filteredUpdates.scheduledPayment = scheduledPaymentAfterEdit(
       loan,
-      await getLoanPaymentDocs(ctx, loanId),
+      payments,
       updates,
     );
 
@@ -587,13 +661,14 @@ export const recordPayment = mutation({
       },
     );
 
-    // Calculate new balance (snapped to 0 once paid off)
-    const principalPortion = Math.min(
-      split.principalPortion,
-      Math.max(0, loan.currentBalance),
-    );
-    const newBalance = settleLoanBalance(
-      loan.currentBalance - principalPortion,
+    // The balance is derived from the payments (snapped to 0 once paid off)
+    const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+    const balanceBefore = deriveLoanBalance(loan, payments, balanceAdjustment);
+    const principalPortion = Math.min(split.principalPortion, balanceBefore);
+    const newBalance = deriveLoanBalance(
+      loan,
+      [...payments, { principalPortion }],
+      balanceAdjustment,
     );
 
     // Determine if loan is paid off
@@ -622,6 +697,7 @@ export const recordPayment = mutation({
     // Update loan (extra payments don't move the next due date)
     await ctx.db.patch(args.loanId, {
       currentBalance: newBalance,
+      balanceAdjustment,
       nextPaymentDate: await recomputeNextPaymentDate(ctx, {
         ...loan,
         currentBalance: newBalance,
@@ -661,8 +737,13 @@ export const updatePayment = mutation({
     // balance owed on the payment date (without this payment). The edited
     // portion wins; an untouched pair is kept unless the amount changed, in
     // which case it is split again. Principal is at most what is owed.
-    const otherPayments = (await getLoanPaymentDocs(ctx, loan._id)).filter(
-      (p) => p._id !== paymentId,
+    const payments = await getLoanPaymentDocs(ctx, loan._id);
+    const otherPayments = payments.filter((p) => p._id !== paymentId);
+    const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+    const balanceWithout = deriveLoanBalance(
+      loan,
+      otherPayments,
+      balanceAdjustment,
     );
     const paymentDate = args.paymentDate ?? payment.paymentDate;
     const editsPortion =
@@ -670,7 +751,7 @@ export const updatePayment = mutation({
     const keepsPortions = !editsPortion && args.amount === undefined;
     const split = splitLoanPayment(
       paymentSplitBasis(
-        { ...loan, currentBalance: loan.currentBalance + payment.principalPortion },
+        { ...loan, currentBalance: balanceWithout },
         otherPayments,
         paymentDate,
       ),
@@ -682,10 +763,7 @@ export const updatePayment = mutation({
         fees: payment.feesPortion,
       },
     );
-    const principalPortion = Math.min(
-      split.principalPortion,
-      Math.max(0, loan.currentBalance + payment.principalPortion),
-    );
+    const principalPortion = Math.min(split.principalPortion, balanceWithout);
 
     await ctx.db.patch(paymentId, {
       ...filteredUpdates,
@@ -702,7 +780,11 @@ export const updatePayment = mutation({
     // raises the balance reopens a paid-off loan (it may have been marked
     // paid off by hand with a balance left).
     const principalDelta = principalPortion - payment.principalPortion;
-    const newBalance = settleLoanBalance(loan.currentBalance - principalDelta);
+    const newBalance = deriveLoanBalance(
+      loan,
+      [...otherPayments, { principalPortion }],
+      balanceAdjustment,
+    );
     const status: LoanStatus =
       principalDelta === 0
         ? loan.status
@@ -714,6 +796,7 @@ export const updatePayment = mutation({
 
     await ctx.db.patch(loan._id, {
       currentBalance: newBalance,
+      balanceAdjustment,
       nextPaymentDate: await recomputeNextPaymentDate(ctx, {
         ...loan,
         currentBalance: newBalance,
@@ -738,9 +821,13 @@ export const deletePayment = mutation({
   handler: async (ctx, args) => {
     const { payment, loan } = await requireOwnedPayment(ctx, args.paymentId);
 
-    // Restore the balance
-    const restoredBalance = settleLoanBalance(
-      loan.currentBalance + payment.principalPortion,
+    // Re-derive the balance without this payment
+    const payments = await getLoanPaymentDocs(ctx, loan._id);
+    const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+    const restoredBalance = deriveLoanBalance(
+      loan,
+      payments.filter((p) => p._id !== payment._id),
+      balanceAdjustment,
     );
 
     // Only a delete that raises the balance reopens a paid-off loan (it may
@@ -756,6 +843,7 @@ export const deletePayment = mutation({
     // Update loan balance
     await ctx.db.patch(payment.loanId, {
       currentBalance: restoredBalance,
+      balanceAdjustment,
       nextPaymentDate: await recomputeNextPaymentDate(ctx, {
         ...loan,
         currentBalance: restoredBalance,
@@ -853,6 +941,12 @@ export const repairLoans = internalMutation({
       if (!args.dryRun) {
         await ctx.db.patch(loan._id, {
           ...to,
+          // The repaired balance becomes the one the payments derive
+          balanceAdjustment: adjustmentForBalance(
+            loan.originalPrincipal,
+            payments,
+            currentBalance,
+          ),
           actualEndDate: isPaidOff ? latestPaymentDate : loan.actualEndDate,
           updatedAt: Date.now(),
         });
@@ -865,7 +959,9 @@ export const repairLoans = internalMutation({
 
 const scenarioFields = {
   description: v.optional(v.string()),
-  // Extra principal paid with every regular payment (per payment period)
+  // Extra principal paid with the regular payments (per payment period)
+  recurringExtras: v.optional(recurringExtrasValidator),
+  // Legacy single extra, accepted from older clients
   extraPerPeriod: v.optional(v.number()),
   extraPerPeriodFrom: v.optional(v.string()),
   prepaymentEffect: v.optional(prepaymentEffectValidator),
@@ -878,13 +974,24 @@ const scenarioFields = {
   monthsSaved: v.optional(v.number()),
 };
 
-// Stores the extra under its correct name only
-function normalizeScenarioExtra<
-  T extends { extraPerPeriod?: number; extraMonthlyPayment?: number },
->({ extraMonthlyPayment, ...rest }: T) {
+// Stores the extras as a list only: legacy single-extra args become a
+// one-entry list. recurringExtras is undefined when no extra was sent.
+function normalizeScenarioExtras<T extends RecurringExtrasSource>({
+  recurringExtras,
+  extraPerPeriod,
+  extraPerPeriodFrom,
+  extraMonthlyPayment,
+  ...rest
+}: T) {
+  const legacy = { extraPerPeriod, extraPerPeriodFrom, extraMonthlyPayment };
+  const sent =
+    recurringExtras !== undefined ||
+    Object.values(legacy).some((value) => value !== undefined);
   return {
-    ...rest,
-    extraPerPeriod: rest.extraPerPeriod ?? extraMonthlyPayment,
+    rest,
+    recurringExtras: sent
+      ? resolveRecurringExtras({ recurringExtras, ...legacy })
+      : undefined,
   };
 }
 
@@ -899,9 +1006,11 @@ export const saveScenario = mutation({
     const { userId } = await requireOwnedLoan(ctx, args.loanId);
     const now = Date.now();
 
+    const { rest, recurringExtras } = normalizeScenarioExtras(args);
     return await ctx.db.insert("loanScenarios", {
       userId,
-      ...normalizeScenarioExtra(args),
+      ...rest,
+      recurringExtras,
       createdAt: now,
       updatedAt: now,
     });
@@ -919,14 +1028,20 @@ export const updateScenario = mutation({
     const { scenarioId, ...updates } = args;
     await requireOwnedScenario(ctx, scenarioId);
 
+    const { rest, recurringExtras } = normalizeScenarioExtras(updates);
     const filteredUpdates = Object.fromEntries(
-      Object.entries(normalizeScenarioExtra(updates)).filter(
-        ([, v]) => v !== undefined,
-      ),
+      Object.entries(rest).filter(([, v]) => v !== undefined),
     );
 
     await ctx.db.patch(scenarioId, {
       ...filteredUpdates,
+      // New extras replace the legacy single extra
+      ...(recurringExtras && {
+        recurringExtras,
+        extraPerPeriod: undefined,
+        extraPerPeriodFrom: undefined,
+        extraMonthlyPayment: undefined,
+      }),
       updatedAt: Date.now(),
     });
   },

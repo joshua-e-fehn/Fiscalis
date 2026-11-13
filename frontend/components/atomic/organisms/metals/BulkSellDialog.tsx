@@ -243,7 +243,10 @@ export function BulkSellDialog({
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {entry.item.quantity} available • Sell price:{" "}
-                            {formatCurrency(entry.item.currentSellPrice, saleCurrency)}/unit
+                            {Number.isFinite(entry.item.currentSellPrice)
+                              ? formatCurrency(entry.item.currentSellPrice, saleCurrency)
+                              : "—"}
+                            /unit
                           </div>
                         </div>
                       </div>

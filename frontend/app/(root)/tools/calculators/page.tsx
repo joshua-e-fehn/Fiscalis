@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowRight, HandCoins, TrendingUp } from "lucide-react";
 import {
   Card,
@@ -14,27 +15,23 @@ import { PageHeader } from "@/components/atomic/molecules/investments";
 const CALCULATORS = [
   {
     href: "/tools/calculators/interest",
-    title: "Interest Calculators",
-    description:
-      "Interest rates, growth duration, future and present values with simple or compound interest.",
+    title: "interest.title",
+    description: "index.interestDescription",
     icon: TrendingUp,
   },
   {
     href: "/tools/calculators/loan",
-    title: "Loan Calculator",
-    description:
-      "Payments, total interest and amortization for annuity, declining, interest-only and bullet loans, with prepayments.",
+    title: "loan.title",
+    description: "index.loanDescription",
     icon: HandCoins,
   },
-];
+] as const;
 
 export default function CalculatorsPage() {
+  const t = useTranslations("calculators");
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <PageHeader
-        title="Calculators"
-        subtitle="Financial tools to help you make better investment and borrowing decisions."
-      />
+      <PageHeader title={t("index.title")} subtitle={t("index.subtitle")} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {CALCULATORS.map(({ href, title, description, icon: Icon }) => (
           <Link key={href} href={href} className="group">
@@ -42,10 +39,10 @@ export default function CalculatorsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Icon className="h-5 w-5" />
-                  {title}
+                  {t(title)}
                   <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground" />
                 </CardTitle>
-                <CardDescription>{description}</CardDescription>
+                <CardDescription>{t(description)}</CardDescription>
               </CardHeader>
             </Card>
           </Link>

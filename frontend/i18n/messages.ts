@@ -12,12 +12,15 @@ import commonEn from "@/messages/en/common.json";
 import commonDe from "@/messages/de/common.json";
 import worldMapEn from "@/messages/en/worldMap.json";
 import worldMapDe from "@/messages/de/worldMap.json";
+import calculatorsEn from "@/messages/en/calculators.json";
+import calculatorsDe from "@/messages/de/calculators.json";
 
 import type { Language } from "./locales";
 
 const en = {
   common: commonEn,
   worldMap: worldMapEn,
+  calculators: calculatorsEn,
 };
 
 export type Messages = typeof en;
@@ -25,6 +28,7 @@ export type Messages = typeof en;
 const de = {
   common: commonDe,
   worldMap: worldMapDe,
+  calculators: calculatorsDe,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = { en, de };

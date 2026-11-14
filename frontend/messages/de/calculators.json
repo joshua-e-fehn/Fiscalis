@@ -1,0 +1,295 @@
+{
+  "index": {
+    "title": "Rechner",
+    "subtitle": "Finanzwerkzeuge für bessere Anlage- und Kreditentscheidungen.",
+    "interestDescription": "Zinssätze, Wachstumsdauer, End- und Barwerte mit einfacher Verzinsung oder Zinseszins.",
+    "loanDescription": "Raten, Zinsen insgesamt und Tilgungsplan für Annuitäten-, Tilgungs-, tilgungsfreie und endfällige Kredite, mit Sondertilgungen."
+  },
+  "intervals": {
+    "label": {
+      "minute": "Minute",
+      "hour": "Stunde",
+      "day": "Tag",
+      "week": "Woche",
+      "month": "Monat",
+      "quarter": "Quartal",
+      "year": "Jahr"
+    },
+    "unitPlural": {
+      "minute": "Minuten",
+      "hour": "Stunden",
+      "day": "Tage",
+      "week": "Wochen",
+      "month": "Monate",
+      "quarter": "Quartale",
+      "year": "Jahre"
+    },
+    "per": {
+      "minute": "Pro Minute",
+      "hour": "Pro Stunde",
+      "day": "Pro Tag",
+      "week": "Pro Woche",
+      "month": "Pro Monat",
+      "quarter": "Pro Quartal",
+      "year": "Pro Jahr"
+    },
+    "count": {
+      "minute": "{count, plural, one {# Minute} other {# Minuten}}",
+      "hour": "{count, plural, one {# Stunde} other {# Stunden}}",
+      "day": "{count, plural, one {# Tag} other {# Tage}}",
+      "week": "{count, plural, one {# Woche} other {# Wochen}}",
+      "month": "{count, plural, one {# Monat} other {# Monate}}",
+      "quarter": "{count, plural, one {# Quartal} other {# Quartale}}",
+      "year": "{count, plural, one {# Jahr} other {# Jahre}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, one {# Minute} other {# Minuten}}",
+      "hour": "{count, plural, one {# Stunde} other {# Stunden}}",
+      "day": "{count, plural, one {# Tag} other {# Tagen}}",
+      "week": "{count, plural, one {# Woche} other {# Wochen}}",
+      "month": "{count, plural, one {# Monat} other {# Monaten}}",
+      "quarter": "{count, plural, one {# Quartal} other {# Quartalen}}",
+      "year": "{count, plural, one {# Jahr} other {# Jahren}}"
+    }
+  },
+  "interest": {
+    "title": "Zinsrechner",
+    "subtitle": "Leistungsstarke Finanzwerkzeuge für bessere Anlageentscheidungen. Berechne Zinseszins, Wachstumsraten, Endwerte und mehr.",
+    "tabs": {
+      "rate": "Zinssatz",
+      "duration": "Dauer",
+      "futureValue": "Endwert",
+      "startingValue": "Anfangswert"
+    },
+    "fields": {
+      "initialValue": "Anfangswert",
+      "finalValue": "Endwert",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "interval": "Zinsintervall",
+      "intervalPlaceholder": "Intervall wählen",
+      "startingCapital": "Startkapital",
+      "targetCapital": "Zielkapital",
+      "interestRate": "Zinssatz (%)",
+      "timePeriod": "Zeitraum ({unit})"
+    },
+    "calculate": "Berechnen",
+    "results": "Ergebnisse",
+    "empty": "Gib Werte ein und berechne, um Ergebnisse zu sehen",
+    "compoundInterest": "Zinseszins",
+    "simpleInterest": "Einfache Verzinsung",
+    "withCompound": "Mit Zinseszins",
+    "withSimple": "Mit einfacher Verzinsung",
+    "gainAfter": "Gewinn: {amount} nach {duration}",
+    "growthAfter": "Wachstum: {amount} nach {duration}",
+    "rate": {
+      "title": "Zinssatz berechnen",
+      "description": "Ermittle den durchschnittlichen Zinssatz zwischen zwei Zeitpunkten, mit Zinseszins und mit einfacher Verzinsung",
+      "resultsHint": "Auf Basis deiner Eingaben ergeben sich diese Zinssätze"
+    },
+    "duration": {
+      "title": "Dauer berechnen",
+      "description": "Finde heraus, wie lange es dauert, bis du dein Zielkapital erreichst, ausgehend von Startwert und Zinssatz",
+      "resultsHint": "Benötigte Zeit bis zum Zielkapital"
+    },
+    "futureValue": {
+      "title": "Endwert berechnen",
+      "description": "Finde heraus, was deine Anlage in Zukunft wert sein wird, ausgehend von Zinssatz und Zeit",
+      "resultsHint": "Voraussichtlicher Endwert deiner Anlage"
+    },
+    "startingValue": {
+      "title": "Anfangswert berechnen",
+      "description": "Finde heraus, wie viel du jetzt anlegen musst, um dein Ziel in Zukunft zu erreichen",
+      "resultsHint": "Benötigte Anfangsanlage, um dein Ziel zu erreichen"
+    }
+  },
+  "loan": {
+    "title": "Kreditrechner",
+    "subtitle": "Lerne verschiedene Kreditarten kennen, sieh dir deine Raten an und finde die beste Option für deine Situation. Wir zeigen dir genau, wohin dein Geld fließt.",
+    "tabs": {
+      "calculate": "Kredit berechnen",
+      "compare": "Alle Arten vergleichen"
+    },
+    "chooseType": "1. Wähle deine Kreditart",
+    "calculateSection": "2. Berechne deinen Kredit",
+    "understanding": "{name} verstehen",
+    "howItWorks": "So funktioniert es",
+    "bestFor": "Geeignet für",
+    "watchOut": "Darauf solltest du achten",
+    "intervals": {
+      "MONTHLY": {
+        "label": "Monatlich",
+        "payment": "Monatsrate",
+        "perPeriod": "pro Monat",
+        "recurring": "Zusätzliche Tilgung (jeden Monat)"
+      },
+      "QUARTERLY": {
+        "label": "Vierteljährlich",
+        "payment": "Quartalsrate",
+        "perPeriod": "pro Quartal",
+        "recurring": "Zusätzliche Tilgung (jedes Quartal)"
+      },
+      "SEMI_ANNUAL": {
+        "label": "Halbjährlich",
+        "payment": "Halbjahresrate",
+        "perPeriod": "pro Halbjahr",
+        "recurring": "Zusätzliche Tilgung (jedes Halbjahr)"
+      },
+      "ANNUAL": {
+        "label": "Jährlich",
+        "payment": "Jahresrate",
+        "perPeriod": "pro Jahr",
+        "recurring": "Zusätzliche Tilgung (jedes Jahr)"
+      }
+    },
+    "types": {
+      "ANNUITY": {
+        "name": "Kredit mit fester Rate",
+        "shortName": "Feste Rate",
+        "shortDescription": "Jede Periode die gleiche Rate, die häufigste Kreditart",
+        "calculatorTitle": "Rechner für Kredite mit fester Rate",
+        "calculatorDescription": "Berechne deine Rate und sieh, wie sie sich im Lauf der Zeit aufteilt.",
+        "howItWorks1": "Du zahlst während der gesamten Laufzeit jede Periode den gleichen Betrag",
+        "howItWorks2": "Frühe Raten sind größtenteils Zinsen, spätere größtenteils Tilgung",
+        "howItWorks3": "Die Restschuld sinkt stetig",
+        "bestFor1": "Immobilienkäufer, die planbare Budgets wollen",
+        "bestFor2": "Langfristige Kredite (15-30 Jahre)",
+        "bestFor3": "Alle, denen Stabilität wichtiger ist als Flexibilität",
+        "watchOut1": "In den ersten Jahren zahlst du mehr Zinsen",
+        "watchOut2": "Weniger Flexibilität, wenn sich dein Einkommen ändert"
+      },
+      "CONSTANT_PRINCIPAL": {
+        "name": "Kredit mit sinkender Rate",
+        "shortName": "Sinkende Rate",
+        "shortDescription": "Die Raten beginnen hoch und sinken mit der Zeit",
+        "calculatorTitle": "Rechner für Kredite mit sinkender Rate",
+        "calculatorDescription": "Sieh, wie deine Raten mit der Tilgung des Darlehensbetrags sinken.",
+        "howItWorks1": "Du tilgst jede Periode einen festen Betrag, zuzüglich Zinsen",
+        "howItWorks2": "Mit der Restschuld sinken auch die Zinsen, und damit die Raten",
+        "howItWorks3": "Du zahlst insgesamt weniger Zinsen als bei einem Kredit mit fester Rate",
+        "bestFor1": "Alle, die später mit weniger Einkommen rechnen (kurz vor der Rente)",
+        "bestFor2": "Alle, die sich höhere Anfangsraten leisten können",
+        "bestFor3": "Kreditnehmer, die die Zinsen insgesamt möglichst gering halten wollen",
+        "watchOut1": "Die Anfangsraten können 20-30% höher sein als bei fester Rate",
+        "watchOut2": "Du bekommst den Kredit eventuell nicht, wenn dein Einkommen die erste Rate kaum deckt"
+      },
+      "INTEREST_ONLY": {
+        "name": "Kredit mit tilgungsfreier Zeit",
+        "shortName": "Tilgungsfrei",
+        "shortDescription": "Erst nur Zinsen zahlen, später tilgen",
+        "calculatorTitle": "Rechner für Kredite mit tilgungsfreier Zeit",
+        "calculatorDescription": "Zahl eine Zeit lang nur Zinsen und beginne dann mit der Tilgung.",
+        "howItWorks1": "Eine festgelegte Zeit zahlst du nur Zinsen - die Restschuld sinkt nicht",
+        "howItWorks2": "Nach der tilgungsfreien Zeit zahlst du zusätzlich Tilgung",
+        "howItWorks3": "Die Raten steigen deutlich, sobald die Tilgung beginnt",
+        "bestFor1": "Immobilieninvestoren, die vor Beginn der Tilgung verkaufen wollen",
+        "bestFor2": "Alle, die künftig mit höherem Einkommen rechnen",
+        "bestFor3": "Kurzfristiger Finanzierungsbedarf",
+        "watchOut1": "In der tilgungsfreien Zeit baust du kein Eigenkapital auf",
+        "watchOut2": "Ratenschock, wenn die regulären Raten beginnen",
+        "watchOut3": "Risiko, mehr zu schulden, als der Vermögenswert wert ist"
+      },
+      "BULLET": {
+        "name": "Endfälliger Kredit",
+        "shortName": "Endfällig",
+        "shortDescription": "Nur Zinsen zahlen, der gesamte Darlehensbetrag ist am Ende fällig",
+        "calculatorTitle": "Rechner für endfällige Kredite",
+        "calculatorDescription": "Zahl während der gesamten Laufzeit nur Zinsen, der volle Darlehensbetrag ist am Ende fällig.",
+        "howItWorks1": "Du zahlst während der gesamten Laufzeit nur Zinsen",
+        "howItWorks2": "Der volle Darlehensbetrag ist am Ende in einer Summe fällig",
+        "howItWorks3": "Die laufenden Raten sind sehr niedrig, aber du brauchst einen Plan für die Schlusszahlung",
+        "bestFor1": "Zwischenfinanzierung (kurzfristige Kredite bis zur Anschlussfinanzierung)",
+        "bestFor2": "Investoren, die den Vermögenswert vor Ende der Laufzeit verkaufen wollen",
+        "bestFor3": "Baukredite oder Bauprojekte",
+        "watchOut1": "Hohes Risiko - du brauchst einen Plan für Rückzahlung oder Anschlussfinanzierung",
+        "watchOut2": "Kannst du die Schlusszahlung nicht leisten, kannst du den Vermögenswert verlieren",
+        "watchOut3": "Während der Laufzeit baust du kein Eigenkapital auf"
+      }
+    },
+    "fields": {
+      "loanAmount": "Darlehensbetrag",
+      "annualInterestRate": "Jährlicher Zinssatz (%)",
+      "interestRate": "Zinssatz (%)",
+      "termYears": "Laufzeit (Jahre)",
+      "termYearsShort": "Laufzeit (Jahre)",
+      "paymentSchedule": "Zahlungsrhythmus",
+      "interestOnlyYears": "Tilgungsfreie Zeit (Jahre)",
+      "interestOnlyHint": "Nach wie vielen Jahren beginnst du mit der Tilgung?"
+    },
+    "prepayments": {
+      "title": "Sondertilgungen",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "recurringHint": "Dieser Betrag wird zu jeder regulären Rate addiert.",
+      "oneTime": "Einmalige Sondertilgungen",
+      "add": "Sondertilgung hinzufügen",
+      "oneTimeHint": "Plane Sondertilgungen in bestimmten Jahren (z. B. Jahresbonus, Erbschaft).",
+      "year": "Jahr",
+      "amountPlaceholder": "Betrag",
+      "fixedAmount": "Fester Betrag",
+      "percentOfBalance": "% der Restschuld",
+      "remove": "Sondertilgung entfernen"
+    },
+    "calculate": "Meinen Kredit berechnen",
+    "yourResults": "Deine Ergebnisse",
+    "summary": {
+      "totalInterest": "Zinsen insgesamt",
+      "totalCost": "Gesamtkosten",
+      "interestToPrincipal": "Zinsen / Darlehensbetrag",
+      "savingsTitle": "Ersparnis durch Sondertilgungen",
+      "interestSaved": "Gesparte Zinsen",
+      "periodsSaved": "Gesparte Raten",
+      "originalTerm": "Ursprüngliche Laufzeit",
+      "newTerm": "Neue Laufzeit",
+      "payments": "{count, plural, one {# Rate} other {# Raten}}"
+    },
+    "charts": {
+      "principal": "Tilgung",
+      "interest": "Zinsen",
+      "balance": "Restschuld",
+      "payment": "Rate",
+      "yearTick": "J{year}",
+      "principalValue": "Tilgung: {amount}",
+      "interestValue": "Zinsen: {amount}",
+      "totalValue": "Gesamt: {amount}",
+      "balanceValue": "Restschuld: {amount}",
+      "breakdownByYear": "Aufteilung der Raten nach Jahr",
+      "breakdownHint": "Tilgung (grün) und Zinsen (orange) im Zeitverlauf.",
+      "balanceOverTime": "Restschuld im Zeitverlauf",
+      "balanceHint": "Sieh zu, wie deine Schulden mit jeder Rate sinken.",
+      "breakdown": "Aufteilung der Raten"
+    },
+    "schedule": {
+      "view": "Vollständigen Tilgungsplan anzeigen",
+      "period": "Nr.",
+      "payment": "Rate",
+      "principal": "Tilgung",
+      "interest": "Zinsen",
+      "extra": "Sondertilgung",
+      "balance": "Restschuld",
+      "showAll": "{count, plural, one {# Rate anzeigen} other {Alle # Raten anzeigen}}"
+    },
+    "warnings": {
+      "savingsTitle": "💰 Ersparnis bei den Raten",
+      "savingsBody": "Deine Rate sinkt von {first} auf {last} — das sind am Ende {difference} weniger pro Periode!",
+      "shockTitle": "⚠️ Warnung vor Ratenschock",
+      "shockBody": "Nach {years, plural, one {# Jahr} other {# Jahren}} steigt deine Rate von {from} auf {to} — ein Plus von {difference} ({percent}% mehr). Stell sicher, dass du dir das leisten kannst!",
+      "balloonTitle": "🚨 Warnung zur Schlusszahlung",
+      "balloonBody": "Am Ende von {years, plural, one {# Jahr} other {# Jahren}} musst du {amount} in einer Summe zahlen. Das nennt man „Schlusszahlung“.",
+      "balloonOptions": "<strong>Deine Möglichkeiten, wenn die Schlusszahlung fällig wird:</strong> Anschlussfinanzierung, Verkauf des Vermögenswerts oder Zahlung aus Ersparnissen. Wenn nichts davon klappt, riskierst du, den Vermögenswert zu verlieren."
+    },
+    "compare": {
+      "title": "Direkter Vergleich",
+      "description": "Sieh, wie sich die Kreditarten bei gleichem Betrag, Zinssatz und gleicher Laufzeit unterscheiden.",
+      "button": "Alle Kreditarten vergleichen",
+      "loanType": "Kreditart",
+      "firstPayment": "Erste Rate",
+      "totalInterest": "Zinsen insgesamt",
+      "totalCost": "Gesamtkosten",
+      "interestChart": "Vergleich der Zinsen insgesamt",
+      "byType": "Aufteilung der Raten & Restschuld nach Kreditart",
+      "insightTitle": "💡 Wichtige Erkenntnis",
+      "insightBody": "Der <strong>Kredit mit sinkender Rate</strong> spart dir {saved} Zinsen gegenüber einem Kredit mit fester Rate, aber deine erste Rate ist {extra} höher. Entscheide nach deinem aktuellen Budget und deinen Einkommenserwartungen."
+    }
+  }
+}

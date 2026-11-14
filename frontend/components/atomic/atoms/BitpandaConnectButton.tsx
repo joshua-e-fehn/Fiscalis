@@ -10,6 +10,8 @@
  */
 
 import { useState, useCallback } from "react";
+import { ConvexError } from "convex/values";
+import { useTranslations } from "next-intl";
 import { Loader2, Plus, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
@@ -25,6 +27,7 @@ import {
 } from "@/components/ui/shadcn/dialog";
 import { useConnectBitpanda } from "@/hooks/convex/bitpanda";
 import { cn } from "@/lib/utils";
+import { useErrorMessage } from "@/i18n/errors";
 
 interface BitpandaConnectButtonProps {
   onSuccess?: (connectionId: string) => void;
@@ -38,6 +41,19 @@ interface BitpandaConnectButtonProps {
 
 const BITPANDA_API_KEYS_URL = "https://web.bitpanda.com/apikey";
 
+/** Codes thrown by the connect action (convex/actions/bitpanda.ts) */
+const CONNECT_ERROR_CODES = [
+  "bitpandaKeyRejected",
+  "bitpandaUnavailable",
+] as const;
+type ConnectErrorCode = (typeof CONNECT_ERROR_CODES)[number];
+
+function connectErrorCode(error: unknown): ConnectErrorCode | null {
+  if (!(error instanceof ConvexError)) return null;
+  const code: unknown = (error.data as { code?: unknown } | null)?.code;
+  return CONNECT_ERROR_CODES.find((known) => known === code) ?? null;
+}
+
 export function BitpandaConnectButton({
   onSuccess,
   onError,
@@ -47,6 +63,9 @@ export function BitpandaConnectButton({
   children,
   disabled = false,
 }: BitpandaConnectButtonProps) {
+  const t = useTranslations("integrations.bitpanda.connect");
+  const tActions = useTranslations("common.actions");
+  const toErrorMessage = useErrorMessage();
   const { connect, isLoading } = useConnectBitpanda();
   const [open, setOpen] = useState(false);
   const [apiKey, setApiKey] = useState("");
@@ -60,7 +79,7 @@ export function BitpandaConnectButton({
 
       const trimmed = apiKey.trim();
       if (!trimmed) {
-        setError("Please paste your Bitpanda API key.");
+        setError(t("keyMissing"));
         return;
       }
 
@@ -74,12 +93,12 @@ export function BitpandaConnectButton({
         setOpen(false);
         onSuccess?.(result.connectionId);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error.message);
-        onError?.(error);
+        const code = connectErrorCode(err);
+        setError(code ? t(`errors.${code}`) : toErrorMessage(err));
+        onError?.(err instanceof Error ? err : new Error(String(err)));
       }
     },
-    [apiKey, label, connect, onSuccess, onError],
+    [apiKey, label, connect, onSuccess, onError, t, toErrorMessage],
   );
 
   return (
@@ -92,29 +111,29 @@ export function BitpandaConnectButton({
           disabled={disabled}
         >
           <Plus className="h-4 w-4" />
-          <span>{children ?? "Connect Bitpanda"}</span>
+          <span>{children ?? t("button")}</span>
         </Button>
       </DialogTrigger>
 
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Connect Bitpanda</DialogTitle>
+            <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription>
-              Paste a <strong>read-only</strong> Bitpanda API key. Fiscalis uses
-              it to sync your crypto, metals, commodities, stocks and cash
-              holdings. The key is encrypted and never shared.
+              {t.rich("description", {
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="bitpanda-api-key">API key</Label>
+              <Label htmlFor="bitpanda-api-key">{t("apiKey")}</Label>
               <Input
                 id="bitpanda-api-key"
                 type="password"
                 autoComplete="off"
-                placeholder="Your read-only Bitpanda API key"
+                placeholder={t("apiKeyPlaceholder")}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 disabled={isLoading}
@@ -125,16 +144,16 @@ export function BitpandaConnectButton({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               >
-                Create a read-only key in Bitpanda
+                {t("createKey")}
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bitpanda-label">Label (optional)</Label>
+              <Label htmlFor="bitpanda-label">{t("label")}</Label>
               <Input
                 id="bitpanda-label"
-                placeholder="e.g. My Bitpanda"
+                placeholder={t("labelPlaceholder")}
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 disabled={isLoading}
@@ -156,11 +175,11 @@ export function BitpandaConnectButton({
               onClick={() => setOpen(false)}
               disabled={isLoading}
             >
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button type="submit" disabled={isLoading} className="gap-2">
               {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {isLoading ? "Connecting…" : "Connect"}
+              {isLoading ? t("connecting") : t("submit")}
             </Button>
           </DialogFooter>
         </form>

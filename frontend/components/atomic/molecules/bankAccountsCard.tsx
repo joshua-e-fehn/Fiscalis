@@ -24,7 +24,6 @@ import {
 import {
   IntegrationConnectionCard,
   IntegrationAccountItem,
-  DISCONNECT_FAILED_MESSAGE,
 } from "@/components/atomic/molecules/integrations";
 
 // Type for Convex account data, with the stored EUR value the totals read
@@ -106,6 +105,7 @@ export function BankAccountsCard({
   accounts,
 }: BankAccountsCardProps) {
   const t = useTranslations("integrations.banking");
+  const tNotices = useTranslations("integrations.connectionNotices");
   const deleteItem = useDeletePlaidItem();
   const refreshAccounts = useRefreshAccounts();
 
@@ -173,7 +173,7 @@ export function BankAccountsCard({
       status="connected"
       totalValueEur={totalBalanceEur}
       lastSyncAt={lastSyncAt}
-      errorMessage={deleteItem.error ? DISCONNECT_FAILED_MESSAGE : undefined}
+      errorMessage={deleteItem.error ? tNotices("disconnectFailed") : undefined}
       secondaryInfo={t("accounts", { count: accounts.length })}
       onSync={handleSync}
       onDisconnect={handleDisconnect}

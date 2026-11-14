@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -14,6 +15,7 @@ import { BrokerConnectionCard } from "@/components/atomic/atoms/brokerConnection
 import { AddBrokerButton } from "@/components/atomic/atoms/addBrokerButton";
 
 export function BrokerConnectionsCard() {
+  const t = useTranslations("integrations.brokers.connections");
   const connections = useBrokerConnections();
 
   // Convex returns undefined while loading
@@ -49,14 +51,14 @@ export function BrokerConnectionsCard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Broker Connections
+            {t("title")}
           </CardTitle>
-          <CardDescription>Manage your brokerage connections</CardDescription>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center dark:border-red-900 dark:bg-red-950/20">
             <p className="text-sm text-red-800 dark:text-red-200">
-              Failed to load broker connections. Please try again later.
+              {t("loadFailed")}
             </p>
           </div>
         </CardContent>
@@ -73,14 +75,12 @@ export function BrokerConnectionsCard() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Broker Connections
+              {t("title")}
             </CardTitle>
             <CardDescription>
               {hasConnections
-                ? `${connections.length} broker${
-                    connections.length === 1 ? "" : "s"
-                  } connected`
-                : "Connect your brokerage accounts to track investments"}
+                ? t("connectedCount", { count: connections.length })
+                : t("connectPrompt")}
             </CardDescription>
           </div>
           <AddBrokerButton />
@@ -101,10 +101,9 @@ export function BrokerConnectionsCard() {
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
               <TrendingUp className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className="mt-4 text-lg font-semibold">No brokers connected</h3>
+            <h3 className="mt-4 text-lg font-semibold">{t("emptyTitle")}</h3>
             <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-              Connect your brokerage account to automatically track your
-              investments and portfolio performance.
+              {t("emptyDescription")}
             </p>
             <div className="mt-6">
               <AddBrokerButton />

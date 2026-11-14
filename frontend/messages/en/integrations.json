@@ -104,6 +104,100 @@
       "tradingAccounts": "Brokerage accounts",
       "cash": "Cash",
       "availableCash": "Available cash"
+    },
+    "connect": {
+      "connectFirst": "Connect your broker",
+      "connectAnother": "Connect another broker",
+      "add": "Add broker",
+      "preparing": "Preparing…",
+      "connecting": "Connecting…",
+      "connected": "Broker connected",
+      "connectingAccount": "Connecting your broker account…",
+      "portalTitle": "SnapTrade connection portal",
+      "failed": "We couldn't connect your broker. Please try again."
+    },
+    "connection": {
+      "unknownBroker": "Unknown broker",
+      "fallbackName": "Broker",
+      "accounts": "{count, plural, one {# account} other {# accounts}}",
+      "status": "Status",
+      "accountId": "Account ID",
+      "username": "Username",
+      "lastSynced": "Last synced",
+      "never": "Never",
+      "pendingNotice": "API integration pending. Data will sync once connected.",
+      "transientNotice": "Temporary problem at the broker. It will retry automatically.",
+      "disconnectTitle": "Disconnect broker",
+      "disconnectDescription": "Do you really want to disconnect “{name}”? This removes the broker connection and all its position data from your account. This cannot be undone."
+    },
+    "connections": {
+      "title": "Broker connections",
+      "description": "Manage your brokerage connections",
+      "loadFailed": "Failed to load broker connections. Please try again later.",
+      "connectedCount": "{count, plural, one {# broker connected} other {# brokers connected}}",
+      "connectPrompt": "Connect your brokerage accounts to track your investments",
+      "emptyTitle": "No brokers connected",
+      "emptyDescription": "Connect your brokerage account to automatically track your investments and portfolio performance."
+    },
+    "account": {
+      "fallbackType": "Investment",
+      "accountNumber": "Account {number}",
+      "totalValue": "Total value",
+      "cash": "Cash",
+      "invested": "Invested"
+    },
+    "empty": {
+      "syncTitle": "Sync your accounts",
+      "syncDescription": "{count, plural, one {You have # broker connection but no accounts synced yet.} other {You have # broker connections but no accounts synced yet.}} Click below to fetch your account data.",
+      "syncAccounts": "Sync accounts",
+      "noBrokersTitle": "No brokers connected",
+      "noBrokersDescription": "Connect your brokerage accounts to track your investments, positions and portfolio performance all in one place."
+    },
+    "reauth": {
+      "needsAttention": "Connection needs attention",
+      "description": "This connection has expired or needs to be re-authenticated. Please reconnect to continue syncing your data.",
+      "reconnect": "Reconnect",
+      "dialogTitle": "Reconnect {name}",
+      "dialogDescription": "Re-authenticate your connection to continue syncing data.",
+      "completing": "Completing re-authentication…",
+      "success": "Successfully re-authenticated!",
+      "failedTitle": "Connection failed",
+      "failed": "The reconnection failed. Please try again.",
+      "portalTitle": "SnapTrade reconnection"
     }
+  },
+  "bitpanda": {
+    "title": "Bitpanda",
+    "subtitle": "Crypto, metals, commodities, stocks & cash via a read-only API key.",
+    "holdings": "{count, plural, one {# holding} other {# holdings}}",
+    "emptyDescription": "Connect your Bitpanda account with a read-only API key to track all your holdings.",
+    "fallbackLabel": "Bitpanda account",
+    "keyRejected": "API key rejected — reconnect with a new read-only key",
+    "syncFailed": "Sync failed — try again",
+    "transient": "Temporary problem at Bitpanda — will retry automatically",
+    "lastSynced": "last synced {date}",
+    "syncNow": "Sync now",
+    "addAnother": "Add another Bitpanda key",
+    "connect": {
+      "button": "Connect Bitpanda",
+      "title": "Connect Bitpanda",
+      "description": "Paste a <strong>read-only</strong> Bitpanda API key. Fiscalis uses it to sync your crypto, metals, commodities, stocks and cash holdings. The key is encrypted and never shared.",
+      "apiKey": "API key",
+      "apiKeyPlaceholder": "Your read-only Bitpanda API key",
+      "createKey": "Create a read-only key in Bitpanda",
+      "label": "Label (optional)",
+      "labelPlaceholder": "e.g. My Bitpanda",
+      "submit": "Connect",
+      "connecting": "Connecting…",
+      "keyMissing": "Please paste your Bitpanda API key.",
+      "errors": {
+        "bitpandaKeyRejected": "That Bitpanda API key was rejected. Make sure it's a valid read-only key.",
+        "bitpandaUnavailable": "Bitpanda is not responding right now. Please try again in a few minutes."
+      }
+    }
+  },
+  "connectionNotices": {
+    "disconnectFailed": "Could not disconnect. Nothing was removed; please try again.",
+    "transientError": "Temporary problem at the provider. Your connection is fine; it will retry automatically."
   }
 }

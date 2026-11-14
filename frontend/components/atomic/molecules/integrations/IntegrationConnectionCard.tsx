@@ -80,14 +80,6 @@ interface IntegrationConnectionCardProps {
   className?: string;
 }
 
-/**
- * Shown when a disconnect fails. Disconnect revokes at the provider first and
- * keeps the local data when that fails (ENG-225); Convex hides server error
- * text in production, so the message is fixed here.
- */
-export const DISCONNECT_FAILED_MESSAGE =
-  "Could not disconnect. Nothing was removed; please try again.";
-
 export function IntegrationConnectionCard({
   name,
   logo,
@@ -107,6 +99,7 @@ export function IntegrationConnectionCard({
   className,
 }: IntegrationConnectionCardProps) {
   const t = useTranslations("integrations.connection");
+  const tNotices = useTranslations("integrations.connectionNotices");
   const lastSyncLabel = useLastSyncLabel();
   const { currency, fromEur, isLoading: isRateLoading } = useDisplayCurrency();
   const formatEur = (amountEur: number) =>
@@ -194,8 +187,7 @@ export function IntegrationConnectionCard({
         {status === "transient_error" ? (
           <div className="mt-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
             <p className="text-sm text-yellow-700 dark:text-yellow-400">
-              Temporary problem at the provider. Your connection is fine; it
-              will retry automatically.
+              {tNotices("transientError")}
             </p>
           </div>
         ) : (

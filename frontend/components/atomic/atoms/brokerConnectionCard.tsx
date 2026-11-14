@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -71,13 +72,18 @@ interface BrokerConnectionCardProps {
 export function BrokerConnectionCard({
   connection,
 }: BrokerConnectionCardProps) {
+  const t = useTranslations("integrations.brokers.connection");
+  const tStatus = useTranslations("integrations.status");
+  const tConnection = useTranslations("integrations.connection");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { deleteConnection, isLoading: isDeleting } = useDeleteConnection();
 
   // Use SnapTrade fields with fallback to legacy fields
   const displayName =
-    connection.brokerName || connection.connectionName || "Unknown Broker";
+    connection.brokerName || connection.connectionName || t("unknownBroker");
   const brokerType =
     connection.brokerSlug || connection.brokerType || "unknown";
 
@@ -114,13 +120,13 @@ export function BrokerConnectionCard({
       case "connected":
         return (
           <Badge variant="outline" className="border-green-500 text-green-500">
-            Connected
+            {tStatus("connected")}
           </Badge>
         );
       case "error":
         return (
           <Badge variant="outline" className="border-red-500 text-red-500">
-            Error
+            {tStatus("error")}
           </Badge>
         );
       case "pending":
@@ -129,7 +135,7 @@ export function BrokerConnectionCard({
             variant="outline"
             className="border-yellow-500 text-yellow-500"
           >
-            Pending
+            {tStatus("pending")}
           </Badge>
         );
       case "transient_error":
@@ -138,7 +144,7 @@ export function BrokerConnectionCard({
             variant="outline"
             className="border-yellow-500 text-yellow-500"
           >
-            Retrying
+            {tStatus("retrying")}
           </Badge>
         );
       default:
@@ -154,14 +160,8 @@ export function BrokerConnectionCard({
   };
 
   const formatDate = (date: number | null | undefined) => {
-    if (!date) return "Never";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    if (!date) return t("never");
+    return format.dateTime(date, "full");
   };
 
   return (
@@ -188,13 +188,13 @@ export function BrokerConnectionCard({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{tConnection("openMenu")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleSync}>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Sync Now
+                  {tConnection("sync")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -202,7 +202,7 @@ export function BrokerConnectionCard({
                   className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Disconnect
+                  {tConnection("disconnect")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -211,13 +211,15 @@ export function BrokerConnectionCard({
 
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Status</span>
+            <span className="text-sm text-muted-foreground">{t("status")}</span>
             {getStatusBadge()}
           </div>
 
           {connection.accountId && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Account ID</span>
+              <span className="text-sm text-muted-foreground">
+                {t("accountId")}
+              </span>
               <span className="text-sm font-medium">
                 {connection.accountId}
               </span>
@@ -226,13 +228,17 @@ export function BrokerConnectionCard({
 
           {connection.username && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Username</span>
+              <span className="text-sm text-muted-foreground">
+                {t("username")}
+              </span>
               <span className="text-sm font-medium">{connection.username}</span>
             </div>
           )}
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Last Synced</span>
+            <span className="text-sm text-muted-foreground">
+              {t("lastSynced")}
+            </span>
             <span className="text-sm text-muted-foreground">
               {formatDate(connection.lastSyncAt)}
             </span>
@@ -241,7 +247,7 @@ export function BrokerConnectionCard({
           {connection.status === "pending" && (
             <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 p-2 dark:border-yellow-900 dark:bg-yellow-950/20">
               <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                API integration pending. Data will sync once connected.
+                {t("pendingNotice")}
               </p>
             </div>
           )}
@@ -249,7 +255,7 @@ export function BrokerConnectionCard({
           {connection.status === "transient_error" && (
             <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 p-2 dark:border-yellow-900 dark:bg-yellow-950/20">
               <p className="text-xs text-yellow-800 dark:text-yellow-200">
-                Temporary problem at the broker. It will retry automatically.
+                {t("transientNotice")}
               </p>
             </div>
           )}
@@ -267,21 +273,20 @@ export function BrokerConnectionCard({
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect Broker</AlertDialogTitle>
+            <AlertDialogTitle>{t("disconnectTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to disconnect &quot;
-              {connection.connectionName}&quot;? This will remove the broker
-              connection and all associated position data from your account.
-              This action cannot be undone.
+              {t("disconnectDescription", { name: displayName })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tActions("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-red-600 text-white hover:bg-red-700 focus:ring-red-600"
             >
-              {isDeleting ? "Disconnecting..." : "Disconnect"}
+              {isDeleting
+                ? tConnection("disconnecting")
+                : tConnection("disconnect")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

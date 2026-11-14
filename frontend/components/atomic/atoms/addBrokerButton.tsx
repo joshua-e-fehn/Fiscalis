@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { SnaptradeConnectButton } from "@/components/atomic/atoms/snaptradeConnectButton";
 
 /**
@@ -7,5 +8,6 @@ import { SnaptradeConnectButton } from "@/components/atomic/atoms/snaptradeConne
  * via SnaptradeConnectButton). SnapTrade lists the supported brokers itself.
  */
 export function AddBrokerButton() {
-  return <SnaptradeConnectButton buttonText="Add Broker" />;
+  const t = useTranslations("integrations.brokers.connect");
+  return <SnaptradeConnectButton buttonText={t("add")} />;
 }

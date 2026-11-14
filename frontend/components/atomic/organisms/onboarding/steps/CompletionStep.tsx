@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   PartyPopper,
   CheckCircle2,
@@ -30,6 +31,7 @@ interface CompletionStepProps {
 }
 
 export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
+  const t = useTranslations("onboarding.completion");
   const router = useRouter();
   const connectionSummary = useConnectionSummary();
   const completeOnboarding = useCompleteOnboarding();
@@ -89,39 +91,35 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
 
         {/* Header */}
         <motion.div variants={itemVariants} className="mb-8">
-          <h2 className="text-4xl font-bold text-white mb-3">
-            You&apos;re All Set! 🎉
-          </h2>
-          <p className="text-lg text-white/50">
-            Your wealth dashboard is ready to explore
-          </p>
+          <h2 className="text-4xl font-bold text-white mb-3">{t("title")}</h2>
+          <p className="text-lg text-white/50">{t("subtitle")}</p>
         </motion.div>
 
         {/* Connection Summary */}
         <OnboardingCard glow="gold" className="mb-8">
           <OnboardingCardContent>
             <h3 className="text-sm font-medium text-white/60 mb-4">
-              {hasAnyConnection ? "What you've connected" : "Setup Summary"}
+              {hasAnyConnection ? t("summaryConnected") : t("summaryEmpty")}
             </h3>
 
             <div className="space-y-4">
               <ConnectionSummaryItem
                 icon={Building2}
-                label="Bank Accounts"
+                label={t("bankAccounts")}
                 count={connectionSummary?.bankingCount || 0}
                 color="emerald"
                 delay={0.3}
               />
               <ConnectionSummaryItem
                 icon={LineChart}
-                label="Brokerage Accounts"
+                label={t("brokerageAccounts")}
                 count={connectionSummary?.brokerCount || 0}
                 color="blue"
                 delay={0.4}
               />
               <ConnectionSummaryItem
                 icon={Bitcoin}
-                label="Crypto Wallets"
+                label={t("cryptoWallets")}
                 count={connectionSummary?.cryptoCount || 0}
                 color="gold"
                 delay={0.5}
@@ -136,7 +134,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
                 transition={{ delay: 0.6 }}
               >
                 <p className="text-white/40 text-sm">
-                  You can connect your accounts anytime in Settings
+                  {t("connectLater")}
                 </p>
               </motion.div>
             )}
@@ -147,8 +145,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
         {hasAnyConnection && (
           <motion.div className="mb-8 text-center" variants={itemVariants}>
             <p className="text-white/50 text-sm">
-              Your accounts are syncing. Head to your dashboard to see your
-              complete wealth picture.
+              {t("syncing")}
             </p>
           </motion.div>
         )}
@@ -165,7 +162,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
             className="w-full"
             icon={<ArrowRight className="w-5 h-5" />}
           >
-            Go to Dashboard
+            {t("goToDashboard")}
           </OnboardingButton>
 
           <div className="flex items-center gap-4">
@@ -174,7 +171,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
               variant="ghost"
               icon={<ArrowLeft className="w-4 h-4" />}
             >
-              Go Back
+              {t("goBack")}
             </OnboardingButton>
 
             {!hasAnyConnection && (
@@ -183,7 +180,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
                 variant="ghost"
                 icon={<Plus className="w-4 h-4" />}
               >
-                Add Accounts
+                {t("addAccounts")}
               </OnboardingButton>
             )}
           </div>
@@ -208,6 +205,7 @@ function ConnectionSummaryItem({
   color,
   delay,
 }: ConnectionSummaryItemProps) {
+  const t = useTranslations("onboarding.completion");
   const colorStyles = {
     emerald: {
       bg: "bg-emerald-500/10",
@@ -250,7 +248,7 @@ function ConnectionSummaryItem({
             <span className="text-white font-medium">{count}</span>
           </>
         ) : (
-          <span className="text-white/30">Not connected</span>
+          <span className="text-white/30">{t("notConnected")}</span>
         )}
       </div>
     </motion.div>

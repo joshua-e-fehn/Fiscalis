@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/nextjs";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import {
   User,
@@ -59,6 +59,9 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const completeProfile = useCompleteProfileStep();
   const existingSettings = useUserSettings();
   const { setTheme } = useTheme();
+  const t = useTranslations("onboarding.profile");
+  const tActions = useTranslations("common.actions");
+  const tLanguage = useTranslations("common.language");
   // Preselect the language the app is shown in (cookie or browser language,
   // limited to RENDERED_LANGUAGES, so English until German is rendered)
   const currentLanguage = languageForLocale(useLocale());
@@ -72,14 +75,16 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
     theme: "system",
   });
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   // An empty date of birth is fine (optional); a filled one must be valid.
   const birthDateCheck = formData.birthDate
     ? validateBirthDate(formData.birthDate)
     : null;
   const birthDateError =
-    birthDateCheck && !birthDateCheck.ok ? birthDateCheck.error : null;
+    birthDateCheck && !birthDateCheck.ok
+      ? t(`birthDateErrors.${birthDateCheck.code}`)
+      : null;
 
   // Pre-fill from Clerk user and existing settings
   useEffect(() => {
@@ -109,7 +114,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
 
   const handleSubmit = async () => {
     if (birthDateError) return;
-    setSaveError(null);
+    setSaveFailed(false);
     setIsSaving(true);
     try {
       await saveSettings({
@@ -124,7 +129,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
       onNext();
     } catch (error) {
       console.error("Failed to save settings:", error);
-      setSaveError("We couldn't save your profile. Please try again.");
+      setSaveFailed(true);
     } finally {
       setIsSaving(false);
     }
@@ -143,12 +148,8 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#3B82F6]/10 border border-[#3B82F6]/20 mb-4">
             <User className="w-8 h-8 text-[#3B82F6]" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">
-            Personalize Your Experience
-          </h2>
-          <p className="text-white/50">
-            Set up your preferences to get the most out of Fiscalis
-          </p>
+          <h2 className="text-3xl font-bold text-white mb-2">{t("title")}</h2>
+          <p className="text-white/50">{t("subtitle")}</p>
         </motion.div>
 
         {/* Form Card */}
@@ -157,11 +158,11 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
             {/* Display Name */}
             <motion.div variants={itemVariants} className="space-y-2">
               <Label htmlFor="displayName" className="text-white/70">
-                Display Name
+                {t("displayName")}
               </Label>
               <Input
                 id="displayName"
-                placeholder="Your name"
+                placeholder={t("displayNamePlaceholder")}
                 value={formData.displayName}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -178,7 +179,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
               <Label htmlFor="birthDate" className="text-white/70">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="w-4 h-4" />
-                  Date of Birth
+                  {t("birthDate")}
                 </div>
               </Label>
               <Input
@@ -197,13 +198,10 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
               />
               {birthDateError ? (
                 <p role="alert" className="text-xs text-red-400">
-                  {birthDateError}.
+                  {birthDateError}
                 </p>
               ) : (
-                <p className="text-xs text-white/40">
-                  Used to personalize planning tools like your retirement
-                  forecast.
-                </p>
+                <p className="text-xs text-white/40">{t("birthDateHint")}</p>
               )}
             </motion.div>
 
@@ -212,7 +210,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
               <Label htmlFor="currency" className="text-white/70">
                 <div className="flex items-center gap-2">
                   <Globe className="w-4 h-4" />
-                  Preferred Currency
+                  {t("currency")}
                 </div>
               </Label>
               <Select
@@ -233,7 +231,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
                     >
                       <span className="flex items-center gap-2">
                         <span>{currency.flag}</span>
-                        <span>{currency.label}</span>
+                        <span>{t(`currencies.${currency.value}`)}</span>
                       </span>
                     </SelectItem>
                   ))}
@@ -244,7 +242,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
             {/* Language */}
             <motion.div variants={itemVariants} className="space-y-2">
               <Label htmlFor="language" className="text-white/70">
-                Language
+                {tLanguage("label")}
               </Label>
               <Select
                 value={formData.language}
@@ -274,26 +272,26 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
               <Label className="text-white/70">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4" />
-                  Theme
+                  {t("theme")}
                 </div>
               </Label>
               <div className="grid grid-cols-3 gap-3">
                 <ThemeButton
                   selected={formData.theme === "light"}
                   onClick={() => selectTheme("light")}
-                  label="Light"
+                  label={t("themes.light")}
                   preview="bg-white"
                 />
                 <ThemeButton
                   selected={formData.theme === "dark"}
                   onClick={() => selectTheme("dark")}
-                  label="Dark"
+                  label={t("themes.dark")}
                   preview="bg-[#0a0a0f]"
                 />
                 <ThemeButton
                   selected={formData.theme === "system"}
                   onClick={() => selectTheme("system")}
-                  label="System"
+                  label={t("themes.system")}
                   preview="bg-gradient-to-r from-white to-[#0a0a0f]"
                 />
               </div>
@@ -314,11 +312,11 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
             className="w-full"
             icon={<ArrowRight className="w-5 h-5" />}
           >
-            Continue
+            {tActions("continue")}
           </OnboardingButton>
-          {saveError && (
+          {saveFailed && (
             <p role="alert" className="text-sm text-red-400">
-              {saveError}
+              {t("saveFailed")}
             </p>
           )}
           <OnboardingButton
@@ -326,7 +324,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
             variant="ghost"
             icon={<ArrowLeft className="w-4 h-4" />}
           >
-            Back
+            {tActions("back")}
           </OnboardingButton>
         </motion.div>
       </motion.div>

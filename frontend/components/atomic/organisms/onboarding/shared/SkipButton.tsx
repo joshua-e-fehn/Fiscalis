@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ChevronRight } from "lucide-react";
 
@@ -13,10 +14,11 @@ interface SkipButtonProps {
 
 export function SkipButton({
   onClick,
-  text = "Skip for now",
+  text,
   className,
   disabled = false,
 }: SkipButtonProps) {
+  const t = useTranslations("onboarding.shared");
   return (
     <motion.button
       type="button"
@@ -31,7 +33,7 @@ export function SkipButton({
       whileHover={{ x: 3 }}
       whileTap={{ scale: 0.98 }}
     >
-      {text}
+      {text ?? t("skip")}
       <ChevronRight className="w-4 h-4" />
     </motion.button>
   );

@@ -1,0 +1,115 @@
+{
+  "steps": {
+    "welcome": "Welcome",
+    "profile": "Profile",
+    "banking": "Banking",
+    "brokers": "Brokers",
+    "crypto": "Crypto",
+    "completion": "Complete"
+  },
+  "progress": {
+    "stepOf": "Step {current} of {total}"
+  },
+  "shared": {
+    "skip": "Skip for now",
+    "noConnections": "No connections yet",
+    "accounts": "{count, plural, one {# account} other {# accounts}}"
+  },
+  "welcome": {
+    "logoAlt": "Fiscalis logo",
+    "title": "Welcome to <brand>Fiscalis</brand>",
+    "subtitle": "Your complete wealth picture, in one place.",
+    "trackTitle": "Track everything",
+    "trackDescription": "Stocks, crypto, real estate, cash, precious metals — all in one view",
+    "debtsTitle": "Know your debts",
+    "debtsDescription": "Loans, mortgages, credit cards at a glance",
+    "netWorthTitle": "True net worth",
+    "netWorthDescription": "Assets minus liabilities, updated in real time",
+    "mockupNetWorth": "Total net worth",
+    "mockupChange": "{change} this year",
+    "getStarted": "Let's get started"
+  },
+  "profile": {
+    "title": "Personalise your experience",
+    "subtitle": "Set up your preferences to get the most out of Fiscalis",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Your name",
+    "birthDate": "Date of birth",
+    "birthDateHint": "Used to personalise planning tools like your retirement forecast.",
+    "birthDateErrors": {
+      "format": "Date of birth must be in YYYY-MM-DD format.",
+      "invalid": "Date of birth is not a valid calendar date.",
+      "future": "Date of birth cannot be in the future.",
+      "outOfRange": "Date of birth is out of the supported range."
+    },
+    "currency": "Preferred currency",
+    "currencies": {
+      "EUR": "Euro (€)",
+      "USD": "US dollar ($)",
+      "GBP": "British pound (£)",
+      "CHF": "Swiss franc (CHF)"
+    },
+    "theme": "Theme",
+    "themes": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "saveFailed": "We couldn't save your profile. Please try again."
+  },
+  "banking": {
+    "title": "Connect your bank accounts",
+    "subtitle": "See your checking, savings and credit cards in one view",
+    "benefitBalances": "Automatic balance updates",
+    "benefitTransactions": "Transaction history & categorisation",
+    "benefitCurrencies": "Multi-currency support",
+    "connected": "Connected accounts",
+    "connecting": "Connecting…",
+    "addAnother": "Add another bank",
+    "connect": "Connect bank account",
+    "security": "Bank-level encryption • Read-only access",
+    "continueWithout": "Continue without banking"
+  },
+  "brokers": {
+    "title": "Connect your investment accounts",
+    "subtitle": "Import your stocks, ETFs and bonds automatically",
+    "benefitRealtime": "Real-time portfolio updates",
+    "benefitBrokerages": "Support for 15+ brokerages",
+    "benefitDividends": "Dividend & performance tracking",
+    "connected": "Connected brokers",
+    "supported": "Supported brokers",
+    "opening": "Opening connection…",
+    "addAnother": "Add another broker",
+    "connect": "Connect brokerage account",
+    "newWindow": "A new window should have opened. Complete the connection there.",
+    "security": "Secure connection via SnapTrade • Read-only access",
+    "continueWithout": "Continue without brokers"
+  },
+  "crypto": {
+    "title": "Connect Bitpanda",
+    "subtitle": "Track Bitcoin, Ethereum and 100+ other assets — plus metals, stocks and cash",
+    "benefitAssets": "Crypto, precious metals, commodities & stocks in one place",
+    "benefitApiKey": "Connect with a read-only API key",
+    "benefitValuation": "Automatic valuation in your base currency",
+    "connected": "Connected",
+    "addAnother": "Add another account",
+    "connect": "Connect Bitpanda",
+    "security": "Read-only API key • Encrypted at rest",
+    "continueWithout": "Continue without Bitpanda"
+  },
+  "completion": {
+    "title": "You're all set! 🎉",
+    "subtitle": "Your wealth dashboard is ready to explore",
+    "summaryConnected": "What you've connected",
+    "summaryEmpty": "Setup summary",
+    "bankAccounts": "Bank accounts",
+    "brokerageAccounts": "Brokerage accounts",
+    "cryptoWallets": "Crypto wallets",
+    "notConnected": "Not connected",
+    "connectLater": "You can connect your accounts anytime in Settings",
+    "syncing": "Your accounts are syncing. Head to your dashboard to see your complete wealth picture.",
+    "goToDashboard": "Go to dashboard",
+    "goBack": "Go back",
+    "addAccounts": "Add accounts"
+  }
+}

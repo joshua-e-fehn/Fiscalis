@@ -8,6 +8,7 @@ import {
   netWorthApiBody,
   netWorthApiBreakdown,
   netWorthApiCurrency,
+  netWorthApiDataAsOf,
   categoryFlowFromHoldings,
   collapseIntradaySnapshots,
   holdingNetFlow,
@@ -528,6 +529,52 @@ describe("netWorthApiBody in another currency", () => {
     expect(body.currency).toBe("GBP");
     expect(body.fxRateDate).toBeNull();
     expect(body.netWorth).toBe(roundMoney(a.netWorth * 0.85));
+  });
+});
+
+describe("netWorthApiDataAsOf", () => {
+  const now = Date.UTC(2026, 10, 15, 12); // Sunday noon
+  const usd = (date: string | null) => ({ currency: "USD" as const, unitsPerEur: 1.1, date });
+  const pricedAt = Date.UTC(2026, 10, 15, 6);
+
+  it("dates a figure converted at an older rate to the end of the rate's day", () => {
+    // Friday's ECB rate on a Sunday: the figure is no fresher than Friday
+    expect(netWorthApiDataAsOf(pricedAt, now, usd("2026-11-13"))).toBe(
+      Date.UTC(2026, 10, 14),
+    );
+  });
+
+  it("keeps an older price time over a newer rate", () => {
+    const old = Date.UTC(2026, 10, 10);
+    expect(netWorthApiDataAsOf(old, now, usd("2026-11-13"))).toBe(old);
+  });
+
+  it("caps today's rate at now, so it never dates the figure", () => {
+    expect(netWorthApiDataAsOf(pricedAt, now, usd("2026-11-15"))).toBe(pricedAt);
+    expect(netWorthApiDataAsOf(null, now, usd("2026-11-15"))).toBe(now);
+  });
+
+  it("uses the rate's day alone when no holding carries a time", () => {
+    expect(netWorthApiDataAsOf(null, now, usd("2026-11-13"))).toBe(Date.UTC(2026, 10, 14));
+  });
+
+  it("ignores EUR, fallback and malformed rate dates", () => {
+    const eur = { currency: "EUR" as const, unitsPerEur: 1, date: "2026-11-01" };
+    expect(netWorthApiDataAsOf(pricedAt, now, eur)).toBe(pricedAt);
+    expect(netWorthApiDataAsOf(pricedAt, now, usd(null))).toBe(pricedAt);
+    expect(netWorthApiDataAsOf(null, now, usd(null))).toBeNull();
+    expect(netWorthApiDataAsOf(pricedAt, now, usd("13.11.2026"))).toBe(pricedAt);
+  });
+
+  it("goes out in the body as dataAsOf", () => {
+    const body = netWorthApiBody(
+      aggregateNetWorth([
+        holding({ source: "bank", category: "cash", valueBase: 10, pricedAt }),
+      ]),
+      now,
+      usd("2026-11-13"),
+    );
+    expect(body.dataAsOf).toBe("2026-11-14T00:00:00.000Z");
   });
 });
 

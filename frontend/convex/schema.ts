@@ -159,6 +159,8 @@ export default defineSchema({
 			v.literal("connected"),
 			v.literal("error"),
 			v.literal("reauth_required"),
+			// A timeout, rate limit or 5xx; the next sync retries
+			v.literal("transient_error"),
 			v.literal("syncing"),
 			v.literal("disconnected"),
 		),
@@ -759,9 +761,14 @@ export default defineSchema({
 		userId: v.string(), // Clerk user ID
 		apiKey: v.string(), // Encrypted read-only Bitpanda API key (AES-256-GCM)
 		label: v.optional(v.string()), // Optional user-provided name
+		// needs_reauth: the key was rejected (401/403); transient_error: a
+		// timeout, rate limit or 5xx, retried by the next sync; error: any
+		// other failure (services/security/connectionStatus.ts)
 		status: v.union(
 			v.literal("active"),
 			v.literal("error"),
+			v.literal("needs_reauth"),
+			v.literal("transient_error"),
 			v.literal("syncing"),
 			v.literal("disconnected"),
 		),

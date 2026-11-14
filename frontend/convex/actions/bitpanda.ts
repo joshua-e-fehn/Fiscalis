@@ -26,6 +26,8 @@ import {
 import { scheduledSyncEnabled } from "../lib/scheduledSync";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
+import { classifyProviderFailure } from "../../../services/security/providerFailure";
+import { bitpandaFailureStatus } from "../../../services/security/connectionStatus";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -71,6 +73,11 @@ export const connect = action({
       if (error instanceof BitpandaAuthError) {
         throw new Error(
           "That Bitpanda API key was rejected. Make sure it's a valid read-only key.",
+        );
+      }
+      if (classifyProviderFailure(error) === "transient") {
+        throw new Error(
+          "Bitpanda is not responding right now. Please try again in a few minutes.",
         );
       }
       throw error;
@@ -322,15 +329,13 @@ export const syncConnectionInternal = internalAction({
       return { ok: true };
     } catch (error) {
       console.error("Bitpanda sync error:", describeError(error));
-      const isAuth = error instanceof BitpandaAuthError;
+      // Only a rejected key (401/403) asks the user to reconnect; a
+      // timeout, rate limit or 5xx keeps the key for the next sync
+      const failure = bitpandaFailureStatus(error);
       await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
         connectionId: args.connectionId,
-        status: "error",
-        errorMessage: isAuth
-          ? "Your Bitpanda API key is no longer valid. Please reconnect with a new read-only key."
-          : error instanceof Error
-            ? error.message
-            : String(error),
+        status: failure.status,
+        errorMessage: failure.errorMessage,
       });
       return { ok: false };
     }

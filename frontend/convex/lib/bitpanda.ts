@@ -17,23 +17,37 @@
  * This file is imported by Convex actions which run in Node.js.
  */
 
+import { PROVIDER_TIMEOUT_MS, parseRetryAfter, withRetry } from "./retry";
+
 const BITPANDA_API_BASE = "https://api.bitpanda.com/v1";
 
-/** Error thrown when the API key is invalid/revoked (401/403). */
+/**
+ * Error thrown when the API key is invalid/revoked (401/403). Carries the
+ * status so classifyProviderFailure (services/security/providerFailure.ts)
+ * reads it as needs_reauth.
+ */
 export class BitpandaAuthError extends Error {
-  constructor(message = "Bitpanda API key is invalid or has been revoked") {
+  status: number;
+  constructor(
+    message = "Bitpanda API key is invalid or has been revoked",
+    status = 401,
+  ) {
     super(message);
     this.name = "BitpandaAuthError";
+    this.status = status;
   }
 }
 
 /** Error thrown for other (non-auth) Bitpanda API failures. */
 export class BitpandaApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  /** From a Retry-After header (429 / 503), when Bitpanda sent one */
+  retryAfterMs?: number;
+  constructor(status: number, message: string, retryAfterMs?: number) {
     super(message);
     this.name = "BitpandaApiError";
     this.status = status;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -70,21 +84,35 @@ async function bitpandaFetchRaw(
     headers["X-Api-Key"] = apiKey;
   }
 
-  const res = await fetch(url.toString(), { method: "GET", headers });
+  // Timeouts, network failures, 429 and 5xx are retried; 401/403 is not
+  return withRetry(
+    async () => {
+      const res = await fetch(url.toString(), {
+        method: "GET",
+        headers,
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+      });
 
-  if (res.status === 401 || res.status === 403) {
-    throw new BitpandaAuthError();
-  }
+      if (res.status === 401 || res.status === 403) {
+        throw new BitpandaAuthError(undefined, res.status);
+      }
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new BitpandaApiError(
-      res.status,
-      `Bitpanda API error ${res.status} for ${path}: ${body.slice(0, 200)}`,
-    );
-  }
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new BitpandaApiError(
+          res.status,
+          `Bitpanda API error ${res.status} for ${path}: ${body.slice(0, 200)}`,
+          parseRetryAfter(res.headers.get("retry-after")),
+        );
+      }
 
-  return res.json();
+      return res.json();
+    },
+    {
+      retryAfterMs: (error) =>
+        error instanceof BitpandaApiError ? error.retryAfterMs : undefined,
+    },
+  );
 }
 
 /**

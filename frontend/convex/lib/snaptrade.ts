@@ -11,6 +11,7 @@
  */
 
 import { Snaptrade } from "snaptrade-typescript-sdk";
+import { PROVIDER_TIMEOUT_MS, withRetry } from "./retry";
 
 /**
  * Get a configured SnapTrade client instance
@@ -30,6 +31,9 @@ export function getSnaptradeClient(): Snaptrade {
   return new Snaptrade({
     clientId,
     consumerKey,
+    // Passed to every axios request; a timeout surfaces as ECONNABORTED,
+    // which parseSnapTradeError reads as retryable
+    baseOptions: { timeout: PROVIDER_TIMEOUT_MS },
   });
 }
 
@@ -244,57 +248,15 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
 }
 
 /**
- * Sleep utility for retry delays
+ * Run a SnapTrade read with retries (convex/lib/retry.ts) on the errors
+ * parseSnapTradeError marks retryable (429, 5xx, timeouts, network). The
+ * last error is rethrown unchanged, so callers still parse it.
  */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Retry a function with exponential backoff
- */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: {
-    maxRetries?: number;
-    initialDelayMs?: number;
-    maxDelayMs?: number;
-    onRetry?: (error: SnapTradeError, attempt: number) => void;
-  } = {},
-): Promise<T> {
-  const {
-    maxRetries = 3,
-    initialDelayMs = 1000,
-    maxDelayMs = 30000,
-    onRetry,
-  } = options;
-
-  let lastError: SnapTradeError | null = null;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = parseSnapTradeError(error);
-
-      // Don't retry if error is not retryable
-      if (!lastError.isRetryable || attempt === maxRetries) {
-        throw new Error(lastError.userMessage);
-      }
-
-      // Calculate delay with exponential backoff
-      const baseDelay = lastError.retryAfterMs || initialDelayMs;
-      const delay = Math.min(baseDelay * Math.pow(2, attempt), maxDelayMs);
-
-      if (onRetry) {
-        onRetry(lastError, attempt + 1);
-      }
-
-      await sleep(delay);
-    }
-  }
-
-  throw new Error(lastError?.userMessage || SNAPTRADE_ERROR_CODES.UNKNOWN);
+export function withSnaptradeRetry<T>(fn: () => Promise<T>): Promise<T> {
+  return withRetry(fn, {
+    shouldRetry: (error) => parseSnapTradeError(error).isRetryable,
+    retryAfterMs: (error) => parseSnapTradeError(error).retryAfterMs,
+  });
 }
 
 /**

@@ -89,7 +89,9 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
                       ? "connected"
                       : connection.status === "syncing"
                         ? "syncing"
-                        : "error"
+                        : connection.status === "transient_error"
+                          ? "retrying"
+                          : "error"
                   }
                   icon={<Wallet className="w-5 h-5 text-[#D4AF37]" />}
                 />

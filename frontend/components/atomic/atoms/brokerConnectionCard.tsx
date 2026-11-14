@@ -52,7 +52,8 @@ interface BrokerConnection {
     | "error"
     | "pending"
     | "syncing"
-    | "reauth_required";
+    | "reauth_required"
+    | "transient_error";
   authorizationId?: string;
   lastSyncAt?: number;
   errorMessage?: string;
@@ -101,6 +102,7 @@ export function BrokerConnectionCard({
       case "error":
         return <AlertCircle className="h-4 w-4 text-red-500" />;
       case "pending":
+      case "transient_error":
         return <Clock className="h-4 w-4 text-yellow-500" />;
       default:
         return null;
@@ -128,6 +130,15 @@ export function BrokerConnectionCard({
             className="border-yellow-500 text-yellow-500"
           >
             Pending
+          </Badge>
+        );
+      case "transient_error":
+        return (
+          <Badge
+            variant="outline"
+            className="border-yellow-500 text-yellow-500"
+          >
+            Retrying
           </Badge>
         );
       default:
@@ -231,6 +242,14 @@ export function BrokerConnectionCard({
             <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 p-2 dark:border-yellow-900 dark:bg-yellow-950/20">
               <p className="text-xs text-yellow-800 dark:text-yellow-200">
                 API integration pending. Data will sync once connected.
+              </p>
+            </div>
+          )}
+
+          {connection.status === "transient_error" && (
+            <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 p-2 dark:border-yellow-900 dark:bg-yellow-950/20">
+              <p className="text-xs text-yellow-800 dark:text-yellow-200">
+                Temporary problem at the broker. It will retry automatically.
               </p>
             </div>
           )}

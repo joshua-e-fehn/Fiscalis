@@ -59,7 +59,8 @@ export const getConnection = query({
 });
 
 /**
- * Get connections that need attention (in an error state).
+ * Get connections that need the user's attention: a rejected key or an
+ * unexpected error. A transient_error retries on its own and is left out.
  */
 export const getConnectionsNeedingAttention = query({
   args: {},
@@ -67,12 +68,17 @@ export const getConnectionsNeedingAttention = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
-    const connections = await ctx.db
-      .query("bitpandaConnections")
-      .withIndex("by_status", (q) =>
-        q.eq("userId", identity.subject).eq("status", "error"),
-      )
-      .collect();
+    const connections = [];
+    for (const status of ["error", "needs_reauth"] as const) {
+      connections.push(
+        ...(await ctx.db
+          .query("bitpandaConnections")
+          .withIndex("by_status", (q) =>
+            q.eq("userId", identity.subject).eq("status", status),
+          )
+          .collect()),
+      );
+    }
 
     return connections.map(sanitizeConnection);
   },
@@ -210,6 +216,8 @@ export const updateConnectionStatus = internalMutation({
     status: v.union(
       v.literal("active"),
       v.literal("error"),
+      v.literal("needs_reauth"),
+      v.literal("transient_error"),
       v.literal("syncing"),
       v.literal("disconnected"),
     ),
@@ -217,10 +225,13 @@ export const updateConnectionStatus = internalMutation({
     lastSyncAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    // errorMessage is cleared when absent; lastSyncAt is only ever moved
+    // forward, so a failed or in-progress sync keeps the last good time
+    // (as brokers.updateConnectionStatus)
     await ctx.db.patch(args.connectionId, {
       status: args.status,
       errorMessage: args.errorMessage,
-      lastSyncAt: args.lastSyncAt,
+      ...(args.lastSyncAt !== undefined ? { lastSyncAt: args.lastSyncAt } : {}),
       updatedAt: Date.now(),
     });
   },

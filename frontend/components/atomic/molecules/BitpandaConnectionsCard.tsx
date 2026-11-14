@@ -9,7 +9,7 @@
  */
 
 import { useMemo } from "react";
-import { RefreshCw, Trash2, AlertCircle, Wallet } from "lucide-react";
+import { RefreshCw, Trash2, AlertCircle, Clock, Wallet } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -101,10 +101,24 @@ export function BitpandaConnectionsCard() {
                 {conn.label ?? "Bitpanda account"}
               </span>
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                {conn.status === "error" ? (
+                {conn.status === "needs_reauth" ? (
                   <>
                     <AlertCircle className="h-3 w-3 text-destructive" />
-                    {conn.errorMessage ?? "Connection error — reconnect"}
+                    {conn.errorMessage ??
+                      "API key rejected — reconnect with a new read-only key"}
+                  </>
+                ) : conn.status === "error" ? (
+                  <>
+                    <AlertCircle className="h-3 w-3 text-destructive" />
+                    {conn.errorMessage ?? "Sync failed — try again"}
+                  </>
+                ) : conn.status === "transient_error" ? (
+                  <>
+                    <Clock className="h-3 w-3 text-yellow-600" />
+                    Temporary problem at Bitpanda — will retry automatically
+                    {conn.lastSyncAt
+                      ? ` · last synced ${new Date(conn.lastSyncAt).toLocaleString()}`
+                      : ""}
                   </>
                 ) : (
                   <>

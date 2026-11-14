@@ -33,7 +33,8 @@ interface BrokerConnection {
     | "error"
     | "pending"
     | "syncing"
-    | "reauth_required";
+    | "reauth_required"
+    | "transient_error";
   lastSyncAt?: number;
   errorMessage?: string;
 }

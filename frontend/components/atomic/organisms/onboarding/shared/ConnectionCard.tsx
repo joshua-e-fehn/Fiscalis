@@ -2,13 +2,16 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, Clock } from "lucide-react";
+
+/** retrying: a provider hiccup the next sync retries; not the user's to fix */
+export type ConnectionCardStatus = "connected" | "error" | "syncing" | "retrying";
 
 interface ConnectionCardProps {
   type: "bank" | "broker" | "crypto";
   name: string;
   accountCount?: number;
-  status: "connected" | "error" | "syncing";
+  status: ConnectionCardStatus;
   icon?: React.ReactNode;
   className?: string;
 }
@@ -38,6 +41,12 @@ export function ConnectionCard({
       color: "text-[#3B82F6]",
       bg: "bg-[#3B82F6]/10",
       text: "Syncing",
+    },
+    retrying: {
+      icon: Clock,
+      color: "text-amber-500",
+      bg: "bg-amber-500/10",
+      text: "Retrying",
     },
   };
 
@@ -96,7 +105,7 @@ interface ConnectionListProps {
     type: "bank" | "broker" | "crypto";
     name: string;
     accountCount: number;
-    status: "connected" | "error" | "syncing";
+    status: ConnectionCardStatus;
   }>;
   emptyMessage?: string;
 }

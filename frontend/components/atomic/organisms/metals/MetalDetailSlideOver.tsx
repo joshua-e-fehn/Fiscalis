@@ -376,13 +376,13 @@ export function MetalDetailSlideOver({
                     <AlertDialogHeader>
                       <AlertDialogTitle>Delete Item?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete "{item.displayName}" from
+                        This will permanently delete &ldquo;{item.displayName}&rdquo; from
                         your vault including all transaction history. This
                         action cannot be undone.
                         <br />
                         <br />
                         <strong>Tip:</strong> If you sold this item, use the
-                        "Sell Item" button instead to record the sale and track
+                        &ldquo;Sell Item&rdquo; button instead to record the sale and track
                         your realized P/L.
                       </AlertDialogDescription>
                     </AlertDialogHeader>

@@ -46,7 +46,7 @@ export function CategoryAllocationChart({
   const THRESHOLD_PERCENT = 2;
   const significantItems: typeof dataWithValue = [];
   let otherValue = 0;
-  let otherColor = "#6B7280"; // Gray for "Other"
+  const otherColor = "#6B7280"; // Gray for "Other"
 
   for (const item of dataWithValue) {
     const percentage =

@@ -984,7 +984,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                               ) : (
                                 <p className="text-amber-600">
                                   <strong>Lower payment:</strong> Your loan will
-                                  take longer to pay off, or you'll have a
+                                  take longer to pay off, or you&apos;ll have a
                                   balloon payment at the end.
                                 </p>
                               )}
@@ -1009,7 +1009,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       Based on your start date, {missedPaymentsInfo.count}{" "}
                       payment
                       {missedPaymentsInfo.count > 1 ? "s have" : " has"} already
-                      come due. Record the payments you've made:
+                      come due. Record the payments you&apos;ve made:
                     </p>
 
                     <div className="space-y-3">

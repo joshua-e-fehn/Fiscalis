@@ -153,7 +153,7 @@ export const getTransactionsDb = query({
 
     const userId = identity.subject;
 
-    let transactions = await ctx.db
+    const transactions = await ctx.db
       .query("plaidTransactions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();

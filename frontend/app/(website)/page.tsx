@@ -17,7 +17,7 @@ import {
   CheckCircle2,
   Sparkles,
 } from "lucide-react";
-import { SignInButton, SignUpButton, SignedOut, SignedIn } from "@clerk/nextjs";
+import { SignInButton, SignedOut, SignedIn } from "@clerk/nextjs";
 import { Button } from "@/components/ui/shadcn/button";
 
 // Animation variants
@@ -108,11 +108,12 @@ export default function HomePage() {
                     Sign in
                   </Button>
                 </SignInButton>
-                <SignUpButton>
+                {/* Sign-up is waitlist-only (ENG-226) */}
+                <Link href="/waitlist">
                   <Button className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-medium">
-                    Get Started
+                    Join the waitlist
                   </Button>
-                </SignUpButton>
+                </Link>
               </SignedOut>
               <SignedIn>
                 <Link href="/dashboard">
@@ -201,15 +202,15 @@ export default function HomePage() {
               variants={itemVariants}
             >
               <SignedOut>
-                <SignUpButton>
+                <Link href="/waitlist">
                   <Button
                     size="lg"
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-8 py-6 text-lg"
                   >
-                    Start For Free
+                    Join the waitlist
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
-                </SignUpButton>
+                </Link>
                 {/* TODO: Add demo video
                 <Button
                   size="lg"
@@ -448,15 +449,15 @@ export default function HomePage() {
                 unified wealth management.
               </p>
               <SignedOut>
-                <SignUpButton>
+                <Link href="/waitlist">
                   <Button
                     size="lg"
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-10 py-6 text-lg"
                   >
-                    Get Started For Free
+                    Join the waitlist
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
-                </SignUpButton>
+                </Link>
               </SignedOut>
               <SignedIn>
                 <Link href="/dashboard">

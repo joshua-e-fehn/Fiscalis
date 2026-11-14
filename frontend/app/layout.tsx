@@ -44,6 +44,7 @@ export default async function AppLayout({
       dynamic
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
+      waitlistUrl="/waitlist"
       localization={clerkLocalization(language)}
     >
       {/* next-themes sets the theme class on <html> before hydration */}

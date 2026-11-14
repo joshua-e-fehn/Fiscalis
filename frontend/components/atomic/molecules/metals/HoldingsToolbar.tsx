@@ -70,7 +70,6 @@ export function HoldingsToolbar({
   viewMode,
   onViewModeChange,
   sortField,
-  sortDirection,
   onSortChange,
   metalFilter,
   onMetalFilterChange,

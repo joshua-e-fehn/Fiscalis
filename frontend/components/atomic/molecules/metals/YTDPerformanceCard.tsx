@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/shadcn/card";
 import { MetalsCurrency } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
-import { CalendarDays, TrendingUp, TrendingDown } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { currencySuffixes } from "@/lib/utils/currency";
 
 interface YTDPerformanceCardProps {

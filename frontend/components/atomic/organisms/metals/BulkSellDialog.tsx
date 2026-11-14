@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/shadcn/select";
-import { MetalBadge, PriceDisplay } from "@/components/atomic/atoms/metals";
+import { MetalBadge } from "@/components/atomic/atoms/metals";
 import {
   MetalItemWithValuation,
   MetalsCurrency,

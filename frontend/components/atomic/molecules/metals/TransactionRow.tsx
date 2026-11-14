@@ -62,7 +62,6 @@ function formatDate(dateStr: string): string {
 
 export function TransactionRow({
   transaction,
-  displayCurrency = "eur",
   className,
 }: TransactionRowProps) {
   const Icon = transactionIcons[transaction.transactionType];

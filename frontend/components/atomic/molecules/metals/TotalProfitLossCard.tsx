@@ -27,7 +27,6 @@ interface TotalProfitLossCardProps {
 export function TotalProfitLossCard({
   profitLoss,
   profitLossPercent,
-  bestPerformer,
   currency = "eur",
   isLoading = false,
   className,

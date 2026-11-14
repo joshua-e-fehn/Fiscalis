@@ -28,7 +28,6 @@ import { Separator } from "@/components/ui/shadcn/separator";
 import {
   MetalBadge,
   PriceDisplay,
-  ChangeIndicator,
 } from "@/components/atomic/atoms/metals";
 import {
   MetalItemWithValuation,

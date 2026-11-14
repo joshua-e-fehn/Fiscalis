@@ -6,7 +6,6 @@ import {
   MetalsType,
 } from "@/lib/types/metals-extended";
 import { HoldingsCardGrid } from "./HoldingsCardGrid";
-import { HoldingsTable } from "./HoldingsTable";
 import { MetalIcon } from "@/components/atomic/atoms/metals";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";

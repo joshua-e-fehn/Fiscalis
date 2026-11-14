@@ -26,12 +26,10 @@ import { Separator } from "@/components/ui/shadcn/separator";
 import {
   MetalBadge,
   PriceDisplay,
-  WeightDisplay,
   DualWeightDisplay,
   ChangeIndicator,
   PurityBadge,
   CategoryBadge,
-  FadeIn,
   StaggerContainer,
   StaggerItem,
 } from "@/components/atomic/atoms/metals";

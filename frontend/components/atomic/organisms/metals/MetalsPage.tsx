@@ -44,7 +44,7 @@ import {
   MetalsCurrency,
   MetalItemWithValuation,
 } from "@/lib/types/metals-extended";
-import { MetalCurrency, MetalType } from "@/lib/types/metals";
+import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
 import { TimeRange } from "@/../services/finance/financeService";
 import {
   isRecordedClose,
@@ -305,11 +305,7 @@ export function MetalsPage({
     isLoading: summaryLoading,
     pricesAsOf,
   } = useMetalsSummary(initialCurrency);
-  const {
-    data: pricesData,
-    isLoading: pricesLoading,
-    refetch: refetchPrices,
-  } = useMetalsPrices();
+  const { data: pricesData, isLoading: pricesLoading } = useMetalsPrices();
   const { transactions: rawTransactions, isLoading: transactionsLoading } =
     useVaultTransactions();
 
@@ -372,7 +368,7 @@ export function MetalsPage({
   const palladiumData = useMetalPrices("palladium", timeRange, priceCurrency);
 
   const compareDatasets = useMemo(() => {
-    const datasets: { metal: MetalType; data: any[]; color: string }[] = [];
+    const datasets: { metal: MetalType; data: MetalChartData[]; color: string }[] = [];
 
     if (selectedMetals.includes("gold") && goldData.data) {
       datasets.push({

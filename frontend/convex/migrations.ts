@@ -96,7 +96,6 @@ export const cleanupOldPremiumFields = internalMutation({
       if (item.defaultPremium !== undefined) {
         // Replace the entire document without the old field
         const { defaultPremium, _id, _creationTime, ...rest } = item;
-        void [defaultPremium, _creationTime]; // dropped from the replacement
         await ctx.db.replace(_id, rest);
         catalogCleaned++;
       }
@@ -108,7 +107,6 @@ export const cleanupOldPremiumFields = internalMutation({
       if (item.premium !== undefined) {
         // Replace the entire document without the old field
         const { premium, _id, _creationTime, ...rest } = item;
-        void [premium, _creationTime]; // dropped from the replacement
         await ctx.db.replace(_id, rest);
         itemsCleaned++;
       }

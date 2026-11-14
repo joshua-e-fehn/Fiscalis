@@ -420,7 +420,6 @@ export const createLoan = mutation({
       ...terms
     } = args;
     // Recomputed from the inserted payments below; a sent value is dropped
-    void ignoredNextPaymentDate;
 
     // The regular payment agreed at origination (for INTEREST_ONLY_THEN the
     // post-grace payment), unless the client sent the actual one
@@ -549,7 +548,6 @@ export const updateLoan = mutation({
       dayCount,
       ...updates
     } = args;
-    void ignoredNextPaymentDate;
 
     const { loan } = await requireOwnedLoan(ctx, loanId);
 

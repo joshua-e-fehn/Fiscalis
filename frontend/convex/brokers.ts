@@ -9,6 +9,7 @@ import {
   getClassificationFields,
 } from "../../services/classification";
 import { loadFxRates } from "./fxRates";
+import { ensureSyncTarget } from "./lib/syncTargets";
 import {
   brokerAccountBaseFields,
   brokerAccountWithBaseFields,
@@ -332,6 +333,7 @@ export const createConnection = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    await ensureSyncTarget(ctx, args.userId);
 
     return await ctx.db.insert("brokerConnections", {
       userId: args.userId,

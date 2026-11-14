@@ -10,6 +10,7 @@ import {
   PlaidEnvironments,
   Products,
   CountryCode,
+  TransactionsUpdateStatus,
 } from "plaid";
 import { encrypt, decrypt } from "../lib/encryption";
 import { NO_CURRENCY } from "../../../services/finance/currency";
@@ -18,6 +19,13 @@ import { describeError } from "../../../services/security/providerError";
 import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
 import { enforceUserRateLimit } from "../lib/rateLimit";
 import { userError } from "../lib/userError";
+import {
+  chunk,
+  collectSyncPages,
+  mergeSyncPages,
+  MUTATION_DURING_PAGINATION,
+  toPlaidTransactionRecord,
+} from "../../../services/banking/transactionSync";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -591,25 +599,142 @@ export const syncAccountsForUserAdmin = internalAction({
   },
 });
 
+/** Plaid's page size limit for /transactions/sync. */
+const TRANSACTIONS_SYNC_PAGE_SIZE = 500;
+/** Transactions written per mutation. */
+const TRANSACTIONS_WRITE_BATCH = 200;
+
+function plaidErrorCode(error: unknown): string | undefined {
+  return (error as { response?: { data?: { error_code?: string } } })
+    ?.response?.data?.error_code;
+}
+
 /**
- * Sync transactions from Plaid
+ * Incremental transaction sync for one item via /transactions/sync
+ * (ENG-230). Reads every change after the stored cursor, applies the
+ * upserts and removals in batches, then stores the new cursor, so a failed
+ * sync replays from the old cursor (the writes are idempotent).
+ *
+ * An item's first sync (no cursor) reads the full history. Its cursor is
+ * only stored once Plaid reports the historical pull complete, and then the
+ * rows the sync did not write are deleted: leftovers of /transactions/get
+ * that Plaid no longer lists. Until then each sync re-reads from the start.
+ */
+export const syncItemTransactions = internalAction({
+  args: { itemId: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ upserted: number; removed: number; complete: boolean }> => {
+    const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
+      itemId: args.itemId,
+    });
+    if (!item) throw new Error("Item not found");
+
+    const accessToken = decrypt(item.accessToken, getEncryptionKey());
+    const plaidClient = getPlaidClient();
+    const startCursor = item.transactionsCursor;
+    const syncStartedAt = Date.now();
+
+    try {
+      const result = await collectSyncPages(
+        async (cursor) => {
+          const response = await plaidClient.transactionsSync({
+            access_token: accessToken,
+            cursor,
+            count: TRANSACTIONS_SYNC_PAGE_SIZE,
+          });
+          const data = response.data;
+          return {
+            added: data.added.map((t) => toPlaidTransactionRecord(item.itemId, t)),
+            modified: data.modified.map((t) =>
+              toPlaidTransactionRecord(item.itemId, t),
+            ),
+            removed: data.removed.map((t) => t.transaction_id),
+            nextCursor: data.next_cursor,
+            hasMore: data.has_more,
+            updateStatus: data.transactions_update_status,
+            accountIds: data.accounts.map((a) => a.account_id),
+          };
+        },
+        startCursor,
+        {
+          isRestartError: (error) =>
+            plaidErrorCode(error) === MUTATION_DURING_PAGINATION,
+        },
+      );
+
+      const { upserts, removed } = mergeSyncPages(result.pages);
+      const upsertBatches = chunk(upserts, TRANSACTIONS_WRITE_BATCH);
+      const removedBatches = chunk(removed, TRANSACTIONS_WRITE_BATCH);
+      for (let i = 0; i < Math.max(upsertBatches.length, removedBatches.length); i++) {
+        await ctx.runMutation(internal.banking.applyTransactionChanges, {
+          userId: item.userId,
+          upserts: upsertBatches[i] ?? [],
+          removed: removedBatches[i] ?? [],
+        });
+      }
+
+      const initial = !startCursor;
+      const complete =
+        !initial ||
+        result.updateStatus ===
+          TransactionsUpdateStatus.HistoricalUpdateComplete;
+
+      if (initial && complete) {
+        for (const accountId of result.accountIds) {
+          let more = true;
+          while (more) {
+            ({ more } = await ctx.runMutation(
+              internal.banking.reconcileAccountTransactions,
+              { userId: item.userId, accountId, syncStartedAt },
+            ));
+          }
+        }
+      }
+
+      if (complete && result.nextCursor) {
+        await ctx.runMutation(internal.banking.saveTransactionsCursor, {
+          itemId: item.itemId,
+          cursor: result.nextCursor,
+        });
+      }
+
+      return { upserted: upserts.length, removed: removed.length, complete };
+    } catch (error: unknown) {
+      const errorCode = plaidErrorCode(error);
+      if (errorCode) {
+        await ctx.runMutation(internal.banking.updateItemStatus, {
+          itemId: item.itemId,
+          status: "error",
+          errorCode,
+        });
+      }
+      throw error;
+    }
+  },
+});
+
+/**
+ * Sync transactions for one item or all of the user's items.
  */
 export const syncTransactions = action({
-  args: {
-    itemId: v.optional(v.string()),
-    startDate: v.optional(v.string()),
-    endDate: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
+  args: { itemId: v.optional(v.string()) },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    success: boolean;
+    itemsSynced: number;
+    itemsFailed: number;
+    transactionsChanged: number;
+  }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
     await enforceUserRateLimit(ctx, "providerRefresh", userId);
-    const plaidClient = getPlaidClient();
-    const encryptionKey = getEncryptionKey();
 
-    // Get items to sync
     let items;
     if (args.itemId) {
       const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
@@ -625,62 +750,30 @@ export const syncTransactions = action({
       });
     }
 
-    const endDate = args.endDate || new Date().toISOString().split("T")[0];
-    const startDate =
-      args.startDate ||
-      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0];
-
-    let totalSynced = 0;
-
+    let itemsFailed = 0;
+    let transactionsChanged = 0;
     for (const item of items) {
-      const accessToken = decrypt(item.accessToken, encryptionKey);
-
       try {
-        const response = await plaidClient.transactionsGet({
-          access_token: accessToken,
-          start_date: startDate,
-          end_date: endDate,
-          options: { count: 500 },
-        });
-
-        const transactions = response.data.transactions.map((txn) => ({
-          accountId: txn.account_id,
-          plaidTransactionId: txn.transaction_id,
-          amount: txn.amount,
-          date: txn.date,
-          name: txn.name,
-          merchantName: txn.merchant_name ?? undefined,
-          category: txn.category?.join(", ") ?? undefined,
-          pending: txn.pending,
-        }));
-
-        await ctx.runMutation(internal.banking.saveTransactions, {
-          userId,
-          transactions,
-        });
-
-        totalSynced += transactions.length;
-      } catch (error: unknown) {
+        const result: { upserted: number; removed: number } =
+          await ctx.runAction(internal.actions.plaid.syncItemTransactions, {
+            itemId: item.itemId,
+          });
+        transactionsChanged += result.upserted + result.removed;
+      } catch (error) {
+        itemsFailed++;
         console.error(
           `Error syncing transactions for item ${item.itemId}:`,
           describeError(error),
         );
-        const plaidError = error as {
-          response?: { data?: { error_code?: string } };
-        };
-        if (plaidError.response?.data?.error_code) {
-          await ctx.runMutation(internal.banking.updateItemStatus, {
-            itemId: item.itemId,
-            status: "error",
-            errorCode: plaidError.response.data.error_code,
-          });
-        }
       }
     }
 
-    return { success: true, transactionsSynced: totalSynced };
+    return {
+      success: itemsFailed === 0,
+      itemsSynced: items.length - itemsFailed,
+      itemsFailed,
+      transactionsChanged,
+    };
   },
 });
 

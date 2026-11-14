@@ -10,12 +10,7 @@
  */
 
 import { v } from "convex/values";
-import {
-  query,
-  internalMutation,
-  internalQuery,
-  type MutationCtx,
-} from "./_generated/server";
+import { query, internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { computeNetWorth } from "./lib/netWorth";
@@ -230,50 +225,5 @@ export const getLatestSnapshot = query({
       .first();
 
     return snapshot;
-  },
-});
-
-/**
- * Internal query to get all unique users who have any financial connections
- * Used by the scheduled daily sync to determine which users to sync
- */
-export const getUsersWithConnections = internalQuery({
-  args: {},
-  handler: async (ctx): Promise<string[]> => {
-    const userIds = new Set<string>();
-
-    // Get users with Plaid connections
-    const plaidItems = await ctx.db.query("plaidItems").collect();
-    for (const item of plaidItems) {
-      userIds.add(item.userId);
-    }
-
-    // Get users with Snaptrade connections
-    const brokerConnections = await ctx.db.query("brokerConnections").collect();
-    for (const conn of brokerConnections) {
-      userIds.add(conn.userId);
-    }
-
-    // Get users with Bitpanda connections
-    const bitpandaConnections = await ctx.db
-      .query("bitpandaConnections")
-      .collect();
-    for (const conn of bitpandaConnections) {
-      userIds.add(conn.userId);
-    }
-
-    // Get users with vault items (manual assets)
-    const vaultItems = await ctx.db.query("vaultItems").collect();
-    for (const item of vaultItems) {
-      userIds.add(item.userId);
-    }
-
-    // Get users with loans (manual liabilities)
-    const loans = await ctx.db.query("loans").collect();
-    for (const loan of loans) {
-      userIds.add(loan.userId);
-    }
-
-    return Array.from(userIds);
   },
 });

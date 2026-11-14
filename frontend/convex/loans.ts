@@ -41,6 +41,7 @@ import {
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { userError } from "./lib/userError";
 import { scheduleSnapshot } from "./portfolioSnapshots";
+import { ensureSyncTarget } from "./lib/syncTargets";
 import { loadFxRates } from "./fxRates";
 import {
   BASE_CURRENCY,
@@ -515,6 +516,7 @@ export const createLoan = mutation({
       createdAt: now,
       updatedAt: now,
     };
+    await ensureSyncTarget(ctx, loan.userId);
     const loanId = await ctx.db.insert("loans", {
       ...loan,
       // Placeholder, recomputed below from the inserted payments

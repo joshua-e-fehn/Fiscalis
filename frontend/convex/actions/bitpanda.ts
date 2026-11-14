@@ -16,9 +16,14 @@ import {
   BitpandaAuthError,
 } from "../lib/bitpanda";
 import {
+  bitpandaRecordDate,
   normalizeHoldings,
   normalizeTransactions,
 } from "../../../services/bitpanda/normalize";
+import {
+  bitpandaSyncCutoff,
+  pageReachesCutoff,
+} from "../../../services/banking/transactionSync";
 import {
   classifyBitpandaPosition,
   getClassificationFields,
@@ -343,10 +348,18 @@ export const syncConnectionInternal = internalAction({
   },
 });
 
+/** A windowed sync falls back to a full one after this long. */
+const BITPANDA_FULL_SYNC_INTERVAL_MS = 30 * 24 * 60 * 60 * 1000;
+
 /**
  * Fetch trades + transactions from Bitpanda and persist.
  * Transaction failures don't flip the connection into an error state
  * (holdings are the critical data).
+ *
+ * Incremental (ENG-230): with transactions stored and a full sync in the
+ * last 30 days, each endpoint is read newest first only until a page lies
+ * wholly before the window start (bitpandaSyncCutoff), and only that
+ * window is replaced. Otherwise the whole history is read and replaced.
  */
 export const syncTransactionsInternal = internalAction({
   args: {
@@ -363,12 +376,30 @@ export const syncTransactionsInternal = internalAction({
     try {
       const apiKey = decrypt(connection.apiKey, getEncryptionKey());
 
+      const syncState = await ctx.runQuery(
+        internal.bitpanda.getTransactionSyncStateInternal,
+        { connectionId: args.connectionId },
+      );
+      const fullSyncDue =
+        syncState.transactionsFullSyncAt === undefined ||
+        Date.now() - syncState.transactionsFullSyncAt >
+          BITPANDA_FULL_SYNC_INTERVAL_MS;
+      const cutoff = fullSyncDue
+        ? undefined
+        : bitpandaSyncCutoff(syncState.newestTransactionDate);
+      const listOptions = cutoff
+        ? {
+            stopAfterPage: (page: unknown[]) =>
+              pageReachesCutoff(page.map(bitpandaRecordDate), cutoff),
+          }
+        : undefined;
+
       const [trades, cryptoTransactions, fiatTransactions, commodityTransactions] =
         await Promise.all([
-          fetchTrades(apiKey),
-          fetchCryptoTransactions(apiKey),
-          fetchFiatTransactions(apiKey),
-          fetchCommodityTransactions(apiKey),
+          fetchTrades(apiKey, listOptions),
+          fetchCryptoTransactions(apiKey, listOptions),
+          fetchFiatTransactions(apiKey, listOptions),
+          fetchCommodityTransactions(apiKey, listOptions),
         ]);
 
       const transactions = normalizeTransactions({
@@ -378,10 +409,13 @@ export const syncTransactionsInternal = internalAction({
         commodityTransactions,
       });
 
+      // An empty read keeps what is stored: the window starts before the
+      // newest stored row, so it is never legitimately empty
       if (transactions.length > 0) {
         await ctx.runMutation(internal.bitpanda.syncTransactions, {
           userId: args.userId,
           connectionId: args.connectionId,
+          cutoff,
           transactions,
         });
       }

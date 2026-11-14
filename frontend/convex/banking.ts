@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import {
   query,
   internalMutation,
@@ -10,6 +11,7 @@ import {
   getClassificationFields,
 } from "../../services/classification";
 import { getUserId } from "./lib/auth";
+import { ensureSyncTarget } from "./lib/syncTargets";
 import { loadFxRates } from "./fxRates";
 import {
   bankAccountBaseFields,
@@ -48,6 +50,7 @@ export const getItems = query({
       institutionPrimaryColor: item.institutionPrimaryColor,
       status: item.status,
       errorCode: item.errorCode,
+      transactionsSyncedAt: item.transactionsSyncedAt,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     }));
@@ -96,80 +99,52 @@ export const getAccountsByItem = query({
   },
 });
 
+/** An empty page, for a signed-out caller or a foreign account. */
+const EMPTY_PAGE = { page: [], isDone: true, continueCursor: "" };
+
 /**
- * Get transactions with optional filtering
+ * The signed-in user's bank transactions, newest first, one page at a time
+ * (usePaginatedQuery). Optionally one account and an inclusive date range
+ * (YYYY-MM-DD); both read an index, so a page costs its own size.
  */
-export const getTransactions = query({
+export const listTransactions = query({
   args: {
-    limit: v.optional(v.number()),
+    paginationOpts: paginationOptsValidator,
     accountId: v.optional(v.string()),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+  handler: async (ctx, { paginationOpts, accountId, startDate, endDate }) => {
+    const userId = await getUserId(ctx);
+    if (!userId) return EMPTY_PAGE;
 
-    const userId = identity.subject;
+    if (accountId) {
+      // Only the caller's own account: a foreign accountId returns nothing
+      const account = await ctx.db
+        .query("plaidAccounts")
+        .withIndex("by_account", (q) => q.eq("accountId", accountId))
+        .first();
+      if (!account || account.userId !== userId) return EMPTY_PAGE;
+      return await ctx.db
+        .query("plaidTransactions")
+        .withIndex("by_account_date", (q) => {
+          const byAccount = q.eq("accountId", accountId);
+          const from = startDate ? byAccount.gte("date", startDate) : byAccount;
+          return endDate ? from.lte("date", endDate) : from;
+        })
+        .order("desc")
+        .paginate(paginationOpts);
+    }
 
-    let transactions = await ctx.db
+    return await ctx.db
       .query("plaidTransactions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Filter by account if specified
-    if (args.accountId) {
-      transactions = transactions.filter((t) => t.accountId === args.accountId);
-    }
-
-    // Filter by date range if specified
-    if (args.startDate) {
-      transactions = transactions.filter((t) => t.date >= args.startDate!);
-    }
-    if (args.endDate) {
-      transactions = transactions.filter((t) => t.date <= args.endDate!);
-    }
-
-    // Sort by date descending
-    transactions.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    );
-
-    // Apply limit
-    if (args.limit) {
-      transactions = transactions.slice(0, args.limit);
-    }
-
-    return transactions;
-  },
-});
-
-/**
- * Get transactions from the database (cached)
- */
-export const getTransactionsDb = query({
-  args: {
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-
-    const transactions = await ctx.db
-      .query("plaidTransactions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Sort by date descending
-    transactions.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-    );
-
-    // Apply limit
-    const limit = args.limit ?? 50;
-    return transactions.slice(0, limit);
+      .withIndex("by_date", (q) => {
+        const byUser = q.eq("userId", userId);
+        const from = startDate ? byUser.gte("date", startDate) : byUser;
+        return endDate ? from.lte("date", endDate) : from;
+      })
+      .order("desc")
+      .paginate(paginationOpts);
   },
 });
 
@@ -288,6 +263,7 @@ export const saveItem = internalMutation({
       return existing._id;
     }
 
+    await ensureSyncTarget(ctx, args.userId);
     return await ctx.db.insert("plaidItems", {
       userId: args.userId,
       accessToken: args.accessToken,
@@ -427,29 +403,34 @@ export const saveAccounts = internalMutation({
   },
 });
 
+const plaidTransactionValidator = v.object({
+  itemId: v.string(),
+  accountId: v.string(),
+  plaidTransactionId: v.string(),
+  amount: v.number(),
+  currency: v.optional(v.string()),
+  date: v.string(),
+  name: v.string(),
+  merchantName: v.optional(v.string()),
+  category: v.optional(v.string()),
+  pending: v.boolean(),
+});
+
 /**
- * Save or update transactions
+ * Apply one batch of /transactions/sync changes (actions/plaid.ts
+ * syncItemTransactions): upsert added/modified by Plaid id, delete removed.
+ * Idempotent, so a sync that fails before saving its cursor can replay it.
  */
-export const saveTransactions = internalMutation({
+export const applyTransactionChanges = internalMutation({
   args: {
     userId: v.string(),
-    transactions: v.array(
-      v.object({
-        accountId: v.string(),
-        plaidTransactionId: v.string(),
-        amount: v.number(),
-        date: v.string(),
-        name: v.string(),
-        merchantName: v.optional(v.string()),
-        category: v.optional(v.string()),
-        pending: v.boolean(),
-      }),
-    ),
+    upserts: v.array(plaidTransactionValidator),
+    removed: v.array(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
 
-    for (const txn of args.transactions) {
+    for (const txn of args.upserts) {
       const existing = await ctx.db
         .query("plaidTransactions")
         .withIndex("by_plaid_id", (q) =>
@@ -458,10 +439,8 @@ export const saveTransactions = internalMutation({
         .first();
 
       if (existing) {
-        await ctx.db.patch(existing._id, {
-          ...txn,
-          syncedAt: now,
-        });
+        if (existing.userId !== args.userId) continue;
+        await ctx.db.patch(existing._id, { ...txn, syncedAt: now });
       } else {
         await ctx.db.insert("plaidTransactions", {
           userId: args.userId,
@@ -470,6 +449,68 @@ export const saveTransactions = internalMutation({
         });
       }
     }
+
+    for (const plaidTransactionId of args.removed) {
+      const existing = await ctx.db
+        .query("plaidTransactions")
+        .withIndex("by_plaid_id", (q) =>
+          q.eq("plaidTransactionId", plaidTransactionId),
+        )
+        .first();
+      if (existing && existing.userId === args.userId) {
+        await ctx.db.delete(existing._id);
+      }
+    }
+  },
+});
+
+/** Rows deleted per reconcile call, to stay inside mutation limits. */
+const RECONCILE_BATCH = 500;
+
+/**
+ * After an item's first full /transactions/sync: delete the account's rows
+ * the sync did not write (syncedAt before it started). Those were stored
+ * by /transactions/get and Plaid no longer lists them, e.g. a pending
+ * transaction that has since posted under another id. Returns whether
+ * more remain, so the caller repeats until done.
+ */
+export const reconcileAccountTransactions = internalMutation({
+  args: {
+    userId: v.string(),
+    accountId: v.string(),
+    syncStartedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const stale = await ctx.db
+      .query("plaidTransactions")
+      .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.lt(q.field("syncedAt"), args.syncStartedAt),
+        ),
+      )
+      .take(RECONCILE_BATCH);
+    for (const txn of stale) await ctx.db.delete(txn._id);
+    return { deleted: stale.length, more: stale.length === RECONCILE_BATCH };
+  },
+});
+
+/** Store an item's /transactions/sync cursor once its changes are applied. */
+export const saveTransactionsCursor = internalMutation({
+  args: { itemId: v.string(), cursor: v.string() },
+  handler: async (ctx, args) => {
+    const item = await ctx.db
+      .query("plaidItems")
+      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
+      .first();
+    if (!item) return;
+    const now = Date.now();
+    await ctx.db.patch(item._id, {
+      transactionsCursor: args.cursor,
+      transactionsSyncedAt: now,
+      updatedAt: now,
+    });
   },
 });
 

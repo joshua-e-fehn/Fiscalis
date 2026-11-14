@@ -36,6 +36,7 @@ import {
 import { loadFxRates } from "./fxRates";
 import { loadSpotPrices } from "./lib/netWorth";
 import { scheduleSnapshot } from "./portfolioSnapshots";
+import { ensureSyncTarget } from "./lib/syncTargets";
 
 // ═══════════════════════════════════════════════════════════════
 // LEDGER - vaultTransactions are the source of truth
@@ -463,6 +464,7 @@ async function createVaultItem(
   });
   const now = Date.now();
   const currency = opening.purchaseCurrency ?? "EUR";
+  await ensureSyncTarget(ctx, userId);
   const vaultItemId = await ctx.db.insert("vaultItems", {
     ...fields,
     userId,

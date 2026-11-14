@@ -62,6 +62,10 @@ export default defineSchema({
 			v.literal("pending_reauth"),
 		),
 		errorCode: v.optional(v.string()),
+		// /transactions/sync position (actions/plaid.ts syncItemTransactions);
+		// absent until the item's first sync, which reads the full history
+		transactionsCursor: v.optional(v.string()),
+		transactionsSyncedAt: v.optional(v.number()),
 		createdAt: v.number(),
 		updatedAt: v.number(),
 	})
@@ -119,7 +123,10 @@ export default defineSchema({
 		userId: v.string(),
 		accountId: v.string(),
 		plaidTransactionId: v.string(),
-		amount: v.number(),
+		// Absent on rows stored by /transactions/get, before ENG-230
+		itemId: v.optional(v.string()),
+		amount: v.number(), // Plaid sign: positive = money out of the account
+		currency: v.optional(v.string()), // ISO 4217 (or Plaid's unofficial code)
 		date: v.string(), // ISO date string (YYYY-MM-DD)
 		name: v.string(),
 		merchantName: v.optional(v.string()),
@@ -129,6 +136,7 @@ export default defineSchema({
 	})
 		.index("by_user", ["userId"])
 		.index("by_account", ["accountId"])
+		.index("by_account_date", ["accountId", "date"])
 		.index("by_date", ["userId", "date"])
 		.index("by_plaid_id", ["plaidTransactionId"]),
 
@@ -774,6 +782,9 @@ export default defineSchema({
 		),
 		errorMessage: v.optional(v.string()),
 		lastSyncAt: v.optional(v.number()),
+		// Last full (not windowed) transaction sync; a sync re-reads the
+		// whole history when this is absent or old (actions/bitpanda.ts)
+		transactionsFullSyncAt: v.optional(v.number()),
 		createdAt: v.number(),
 		updatedAt: v.number(),
 	})
@@ -849,6 +860,7 @@ export default defineSchema({
 	})
 		.index("by_user", ["userId"])
 		.index("by_connection", ["connectionId"])
+		.index("by_connection_date", ["connectionId", "transactionDate"])
 		.index("by_date", ["userId", "transactionDate"])
 		.index("by_bitpanda_id", ["bitpandaTransactionId"]),
 
@@ -1028,6 +1040,20 @@ export default defineSchema({
 	// ═══════════════════════════════════════════════════════════════
 	// User-scoped keys for the public REST API (convex/http.ts).
 	// Only the SHA-256 hash of a key is stored; the plaintext is shown once.
+
+	// ═══════════════════════════════════════════════════════════════
+	// SYNC TARGETS
+	// ═══════════════════════════════════════════════════════════════
+	// One row per user with anything the daily sync covers (a provider
+	// connection, a vault item or a loan), so the cron discovers users
+	// with an indexed page read instead of scanning every source table
+	// (lib/syncTargets.ts). Rows are added when such data is created and
+	// pruned by the cron once a user has none left.
+
+	syncTargets: defineTable({
+		userId: v.string(),
+		createdAt: v.number(),
+	}).index("by_user", ["userId"]),
 
 	apiKeys: defineTable({
 		userId: v.string(), // Clerk user ID that owns the key

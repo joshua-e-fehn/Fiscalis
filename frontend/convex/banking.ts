@@ -483,13 +483,10 @@ export const reconcileAccountTransactions = internalMutation({
   handler: async (ctx, args) => {
     const stale = await ctx.db
       .query("plaidTransactions")
-      .withIndex("by_account", (q) => q.eq("accountId", args.accountId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("userId"), args.userId),
-          q.lt(q.field("syncedAt"), args.syncStartedAt),
-        ),
+      .withIndex("by_account_synced", (q) =>
+        q.eq("accountId", args.accountId).lt("syncedAt", args.syncStartedAt),
       )
+      .filter((q) => q.eq(q.field("userId"), args.userId))
       .take(RECONCILE_BATCH);
     for (const txn of stale) await ctx.db.delete(txn._id);
     return { deleted: stale.length, more: stale.length === RECONCILE_BATCH };

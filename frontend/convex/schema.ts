@@ -137,6 +137,7 @@ export default defineSchema({
 		.index("by_user", ["userId"])
 		.index("by_account", ["accountId"])
 		.index("by_account_date", ["accountId", "date"])
+		.index("by_account_synced", ["accountId", "syncedAt"])
 		.index("by_date", ["userId", "date"])
 		.index("by_plaid_id", ["plaidTransactionId"]),
 

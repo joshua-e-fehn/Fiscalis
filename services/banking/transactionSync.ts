@@ -146,6 +146,25 @@ export function pageReachesCutoff(
   return times.every((t) => t < cutoffTime);
 }
 
+/**
+ * Whether a record dated `date` lies in the window starting at `cutoff`,
+ * compared as instants: Bitpanda dates carry UTC offsets, so string order
+ * is not time order. An unreadable date is outside every window.
+ */
+export function isInSyncWindow(date: string, cutoff: string): boolean {
+  const time = Date.parse(date);
+  return Number.isFinite(time) && time >= Date.parse(cutoff);
+}
+
+/**
+ * A string lower bound for an index range over ISO dates that contains
+ * every date in the window from `cutoff`, whatever its UTC offset (at most
+ * 14 hours). Rows in the range still need isInSyncWindow.
+ */
+export function syncWindowIndexLowerBound(cutoff: string): string {
+  return new Date(Date.parse(cutoff) - 86_400_000).toISOString();
+}
+
 /** The newest ISO date among the records, or undefined when none parse. */
 export function newestDate(dates: string[]): string | undefined {
   let best: { iso: string; time: number } | undefined;

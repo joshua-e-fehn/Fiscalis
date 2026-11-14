@@ -4,7 +4,9 @@ import {
   chunk,
   collectSyncPages,
   mergeSyncPages,
+  isInSyncWindow,
   newestDate,
+  syncWindowIndexLowerBound,
   pageReachesCutoff,
   toPlaidTransactionRecord,
   type FetchedSyncPage,
@@ -217,5 +219,37 @@ describe("newestDate", () => {
       newestDate(["2026-01-01T00:00:00Z", "x", "2026-03-01T00:00:00+01:00"]),
     ).toBe("2026-03-01T00:00:00+01:00");
     expect(newestDate([])).toBeUndefined();
+  });
+});
+
+describe("isInSyncWindow", () => {
+  const cutoff = "2026-11-01T10:00:00.000Z";
+
+  it("compares instants, not strings, across UTC offsets", () => {
+    // Sorts after the cutoff as a string, but is 09:30 UTC
+    expect(isInSyncWindow("2026-11-01T10:30:00+01:00", cutoff)).toBe(false);
+    // Sorts before the cutoff as a string, but is 10:30 UTC
+    expect(isInSyncWindow("2026-11-01T09:30:00-01:00", cutoff)).toBe(true);
+    expect(isInSyncWindow(cutoff, cutoff)).toBe(true);
+  });
+
+  it("treats an unreadable date as outside the window", () => {
+    expect(isInSyncWindow("1621855629", cutoff)).toBe(false);
+    expect(isInSyncWindow("garbage", cutoff)).toBe(false);
+  });
+});
+
+describe("syncWindowIndexLowerBound", () => {
+  it("sorts before every offset spelling of an in-window date", () => {
+    const cutoff = "2026-11-01T10:00:00.000Z";
+    const bound = syncWindowIndexLowerBound(cutoff);
+    for (const date of [
+      "2026-11-01T10:00:00.000Z",
+      "2026-11-01T00:00:00-10:00",
+      "2026-10-31T20:00:00-14:00",
+    ]) {
+      expect(isInSyncWindow(date, cutoff)).toBe(true);
+      expect(date >= bound).toBe(true);
+    }
   });
 });

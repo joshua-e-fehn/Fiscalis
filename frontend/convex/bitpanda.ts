@@ -13,6 +13,10 @@ import {
 import { bitpandaOverridePatch } from "./lib/classificationOverride";
 import { getOwnedDoc, requireUserId } from "./lib/auth";
 import { ensureSyncTarget } from "./lib/syncTargets";
+import {
+  isInSyncWindow,
+  syncWindowIndexLowerBound,
+} from "../../services/banking/transactionSync";
 
 // ═══════════════════════════════════════════════════════════════
 // CONNECTION QUERIES
@@ -170,10 +174,10 @@ export const getTransactions = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const limit = Math.min(
-      Math.max(1, Math.floor(args.limit ?? MAX_TRANSACTIONS)),
-      MAX_TRANSACTIONS,
-    );
+    const requested = args.limit ?? MAX_TRANSACTIONS;
+    const limit = Number.isFinite(requested)
+      ? Math.min(Math.max(1, Math.floor(requested)), MAX_TRANSACTIONS)
+      : MAX_TRANSACTIONS;
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
@@ -475,22 +479,33 @@ export const syncTransactions = internalMutation({
     }
 
     const cutoff = args.cutoff;
-    const cutoffTime = Date.parse(cutoff);
     // Older incoming rows are skipped: their cross-endpoint copies may lie
     // outside what this sync read, so they could not be deduplicated
-    const incoming = args.transactions.filter(
-      (tx) => Date.parse(tx.transactionDate) >= cutoffTime,
+    const incoming = args.transactions.filter((tx) =>
+      isInSyncWindow(tx.transactionDate, cutoff),
     );
     const incomingIds = new Set(incoming.map((tx) => tx.bitpandaTransactionId));
-    const stored = await ctx.db
+    // Stored dates carry UTC offsets (+02:00), so the index range is a
+    // superset and the window itself is decided by instant, exactly as for
+    // the incoming rows above
+    const nearWindow = await ctx.db
       .query("bitpandaTransactions")
       .withIndex("by_connection_date", (q) =>
-        q.eq("connectionId", args.connectionId).gte("transactionDate", cutoff),
+        q
+          .eq("connectionId", args.connectionId)
+          .gte("transactionDate", syncWindowIndexLowerBound(cutoff)),
       )
       .collect();
-    const storedById = new Map(stored.map((tx) => [tx.bitpandaTransactionId, tx]));
-    for (const tx of stored) {
-      if (!incomingIds.has(tx.bitpandaTransactionId)) await ctx.db.delete(tx._id);
+    const storedById = new Map(
+      nearWindow.map((tx) => [tx.bitpandaTransactionId, tx]),
+    );
+    for (const tx of nearWindow) {
+      if (
+        isInSyncWindow(tx.transactionDate, cutoff) &&
+        !incomingIds.has(tx.bitpandaTransactionId)
+      ) {
+        await ctx.db.delete(tx._id);
+      }
     }
     for (const tx of incoming) {
       const existing =

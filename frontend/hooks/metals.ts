@@ -18,7 +18,10 @@ import {
 } from "@/../services/finance/financeService";
 import type { PricePoint } from "@/lib/performance";
 import type { InvestmentCurrency } from "@/lib/types/investments";
-import { fromEur } from "@/../services/finance/displayCurrency";
+import {
+  fromEur,
+  quotesInCurrency,
+} from "@/../services/finance/displayCurrency";
 import {
   useDisplayCurrency,
   useDisplayRateHistory,
@@ -67,38 +70,97 @@ export const metalsPriceKeys = {
 // ═══════════════════════════════════════════════════════════════
 
 /**
+ * Market quotes in `currency`: the price store's own column for EUR, USD
+ * and CHF; another display currency (GBP) from the EUR quotes, at the
+ * daily rates from `sinceMs` (rateOn) or the latest rate. Only the display
+ * currency can be derived; another one has no data.
+ */
+function useQuoteConversion(
+  currency: InvestmentCurrency,
+  sinceMs: number | undefined,
+) {
+  const quoted = isQuoteCurrency(currency);
+  const fetched: MetalCurrency = quoted ? currency : "eur";
+  const display = useDisplayCurrency();
+  const rates = useDisplayRateHistory(quoted ? undefined : sinceMs);
+  const convertible = quoted || display.currency === currency;
+  const ratesLoading = !quoted && (display.isLoading || rates.isLoading);
+  return {
+    quoted,
+    fetched,
+    convertible,
+    ratesLoading,
+    rateOn: rates.rateOn,
+    unitsPerEur: display.unitsPerEur,
+  };
+}
+
+/**
  * Hook to fetch historical metal prices based on a predefined time range,
  * for the price charts. Missing closes stay gaps (null or 0); PriceChart
- * breaks the line there.
+ * breaks the line there. A display currency without its own quote column
+ * (GBP) is derived from the EUR closes at each day's rate.
  */
 export function useMetalPrices(
   metal: MetalType,
   timeRange: TimeRange,
-  currency: MetalCurrency,
-) {
-  return useQuery<MetalChartData[]>({
-    queryKey: metalKeys.historical(metal, timeRange, currency),
+  currency: InvestmentCurrency,
+): { data: MetalChartData[] | undefined; isLoading: boolean } {
+  // Rate history from a start that is stable for the day
+  const conversion = useQuoteConversion(
+    currency,
+    priceHistoryWindow(timeRange).from,
+  );
+  const { quoted, fetched, convertible, ratesLoading, rateOn, unitsPerEur } =
+    conversion;
+  const query = useQuery<MetalChartData[]>({
+    queryKey: metalKeys.historical(metal, timeRange, fetched),
     queryFn: () =>
-      metalsApi.getMetalPricesHistorical(metal, timeRange, currency),
+      metalsApi.getMetalPricesHistorical(metal, timeRange, fetched),
     staleTime: 1000 * 60 * 5, // 5 minutes
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchInterval: timeRange === "Hour" ? 1000 * 60 : 1000 * 60 * 5, // 1 minute or 5 minutes
   });
+
+  const raw = query.data;
+  const data = useMemo(() => {
+    if (raw === undefined || quoted) return raw;
+    if (ratesLoading) return undefined;
+    if (!convertible) return [];
+    return quotesInCurrency(raw, rateOn, unitsPerEur);
+  }, [raw, quoted, ratesLoading, convertible, rateOn, unitsPerEur]);
+
+  return { data, isLoading: query.isLoading || ratesLoading };
 }
 
 /**
- * Hook to fetch the latest metal price data
+ * Hook to fetch the latest metal price data, in `currency`: the quote
+ * column, or (GBP) the EUR quote at the latest display rate.
  */
-export function useMetalPriceLatest(metal: MetalType, currency: MetalCurrency) {
-  return useQuery<MetalChartData>({
-    queryKey: metalKeys.latest(metal, currency),
-    queryFn: () => metalsApi.getMetalPriceLatest(metal, currency),
+export function useMetalPriceLatest(
+  metal: MetalType,
+  currency: InvestmentCurrency,
+): { data: MetalChartData | undefined; isLoading: boolean } {
+  const { quoted, fetched, convertible, ratesLoading, unitsPerEur } =
+    useQuoteConversion(currency, undefined);
+  const query = useQuery<MetalChartData>({
+    queryKey: metalKeys.latest(metal, fetched),
+    queryFn: () => metalsApi.getMetalPriceLatest(metal, fetched),
     staleTime: 1000 * 60, // 1 minute
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     refetchInterval: 1000 * 60, // Refresh every minute
   });
+
+  const raw = query.data;
+  const data = useMemo(() => {
+    if (raw === undefined || quoted) return raw;
+    if (ratesLoading || !convertible) return undefined;
+    return quotesInCurrency([raw], () => unitsPerEur, unitsPerEur)[0];
+  }, [raw, quoted, ratesLoading, convertible, unitsPerEur]);
+
+  return { data, isLoading: query.isLoading || ratesLoading };
 }
 
 /** Currencies the price store quotes metals in (its EUR/USD/CHF columns) */

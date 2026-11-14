@@ -7,16 +7,18 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/shadcn/collapsible";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import {
 	DEFAULT_WITHDRAWAL_RATE,
 	formatYears,
 	type RetirementAssumptions,
 	type RetirementResults,
 } from "@/lib/types/retirement";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency, formatRate } from "@/lib/utils/currency";
 
 interface Props {
+	/** The currency `results` is in */
+	currency: InvestmentCurrency;
 	results?: RetirementResults;
 	/** The plan's own rates; without them the copy stays generic. */
 	assumptions?: RetirementAssumptions;
@@ -37,9 +39,9 @@ function formatMultiple(withdrawalRate: number): string {
 export function FourPercentRuleExplainer({
 	results,
 	assumptions,
+	currency,
 	className,
 }: Props) {
-	const currency = useBaseCurrency();
 	// Only call out the plan's own withdrawal rate when it isn't the 4% default.
 	const withdrawal =
 		assumptions &&

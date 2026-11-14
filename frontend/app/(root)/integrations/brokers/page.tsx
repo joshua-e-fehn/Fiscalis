@@ -44,7 +44,11 @@ export default function BrokersPage() {
   const { syncAll, isLoading: isLocalSyncing } = useSyncAll();
   const { isSnaptradeSyncing: isGlobalSyncing } = useSyncContext();
   // The totals are summed in EUR and shown in the display currency
-  const { currency, fromEur } = useDisplayCurrency();
+  const {
+    currency,
+    fromEur,
+    isLoading: isRateLoading,
+  } = useDisplayCurrency();
 
   // Show syncing state if either local or global sync is in progress
   const isSyncing = isLocalSyncing || isGlobalSyncing;
@@ -57,7 +61,8 @@ export default function BrokersPage() {
 
   // Calculate stats across all broker providers (SnapTrade + Bitpanda)
   const stats = useMemo(() => {
-    if (!hasAnyConnection) return null;
+    // No figure before the display rate arrives
+    if (!hasAnyConnection || isRateLoading) return null;
 
     // SnapTrade market value in EUR (a position without a rate counts 0,
     // as in net worth)
@@ -124,6 +129,7 @@ export default function BrokersPage() {
     bitpandaHoldings,
     currency,
     fromEur,
+    isRateLoading,
   ]);
 
   return (

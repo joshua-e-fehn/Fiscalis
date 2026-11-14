@@ -81,8 +81,11 @@ export function RetirementResultsView({
 			</div>
 			<PensionCoverageBreakdown results={results} currency={currency} />
 			<RetirementProjectionChart results={results} currency={currency} />
-			{/* Takes the results' currency in the batch that removes useBaseCurrency */}
-			<FourPercentRuleExplainer results={results} assumptions={assumptions} />
+			<FourPercentRuleExplainer
+				results={results}
+				assumptions={assumptions}
+				currency={currency}
+			/>
 		</div>
 	);
 }

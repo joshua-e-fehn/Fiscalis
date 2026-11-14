@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { Transaction } from "./TransactionRow";
 import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import type { InvestmentCurrency } from "@/lib/types/investments";
@@ -76,6 +77,11 @@ export function TransactionSummary({
 
   const isNetOutflow = summary.cashFlow >= 0;
   const hasUnrealizedPL = unrealizedPL !== null;
+
+  // No figure before the display rate arrives
+  if (display.isLoading) {
+    return <Skeleton className={cn("h-[88px] w-full rounded-xl", className)} />;
+  }
 
   return (
     <Card className={cn(className)}>

@@ -27,7 +27,11 @@ import { bankAccountTotals } from "@/../services/portfolio/categorySummary";
 export default function BankingPage() {
   const accounts = usePlaidAccounts();
   // The totals are summed in EUR and shown in the display currency
-  const { currency, fromEur } = useDisplayCurrency();
+  const {
+    currency,
+    fromEur,
+    isLoading: isRateLoading,
+  } = useDisplayCurrency();
   const { mutate: refreshAll, isLoading: isLocalSyncing } =
     useRefreshAccounts();
   const { isPlaidSyncing: isGlobalSyncing } = useSyncContext();
@@ -42,7 +46,8 @@ export default function BankingPage() {
   // amounts owed (credit cards, loans) subtracted from the net balance, as
   // in net worth
   const stats = useMemo(() => {
-    if (!accounts || accounts.length === 0) return null;
+    // No figure before the display rate arrives
+    if (!accounts || accounts.length === 0 || isRateLoading) return null;
 
     const totals = bankAccountTotals(accounts);
     const plural = (n: number, word: string) =>
@@ -81,7 +86,7 @@ export default function BankingPage() {
             : plural(totals.counts.cards, "card"),
       },
     ];
-  }, [accounts, currency, fromEur]);
+  }, [accounts, currency, fromEur, isRateLoading]);
 
   return (
     <div className="container mx-auto py-6 space-y-8">

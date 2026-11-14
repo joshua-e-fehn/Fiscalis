@@ -30,19 +30,6 @@ import {
 import React from "react";
 
 // ═══════════════════════════════════════════════════════════════
-// Base currency
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * The display currency, for formatting (lib/utils/currency formatCurrency).
- * Transitional: callers move to useDisplayCurrency (./displayCurrency),
- * which also carries the rate; this is removed once none is left.
- */
-export function useBaseCurrency(): InvestmentCurrency {
-  return useDisplayCurrency().currency;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // Overview
 // ═══════════════════════════════════════════════════════════════
 

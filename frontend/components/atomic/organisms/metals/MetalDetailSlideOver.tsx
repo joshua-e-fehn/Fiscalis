@@ -36,7 +36,7 @@ import {
 import {
   MetalItemWithValuation,
 } from "@/lib/types/metals-extended";
-import { toMetalCurrency, type MetalsDisplayCurrency } from "@/lib/types/metals";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import {
   Edit2,
@@ -407,9 +407,8 @@ export function MetalDetailSlideOver({
           item={item}
           isOpen={isSellOpen}
           onClose={() => setIsSellOpen(false)}
-          // The sale form takes a quote currency (EUR/USD/CHF): another
-          // display currency opens it in EUR
-          currency={toMetalCurrency(currency) ?? "eur"}
+          // The item's valuation currency (the display currency)
+          currency={currency}
         />
 
         {/* Edit Dialog: details and opening balance (vault.updateVaultItem) */}

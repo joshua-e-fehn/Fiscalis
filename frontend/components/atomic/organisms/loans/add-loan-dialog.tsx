@@ -292,9 +292,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   const [originalPrincipal, setOriginalPrincipal] = useState("");
   const [currentBalance, setCurrentBalance] = useState("");
   const [annualInterestRate, setAnnualInterestRate] = useState("");
-  // New loans default to the user's display currency
+  // New loans default to the user's display currency. The dialog stays
+  // mounted, so the default follows it until the user picks one (it is
+  // EUR while the display currency loads)
   const defaultCurrency = currencyCodes[useDisplayCurrency().currency];
-  const [currency, setCurrency] = useState(defaultCurrency);
+  const [chosenCurrency, setCurrency] = useState<string | null>(null);
+  const currency = chosenCurrency ?? defaultCurrency;
   const [termPeriods, setTermPeriods] = useState("");
   const [paymentFrequency, setPaymentFrequency] =
     useState<PaymentFrequency>("MONTHLY");
@@ -447,7 +450,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     setOriginalPrincipal("");
     setCurrentBalance("");
     setAnnualInterestRate("");
-    setCurrency(defaultCurrency);
+    setCurrency(null);
     setTermPeriods("");
     setPaymentFrequency("MONTHLY");
     setGracePeriods("");

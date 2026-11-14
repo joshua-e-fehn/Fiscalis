@@ -43,12 +43,8 @@ import {
   MetalsType,
   MetalItemWithValuation,
 } from "@/lib/types/metals-extended";
-import {
-  MetalChartData,
-  MetalCurrency,
-  MetalType,
-  toMetalCurrency,
-} from "@/lib/types/metals";
+import { MetalChartData, MetalType } from "@/lib/types/metals";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { TimeRange } from "@/../services/finance/financeService";
 import {
   isRecordedClose,
@@ -178,7 +174,7 @@ const MetalPriceCard = ({
   showCheckbox = false,
 }: {
   metal: MetalType;
-  currency: MetalCurrency;
+  currency: InvestmentCurrency;
   onSelect: () => void;
   isSelected: boolean;
   showCheckbox?: boolean;
@@ -309,17 +305,11 @@ export function MetalsPage({ className }: MetalsPageProps) {
     isLoading: summaryLoading,
     pricesAsOf,
   } = useMetalsSummary();
-  // The display currency as a quote column of the price table; null for
-  // a currency it has none for (GBP). The transaction summary and the
-  // sale dialogs convert at the spot payload's rates and take a quote
-  // currency, so a view in another currency hands them EUR and labels it
-  // EUR. YTD and the vault series come from the performance hooks, already
-  // in the display currency.
-  const quoteCurrency = toMetalCurrency(currency);
-  const ownQuoteCurrency: MetalCurrency = quoteCurrency ?? "eur";
-  // The summary's P/L is in the display currency: shown next to
-  // quote-currency totals only when the two agree
-  const summaryInQuoteCurrency = quoteCurrency === currency;
+  // The Prices tab quotes in the display currency by default: the price
+  // table's own column, or (GBP) the EUR quotes at each day's rate
+  // (useMetalPrices). Everything else on the page is in the display
+  // currency too: YTD and the vault series from the performance hooks, the
+  // transaction summary and the sale dialogs at the display rate.
   const { data: pricesData, isLoading: pricesLoading } = useMetalsPrices();
   const { transactions: rawTransactions, isLoading: transactionsLoading } =
     useVaultTransactions();
@@ -363,11 +353,18 @@ export function MetalsPage({ className }: MetalsPageProps) {
   // PRICES TAB STATE
   // ─────────────────────────────────────────────────────────────
   const [timeRange, setTimeRange] = useState<TimeRange>("Month");
-  // The quote toggle starts at the display currency when the price table
-  // has a column for it, else EUR; a choice made here overrides that
+  // The quote toggle starts at the display currency and cycles through it,
+  // EUR and USD; a choice made here overrides the default
   const [priceCurrencyChoice, setPriceCurrency] =
-    useState<MetalCurrency | null>(null);
-  const priceCurrency = priceCurrencyChoice ?? ownQuoteCurrency;
+    useState<InvestmentCurrency | null>(null);
+  const priceCurrency = priceCurrencyChoice ?? currency;
+  const quoteCurrencies = [
+    ...new Set<InvestmentCurrency>([currency, "eur", "usd"]),
+  ];
+  const nextQuoteCurrency =
+    quoteCurrencies[
+      (quoteCurrencies.indexOf(priceCurrency) + 1) % quoteCurrencies.length
+    ];
   const [selectedMetal, setSelectedMetal] = useState<MetalType>("gold");
   const [compareMode, setCompareMode] = useState(false);
   const [selectedMetals, setSelectedMetals] = useState<MetalType[]>([
@@ -809,23 +806,13 @@ export function MetalsPage({ className }: MetalsPageProps) {
               {transactions.length > 0 && (
                 <TransactionSummary
                   transactions={transactions}
-                  displayCurrency={ownQuoteCurrency}
+                  displayCurrency={currency}
                   exchangeRates={(prices ?? pricesData)?.all?.exchangeRates}
-                  realizedPL={
-                    summaryInQuoteCurrency
-                      ? (summary?.realizedProfitLoss ?? null)
-                      : null
-                  }
+                  realizedPL={summary?.realizedProfitLoss ?? null}
                   unrealizedPL={
-                    summaryInQuoteCurrency && summary?.pricedAtSpot
-                      ? summary.unrealizedProfitLoss
-                      : null
+                    summary?.pricedAtSpot ? summary.unrealizedProfitLoss : null
                   }
-                  totalPL={
-                    summaryInQuoteCurrency && summary?.pricedAtSpot
-                      ? summary.totalProfitLoss
-                      : null
-                  }
+                  totalPL={summary?.pricedAtSpot ? summary.totalProfitLoss : null}
                 />
               )}
 
@@ -841,7 +828,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
 
               <TransactionList
                 transactions={transactions}
-                displayCurrency={ownQuoteCurrency}
+                displayCurrency={currency}
                 isLoading={transactionsLoading}
               />
             </>
@@ -936,11 +923,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() =>
-                        setPriceCurrency(
-                          priceCurrency === "eur" ? "usd" : "eur",
-                        )
-                      }
+                      onClick={() => setPriceCurrency(nextQuoteCurrency)}
                       className="h-8"
                     >
                       {priceCurrency === "eur" ? (
@@ -1119,7 +1102,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
           setSelectionMode(false);
           setSelectedIds(new Set());
         }}
-        currency={ownQuoteCurrency}
+        currency={currency}
       />
     </div>
   );

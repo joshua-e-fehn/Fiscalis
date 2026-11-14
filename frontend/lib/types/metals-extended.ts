@@ -120,7 +120,8 @@ export interface MetalItemWithValuation {
   profitLossPercent: number | null;
   /** Valued at a fresh spot price; false: at cost (stale or missing spot) */
   pricedAtSpot: boolean;
-  /** Ledger (services/finance/metalsLedger.ts), EUR (sale previews) */
+  /** Ledger (services/finance/metalsLedger.ts), EUR (sale previews); an
+   * unreplayable item's cached cost converted into EUR, null without a rate */
   averageCost: number | null;
   /** Realized P/L of the item's sales, display currency; null when unknown */
   realizedProfitLoss: number | null;

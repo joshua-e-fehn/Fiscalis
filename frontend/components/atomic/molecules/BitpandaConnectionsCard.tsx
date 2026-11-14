@@ -26,6 +26,7 @@ import {
 } from "@/hooks/convex/bitpanda";
 import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { formatCurrency } from "@/lib/utils/currency";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export function BitpandaConnectionsCard() {
@@ -59,9 +60,14 @@ export function BitpandaConnectionsCard() {
         </div>
         {hasConnections && (
           <div className="text-right">
-            <p className="text-lg font-semibold">
-              {formatCurrency(display.fromEur(totalValue), display.currency)}
-            </p>
+            {/* No figure before the display rate arrives */}
+            {display.isLoading ? (
+              <Skeleton className="ml-auto h-6 w-24" />
+            ) : (
+              <p className="text-lg font-semibold">
+                {formatCurrency(display.fromEur(totalValue), display.currency)}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               {holdings?.length ?? 0} holdings
             </p>

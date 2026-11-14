@@ -12,6 +12,7 @@
 
 import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/shadcn/card";
+import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
@@ -91,7 +92,7 @@ export function IntegrationConnectionCard({
   headerExtra,
   className,
 }: IntegrationConnectionCardProps) {
-  const { currency, fromEur } = useDisplayCurrency();
+  const { currency, fromEur, isLoading: isRateLoading } = useDisplayCurrency();
   const formatEur = (amountEur: number) =>
     formatCurrency(fromEur(amountEur), currency, { fractionDigits: 0 });
 
@@ -150,8 +151,13 @@ export function IntegrationConnectionCard({
           {/* Right side: Value + Menu */}
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-lg font-semibold">{formattedValue}</p>
-              {hasCash && (
+              {/* No figure before the display rate arrives */}
+              {isRateLoading ? (
+                <Skeleton className="ml-auto h-6 w-24" />
+              ) : (
+                <p className="text-lg font-semibold">{formattedValue}</p>
+              )}
+              {hasCash && !isRateLoading && (
                 <p className="text-xs text-muted-foreground">
                   {formatEur(totalCashEur)} cash
                 </p>

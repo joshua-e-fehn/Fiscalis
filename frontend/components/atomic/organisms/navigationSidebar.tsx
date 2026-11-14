@@ -41,20 +41,26 @@ import {
 	filterMenuByFeature,
 	type FeatureFlag,
 } from "@/lib/config/features";
+import type { Messages } from "@/i18n/messages";
+
+/** A sidebar label: a key under navigation.sidebar.items */
+type NavigationItemKey = keyof Messages["navigation"]["sidebar"]["items"];
+
+interface NavigationSubItem {
+	titleKey: NavigationItemKey;
+	url: string;
+	icon?: LucideIcon;
+	feature?: FeatureFlag;
+}
 
 interface NavigationItem {
-	title: string;
+	titleKey: NavigationItemKey;
 	url: string;
 	icon?: LucideIcon;
 	isActive?: boolean;
 	/** Hidden unless this flag is on (planned, not built yet) */
 	feature?: FeatureFlag;
-	items?: {
-		title: string;
-		url: string;
-		icon?: LucideIcon;
-		feature?: FeatureFlag;
-	}[];
+	items?: NavigationSubItem[];
 }
 
 const data: Record<
@@ -63,74 +69,74 @@ const data: Record<
 > = {
 	navigationPortfolio: [
 		{
-			title: "Dashboard",
+			titleKey: "dashboard",
 			url: "/dashboard",
 			icon: House,
 			isActive: true,
 			items: [],
 		},
 		{
-			title: "Investments",
+			titleKey: "investments",
 			url: "#",
 			icon: ChartCandlestick,
 			isActive: true,
 			items: [
 				{
-					title: "Equities",
+					titleKey: "equities",
 					url: "/assets/equities",
 					icon: ChartLine,
 				},
 				{
-					title: "Commodities",
+					titleKey: "commodities",
 					url: "/assets/commodities",
 					icon: GemIcon,
 				},
 				{
-					title: "Bonds",
+					titleKey: "bonds",
 					url: "/assets/bonds",
 					icon: ReceiptText,
 				},
 				{
-					title: "Real Estate",
+					titleKey: "realEstate",
 					url: "/assets/real-estate",
 					icon: Building2,
 				},
 				{
-					title: "Cash & Money Market",
+					titleKey: "cash",
 					url: "/assets/cash",
 					icon: Banknote,
 				},
 				{
-					title: "Crypto",
+					titleKey: "crypto",
 					url: "/assets/crypto",
 					icon: Bitcoin,
 				},
 				{
-					title: "Collectibles",
+					titleKey: "collectibles",
 					url: "/assets/collectibles",
 					icon: Star,
 				},
 			],
 		},
 		{
-			title: "Liabilities",
+			titleKey: "liabilities",
 			url: "/liabilities",
 			icon: CreditCard,
 			items: [
 				{
-					title: "Loans",
+					titleKey: "loans",
 					url: "/liabilities/loans",
 					icon: HandCoins,
 				},
 			],
 		},
 		{
-			title: "Investment Strategies",
+			titleKey: "investmentStrategies",
 			url: "#",
 			icon: ChartNoAxesCombined,
 			items: [
 				{
-					title: "Pies",
+					titleKey: "pies",
 					url: "#",
 					icon: PieChart,
 					feature: "pies",
@@ -140,14 +146,14 @@ const data: Record<
 	],
 	navigationIntegrations: [
 		{
-			title: "Banking",
+			titleKey: "banking",
 			url: "/integrations/banking",
 			icon: Landmark,
 			isActive: true,
 			items: [],
 		},
 		{
-			title: "Brokers",
+			titleKey: "brokers",
 			url: "/integrations/brokers",
 			icon: ChartCandlestick,
 			isActive: true,
@@ -156,28 +162,28 @@ const data: Record<
 	],
 	navigationTools: [
 		{
-			title: "Retirement Planner",
+			titleKey: "retirementPlanner",
 			url: "/retirement",
 			icon: PiggyBank,
 			isActive: true,
 			items: [],
 		},
 		{
-			title: "Interest Calculators",
+			titleKey: "interestCalculators",
 			url: "/tools/calculators/interest",
 			icon: Calculator,
 			isActive: true,
 			items: [],
 		},
 		{
-			title: "Loan Calculators",
+			titleKey: "loanCalculators",
 			url: "/tools/calculators/loan",
 			icon: Calculator,
 			isActive: true,
 			items: [],
 		},
 		{
-			title: "World Map",
+			titleKey: "worldMap",
 			url: "/tools/world-map",
 			icon: Globe2,
 			isActive: true,
@@ -186,54 +192,54 @@ const data: Record<
 	],
 	others: [
 		{
-			title: "Documentation",
+			titleKey: "documentation",
 			url: "#",
 			icon: BookOpen,
 			feature: "documentation",
 			items: [
 				{
-					title: "Introduction",
+					titleKey: "introduction",
 					url: "#",
 				},
 				{
-					title: "Get Started",
+					titleKey: "getStarted",
 					url: "#",
 				},
 				{
-					title: "Tutorials",
+					titleKey: "tutorials",
 					url: "#",
 				},
 				{
-					title: "Changelog",
+					titleKey: "changelog",
 					url: "#",
 				},
 			],
 		},
 		{
-			title: "Settings",
+			titleKey: "settings",
 			url: "/settings/general",
 			icon: Settings2,
 			items: [
 				{
-					title: "General",
+					titleKey: "general",
 					url: "/settings/general",
 				},
 				{
-					title: "API Keys",
+					titleKey: "apiKeys",
 					url: "/settings/api-keys",
 				},
 				{
-					title: "Team",
+					titleKey: "team",
 					url: "#",
 					feature: "teamSettings",
 				},
 				{
-					title: "Billing",
+					titleKey: "billing",
 					url: "#",
 					feature: "billing",
 				},
 				{
-					title: "Limits",
+					titleKey: "limits",
 					url: "#",
 					feature: "usageLimits",
 				},
@@ -242,20 +248,18 @@ const data: Record<
 	],
 };
 
-/**
- * Liabilities opens a group, so its own page gets an "Overview" entry (the
- * one label added here, hence translated).
- */
-function withLiabilitiesOverview(
-	items: NavigationItem[],
-	overview: string,
-): NavigationItem[] {
+/** Liabilities opens a group, so its own page gets an "Overview" entry. */
+function withLiabilitiesOverview(items: NavigationItem[]): NavigationItem[] {
 	return items.map((item) =>
 		item.url === "/liabilities"
 			? {
 					...item,
 					items: [
-						{ title: overview, url: "/liabilities", icon: LayoutGrid },
+						{
+							titleKey: "liabilitiesOverview",
+							url: "/liabilities",
+							icon: LayoutGrid,
+						},
 						...(item.items ?? []),
 					],
 				}
@@ -273,11 +277,19 @@ export function NavigationSidebar({
 		avatar: string;
 	};
 } & React.ComponentProps<typeof Sidebar>) {
-	const t = useTranslations("navigation");
-	const portfolio = withLiabilitiesOverview(
-		data.navigationPortfolio,
-		t("liabilitiesOverview"),
-	);
+	const t = useTranslations("navigation.sidebar");
+
+	/** Drops entries behind an off feature flag, then labels the rest. */
+	const menu = (items: NavigationItem[]) =>
+		filterMenuByFeature(items, FEATURES).map(({ titleKey, items: sub, ...item }) => ({
+			...item,
+			title: t(`items.${titleKey}`),
+			items: sub?.map(({ titleKey: subKey, ...subItem }) => ({
+				...subItem,
+				title: t(`items.${subKey}`),
+			})),
+		}));
+
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
@@ -285,15 +297,21 @@ export function NavigationSidebar({
 			</SidebarHeader>
 			<SidebarContent>
 				<NavigationDropdown
-					groupLabel="Portfolio"
-					items={filterMenuByFeature(portfolio, FEATURES)}
+					groupLabel={t("groups.portfolio")}
+					items={menu(withLiabilitiesOverview(data.navigationPortfolio))}
 				/>
-				<NavigationDropdown groupLabel="Tools" items={filterMenuByFeature(data.navigationTools, FEATURES)} />
 				<NavigationDropdown
-					groupLabel="Integrations"
-					items={filterMenuByFeature(data.navigationIntegrations, FEATURES)}
+					groupLabel={t("groups.tools")}
+					items={menu(data.navigationTools)}
 				/>
-				<NavigationDropdown groupLabel="Others" items={filterMenuByFeature(data.others, FEATURES)} />
+				<NavigationDropdown
+					groupLabel={t("groups.integrations")}
+					items={menu(data.navigationIntegrations)}
+				/>
+				<NavigationDropdown
+					groupLabel={t("groups.others")}
+					items={menu(data.others)}
+				/>
 			</SidebarContent>
 			<SidebarFooter>
 				<NavigationUserMenu user={user} />

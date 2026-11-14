@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/shadcn/separator";
 import { Button } from "@/components/ui/shadcn/button";
 import { SidebarTrigger } from "@/components/ui/shadcn/sidebar";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { SyncAllButton } from "@/components/atomic/atoms/syncAllButton";
 import { FxRateNotice } from "@/components/atomic/atoms/fxRateNotice";
 
@@ -13,6 +14,7 @@ export function Header({
   hasSidebarTrigger: boolean;
   hasDashboardButton: boolean;
 }) {
+  const t = useTranslations("navigation.header");
   return (
     <header className="sticky top-0 z-50 bg-background flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
       <div className="flex w-full items-center gap-2 px-4">
@@ -44,17 +46,17 @@ export function Header({
           </SignedIn>
           <SignedOut>
             <SignInButton>
-              <Button variant="outline">Sign in</Button>
+              <Button variant="outline">{t("signIn")}</Button>
             </SignInButton>
             {/* Sign-up is waitlist-only (ENG-226) */}
             <Link href="/waitlist">
-              <Button>Join the waitlist</Button>
+              <Button>{t("joinWaitlist")}</Button>
             </Link>
           </SignedOut>
           {hasDashboardButton && (
             <SignedIn>
               <Link key="dashboard" href="/dashboard" prefetch={true}>
-                <Button variant="outline">Dashboard</Button>
+                <Button variant="outline">{t("dashboard")}</Button>
               </Link>
             </SignedIn>
           )}

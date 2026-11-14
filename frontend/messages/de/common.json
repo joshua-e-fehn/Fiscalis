@@ -52,6 +52,12 @@
   },
   "errors": {
     "generic": "Etwas ist schiefgelaufen. Bitte versuch es erneut.",
-    "saveFailed": "Deine Änderungen konnten nicht gespeichert werden. Bitte versuch es erneut."
+    "saveFailed": "Deine Änderungen konnten nicht gespeichert werden. Bitte versuch es erneut.",
+    "rateLimited": "Zu viele Anfragen. Bitte versuch es in {minutes, plural, one {# Minute} other {# Minuten}} erneut."
+  },
+  "a11y": {
+    "toggleSidebar": "Seitenleiste ein-/ausblenden",
+    "sidebar": "Seitenleiste",
+    "sidebarDescription": "Zeigt die mobile Seitenleiste an."
   }
 }

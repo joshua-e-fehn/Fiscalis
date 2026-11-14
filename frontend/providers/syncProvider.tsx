@@ -8,8 +8,20 @@ import React, {
   useMemo,
 } from "react";
 import { useAction } from "convex/react";
+import { ConvexError } from "convex/values";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { toActionError } from "@/lib/actionError";
+import {
+  summarizeSyncResult,
+  type SyncOutcome,
+} from "@/../services/portfolio/syncOutcome";
+import {
+  parseRateLimitedError,
+  retryAfterMinutes,
+} from "@/../services/security/rateLimit";
+
+export type { SyncOutcome } from "@/../services/portfolio/syncOutcome";
 
 // ═══════════════════════════════════════════════════════════════
 // SYNC CONTEXT TYPES
@@ -49,7 +61,8 @@ export interface SyncContextValue {
   // Global sync state
   isGlobalSyncing: boolean;
   globalSyncStatus: SyncStatus;
-  globalSyncMessage: string;
+  /** What the last run did, worded by the sync button; null when idle or syncing */
+  globalSyncOutcome: SyncOutcome | null;
   lastSyncResult: SyncResult | null;
 
   // Per-provider sync state (for granular UI updates)
@@ -87,11 +100,13 @@ export function useSyncContextSafe() {
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const syncAllAction = useAction(api.actions.syncAll.syncAllProviders);
+  const tErrors = useTranslations("common.errors");
 
   // Global state
   const [isGlobalSyncing, setIsGlobalSyncing] = useState(false);
   const [globalSyncStatus, setGlobalSyncStatus] = useState<SyncStatus>("idle");
-  const [globalSyncMessage, setGlobalSyncMessage] = useState("");
+  const [globalSyncOutcome, setGlobalSyncOutcome] =
+    useState<SyncOutcome | null>(null);
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
 
   // Per-provider state
@@ -101,13 +116,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   const resetStatus = useCallback(() => {
     setGlobalSyncStatus("idle");
-    setGlobalSyncMessage("");
+    setGlobalSyncOutcome(null);
   }, []);
 
   const syncAll = useCallback(async (): Promise<SyncResult> => {
     setIsGlobalSyncing(true);
     setGlobalSyncStatus("syncing");
-    setGlobalSyncMessage("Syncing all accounts...");
+    setGlobalSyncOutcome(null);
 
     // Set all providers to syncing
     setIsPlaidSyncing(true);
@@ -118,48 +133,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       const result = await syncAllAction();
       setLastSyncResult(result);
 
-      // Build status message
-      const successes: string[] = [];
-      const failures: string[] = [];
-
-      if (result.plaid.success && result.plaid.itemsSynced > 0) {
-        successes.push(`Banking (${result.plaid.itemsSynced})`);
-      } else if (result.plaid.error) {
-        failures.push("Banking");
-      }
-
-      if (result.snaptrade.success && result.snaptrade.positionsProcessed > 0) {
-        successes.push(`Brokers (${result.snaptrade.positionsProcessed})`);
-      } else if (result.snaptrade.error) {
-        failures.push("Brokers");
-      }
-
-      if (result.bitpanda.success && result.bitpanda.connectionsSynced > 0) {
-        successes.push(`Bitpanda (${result.bitpanda.connectionsSynced})`);
-      } else if (result.bitpanda.error) {
-        failures.push("Bitpanda");
-      }
-
-      if (result.success) {
-        setGlobalSyncStatus("success");
-        setGlobalSyncMessage(
-          successes.length > 0
-            ? `Synced: ${successes.join(", ")}`
-            : "Sync complete",
-        );
-      } else if (successes.length > 0) {
-        setGlobalSyncStatus("partial");
-        setGlobalSyncMessage(
-          `Synced: ${successes.join(", ")}. Failed: ${failures.join(", ")}`,
-        );
-      } else {
-        setGlobalSyncStatus("error");
-        setGlobalSyncMessage(
-          failures.length > 0
-            ? `Failed: ${failures.join(", ")}`
-            : "Sync failed",
-        );
-      }
+      const outcome = summarizeSyncResult(result);
+      setGlobalSyncStatus(outcome.status);
+      setGlobalSyncOutcome(outcome);
 
       // Reset status after delay
       setTimeout(() => {
@@ -168,11 +144,21 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
       return result;
     } catch (err) {
-      // A rate-limited sync becomes "try again in N min" (lib/actionError.ts)
-      const error = toActionError(err);
+      // A rate-limited sync is shown as "try again in N min" (lib/actionError.ts)
+      const error = toActionError(err, (minutes) =>
+        tErrors("rateLimited", { minutes }),
+      );
       console.error("Sync all error:", error);
+      const limited =
+        err instanceof ConvexError ? parseRateLimitedError(err.data) : null;
       setGlobalSyncStatus("error");
-      setGlobalSyncMessage(error.message || "Sync failed");
+      setGlobalSyncOutcome({
+        status: "error",
+        failed: [],
+        ...(limited && {
+          retryAfterMinutes: retryAfterMinutes(limited.retryAfter),
+        }),
+      });
 
       const errorResult: SyncResult = {
         success: false,
@@ -200,13 +186,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       setIsSnaptradeSyncing(false);
       setIsBitpandaSyncing(false);
     }
-  }, [syncAllAction, resetStatus]);
+  }, [syncAllAction, resetStatus, tErrors]);
 
   const value = useMemo<SyncContextValue>(
     () => ({
       isGlobalSyncing,
       globalSyncStatus,
-      globalSyncMessage,
+      globalSyncOutcome,
       lastSyncResult,
       isPlaidSyncing,
       isSnaptradeSyncing,
@@ -217,7 +203,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     [
       isGlobalSyncing,
       globalSyncStatus,
-      globalSyncMessage,
+      globalSyncOutcome,
       lastSyncResult,
       isPlaidSyncing,
       isSnaptradeSyncing,

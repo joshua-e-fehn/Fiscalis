@@ -30,6 +30,7 @@ import {
   type UnrealizedProfitLoss,
 } from "./unrealizedProfitLoss";
 import { roundMoney } from "../finance/financeService";
+import { utcDayEnd } from "../finance/currency";
 import {
   fromEur,
   toDisplayCurrency,
@@ -594,7 +595,11 @@ export interface NetWorthApiBody {
   fxRateDate: string | null;
   /** When the request was served, ISO 8601 */
   asOf: string;
-  /** How fresh the data is, ISO 8601; null when no holding carries a time */
+  /**
+   * How fresh the data is, ISO 8601: the oldest holding price time, or the
+   * end of the conversion rate's day when that is older (netWorthApiDataAsOf);
+   * null when neither carries a time
+   */
   dataAsOf: string | null;
   categories: NetWorthApiCategory[];
 }
@@ -627,10 +632,33 @@ export function netWorthApiCurrency(
   return toDisplayCurrency(param);
 }
 
+const isoOrNull = (ms: number | null) =>
+  ms === null ? null : new Date(ms).toISOString();
+
+/**
+ * The data time of a net worth body (epoch ms): the aggregate's asOf (the
+ * oldest pricedAt), or, for an amount converted at a dated rate, the end of
+ * that rate's UTC day when it is older, capped at `now` (today's rate is
+ * current). A weekend's Friday ECB rate thus dates the figure to Friday.
+ * Null when neither carries a time.
+ */
+export function netWorthApiDataAsOf(
+  asOf: number | null,
+  now: number,
+  rate: NetWorthApiRate,
+): number | null {
+  const rateEnd =
+    rate.currency === "EUR" || rate.date === null
+      ? Number.NaN
+      : Math.min(utcDayEnd(rate.date), now);
+  if (!Number.isFinite(rateEnd)) return asOf;
+  return asOf === null ? rateEnd : Math.min(asOf, rateEnd);
+}
+
 /**
  * The public API's response body for a net worth served at `now` (epoch ms).
- * `asOf` is the serving time; the aggregate's own asOf (the oldest pricedAt)
- * goes out as `dataAsOf`. Amounts are converted from EUR at `rate` (EUR by
+ * `asOf` is the serving time; netWorthApiDataAsOf (the oldest pricedAt, or
+ * an older rate day) goes out as `dataAsOf`. Amounts are converted from EUR at `rate` (EUR by
  * default), then rounded to cents.
  */
 export function netWorthApiBody(
@@ -651,8 +679,7 @@ export function netWorthApiBody(
     currency: rate.currency,
     fxRateDate: rate.currency === "EUR" ? null : rate.date,
     asOf: new Date(now).toISOString(),
-    dataAsOf:
-      netWorth.asOf === null ? null : new Date(netWorth.asOf).toISOString(),
+    dataAsOf: isoOrNull(netWorthApiDataAsOf(netWorth.asOf, now, rate)),
     categories: netWorthApiBreakdown(netWorth, rate.unitsPerEur),
   };
 }

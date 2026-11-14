@@ -131,7 +131,7 @@ spot price from the last 7 days is available.
 | `currency`         | `"EUR"`, `"USD"`, `"GBP"` or `"CHF"` | The currency of every amount: the `currency` parameter, `"EUR"` without one |
 | `fxRateDate`       | `YYYY-MM-DD` string or `null` | The day of the EUR exchange rate the amounts were converted at. `null` for EUR (no conversion), and for another currency when no mirrored rate exists and an approximate built-in rate was used. A date more than a week old means the rate mirror has not refreshed since |
 | `asOf`             | ISO 8601 string  | When the request was served. It says nothing about the data's age |
-| `dataAsOf`         | ISO 8601 string or `null` | How fresh the data is: the oldest sync or price time among your holdings, so one stale provider makes it old. `null` when no holding carries a time (for example only loans, or vault items without a spot price) |
+| `dataAsOf`         | ISO 8601 string or `null` | How fresh the data is: the oldest sync or price time among your holdings, so one stale provider makes it old. For a non-EUR `currency` it is also no later than the end of the conversion rate's UTC day (`fxRateDate`), so a weekend figure converted at Friday's rate is dated to the end of Friday. `null` when nothing carries a time (for example only loans, or vault items without a spot price) |
 | `categories`       | array            | The breakdown described below. Always all nine categories, in the order shown, including empty ones |
 
 Each entry of `categories`:

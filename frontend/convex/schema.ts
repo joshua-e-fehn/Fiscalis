@@ -1012,6 +1012,18 @@ export default defineSchema({
 		.index("by_date", ["date"]),
 
 	// ═══════════════════════════════════════════════════════════════
+	// JOB HEARTBEATS
+	// ═══════════════════════════════════════════════════════════════
+	// When a scheduled job last finished successfully, one row per job,
+	// written by the job (convex/health.ts recordJobSuccess) and read by
+	// GET /health/deep (services/health/freshness.ts). No user data.
+
+	jobHeartbeats: defineTable({
+		job: v.union(v.literal("fx-refresh"), v.literal("provider-sync")),
+		lastSuccessAt: v.number(),
+	}).index("by_job", ["job"]),
+
+	// ═══════════════════════════════════════════════════════════════
 	// API KEYS
 	// ═══════════════════════════════════════════════════════════════
 	// User-scoped keys for the public REST API (convex/http.ts).

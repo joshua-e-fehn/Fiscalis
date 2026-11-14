@@ -278,7 +278,7 @@ export const CompareChart = memo(function CompareChart({
               if (!active || !payload) return null;
               // Filter out entries that aren't metal data
               const metalEntries = payload.filter(
-                (entry) =>
+                (entry): entry is typeof entry & { dataKey: string } =>
                   typeof entry.dataKey === "string" &&
                   datasets.some((d) => d.metal === entry.dataKey),
               );

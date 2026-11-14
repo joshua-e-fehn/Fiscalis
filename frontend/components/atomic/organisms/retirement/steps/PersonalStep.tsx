@@ -1,18 +1,30 @@
 "use client";
 
 import { CalendarClock } from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import {
 	MAX_RETIREMENT_PLAN_AGE,
 	MIN_RETIREMENT_PLAN_AGE,
-	validateRetirementAges,
+	retirementAgeIssues,
 } from "@/lib/types/retirement";
 import { todayLocalISO, validateBirthDate } from "@/lib/utils/date";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
+import { useRetirementIssueMessage } from "../shared/useRetirementIssueMessage";
 import type { RetirementStepProps } from "./types";
 
 const TODAY_ISO = todayLocalISO();
+
+/** Emphasis in the timeline copy (the <b> tag of its messages). */
+function strong(chunks: ReactNode) {
+	return <span className="font-medium text-foreground">{chunks}</span>;
+}
+
+function semibold(chunks: ReactNode) {
+	return <span className="font-semibold text-foreground">{chunks}</span>;
+}
 
 interface PersonalStepProps extends RetirementStepProps {
 	/** Date of birth being edited (seeded from the profile by the wizard). */
@@ -29,25 +41,27 @@ export function PersonalStep({
 	birthDate,
 	onBirthDateChange,
 }: PersonalStepProps) {
+	const t = useTranslations("retirement");
+	const issueMessage = useRetirementIssueMessage();
 	// The wizard derives data.currentAge from the date of birth and saves the
 	// date to the profile together with the plan.
 	const dob = birthDate ? validateBirthDate(birthDate) : null;
 	const age = dob?.ok ? dob.age : null;
-	const ageError =
+	const ageIssue =
 		age !== null
-			? validateRetirementAges({
+			? retirementAgeIssues({
 					currentAge: age,
 					retirementAge: data.retirementAge,
 				}).retirementAge
 			: undefined;
-	const valid = age !== null && !ageError;
+	const valid = age !== null && !ageIssue;
 	const years = valid ? data.retirementAge - age : null;
 
 	return (
 		<RetirementStepShell
 			icon={CalendarClock}
-			title="Your timeline"
-			description="When were you born, and when do you want to retire?"
+			title={t("personalStep.title")}
+			description={t("personalStep.description")}
 			onNext={onNext}
 			onBack={onBack}
 			nextDisabled={!valid}
@@ -55,7 +69,7 @@ export function PersonalStep({
 		>
 			<div className="grid gap-4 sm:grid-cols-2">
 				<div className="space-y-2">
-					<Label htmlFor="birthDate">Date of birth</Label>
+					<Label htmlFor="birthDate">{t("personalStep.birthDate")}</Label>
 					<Input
 						id="birthDate"
 						type="date"
@@ -65,13 +79,14 @@ export function PersonalStep({
 					/>
 					{age !== null && (
 						<p className="text-xs text-muted-foreground">
-							You are <span className="font-medium text-foreground">{age}</span>{" "}
-							years old.
+							{t.rich("personalStep.currentAge", { age, b: strong })}
 						</p>
 					)}
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="retirementAge">Retirement age</Label>
+					<Label htmlFor="retirementAge">
+						{t("personalStep.retirementAge")}
+					</Label>
 					<Input
 						id="retirementAge"
 						type="number"
@@ -91,18 +106,21 @@ export function PersonalStep({
 			<div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
 				{valid && years !== null ? (
 					<p>
-						You have{" "}
-						<span className="font-semibold text-foreground">{years} years</span>{" "}
-						to build your retirement portfolio.
+						{t.rich("personalStep.yearsLeft", {
+							years: t("years", { count: years }),
+							b: semibold,
+						})}
 					</p>
 				) : dob === null ? (
 					<p className="text-muted-foreground">
-						Enter your date of birth so we can work out your age.
+						{t("personalStep.enterBirthDate")}
 					</p>
 				) : !dob.ok ? (
 					<p className="text-destructive">{dob.error}.</p>
 				) : (
-					<p className="text-destructive">{ageError}.</p>
+					<p className="text-destructive">
+						{ageIssue && issueMessage(ageIssue)}.
+					</p>
 				)}
 			</div>
 		</RetirementStepShell>

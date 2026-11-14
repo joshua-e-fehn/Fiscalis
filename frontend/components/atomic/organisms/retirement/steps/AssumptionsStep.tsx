@@ -1,6 +1,7 @@
 "use client";
 
 import { RotateCcw, SlidersHorizontal } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
@@ -16,41 +17,21 @@ import {
 	MAX_RETIREMENT_RATE,
 	type RetirementAssumptionField,
 	type RetirementInputs,
-	validateRetirementAssumptions,
-	validateRetirementDeductions,
+	retirementAssumptionIssues,
+	retirementDeductionIssues,
 } from "@/lib/types/retirement";
 import { formatRate } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
+import { useRetirementIssueMessage } from "../shared/useRetirementIssueMessage";
 import type { RetirementStepProps } from "./types";
 
-interface RateFieldDef {
-	key: RetirementAssumptionField;
-	label: string;
-	hint: string;
-}
-
-const FIELDS: RateFieldDef[] = [
-	{
-		key: "optimisticReturn",
-		label: "Expected annual return",
-		hint: `Long-run market growth. The default ${formatRate(DEFAULT_OPTIMISTIC_RETURN)} doubles a portfolio every 10 years.`,
-	},
-	{
-		key: "conservativeReturn",
-		label: "Conservative annual return",
-		hint: "A cautious growth assumption for the safer estimate.",
-	},
-	{
-		key: "inflationRate",
-		label: "Inflation rate",
-		hint: "How fast prices rise; raises your future expense target.",
-	},
-	{
-		key: "withdrawalRate",
-		label: "Safe withdrawal rate",
-		hint: "The 4% rule. Lower = safer but needs a bigger portfolio.",
-	},
-];
+/** The rate fields in display order; label and hint under assumptionsStep.fields. */
+const FIELDS = [
+	"optimisticReturn",
+	"conservativeReturn",
+	"inflationRate",
+	"withdrawalRate",
+] as const satisfies readonly RetirementAssumptionField[];
 
 /** 0.0718 → 7.18; an unset (NaN) rate shows as an empty field. */
 function toPercentInput(rate: number): number | "" {
@@ -64,14 +45,22 @@ export function AssumptionsStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
+	const t = useTranslations("retirement.assumptionsStep");
+	const issueMessage = useRetirementIssueMessage();
 	// Raw text per field while typing, so clearing a field shows it empty (and
 	// invalid) instead of silently turning it into 0%.
 	const [drafts, setDrafts] = useState<
 		Partial<Record<RetirementAssumptionField | "withdrawalTaxRate", string>>
 	>({});
-	const errors = validateRetirementAssumptions(data);
-	const taxError = validateRetirementDeductions(data).withdrawalTaxRate;
-	const valid = Object.keys(errors).length === 0 && !taxError;
+	const issues = retirementAssumptionIssues(data);
+	const taxIssue = retirementDeductionIssues(data).withdrawalTaxRate;
+	const valid = Object.keys(issues).length === 0 && !taxIssue;
+	const hint = (field: (typeof FIELDS)[number]) =>
+		field === "optimisticReturn"
+			? t("fields.optimisticReturn.hint", {
+					rate: formatRate(DEFAULT_OPTIMISTIC_RETURN),
+				})
+			: t(`fields.${field}.hint`);
 	const withdrawalTaxRate =
 		data.withdrawalTaxRate ?? DEFAULT_WITHDRAWAL_TAX_RATE;
 
@@ -100,30 +89,30 @@ export function AssumptionsStep({
 	return (
 		<RetirementStepShell
 			icon={SlidersHorizontal}
-			title="Assumptions"
-			description="Sensible defaults are filled in — adjust only if you know what you're doing."
+			title={t("title")}
+			description={t("description")}
 			onNext={onNext}
 			onBack={onBack}
-			nextLabel="See my plan"
+			nextLabel={t("seePlan")}
 			nextDisabled={!valid}
 			isSaving={isSaving}
 		>
 			<div className="grid gap-4 sm:grid-cols-2">
 				{FIELDS.map((field) => {
-					const error = errors[field.key];
+					const issue = issues[field];
 					return (
-						<div key={field.key} className="space-y-1.5">
-							<Label htmlFor={field.key}>{field.label}</Label>
+						<div key={field} className="space-y-1.5">
+							<Label htmlFor={field}>{t(`fields.${field}.label`)}</Label>
 							<div className="relative">
 								<Input
-									id={field.key}
+									id={field}
 									type="number"
 									min={0}
 									max={MAX_RETIREMENT_RATE * 100}
 									step={0.1}
-									value={drafts[field.key] ?? toPercentInput(data[field.key])}
-									onChange={(e) => setRate(field.key, e.target.value)}
-									aria-invalid={!!error}
+									value={drafts[field] ?? toPercentInput(data[field])}
+									onChange={(e) => setRate(field, e.target.value)}
+									aria-invalid={!!issue}
 									className="pr-8"
 								/>
 								<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -132,12 +121,12 @@ export function AssumptionsStep({
 							</div>
 							<p
 								className={
-									error
+									issue
 										? "text-xs text-destructive"
 										: "text-xs text-muted-foreground"
 								}
 							>
-								{error ?? field.hint}
+								{issue ? issueMessage(issue) : hint(field)}
 							</p>
 						</div>
 					);
@@ -146,7 +135,7 @@ export function AssumptionsStep({
 
 			<div className="grid gap-4 sm:grid-cols-2">
 				<div className="space-y-1.5">
-					<Label htmlFor="withdrawalTaxRate">Tax on withdrawals</Label>
+					<Label htmlFor="withdrawalTaxRate">{t("withdrawalTax")}</Label>
 					<div className="relative">
 						<Input
 							id="withdrawalTaxRate"
@@ -158,7 +147,7 @@ export function AssumptionsStep({
 								drafts.withdrawalTaxRate ?? toPercentInput(withdrawalTaxRate)
 							}
 							onChange={(e) => setRate("withdrawalTaxRate", e.target.value)}
-							aria-invalid={!!taxError}
+							aria-invalid={!!taxIssue}
 							className="pr-8"
 						/>
 						<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -167,23 +156,21 @@ export function AssumptionsStep({
 					</div>
 					<p
 						className={
-							taxError
+							taxIssue
 								? "text-xs text-destructive"
 								: "text-xs text-muted-foreground"
 						}
 					>
-						{taxError ??
-							"Effective tax on what you withdraw (e.g. capital-gains tax on the gains share). At 0% the target is a pre-tax figure."}
+						{taxIssue ? issueMessage(taxIssue) : t("withdrawalTaxHint")}
 					</p>
 				</div>
 				<div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3">
 					<div className="space-y-0.5">
 						<Label htmlFor="indexContributions">
-							Raise my savings with inflation
+							{t("indexContributions")}
 						</Label>
 						<p className="text-xs text-muted-foreground">
-							Off: one flat amount in today&apos;s money, worth less every year.
-							On: a lower first amount that grows with inflation.
+							{t("indexContributionsHint")}
 						</p>
 					</div>
 					<Switch
@@ -198,7 +185,7 @@ export function AssumptionsStep({
 
 			<Button variant="ghost" size="sm" onClick={resetDefaults}>
 				<RotateCcw className="mr-1 h-3.5 w-3.5" />
-				Reset to recommended defaults
+				{t("reset")}
 			</Button>
 		</RetirementStepShell>
 	);

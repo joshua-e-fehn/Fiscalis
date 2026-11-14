@@ -14,14 +14,18 @@
     "button": "Export CSV",
     "exporting": "Exporting…",
     "currentYear": "Current year ({year})",
-    "allYears": "All years ({min}–{max})"
+    "allYears": "All years ({min}–{max})",
+    "comparison": "Comparison ({start}–{end})"
   },
   "csv": {
     "countryCode": "Country code",
     "countryCodeIso3": "Country code (ISO3)",
     "countryName": "Country name",
     "year": "Year",
-    "value": "{indicator} ({unit})"
+    "value": "{indicator} ({unit})",
+    "yearValue": "{indicator} {year} ({unit})",
+    "absoluteChange": "Change {start}–{end} ({unit})",
+    "percentChange": "Change {start}–{end} (%)"
   },
   "prefetch": {
     "loading": "Preloading data: {loaded}/{total} years",
@@ -55,7 +59,16 @@
   "top": {
     "title": "Top 5 countries",
     "description": "Highest values in {year}",
-    "empty": "No data available"
+    "empty": "No data available",
+    "titleIncrease": "Biggest increase",
+    "titleDecrease": "Biggest decrease",
+    "changeDescription": "Change {start}–{end}",
+    "sortLabel": "Sort by",
+    "sortIncrease": "Increase",
+    "sortDecrease": "Decrease",
+    "sortAbsolute": "Absolute",
+    "sortPercent": "Percent",
+    "showHistory": "Show the history of {country}"
   },
   "dataset": {
     "title": "Dataset information",
@@ -67,7 +80,10 @@
   },
   "units": {
     "years": "years",
-    "yearsValue": "{value} years"
+    "yearsValue": "{value} years",
+    "percentValue": "{value}%",
+    "percentPoints": "{value} pp",
+    "tonnesValue": "{value} t"
   },
   "timeSlider": {
     "jumpToStart": "Jump to start",
@@ -229,5 +245,30 @@
       "name": "Total natural resources rents (% of GDP)",
       "description": "Sum of oil, natural gas, coal, mineral and forest rents"
     }
+  },
+  "compare": {
+    "toggle": "Compare years",
+    "from": "From",
+    "to": "To",
+    "featuredOnly": "Comparing years is available for featured indicators.",
+    "sameYear": "Pick two different years.",
+    "mapDescription": "Change from {start} to {end}",
+    "legendTitle": "Change {start}–{end}",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "noChange": "0",
+    "loading": "Loading {start} and {end}…",
+    "changeValue": "{absolute} ({percent})",
+    "fromTo": "{start} → {end}"
+  },
+  "country": {
+    "description": "{indicator} over time",
+    "loading": "Loading history: {loaded}/{total} years",
+    "empty": "No data for this country.",
+    "gaps": "Gaps: no data recorded",
+    "latest": "Latest ({year})",
+    "first": "First ({year})",
+    "change": "Change since {year}",
+    "hint": "Click a country to see its history."
   }
 }

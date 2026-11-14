@@ -14,14 +14,18 @@
     "button": "CSV exportieren",
     "exporting": "Wird exportiert…",
     "currentYear": "Aktuelles Jahr ({year})",
-    "allYears": "Alle Jahre ({min}–{max})"
+    "allYears": "Alle Jahre ({min}–{max})",
+    "comparison": "Vergleich ({start}–{end})"
   },
   "csv": {
     "countryCode": "Ländercode",
     "countryCodeIso3": "Ländercode (ISO3)",
     "countryName": "Land",
     "year": "Jahr",
-    "value": "{indicator} ({unit})"
+    "value": "{indicator} ({unit})",
+    "yearValue": "{indicator} {year} ({unit})",
+    "absoluteChange": "Veränderung {start}–{end} ({unit})",
+    "percentChange": "Veränderung {start}–{end} (%)"
   },
   "prefetch": {
     "loading": "Daten werden vorgeladen: {loaded}/{total} Jahre",
@@ -55,7 +59,16 @@
   "top": {
     "title": "Top 5 Länder",
     "description": "Höchste Werte {year}",
-    "empty": "Keine Daten verfügbar"
+    "empty": "Keine Daten verfügbar",
+    "titleIncrease": "Größter Anstieg",
+    "titleDecrease": "Größter Rückgang",
+    "changeDescription": "Veränderung {start}–{end}",
+    "sortLabel": "Sortieren nach",
+    "sortIncrease": "Anstieg",
+    "sortDecrease": "Rückgang",
+    "sortAbsolute": "Absolut",
+    "sortPercent": "Prozent",
+    "showHistory": "Verlauf von {country} anzeigen"
   },
   "dataset": {
     "title": "Informationen zum Datensatz",
@@ -67,7 +80,10 @@
   },
   "units": {
     "years": "Jahre",
-    "yearsValue": "{value} Jahre"
+    "yearsValue": "{value} Jahre",
+    "percentValue": "{value} %",
+    "percentPoints": "{value} Pp.",
+    "tonnesValue": "{value} t"
   },
   "timeSlider": {
     "jumpToStart": "Zum Anfang",
@@ -229,5 +245,30 @@
       "name": "Renten aus natürlichen Ressourcen gesamt (% des BIP)",
       "description": "Summe der Renten aus Öl, Erdgas, Kohle, Mineralien und Wald"
     }
+  },
+  "compare": {
+    "toggle": "Jahre vergleichen",
+    "from": "Von",
+    "to": "Bis",
+    "featuredOnly": "Der Jahresvergleich ist für ausgewählte Indikatoren verfügbar.",
+    "sameYear": "Wähle zwei verschiedene Jahre.",
+    "mapDescription": "Veränderung von {start} bis {end}",
+    "legendTitle": "Veränderung {start}–{end}",
+    "decrease": "Rückgang",
+    "increase": "Anstieg",
+    "noChange": "0",
+    "loading": "{start} und {end} werden geladen…",
+    "changeValue": "{absolute} ({percent})",
+    "fromTo": "{start} → {end}"
+  },
+  "country": {
+    "description": "{indicator} im Zeitverlauf",
+    "loading": "Verlauf wird geladen: {loaded}/{total} Jahre",
+    "empty": "Für dieses Land gibt es keine Daten.",
+    "gaps": "Lücken: keine Daten erfasst",
+    "latest": "Zuletzt ({year})",
+    "first": "Erstmals ({year})",
+    "change": "Veränderung seit {year}",
+    "hint": "Klicke auf ein Land, um seinen Verlauf zu sehen."
   }
 }

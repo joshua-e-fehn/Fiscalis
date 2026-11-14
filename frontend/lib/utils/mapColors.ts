@@ -2,6 +2,7 @@
 // Map Color Scale Utilities
 // ═══════════════════════════════════════════════════════════════
 
+import type { ExpressionSpecification } from "maplibre-gl";
 import type { FillLayerSpecification } from "react-map-gl/maplibre";
 
 /** A MapLibre `fill-color` paint value, as produced by createMapColorExpression. */
@@ -330,6 +331,50 @@ export function getRecommendedColorScale(indicatorId: string): ColorScaleType {
   return "quantile";
 }
 
+// MapLibre test for a feature without data. We use a special marker value
+// (-999999999) for "no data" since null doesn't serialize well in GeoJSON;
+// the GeoJSON processing sets dataValue to this marker when there's no data.
+const NO_DATA_TEST: ExpressionSpecification = [
+  "any",
+  ["!", ["has", "dataValue"]],
+  ["==", ["get", "dataValue"], -999999999],
+  ["==", ["get", "dataValue"], null],
+  ["==", ["typeof", ["get", "dataValue"]], "string"],
+];
+
+/**
+ * Diverging fill for a change between two years: red for a decrease, yellow
+ * at zero, green for an increase (swapped for "higher is bad" indicators).
+ * `stops` are ascending values centred on zero, one per palette colour
+ * (services/worldbank/countryViews.ts divergingStops); null means every
+ * change is zero, so every country with data gets the neutral colour.
+ */
+export function createDivergingMapColorExpression(
+  stops: number[] | null,
+  inverted: boolean = false,
+): MapColorExpression {
+  const palette = inverted ? GREEN_TO_RED_PALETTE : RED_TO_GREEN_PALETTE;
+  if (stops === null || stops.length !== palette.length) {
+    return [
+      "case",
+      NO_DATA_TEST,
+      NO_DATA_COLOR,
+      palette[Math.floor(palette.length / 2)],
+    ];
+  }
+  return [
+    "case",
+    NO_DATA_TEST,
+    NO_DATA_COLOR,
+    [
+      "interpolate",
+      ["linear"],
+      ["get", "dataValue"],
+      ...stops.flatMap((stop, i) => [stop, palette[i]]),
+    ],
+  ];
+}
+
 /**
  * Create MapLibre expression for color interpolation
  * This can be used directly in the map layer paint property
@@ -421,31 +466,17 @@ export function createMapColorExpression(
     const singleColor = palette[Math.floor(palette.length / 2)];
     return [
       "case",
-      [
-        "any",
-        ["!", ["has", "dataValue"]],
-        ["==", ["get", "dataValue"], -999999999],
-        ["==", ["get", "dataValue"], null],
-        ["==", ["typeof", ["get", "dataValue"]], "string"],
-      ],
+      NO_DATA_TEST,
       NO_DATA_COLOR,
       singleColor,
     ];
   }
 
   // MapLibre expression for coloring
-  // We use a special marker value (-999999999) for "no data" since null doesn't serialize well in GeoJSON
-  // The GeoJSON processing should set dataValue to this marker when there's no data
   return [
     "case",
     // Check if dataValue is the "no data" marker or missing
-    [
-      "any",
-      ["!", ["has", "dataValue"]],
-      ["==", ["get", "dataValue"], -999999999],
-      ["==", ["get", "dataValue"], null],
-      ["==", ["typeof", ["get", "dataValue"]], "string"],
-    ],
+    NO_DATA_TEST,
     NO_DATA_COLOR,
     ["interpolate", ["linear"], ["get", "dataValue"], ...stops],
   ];

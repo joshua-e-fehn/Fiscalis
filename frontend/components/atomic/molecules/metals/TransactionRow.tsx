@@ -5,7 +5,14 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { MetalBadge } from "@/components/atomic/atoms/metals";
 import { MetalsType } from "@/lib/types/metals-extended";
-import { ArrowDownLeft, ArrowUpRight, Gift, GiftIcon } from "lucide-react";
+import { Button } from "@/components/ui/shadcn/button";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Gift,
+  GiftIcon,
+  Trash2,
+} from "lucide-react";
 
 export interface Transaction {
   _id: string;
@@ -28,6 +35,8 @@ export interface Transaction {
 
 interface TransactionRowProps {
   transaction: Transaction;
+  /** Shows a delete action for the entry (ENG-200) */
+  onDelete?: (transaction: Transaction) => void;
   className?: string;
 }
 
@@ -47,10 +56,12 @@ const transactionColors = {
 
 export function TransactionRow({
   transaction,
+  onDelete,
   className,
 }: TransactionRowProps) {
   const t = useTranslations("metals.transactions");
   const format = useFormatter();
+  const tDelete = useTranslations("metals.deleteTransaction");
   const Icon = transactionIcons[transaction.transactionType];
   // The purchase or sale currency as entered, an ISO code ("EUR", "GBP");
   // formatCurrency writes any code after the amount
@@ -136,6 +147,19 @@ export function TransactionRow({
           </>
         )}
       </div>
+
+      {onDelete && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          aria-label={tDelete("action")}
+          title={tDelete("action")}
+          onClick={() => onDelete(transaction)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }

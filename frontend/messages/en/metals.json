@@ -320,5 +320,19 @@
       "noData": "No data",
       "noHoldings": "No holdings"
     }
+  },
+  "deleteTransaction": {
+    "action": "Delete entry",
+    "title": "Delete this entry?",
+    "type": {
+      "buy": "Buy",
+      "sell": "Sale",
+      "gift_received": "Gift received",
+      "gift_given": "Gift given"
+    },
+    "description": "{type} of {quantity, plural, one {# unit} other {# units}} of {item} on {date, date, dateOnly} will be removed from your vault history.",
+    "descriptionUndated": "{type} of {quantity, plural, one {# unit} other {# units}} of {item} (opening balance) will be removed from your vault history.",
+    "consequence": "Holdings, cost basis and vault value are recalculated without it. This can't be undone.",
+    "deleting": "Deleting…"
   }
 }

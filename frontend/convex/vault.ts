@@ -18,8 +18,10 @@ import {
 } from "../../services/finance/currency";
 import {
   LedgerError,
+  deletionConflict,
   itemProjection,
   ledgerOverCounts,
+  ledgerTimestamp,
   missingOpeningTransaction,
   nextOpeningQuantity,
   replayLedger,
@@ -847,8 +849,11 @@ export const sellItems = mutation({
 });
 
 /**
- * Delete a transaction. Rejected when the item would then hold a negative
- * quantity at any date (e.g. deleting a buy that a later sale relies on).
+ * Delete one ledger entry of the signed-in user's (ENG-200). Another user's
+ * entry reads as not found. Rejected with a coded ConvexError
+ * (common.errors.vaultDeleteLeavesNegativeHolding[Undated]) when a later
+ * sale or gift relies on it (deletionConflict); syncProjection then
+ * rewrites the item's quantity and average cost from what is left.
  */
 export const deleteTransaction = mutation({
   args: {
@@ -858,11 +863,32 @@ export const deleteTransaction = mutation({
     const userId = await requireUserId(ctx);
     const transaction = await getOwnedDoc(ctx, userId, args.transactionId);
     if (!transaction) {
-      throw new Error("Transaction not found");
+      throw new ConvexError({ code: "vaultEntryNotFound" });
     }
     const vaultItem = await getOwnedDoc(ctx, userId, transaction.vaultItemId);
     if (vaultItem) {
-      await ensureOpeningTransaction(ctx, vaultItem);
+      // An older item's missing opening balance is written first, so the
+      // check below sees the whole quantity it holds
+      const txs = await ensureOpeningTransaction(ctx, vaultItem);
+      const conflict = deletionConflict(
+        txs.map(asLedgerTransaction),
+        txs.findIndex((tx) => tx._id === transaction._id),
+      );
+      if (conflict) {
+        // A timestamp, formatted as a calendar date by the client (dateOnly)
+        const date = ledgerTimestamp(conflict.transaction.transactionDate);
+        throw new ConvexError(
+          date !== undefined
+            ? {
+                code: "vaultDeleteLeavesNegativeHolding",
+                params: { quantity: conflict.shortfall, date },
+              }
+            : {
+                code: "vaultDeleteLeavesNegativeHoldingUndated",
+                params: { quantity: conflict.shortfall },
+              },
+        );
+      }
     }
 
     await ctx.db.delete(args.transactionId);

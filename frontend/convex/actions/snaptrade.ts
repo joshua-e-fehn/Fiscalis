@@ -28,6 +28,7 @@ import {
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { snaptradeFailureStatus } from "../../../services/security/connectionStatus";
+import { enforceUserRateLimit } from "../lib/rateLimit";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -207,6 +208,7 @@ export const createConnectUrl = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerLink", userId);
 
     // Get SnapTrade user credentials
     const snaptradeUser = await ctx.runQuery(
@@ -947,6 +949,7 @@ export const syncAccounts = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerRefresh", userId);
 
     const connection = await ctx.runQuery(
       internal.brokers.getConnectionInternal,
@@ -977,6 +980,7 @@ export const syncPositions = action({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+    await enforceUserRateLimit(ctx, "providerRefresh", identity.subject);
 
     const result = await syncSnaptrade(ctx, identity.subject, {
       kind: "account",
@@ -1114,6 +1118,7 @@ export const syncAll = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerRefresh", userId);
 
     const result = await syncSnaptrade(ctx, userId, { kind: "all" });
     if (!result) {

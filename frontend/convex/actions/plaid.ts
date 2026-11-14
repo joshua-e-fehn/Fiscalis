@@ -15,6 +15,7 @@ import { NO_CURRENCY } from "../../../services/finance/currency";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
+import { enforceUserRateLimit } from "../lib/rateLimit";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -73,6 +74,7 @@ export const createLinkToken = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerLink", userId);
     const plaidClient = getPlaidClient();
 
     const response = await plaidClient.linkTokenCreate({
@@ -97,6 +99,7 @@ export const createUpdateLinkToken = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerLink", userId);
 
     // Get the item's access token
     const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
@@ -467,6 +470,7 @@ export const refreshAccounts = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerRefresh", userId);
 
     if (args.itemId) {
       // Verify ownership
@@ -589,6 +593,7 @@ export const syncTransactions = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerRefresh", userId);
     const plaidClient = getPlaidClient();
     const encryptionKey = getEncryptionKey();
 

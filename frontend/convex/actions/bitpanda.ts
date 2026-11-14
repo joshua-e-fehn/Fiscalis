@@ -28,6 +28,7 @@ import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { classifyProviderFailure } from "../../../services/security/providerFailure";
 import { bitpandaFailureStatus } from "../../../services/security/connectionStatus";
+import { enforceUserRateLimit } from "../lib/rateLimit";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -158,6 +159,7 @@ export const syncConnection = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerRefresh", userId);
 
     const connection = await ctx.runQuery(
       internal.bitpanda.getConnectionInternal,
@@ -198,6 +200,7 @@ export const syncAllConnections = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "providerRefresh", userId);
 
     const connections = await ctx.runQuery(
       internal.bitpanda.getConnectionsByUserInternal,

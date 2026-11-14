@@ -2,9 +2,10 @@
 
 import { v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
-import { internal, api } from "../_generated/api";
+import { internal } from "../_generated/api";
 import { scheduledSyncEnabled } from "../lib/scheduledSync";
 import { describeError } from "../../../services/security/providerError";
+import { enforceUserRateLimit } from "../lib/rateLimit";
 
 // ═══════════════════════════════════════════════════════════════
 // SYNC ALL ACTION
@@ -81,6 +82,7 @@ export const syncAllProviders = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    await enforceUserRateLimit(ctx, "manualSync", userId);
 
     const result: SyncAllResult = {
       success: false,
@@ -95,12 +97,17 @@ export const syncAllProviders = action({
       snapshot: { success: false },
     };
 
-    // 1. Sync Plaid accounts (skip individual snapshot)
+    // The providers run through the same internal per-user actions as the
+    // scheduled sync, so a "Sync all" spends only its manualSync token and
+    // not the per-provider buckets of the public refresh actions. None of
+    // them takes a snapshot; one is taken below.
+
+    // 1. Sync Plaid accounts
     try {
-      const plaidResult = await ctx.runAction(
-        api.actions.plaid.refreshAccounts,
-        { skipSnapshot: true },
-      );
+      const plaidResult: { success: boolean; itemsSynced: number } =
+        await ctx.runAction(internal.actions.plaid.syncAccountsForUserAdmin, {
+          userId,
+        });
       result.plaid = {
         success: plaidResult.success,
         itemsSynced: plaidResult.itemsSynced,
@@ -114,29 +121,13 @@ export const syncAllProviders = action({
       };
     }
 
-    // 2. Sync Snaptrade broker data (skip individual snapshot)
+    // 2. Sync Snaptrade broker data
     try {
-      const snaptradeResult = await ctx.runAction(
-        api.actions.snaptrade.syncAll,
-        { skipSnapshot: true },
+      const snaptradeResult: SyncAllResult["snaptrade"] = await ctx.runAction(
+        internal.actions.snaptrade.syncAllForUserInternal,
+        { userId },
       );
-      // Handle union type - check if the detailed fields exist
-      if ("connectionsProcessed" in snaptradeResult) {
-        result.snaptrade = {
-          success: snaptradeResult.success,
-          connectionsProcessed: snaptradeResult.connectionsProcessed,
-          accountsProcessed: snaptradeResult.accountsProcessed,
-          positionsProcessed: snaptradeResult.positionsProcessed,
-        };
-      } else {
-        // It's the simple success/message response
-        result.snaptrade = {
-          success: snaptradeResult.success,
-          connectionsProcessed: 0,
-          accountsProcessed: 0,
-          positionsProcessed: 0,
-        };
-      }
+      result.snaptrade = snaptradeResult;
     } catch (error) {
       console.error("Snaptrade sync error:", describeError(error));
       result.snaptrade = {
@@ -148,16 +139,13 @@ export const syncAllProviders = action({
       };
     }
 
-    // 3. Sync Bitpanda data (skip individual snapshot)
+    // 3. Sync Bitpanda data
     try {
-      const bitpandaResult = await ctx.runAction(
-        api.actions.bitpanda.syncAllConnections,
-        { skipSnapshot: true },
-      );
-      result.bitpanda = {
-        success: bitpandaResult.success,
-        connectionsSynced: bitpandaResult.count,
-      };
+      const bitpandaResult: { success: boolean; connectionsSynced: number } =
+        await ctx.runAction(internal.actions.bitpanda.syncAllForUserInternal, {
+          userId,
+        });
+      result.bitpanda = bitpandaResult;
     } catch (error) {
       console.error("Bitpanda sync error:", describeError(error));
       result.bitpanda = {

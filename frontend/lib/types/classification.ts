@@ -376,6 +376,42 @@ export function isValidSubcategory(
 }
 
 /**
+ * The stored rows a user can re-classify, by the mutation that saves them:
+ * a bank account (classification.overridePlaidAccountClassification), a
+ * broker position (classification.overrideBrokerPositionClassification) or
+ * a Bitpanda holding (bitpanda.setUserOverride).
+ */
+export type ClassificationTarget = "plaid" | "broker" | "bitpanda";
+
+/** Every category, in taxonomy order. */
+export const INVESTMENT_CATEGORIES = Object.keys(
+  subcategoriesByCategory,
+) as InvestmentCategory[];
+
+/**
+ * The categories an item can be moved to. A bank account only to cash or
+ * liabilities: the category queries read bank accounts for those two only,
+ * so any other category would drop the account from every client total.
+ */
+export function overrideCategoriesFor(
+  target: ClassificationTarget,
+): readonly InvestmentCategory[] {
+  return target === "plaid" ? ["cash", "liabilities"] : INVESTMENT_CATEGORIES;
+}
+
+/**
+ * The subcategory to keep selected after the category changes: the current
+ * one when it belongs to the new category, otherwise the category's first.
+ */
+export function subcategoryForCategory(
+  category: InvestmentCategory,
+  current: string | undefined,
+): InvestmentSubcategory {
+  const slugs = subcategoriesByCategory[category];
+  return slugs.find((slug) => slug === current) ?? slugs[0];
+}
+
+/**
  * A user's category/subcategory override checked against the taxonomy.
  * `allowedCategories` narrows the categories an item may be moved to.
  * Throws on an unknown category, a subcategory that does not belong to it,

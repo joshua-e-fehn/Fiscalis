@@ -10,7 +10,8 @@ import {
   resolveHoldingPrice,
   type PreviousHoldingPrice,
 } from "../../services/bitpanda/holdingPrice";
-import { parseClassificationOverride } from "../lib/types/classification";
+import { bitpandaOverridePatch } from "./lib/classificationOverride";
+import { getOwnedDoc, requireUserId } from "./lib/auth";
 
 // ═══════════════════════════════════════════════════════════════
 // CONNECTION QUERIES
@@ -450,10 +451,11 @@ export const scheduledSyncAll = internalMutation({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Set or clear a user's manual category override for a single holding.
- * An override is checked against the taxonomy (parseClassificationOverride,
- * as in classification.ts); a side left out keeps the holding's current
- * value, which must then still fit the other side.
+ * Set or clear a user's manual category override for a single holding of
+ * the signed-in user. An override is checked against the taxonomy; a side
+ * left out keeps the holding's current value. Clearing re-runs the rule
+ * engine, so the holding is filed under its automatic category straight
+ * away (lib/classificationOverride.ts bitpandaOverridePatch).
  */
 export const setUserOverride = mutation({
   args: {
@@ -462,36 +464,14 @@ export const setUserOverride = mutation({
     subcategory: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await requireUserId(ctx);
+    const holding = await getOwnedDoc(ctx, userId, args.holdingId);
+    if (!holding) throw new Error("Holding not found");
 
-    const holding = await ctx.db.get(args.holdingId);
-    if (!holding || holding.userId !== identity.subject) {
-      throw new Error("Holding not found or unauthorized");
-    }
-
-    if (!args.category && !args.subcategory) {
-      await ctx.db.patch(args.holdingId, {
-        userCategoryOverride: undefined,
-        userSubcategoryOverride: undefined,
-        classificationSource: "auto",
-      });
-      return { success: true };
-    }
-
-    const { category, subcategory } = parseClassificationOverride(
-      args.category || holding.investmentCategory || "",
-      args.subcategory || holding.investmentSubcategory || "",
+    await ctx.db.patch(
+      holding._id,
+      bitpandaOverridePatch(holding, args.category, args.subcategory),
     );
-
-    await ctx.db.patch(args.holdingId, {
-      userCategoryOverride: category,
-      userSubcategoryOverride: subcategory,
-      investmentCategory: category,
-      investmentSubcategory: subcategory,
-      classificationSource: "user_override",
-    });
-
     return { success: true };
   },
 });

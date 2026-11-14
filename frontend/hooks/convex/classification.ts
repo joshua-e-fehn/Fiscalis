@@ -1,232 +1,125 @@
 /**
- * Classification Override Hook
+ * Classification override hooks
  *
- * React hook for managing classification overrides on Plaid accounts
- * and broker positions.
+ * Change, or reset to automatic, the category of a bank account, broker
+ * position or Bitpanda holding, each through its provider's mutation.
  */
 
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Id } from "@/convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 import type {
+  ClassificationTarget,
   InvestmentCategory,
   InvestmentSubcategory,
 } from "@/lib/types/classification";
 
-// ═══════════════════════════════════════════════════════════════
-// TYPES
-// ═══════════════════════════════════════════════════════════════
-
-export type ClassificationItemType = "plaid" | "broker";
-
-export interface ClassificationOverrideState {
-  isOpen: boolean;
-  itemType: ClassificationItemType | null;
-  itemId: Id<"plaidAccounts"> | Id<"brokerPositions"> | null;
-  itemName: string;
+/** A row whose category the user can change. */
+export interface CategoryOverrideItem {
+  target: ClassificationTarget;
+  /** The stored document's id in the target's table */
+  id: string;
 }
 
-export interface UseClassificationOverrideReturn {
-  // State
-  state: ClassificationOverrideState;
-  // Actions
-  openDialog: (
-    itemType: ClassificationItemType,
-    itemId: Id<"plaidAccounts"> | Id<"brokerPositions">,
-    itemName: string,
-  ) => void;
-  closeDialog: () => void;
-  // Mutations
-  overridePlaidAccount: (
-    accountId: Id<"plaidAccounts">,
+export interface UseCategoryOverrideReturn {
+  /** Files the item under the category and subcategory, as a manual one */
+  save: (
+    item: CategoryOverrideItem,
     category: InvestmentCategory,
     subcategory: InvestmentSubcategory,
   ) => Promise<void>;
-  overrideBrokerPosition: (
-    positionId: Id<"brokerPositions">,
-    category: InvestmentCategory,
-    subcategory: InvestmentSubcategory,
-  ) => Promise<void>;
-  resetPlaidAccount: (accountId: Id<"plaidAccounts">) => Promise<void>;
-  resetBrokerPosition: (positionId: Id<"brokerPositions">) => Promise<void>;
-  // Loading states
-  isOverriding: boolean;
-  isResetting: boolean;
+  /** Clears the manual category: the rule engine's applies again */
+  reset: (item: CategoryOverrideItem) => Promise<void>;
+  isPending: boolean;
 }
-
-// ═══════════════════════════════════════════════════════════════
-// HOOK
-// ═══════════════════════════════════════════════════════════════
 
 /**
- * Hook for managing classification overrides
- *
- * @example
- * ```tsx
- * const { state, openDialog, closeDialog } = useClassificationOverride();
- *
- * // Open the override for a Plaid account, then render a dialog
- * // driven by state.isOpen / state.itemType / state.itemId
- * openDialog("plaid", account._id, account.name);
- * ```
+ * Save or reset a manual category. The ids come from the server
+ * (portfolio.getUnifiedPositions `_id`, banking.getAccounts,
+ * classification.getOverriddenItems), so the casts only restore their table
+ * type; the mutations check that the row belongs to the user.
  */
-export function useClassificationOverride(): UseClassificationOverrideReturn {
-  const [state, setState] = useState<ClassificationOverrideState>({
-    isOpen: false,
-    itemType: null,
-    itemId: null,
-    itemName: "",
-  });
+export function useCategoryOverride(): UseCategoryOverrideReturn {
+  const [isPending, setIsPending] = useState(false);
 
-  const [isOverriding, setIsOverriding] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-
-  // Mutations
-  const overridePlaidMutation = useMutation(
+  const overridePlaid = useMutation(
     api.classification.overridePlaidAccountClassification,
   );
-  const overrideBrokerMutation = useMutation(
+  const overrideBroker = useMutation(
     api.classification.overrideBrokerPositionClassification,
   );
-  const resetPlaidMutation = useMutation(
+  const resetPlaid = useMutation(
     api.classification.resetPlaidAccountClassification,
   );
-  const resetBrokerMutation = useMutation(
+  const resetBroker = useMutation(
     api.classification.resetBrokerPositionClassification,
   );
+  const setBitpanda = useMutation(api.bitpanda.setUserOverride);
 
-  // Actions
-  const openDialog = useCallback(
-    (
-      itemType: ClassificationItemType,
-      itemId: Id<"plaidAccounts"> | Id<"brokerPositions">,
-      itemName: string,
-    ) => {
-      setState({
-        isOpen: true,
-        itemType,
-        itemId,
-        itemName,
-      });
-    },
-    [],
-  );
-
-  const closeDialog = useCallback(() => {
-    setState({
-      isOpen: false,
-      itemType: null,
-      itemId: null,
-      itemName: "",
-    });
+  const run = useCallback(async (call: () => Promise<unknown>) => {
+    setIsPending(true);
+    try {
+      await call();
+    } finally {
+      setIsPending(false);
+    }
   }, []);
 
-  // Override functions
-  const overridePlaidAccount = useCallback(
-    async (
-      accountId: Id<"plaidAccounts">,
+  const save = useCallback(
+    (
+      item: CategoryOverrideItem,
       category: InvestmentCategory,
       subcategory: InvestmentSubcategory,
-    ) => {
-      setIsOverriding(true);
-      try {
-        await overridePlaidMutation({
-          accountId,
-          category,
-          subcategory,
-        });
-      } finally {
-        setIsOverriding(false);
-      }
-    },
-    [overridePlaidMutation],
+    ) =>
+      run(() => {
+        switch (item.target) {
+          case "plaid":
+            return overridePlaid({
+              accountId: item.id as Id<"plaidAccounts">,
+              category,
+              subcategory,
+            });
+          case "broker":
+            return overrideBroker({
+              positionId: item.id as Id<"brokerPositions">,
+              category,
+              subcategory,
+            });
+          case "bitpanda":
+            return setBitpanda({
+              holdingId: item.id as Id<"bitpandaHoldings">,
+              category,
+              subcategory,
+            });
+        }
+      }),
+    [run, overridePlaid, overrideBroker, setBitpanda],
   );
 
-  const overrideBrokerPosition = useCallback(
-    async (
-      positionId: Id<"brokerPositions">,
-      category: InvestmentCategory,
-      subcategory: InvestmentSubcategory,
-    ) => {
-      setIsOverriding(true);
-      try {
-        await overrideBrokerMutation({
-          positionId,
-          category,
-          subcategory,
-        });
-      } finally {
-        setIsOverriding(false);
-      }
-    },
-    [overrideBrokerMutation],
+  const reset = useCallback(
+    (item: CategoryOverrideItem) =>
+      run(() => {
+        switch (item.target) {
+          case "plaid":
+            return resetPlaid({ accountId: item.id as Id<"plaidAccounts"> });
+          case "broker":
+            return resetBroker({
+              positionId: item.id as Id<"brokerPositions">,
+            });
+          case "bitpanda":
+            return setBitpanda({
+              holdingId: item.id as Id<"bitpandaHoldings">,
+            });
+        }
+      }),
+    [run, resetPlaid, resetBroker, setBitpanda],
   );
 
-  const resetPlaidAccount = useCallback(
-    async (accountId: Id<"plaidAccounts">) => {
-      setIsResetting(true);
-      try {
-        await resetPlaidMutation({ accountId });
-      } finally {
-        setIsResetting(false);
-      }
-    },
-    [resetPlaidMutation],
-  );
-
-  const resetBrokerPosition = useCallback(
-    async (positionId: Id<"brokerPositions">) => {
-      setIsResetting(true);
-      try {
-        await resetBrokerMutation({ positionId });
-      } finally {
-        setIsResetting(false);
-      }
-    },
-    [resetBrokerMutation],
-  );
-
-  return {
-    state,
-    openDialog,
-    closeDialog,
-    overridePlaidAccount,
-    overrideBrokerPosition,
-    resetPlaidAccount,
-    resetBrokerPosition,
-    isOverriding,
-    isResetting,
-  };
+  return { save, reset, isPending };
 }
 
-/**
- * Hook to get items with user overrides
- */
+/** Every item with a manual category, with its automatic one. */
 export function useOverriddenItems() {
   return useQuery(api.classification.getOverriddenItems);
-}
-
-/**
- * Hook to get Plaid account classification details
- */
-export function usePlaidAccountClassification(
-  accountId: Id<"plaidAccounts"> | undefined,
-) {
-  return useQuery(
-    api.classification.getPlaidAccountClassification,
-    accountId ? { accountId } : "skip",
-  );
-}
-
-/**
- * Hook to get broker position classification details
- */
-export function useBrokerPositionClassification(
-  positionId: Id<"brokerPositions"> | undefined,
-) {
-  return useQuery(
-    api.classification.getBrokerPositionClassification,
-    positionId ? { positionId } : "skip",
-  );
 }

@@ -1,35 +1,28 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { ClassificationTarget } from "../lib/types/classification";
+import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import {
-  classifyPlaidAccount,
-  classifySnaptradePosition,
-} from "../../services/classification";
-import {
-  parseClassificationOverride,
-  type InvestmentCategory,
-} from "../lib/types/classification";
-
-/**
- * Categories a bank (Plaid) account can be moved to: the category queries
- * read Plaid accounts only for cash and liabilities, so any other category
- * would drop the account from every client total.
- */
-const PLAID_OVERRIDE_CATEGORIES: readonly InvestmentCategory[] = [
-  "cash",
-  "liabilities",
-];
+  autoBitpandaClassification,
+  autoBrokerClassification,
+  autoPlaidClassification,
+  automaticFields,
+  overrideFields,
+} from "./lib/classificationOverride";
 
 // ═══════════════════════════════════════════════════════════════
 // CLASSIFICATION OVERRIDE MUTATIONS
+//
+// Each mutation acts only on a row of the signed-in user: a foreign row is
+// reported as missing (lib/auth.ts getOwnedDoc). The sync keeps an override
+// (banking.saveAccounts skips classification for an overridden account;
+// brokers.replaceAccountHoldings and bitpanda.syncHoldings carry it over by
+// the position's identity).
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Override classification for a Plaid account
- *
- * Sets the user's preferred category and subcategory, which will be
- * preserved even when the account data is synced/refreshed. Values are
- * checked against the taxonomy (cash or liabilities only, see
- * PLAID_OVERRIDE_CATEGORIES).
+ * Override classification for a Plaid account (cash or liabilities only,
+ * see overrideCategoriesFor).
  */
 export const overridePlaidAccountClassification = mutation({
   args: {
@@ -38,43 +31,19 @@ export const overridePlaidAccountClassification = mutation({
     subcategory: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await requireUserId(ctx);
+    const account = await getOwnedDoc(ctx, userId, args.accountId);
+    if (!account) throw new Error("Account not found");
 
-    const account = await ctx.db.get(args.accountId);
-    if (!account) {
-      throw new Error("Account not found");
-    }
-    if (account.userId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
-
-    const { category, subcategory } = parseClassificationOverride(
-      args.category,
-      args.subcategory,
-      PLAID_OVERRIDE_CATEGORIES,
+    await ctx.db.patch(
+      account._id,
+      overrideFields("plaid", args.category, args.subcategory),
     );
-
-    await ctx.db.patch(args.accountId, {
-      userCategoryOverride: category,
-      userSubcategoryOverride: subcategory,
-      investmentCategory: category,
-      investmentSubcategory: subcategory,
-      classificationSource: "user_override",
-    });
-
     return { success: true };
   },
 });
 
-/**
- * Override classification for a broker position
- *
- * Sets the user's preferred category and subcategory, which will be
- * preserved even when position data is synced/refreshed
- * (brokers.replaceAccountHoldings). Values are checked against the
- * taxonomy.
- */
+/** Override classification for a broker position. */
 export const overrideBrokerPositionClassification = mutation({
   args: {
     positionId: v.id("brokerPositions"),
@@ -82,121 +51,54 @@ export const overrideBrokerPositionClassification = mutation({
     subcategory: v.string(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await requireUserId(ctx);
+    const position = await getOwnedDoc(ctx, userId, args.positionId);
+    if (!position) throw new Error("Position not found");
 
-    const position = await ctx.db.get(args.positionId);
-    if (!position) {
-      throw new Error("Position not found");
-    }
-    if (position.userId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
-
-    const { category, subcategory } = parseClassificationOverride(
-      args.category,
-      args.subcategory,
+    await ctx.db.patch(
+      position._id,
+      overrideFields("broker", args.category, args.subcategory),
     );
-
-    await ctx.db.patch(args.positionId, {
-      userCategoryOverride: category,
-      userSubcategoryOverride: subcategory,
-      investmentCategory: category,
-      investmentSubcategory: subcategory,
-      classificationSource: "user_override",
-    });
-
     return { success: true };
   },
 });
 
-/**
- * Reset Plaid account to automatic classification
- *
- * Clears user overrides and re-runs the classification engine.
- */
+/** Reset a Plaid account to its automatic classification. */
 export const resetPlaidAccountClassification = mutation({
   args: {
     accountId: v.id("plaidAccounts"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await requireUserId(ctx);
+    const account = await getOwnedDoc(ctx, userId, args.accountId);
+    if (!account) throw new Error("Account not found");
 
-    const account = await ctx.db.get(args.accountId);
-    if (!account) {
-      throw new Error("Account not found");
-    }
-    if (account.userId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
-
-    // Re-run classification engine
-    const classification = classifyPlaidAccount({
-      type: account.type ?? "",
-      subtype: account.subtype ?? null,
-      name: account.name ?? "",
-      currentBalance: account.currentBalance ?? 0,
-    });
-
-    await ctx.db.patch(args.accountId, {
-      userCategoryOverride: undefined,
-      userSubcategoryOverride: undefined,
-      investmentCategory: classification.category,
-      investmentSubcategory: classification.subcategory,
-      classificationSource: "auto",
-    });
-
+    const auto = autoPlaidClassification(account);
+    await ctx.db.patch(account._id, automaticFields(auto));
     return {
       success: true,
-      newCategory: classification.category,
-      newSubcategory: classification.subcategory,
+      newCategory: auto.category,
+      newSubcategory: auto.subcategory,
     };
   },
 });
 
-/**
- * Reset broker position to automatic classification
- *
- * Clears user overrides and re-runs the classification engine.
- */
+/** Reset a broker position to its automatic classification. */
 export const resetBrokerPositionClassification = mutation({
   args: {
     positionId: v.id("brokerPositions"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await requireUserId(ctx);
+    const position = await getOwnedDoc(ctx, userId, args.positionId);
+    if (!position) throw new Error("Position not found");
 
-    const position = await ctx.db.get(args.positionId);
-    if (!position) {
-      throw new Error("Position not found");
-    }
-    if (position.userId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
-
-    // Re-run classification engine
-    const classification = classifySnaptradePosition({
-      assetType: position.assetType ?? "",
-      symbol: position.symbol ?? "",
-      name: position.name ?? null,
-      quantity: position.quantity ?? 0,
-      marketValue: position.marketValue ?? null,
-    });
-
-    await ctx.db.patch(args.positionId, {
-      userCategoryOverride: undefined,
-      userSubcategoryOverride: undefined,
-      investmentCategory: classification.category,
-      investmentSubcategory: classification.subcategory,
-      classificationSource: "auto",
-    });
-
+    const auto = autoBrokerClassification(position);
+    await ctx.db.patch(position._id, automaticFields(auto));
     return {
       success: true,
-      newCategory: classification.category,
-      newSubcategory: classification.subcategory,
+      newCategory: auto.category,
+      newSubcategory: auto.subcategory,
     };
   },
 });
@@ -205,144 +107,86 @@ export const resetBrokerPositionClassification = mutation({
 // CLASSIFICATION QUERIES
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Get classification details for a Plaid account
- */
-export const getPlaidAccountClassification = query({
-  args: {
-    accountId: v.id("plaidAccounts"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const account = await ctx.db.get(args.accountId);
-    if (!account || account.userId !== identity.subject) {
-      return null;
-    }
-
-    // Calculate what the auto classification would be
-    const autoClassification = classifyPlaidAccount({
-      type: account.type ?? "",
-      subtype: account.subtype ?? null,
-      name: account.name ?? "",
-      currentBalance: account.currentBalance ?? 0,
-    });
-
-    return {
-      accountId: account._id,
-      accountName: account.name ?? account.officialName ?? "Unknown Account",
-      accountType: account.type,
-      accountSubtype: account.subtype,
-      currentCategory: account.investmentCategory,
-      currentSubcategory: account.investmentSubcategory,
-      classificationSource: account.classificationSource ?? "auto",
-      hasUserOverride: !!account.userCategoryOverride,
-      userCategoryOverride: account.userCategoryOverride,
-      userSubcategoryOverride: account.userSubcategoryOverride,
-      autoCategory: autoClassification.category,
-      autoSubcategory: autoClassification.subcategory,
-      autoRuleName: autoClassification.ruleName,
-      autoConfidence: autoClassification.confidence,
-    };
-  },
-});
+/** One overridden row, with what the rule engine would file it under. */
+export interface OverriddenItem {
+  target: ClassificationTarget;
+  id: string;
+  name: string;
+  symbol?: string;
+  category?: string;
+  subcategory?: string;
+  autoCategory: string;
+  autoSubcategory: string;
+}
 
 /**
- * Get classification details for a broker position
- */
-export const getBrokerPositionClassification = query({
-  args: {
-    positionId: v.id("brokerPositions"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const position = await ctx.db.get(args.positionId);
-    if (!position || position.userId !== identity.subject) {
-      return null;
-    }
-
-    // Calculate what the auto classification would be
-    const autoClassification = classifySnaptradePosition({
-      assetType: position.assetType ?? "",
-      symbol: position.symbol ?? "",
-      name: position.name ?? null,
-      quantity: position.quantity ?? 0,
-      marketValue: position.marketValue ?? null,
-    });
-
-    return {
-      positionId: position._id,
-      positionName: position.name ?? position.symbol ?? "Unknown Position",
-      symbol: position.symbol,
-      assetType: position.assetType,
-      currentCategory: position.investmentCategory,
-      currentSubcategory: position.investmentSubcategory,
-      classificationSource: position.classificationSource ?? "auto",
-      hasUserOverride: !!position.userCategoryOverride,
-      userCategoryOverride: position.userCategoryOverride,
-      userSubcategoryOverride: position.userSubcategoryOverride,
-      autoCategory: autoClassification.category,
-      autoSubcategory: autoClassification.subcategory,
-      autoRuleName: autoClassification.ruleName,
-      autoConfidence: autoClassification.confidence,
-    };
-  },
-});
-
-/**
- * Get all items with user overrides for the current user
+ * Every bank account, broker position and Bitpanda holding of the current
+ * user that has a manual category, with its automatic classification.
  */
 export const getOverriddenItems = query({
   args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+  handler: async (ctx): Promise<OverriddenItem[] | null> => {
+    const userId = await getUserId(ctx);
+    if (!userId) return null;
 
-    const userId = identity.subject;
+    const items: OverriddenItem[] = [];
 
-    // Get overridden Plaid accounts
     const plaidAccounts = await ctx.db
       .query("plaidAccounts")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-
-    const overriddenAccounts = plaidAccounts
-      .filter((acc) => acc.userCategoryOverride)
-      .map((acc) => ({
-        type: "plaid" as const,
+    for (const acc of plaidAccounts) {
+      if (!acc.userCategoryOverride && !acc.userSubcategoryOverride) continue;
+      const auto = autoPlaidClassification(acc);
+      items.push({
+        target: "plaid",
         id: acc._id,
-        name: acc.name ?? acc.officialName ?? "Unknown Account",
+        name: acc.name || acc.officialName || "",
         category: acc.investmentCategory,
         subcategory: acc.investmentSubcategory,
-        originalCategory: acc.userCategoryOverride
-          ? undefined
-          : acc.investmentCategory,
-      }));
+        autoCategory: auto.category,
+        autoSubcategory: auto.subcategory,
+      });
+    }
 
-    // Get overridden broker positions
     const brokerPositions = await ctx.db
       .query("brokerPositions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-
-    const overriddenPositions = brokerPositions
-      .filter((pos) => pos.userCategoryOverride)
-      .map((pos) => ({
-        type: "broker" as const,
+    for (const pos of brokerPositions) {
+      if (!pos.userCategoryOverride && !pos.userSubcategoryOverride) continue;
+      const auto = autoBrokerClassification(pos);
+      items.push({
+        target: "broker",
         id: pos._id,
-        name: pos.name ?? pos.symbol ?? "Unknown Position",
+        name: pos.name || pos.symbol || "",
         symbol: pos.symbol,
         category: pos.investmentCategory,
         subcategory: pos.investmentSubcategory,
-      }));
+        autoCategory: auto.category,
+        autoSubcategory: auto.subcategory,
+      });
+    }
 
-    return {
-      plaidAccounts: overriddenAccounts,
-      brokerPositions: overriddenPositions,
-      totalOverrides: overriddenAccounts.length + overriddenPositions.length,
-    };
+    const bitpandaHoldings = await ctx.db
+      .query("bitpandaHoldings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const h of bitpandaHoldings) {
+      if (!h.userCategoryOverride && !h.userSubcategoryOverride) continue;
+      const auto = autoBitpandaClassification(h);
+      items.push({
+        target: "bitpanda",
+        id: h._id,
+        name: h.name || h.symbol,
+        symbol: h.symbol,
+        category: h.investmentCategory,
+        subcategory: h.investmentSubcategory,
+        autoCategory: auto.category,
+        autoSubcategory: auto.subcategory,
+      });
+    }
+
+    return items.sort((a, b) => a.name.localeCompare(b.name));
   },
 });

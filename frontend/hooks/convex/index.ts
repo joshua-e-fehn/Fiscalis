@@ -27,7 +27,6 @@ export {
   useSyncBitpandaConnection,
   useSyncAllBitpandaConnections,
   useDeleteBitpandaConnection,
-  useSetBitpandaOverride,
 } from "./bitpanda";
 
 // Re-export all Convex broker hooks
@@ -131,13 +130,10 @@ export { useLiabilitiesSummary } from "./liabilities";
 
 // Re-export classification override hooks
 export {
-  useClassificationOverride,
+  useCategoryOverride,
   useOverriddenItems,
-  usePlaidAccountClassification,
-  useBrokerPositionClassification,
-  type ClassificationItemType,
-  type ClassificationOverrideState,
-  type UseClassificationOverrideReturn,
+  type CategoryOverrideItem,
+  type UseCategoryOverrideReturn,
 } from "./classification";
 
 // Re-export retirement planner hooks

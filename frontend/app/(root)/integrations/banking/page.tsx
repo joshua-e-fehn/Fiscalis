@@ -38,7 +38,8 @@ export default function BankingPage() {
   const hasAccounts = accounts && accounts.length > 0;
 
   // Totals in the base currency from each account's stored EUR value, with
-  // amounts owed (credit cards, loans) subtracted from the net balance
+  // amounts owed (credit cards, loans) subtracted from the net balance, as
+  // in net worth
   const stats = useMemo(() => {
     if (!accounts || accounts.length === 0) return null;
 
@@ -70,10 +71,13 @@ export default function BankingPage() {
         description: plural(totals.counts.savings, "account"),
       },
       {
-        label: "Credit Owed",
-        value: formatCurrency(totals.creditOwed, baseCurrency),
+        label: "Owed",
+        value: formatCurrency(totals.owed, baseCurrency),
         icon: CreditCard,
-        description: plural(totals.counts.credit, "card"),
+        description:
+          totals.counts.loans > 0
+            ? `${plural(totals.counts.cards, "card")}, ${plural(totals.counts.loans, "loan")}`
+            : plural(totals.counts.cards, "card"),
       },
     ];
   }, [accounts, baseCurrency]);

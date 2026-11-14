@@ -15,9 +15,7 @@ import { loadFxRates } from "./fxRates";
 import {
   bankAccountBaseFields,
   bankAccountWithBaseFields,
-  toBase,
 } from "../../services/finance/currency";
-import { bankAccountValue } from "../../services/portfolio/categorySummary";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES (Public - called from frontend)
@@ -67,10 +65,14 @@ export const getAccounts = query({
     if (!identity) return null;
 
     const userId = identity.subject;
-    return await ctx.db
+    const accounts = await ctx.db
       .query("plaidAccounts")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
+    // Stamp a row synced before base fields existed at today's rate, as
+    // the net-worth readers do (lib/netWorth.ts loadHoldings)
+    const rates = await loadFxRates(ctx);
+    return accounts.map((account) => bankAccountWithBaseFields(account, rates));
   },
 });
 
@@ -88,7 +90,10 @@ export const getAccountsByItem = query({
       .query("plaidAccounts")
       .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
       .collect();
-    return accounts.filter((account) => account.userId === userId);
+    const rates = await loadFxRates(ctx);
+    return accounts
+      .filter((account) => account.userId === userId)
+      .map((account) => bankAccountWithBaseFields(account, rates));
   },
 });
 
@@ -166,54 +171,6 @@ export const getTransactionsDb = query({
     // Apply limit
     const limit = args.limit ?? 50;
     return transactions.slice(0, limit);
-  },
-});
-
-/**
- * Get aggregated balance summary
- */
-export const getBalancesSummary = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const userId = identity.subject;
-    const accounts = await ctx.db
-      .query("plaidAccounts")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-
-    // Totals in the base currency (EUR); an amount without a rate is left
-    // out rather than counted 1:1
-    const rates = await loadFxRates(ctx);
-    const summary = {
-      totalBalance: 0,
-      totalAvailable: 0,
-      accountCount: accounts.length,
-      byType: {} as Record<string, { balance: number; count: number }>,
-    };
-
-    for (const account of accounts) {
-      const balance = bankAccountValue(bankAccountWithBaseFields(account, rates));
-      const availableInBase = toBase(
-        account.availableBalance ?? 0,
-        account.currency,
-        rates,
-      );
-      const available = availableInBase.ok ? availableInBase.value : 0;
-
-      summary.totalBalance += balance;
-      summary.totalAvailable += available;
-
-      if (!summary.byType[account.type]) {
-        summary.byType[account.type] = { balance: 0, count: 0 };
-      }
-      summary.byType[account.type].balance += balance;
-      summary.byType[account.type].count += 1;
-    }
-
-    return summary;
   },
 });
 

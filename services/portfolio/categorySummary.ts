@@ -317,28 +317,40 @@ export interface BankAccountTotalsLike {
   subtype?: string;
   currentBalance?: number;
   valueInBaseCurrency?: number;
+  /** "unknown": the account's currency has no EUR rate */
+  exchangeRateSource?: string;
   investmentCategory?: string;
 }
 
 /** EUR totals over bank accounts for the Bank Accounts page. */
 export interface BankAccountTotals {
-  /** What the accounts are worth together: balances minus amounts owed */
+  /** Balances minus amounts owed: what the accounts add to net worth */
   net: number;
+  /** Checking and savings balances of accounts that are not debts */
   checking: number;
   savings: number;
-  /** Owed on credit cards (Plaid: positive = owed, negative = a credit balance) */
-  creditOwed: number;
-  counts: { all: number; checking: number; savings: number; credit: number };
-  /** Accounts with a balance that has no EUR rate; they count as 0 */
+  /** Owed on accounts classified as liabilities (credit cards, loans) */
+  owed: number;
+  counts: {
+    all: number;
+    checking: number;
+    savings: number;
+    /** Liability accounts with an amount owed, by Plaid type */
+    cards: number;
+    loans: number;
+  };
+  /** Accounts with a balance in a currency without an EUR rate; counted as 0 */
   unconverted: number;
 }
 
 /**
- * EUR totals over bank accounts, from each account's stored base value
- * (bankAccountValue), never adding balances in different currencies 1:1.
- * An account classified as a liability (a credit card, a loan) reports the
- * amount owed, so it is subtracted from the net, as in the net-worth
- * aggregator (aggregate.ts placeHolding).
+ * EUR totals over bank accounts, from each account's base value
+ * (bankAccountValue; rows stamped by bankAccountWithBaseFields), never
+ * adding balances in different currencies 1:1. An account is a debt by its
+ * classification (investmentCategory, override-aware), as in the net-worth
+ * aggregator: Plaid reports a liability's balance as the amount owed, and
+ * a negative amount owed (a card in credit) is money owed to the user, so
+ * it counts as a balance (aggregate.ts placeHolding).
  */
 export function bankAccountTotals(
   accounts: readonly BankAccountTotalsLike[],
@@ -347,24 +359,29 @@ export function bankAccountTotals(
     net: 0,
     checking: 0,
     savings: 0,
-    creditOwed: 0,
-    counts: { all: accounts.length, checking: 0, savings: 0, credit: 0 },
+    owed: 0,
+    counts: { all: accounts.length, checking: 0, savings: 0, cards: 0, loans: 0 },
     unconverted: 0,
   };
   for (const account of accounts) {
     const value = bankAccountValue(account);
     if (
-      account.valueInBaseCurrency === undefined &&
+      account.exchangeRateSource === "unknown" &&
       account.currentBalance !== undefined
     ) {
       totals.unconverted += 1;
     }
-    const owed = account.investmentCategory === "liabilities";
-    totals.net += owed ? -value : value;
-    if (account.type === "credit") {
-      totals.creditOwed += value;
-      totals.counts.credit += 1;
-    } else if (account.subtype === "checking") {
+    if (account.investmentCategory === "liabilities") {
+      if (value > 0) {
+        totals.owed += value;
+        if (account.type === "credit") totals.counts.cards += 1;
+        else totals.counts.loans += 1;
+      }
+      totals.net -= value;
+      continue;
+    }
+    totals.net += value;
+    if (account.subtype === "checking") {
       totals.checking += value;
       totals.counts.checking += 1;
     } else if (account.subtype === "savings") {

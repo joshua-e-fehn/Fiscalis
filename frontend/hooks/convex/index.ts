@@ -8,7 +8,6 @@ export {
   useDeletePlaidItem,
   usePlaidAccounts,
   usePlaidAccountsByItem,
-  useBalancesSummary,
   useRefreshAccounts,
   useUpdateInstitutionLogo,
   useUpdateAllInstitutionLogos,

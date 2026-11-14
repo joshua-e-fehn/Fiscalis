@@ -41,7 +41,6 @@ export function ChangeIndicator({
 }: ChangeIndicatorProps) {
   const isPositive = value > 0;
   const isNegative = value < 0;
-  const isNeutral = value === 0;
 
   const colorClass = isPositive
     ? "text-profit"

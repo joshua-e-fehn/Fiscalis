@@ -134,23 +134,6 @@ const providerRoutes: Record<FinancialProvider, string> = {
   manual: "/assets/commodities/metals",
 };
 
-// Format large numbers
-function formatNumber(value: number): string {
-  if (Math.abs(value) >= 1000000) {
-    return (value / 1000000).toFixed(2) + "M";
-  }
-  if (Math.abs(value) >= 1000) {
-    return (value / 1000).toFixed(2) + "K";
-  }
-  if (Math.abs(value) < 0.01 && value !== 0) {
-    return value.toExponential(2);
-  }
-  return value.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  });
-}
-
 // Format quantity with appropriate precision
 function formatQuantity(value: number | undefined | null): string {
   // If quantity is undefined, null, or 0, show dash

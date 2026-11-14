@@ -21,7 +21,6 @@ import {
   ChevronRight,
   Calendar,
   Percent,
-  TrendingDown,
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════

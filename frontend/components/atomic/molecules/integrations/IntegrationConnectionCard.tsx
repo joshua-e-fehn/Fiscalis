@@ -7,6 +7,7 @@
  * Shows connection logo, name, status, total value, and nested accounts.
  */
 
+import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -107,9 +108,13 @@ export function IntegrationConnectionCard({
             {/* Logo */}
             <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
               {logo ? (
-                <img
+                <Image
                   src={logo}
                   alt={name}
+                  width={40}
+                  height={40}
+                  unoptimized
+                  loading="eager"
                   className="h-full w-full object-contain"
                 />
               ) : (

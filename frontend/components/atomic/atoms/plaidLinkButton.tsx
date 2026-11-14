@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { usePlaidLink } from "react-plaid-link";
+import {
+  usePlaidLink,
+  type PlaidLinkOnSuccessMetadata,
+} from "react-plaid-link";
 import { Button } from "@/components/ui/shadcn/button";
 import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import {
@@ -56,7 +59,7 @@ export function PlaidLinkButton({
 
   // Success handler
   const onSuccess = useCallback(
-    async (public_token: string, metadata: any) => {
+    async (public_token: string, metadata: PlaidLinkOnSuccessMetadata) => {
       try {
         await exchangeTokenHook.mutate({
           publicToken: public_token,

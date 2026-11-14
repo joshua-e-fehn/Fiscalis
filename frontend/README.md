@@ -18,8 +18,8 @@
 This is the main frontend application for Fiscalis, built with Next.js 16 and the App Router. It includes:
 
 - **React 19** with Server Components and the latest features
-- **Convex** real-time backend for user data (embedded in `/convex` directory)
-- **Hono** API routes for time-series data (precious metals, exchange rates)
+- **Convex** real-time backend for user data and market data: metal prices, FX (embedded in `/convex` directory)
+- **Hono** API routes for the public World Bank data
 - **Clerk** authentication with protected routes
 - **TanStack Query** for REST API state management
 
@@ -65,7 +65,6 @@ This is the main frontend application for Fiscalis, built with Next.js 16 and th
 | -------------------- | ------- | --------------------------------- |
 | **Hono**             | ^4.11.5 | Edge-compatible API framework     |
 | **@hono/clerk-auth** | ^2.0.1  | Clerk middleware for Hono         |
-| **Drizzle ORM**      | ^0.31.4 | Type-safe SQL for Neon PostgreSQL |
 
 ### UI & Styling
 
@@ -94,7 +93,6 @@ This is the main frontend application for Fiscalis, built with Next.js 16 and th
 
 - [Bun](https://bun.sh/) v1.0+ (recommended) or Node.js 20+
 - [Convex](https://convex.dev/) account
-- [Neon](https://neon.tech/) PostgreSQL database
 - [Clerk](https://clerk.com/) account
 
 ### Environment Variables
@@ -115,11 +113,6 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
 CLERK_SECRET_KEY="sk_..."
 NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
 NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
-
-# ===========================================
-# Neon PostgreSQL (for time-series data)
-# ===========================================
-DATABASE_URL="postgresql://..."
 
 # ===========================================
 # Plaid (Banking Integration)
@@ -159,9 +152,6 @@ bunx convex dev
 
 # Start Next.js development server (in another terminal)
 bun run dev
-
-# Run database migrations (for Neon/Drizzle)
-bun run db:migrate
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
@@ -259,20 +249,11 @@ frontend/
 │   ├── useVezgoConnect.ts        # Vezgo connect URL
 │   └── useTimePlayback.ts        # Historical playback
 │
-├── db/drizzle/                   # Neon database
-│   ├── drizzle.ts                # DB connection
-│   └── schema.ts                 # Time-series tables
-│
-├── drizzle/                      # Migration files
-│   └── *.sql
-│
 ├── lib/
-│   ├── api/                      # API fetch functions
-│   │   └── metals.ts
+│   ├── api/                      # World Bank fetch functions
 │   ├── types/                    # TypeScript definitions
 │   │   ├── metals.ts
 │   │   └── classification.ts     # Investment categories
-│   ├── hono.ts                   # Hono client setup
 │   └── utils.ts                  # General utilities
 │
 ├── providers/
@@ -293,9 +274,6 @@ frontend/
 | `bun run build`       | Create production build              |
 | `bun run start`       | Start production server              |
 | `bun run lint`        | Run ESLint                           |
-| `bun run db:generate` | Generate Drizzle migrations          |
-| `bun run db:migrate`  | Run database migrations              |
-| `bun run db:studio`   | Open Drizzle Studio                  |
 
 ### Convex Commands
 
@@ -310,13 +288,10 @@ frontend/
 
 ## API Routes
 
-### Hono API (Time-series Data)
+### Hono API (World Bank)
 
 | Method | Endpoint                                    | Description                  |
 | ------ | ------------------------------------------- | ---------------------------- |
-| GET    | `/api/metals/:metal/prices/latest`          | Latest price for a metal     |
-| GET    | `/api/metals/:metal/prices/historical`      | Historical prices by range   |
-| GET    | `/api/metals/:metal/prices/range`           | Prices for custom date range |
 | GET    | `/api/world-data/indicators/:code/:country` | World Bank indicator         |
 | POST   | `/api/worldbank/sync`                       | Trigger indicator sync       |
 
@@ -331,6 +306,7 @@ frontend/
 | `portfolio`  | `getOverview`, `getUnifiedPositions`                  |
 | `loans`      | `getLoans`, `getLoanWithPayments`, `getLoanScenarios` |
 | `vault`      | `getUserVaultItems`, `getUserTransactions`            |
+| `metalPrices`| `latest`, `closes` (public market data)               |
 
 ---
 
@@ -346,14 +322,16 @@ Component → useQuery(api.banking.getAccounts)
                               └──→ Auto-updates on data change
 ```
 
-### Time-series Data (Hono + React Query)
+### Metal Prices (Convex)
 
 ```
-Component → useMetalPrices("gold", "1D")
+cron (every minute) → metalPrices.ingestGoldDe → gold.de
     │
-    └──→ React Query → fetch("/api/metals/gold/prices/latest")
-                              │
-                              └──→ Hono → Drizzle → Neon PostgreSQL
+    └──→ metalPriceTicks (7 days) + metalPriceCloses (hour/day, forever)
+
+Component → useMetalPrices("gold", "Month", "eur")
+    │
+    └──→ useQuery(api.metalPrices.closes) + useQuery(api.metalPrices.latest)
 ```
 
 ---

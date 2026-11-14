@@ -166,7 +166,7 @@
     "gracePeriodsPlaceholder": "Number of {unit}",
     "startDate": "Loan Start Date *",
     "calculatedPayment": "Calculated Payment",
-    "afterInterestOnly": "after {amount} interest-only for the first {periods}",
+    "afterInterestOnly": "after {amount} interest-only for the {frequency, select, MONTHLY {{count, plural, one {first month} other {first # months}}} QUARTERLY {{count, plural, one {first quarter} other {first # quarters}}} SEMI_ANNUAL {{count, plural, one {first half-year} other {first # half-years}}} other {{count, plural, one {first year} other {first # years}}}}",
     "useThisAmount": "Use this amount",
     "customPayment": "Custom Payment Amount",
     "customPaymentPlaceholder": "Enter your actual payment",

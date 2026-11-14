@@ -880,7 +880,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                     id="gracePeriods"
                     type="number"
                     min="0"
-                    placeholder={t("gracePeriodsPlaceholder", { unit: periodUnit })}
+                    placeholder={t("gracePeriodsPlaceholder", {
+                      unit: periodUnit,
+                    })}
                     className="mt-1.5"
                     value={gracePeriods}
                     onChange={(e) => setGracePeriods(e.target.value)}
@@ -928,10 +930,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                 interestOnlyPayment,
                                 currency,
                               ),
-                              periods: tLoans("periodCount", {
-                                frequency: paymentFrequency,
-                                count: parseInt(gracePeriods) || 0,
-                              }),
+                              frequency: paymentFrequency,
+                              count: parseInt(gracePeriods) || 0,
                             })}
                           </p>
                         )}
@@ -1122,9 +1122,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                     </div>
 
                     <div>
-                      <Label htmlFor="prepaymentPenalty">
-                        {t("penalty")}
-                      </Label>
+                      <Label htmlFor="prepaymentPenalty">{t("penalty")}</Label>
                       <div className="relative mt-1.5">
                         <Input
                           id="prepaymentPenalty"

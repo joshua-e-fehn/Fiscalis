@@ -166,7 +166,7 @@
     "gracePeriodsPlaceholder": "Anzahl {unit}",
     "startDate": "Kreditbeginn *",
     "calculatedPayment": "Berechnete Rate",
-    "afterInterestOnly": "nach {amount} nur Zinsen in den ersten {periods}",
+    "afterInterestOnly": "nach {amount} nur Zinsen {frequency, select, MONTHLY {{count, plural, one {im ersten Monat} other {in den ersten # Monaten}}} QUARTERLY {{count, plural, one {im ersten Quartal} other {in den ersten # Quartalen}}} SEMI_ANNUAL {{count, plural, one {im ersten Halbjahr} other {in den ersten # Halbjahren}}} other {{count, plural, one {im ersten Jahr} other {in den ersten # Jahren}}}}",
     "useThisAmount": "Diesen Betrag verwenden",
     "customPayment": "Eigene Rate",
     "customPaymentPlaceholder": "Gib deine tatsächliche Rate ein",

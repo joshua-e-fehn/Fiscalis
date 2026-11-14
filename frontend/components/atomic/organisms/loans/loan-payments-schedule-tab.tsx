@@ -18,6 +18,7 @@ import {
   type LoanScheduleRow,
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
+import { downloadCSV } from "@/lib/utils/export";
 import { formatCurrency as formatMoney } from "@/lib/utils/currency";
 import {
   Card,
@@ -287,18 +288,11 @@ export function LoanPaymentsScheduleTab({
       row.cumulativePrincipal.toFixed(2),
     ]);
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${t("csv.fileName", { name: loan.name.replace(/\s+/g, "_") })}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCSV(
+      headers,
+      rows,
+      `${t("csv.fileName", { name: loan.name.replace(/\s+/g, "_") })}.csv`,
+    );
   };
 
   // Totals (the same KPIs as the page header and the Overview tab)
@@ -406,9 +400,7 @@ export function LoanPaymentsScheduleTab({
           {fullSchedule.length === 0 ? (
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">
-                {t("noData")}
-              </p>
+              <p className="text-muted-foreground mb-4">{t("noData")}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -825,9 +817,7 @@ export function LoanPaymentsScheduleTab({
               </div>
 
               <div>
-                <Label htmlFor="interest-portion">
-                  {t("interestPortion")}
-                </Label>
+                <Label htmlFor="interest-portion">{t("interestPortion")}</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     $

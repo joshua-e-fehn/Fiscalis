@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
 	FourPercentRuleExplainer,
 	PensionCoverageBreakdown,
@@ -43,6 +44,7 @@ export function RetirementResultsView({
 	currency: resultsCurrency,
 }: Props) {
 	const currency = useRetirementAmountsCurrency(resultsCurrency);
+	const t = useTranslations("retirement");
 	if (results === undefined) return <ResultsLoading />;
 	if (results === null) return null;
 
@@ -55,16 +57,24 @@ export function RetirementResultsView({
 					<AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
 					<div className="space-y-3">
 						<div>
-							<p className="font-medium">{problem.title}</p>
+							<p className="font-medium">
+								{results.invalidTimeline
+									? t("results.timelineTitle")
+									: t("results.assumptionsTitle")}
+							</p>
 							<p className="text-muted-foreground">
-								{problem.body}{" "}
-								{onEdit ? "Edit your plan to adjust it." : "Go back and adjust it."}
+								{/* An assumption problem carries the validator's message,
+								    which is still English (see the error-code batch). */}
+								{results.invalidTimeline
+									? t("results.timelineBody")
+									: problem.body}{" "}
+								{onEdit ? t("results.editHint") : t("results.backHint")}
 							</p>
 						</div>
 						{onEdit && (
 							<Button variant="outline" size="sm" onClick={onEdit}>
 								<Pencil className="h-4 w-4" />
-								Edit plan
+								{t("dashboard.editPlan")}
 							</Button>
 						)}
 					</div>

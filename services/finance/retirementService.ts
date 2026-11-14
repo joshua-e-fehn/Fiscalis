@@ -1069,10 +1069,9 @@ export function isOnTrack(
   return results.optimistic.onTrack && results.conservative.onTrack;
 }
 
-/** "27.1 years" / "28 years" — fractional horizons to one decimal. */
-export function formatYears(years: number): string {
-  const rounded = Math.round(years * 10) / 10;
-  return `${rounded} ${rounded === 1 ? "year" : "years"}`;
+/** A horizon in years for display: 27.14 → 27.1, 28 → 28 (one decimal). */
+export function roundYears(years: number): number {
+  return Math.round(years * 10) / 10;
 }
 
 // ───────────────────────────────────────────────────────────────

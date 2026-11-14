@@ -1,6 +1,7 @@
 "use client";
 
 import { Gauge, PiggyBank } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { calculateCapitalGainDurationWithCompoundInterest } from "@/../services/finance/financeService";
 import {
 	Card,
@@ -25,87 +26,104 @@ function monthly(value: number, currency: InvestmentCurrency): string {
 	return formatCurrency(value, currency);
 }
 
-/** "assumes 7.18% / yr — a portfolio that doubles roughly every 10 years" */
-function expectedHint(annualReturn: number): string {
-	if (annualReturn <= 0) return `assumes ${formatRate(annualReturn)} / yr`;
-	const doublingYears = calculateCapitalGainDurationWithCompoundInterest(
-		1,
-		2,
-		annualReturn,
+/** Years for a portfolio growing at `annualReturn` to double, or null without growth. */
+function doublingYears(annualReturn: number): number | null {
+	if (annualReturn <= 0) return null;
+	return Math.round(
+		calculateCapitalGainDurationWithCompoundInterest(1, 2, annualReturn),
 	);
-	return `assumes ${formatRate(annualReturn)} / yr — a portfolio that doubles roughly every ${Math.round(doublingYears)} years`;
 }
 
 export function RequiredSavingsCard({ results, currency, className }: Props) {
 	const onTrack = isOnTrack(results);
+	const t = useTranslations("retirement");
+	const expectedRate = formatRate(results.optimistic.annualReturn);
+	const doubling = doublingYears(results.optimistic.annualReturn);
+	const mortgage = results.residenceMortgage;
 
 	return (
 		<Card className={className}>
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2 text-base">
 					<PiggyBank className="h-4 w-4 text-primary" />
-					How much to save each month
+					{t("savingsCard.title")}
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
 				{onTrack ? (
 					<p className="text-sm text-muted-foreground">
 						{results.pensionsCoverAll
-							? "Your pensions cover your expected expenses, so you don't need to save toward a retirement portfolio."
-							: "Based on your current assets and expected growth, you're on track to reach your goal without saving anything extra. Keep it up!"}
+							? t("savingsCard.pensionsCoverAll")
+							: t("savingsCard.onTrack")}
 					</p>
 				) : (
 					<div className="space-y-3">
 						<div className="grid gap-4 sm:grid-cols-2">
 							<ScenarioBox
-								label="Expected case"
-								hint={expectedHint(results.optimistic.annualReturn)}
+								label={t("savingsCard.expectedCase")}
+								hint={
+									doubling === null
+										? t("savingsCard.expectedHintNoGrowth", {
+												rate: expectedRate,
+											})
+										: t("savingsCard.expectedHint", {
+												rate: expectedRate,
+												years: doubling,
+											})
+								}
 								value={monthly(results.optimistic.monthlyContribution, currency)}
 								accent="primary"
 							/>
 							<ScenarioBox
-								label="Conservative case"
-								hint={`assumes a cautious ${formatRate(results.conservative.annualReturn)} / yr`}
+								label={t("savingsCard.conservativeCase")}
+								hint={t("savingsCard.conservativeHint", {
+									rate: formatRate(results.conservative.annualReturn),
+								})}
 								value={monthly(results.conservative.monthlyContribution, currency)}
 								accent="muted"
 							/>
 						</div>
 						<p className="text-xs text-muted-foreground">
 							{results.contributionsIndexed
-								? `First month's amount, rising with inflation — to ${monthly(results.optimistic.finalMonthlyContribution, currency)} (expected) by retirement.`
-								: "A flat nominal amount each month until retirement; inflation makes the later payments worth less."}
+								? t("savingsCard.indexed", {
+										amount: monthly(
+											results.optimistic.finalMonthlyContribution,
+											currency,
+										),
+									})
+								: t("savingsCard.flat")}
 						</p>
 						{results.hasNetDebt && (
 							<p className="text-xs text-muted-foreground">
-								These amounts start from{" "}
-								{formatCurrency(0, currency, { compact: true })} and don&apos;t include paying down
-								your current debt.
+								{t("savingsCard.netDebt", {
+									zero: formatCurrency(0, currency, { compact: true }),
+								})}
 							</p>
 						)}
 					</div>
 				)}
-				{results.residenceMortgage &&
-					!results.residenceMortgage.balanceProjected && (
+				{mortgage && !mortgage.balanceProjected && (
+					<p className="mt-3 text-xs text-muted-foreground">
+						{t("savingsCard.mortgageNotProjected", {
+							balance: formatCurrency(mortgage.balanceAtRetirement, currency),
+						})}
+					</p>
+				)}
+				{mortgage &&
+					mortgage.balanceProjected &&
+					mortgage.monthlyPayment > 0 && (
 						<p className="mt-3 text-xs text-muted-foreground">
-							Your home mortgage&apos;s full balance of{" "}
-							{formatCurrency(
-								results.residenceMortgage.balanceAtRetirement,
-								currency,
-							)}{" "}
-							counts as still owed at retirement and is part of your target:
-							add its rate and repayment in the plan to project it.
-						</p>
-					)}
-				{results.residenceMortgage &&
-					results.residenceMortgage.balanceProjected &&
-					results.residenceMortgage.monthlyPayment > 0 && (
-						<p className="mt-3 text-xs text-muted-foreground">
-							On top of this, your home mortgage repayments of{" "}
-							{formatCurrency(results.residenceMortgage.monthlyPayment, currency)}
-							/mo continue from your income
-							{results.residenceMortgage.balanceAtRetirement > 0
-								? `; the ${formatCurrency(results.residenceMortgage.balanceAtRetirement, currency)} still owed at retirement is part of your target.`
-								: " until the loan is repaid."}
+							{mortgage.balanceAtRetirement > 0
+								? t("savingsCard.mortgageOwedAtRetirement", {
+										payment: formatCurrency(mortgage.monthlyPayment, currency),
+										balance: formatCurrency(
+											mortgage.balanceAtRetirement,
+											currency,
+										),
+									})
+								: t("savingsCard.mortgageRepaidBefore", {
+										payment: formatCurrency(mortgage.monthlyPayment, currency),
+									})}
 						</p>
 					)}
 			</CardContent>
@@ -124,6 +142,7 @@ function ScenarioBox({
 	value: string;
 	accent: "primary" | "muted";
 }) {
+	const t = useTranslations("retirement");
 	return (
 		<div
 			className={cn(
@@ -140,7 +159,7 @@ function ScenarioBox({
 			<p className="mt-2 text-2xl font-bold">
 				{value}
 				<span className="ml-1 text-sm font-normal text-muted-foreground">
-					/ mo
+					{t("perMonthUnit")}
 				</span>
 			</p>
 			<p className="mt-1 text-xs text-muted-foreground">{hint}</p>

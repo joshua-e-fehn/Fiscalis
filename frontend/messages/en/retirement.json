@@ -1,0 +1,121 @@
+{
+  "years": "{count, plural, one {# year} other {# years}}",
+  "perMonth": "{amount}/mo",
+  "perMonthUnit": "/ mo",
+  "pensions": "Pensions",
+  "steps": {
+    "intro": "Start",
+    "personal": "Age",
+    "expenses": "Expenses",
+    "housing": "Housing",
+    "pensions": "Pensions",
+    "portfolio": "Portfolio",
+    "assumptions": "Assumptions",
+    "results": "Results"
+  },
+  "stepShell": {
+    "saving": "Saving…"
+  },
+  "progress": {
+    "stepOf": "Step {current} of {total}"
+  },
+  "wizard": {
+    "defaultPensionLabel": "State pension",
+    "editingBanner": "You're editing your saved plan. Changes apply when you save.",
+    "discardChanges": "Discard changes",
+    "currencyChanged": "Your display currency changed to {display}. The amounts in this form are still in {form} and save in {form}.",
+    "reloadInCurrency": "Reload in {currency}",
+    "storedCurrency": "Your plan was entered in {stored}. Its amounts are shown in {shown} at today's exchange rate, and your next save keeps them in {shown}.",
+    "birthDateRequired": "Date of birth is required",
+    "saveFailed": "We couldn't save your plan. Please try again."
+  },
+  "dashboard": {
+    "title": "Retirement Plan",
+    "subtitle": "Targeting retirement at age {age}. This plan updates automatically as your portfolio changes.",
+    "subtitleFallback": "Your saved retirement plan.",
+    "editPlan": "Edit plan"
+  },
+  "results": {
+    "timelineTitle": "Check your retirement age",
+    "timelineBody": "Your retirement age needs to be later than your current age to build a plan.",
+    "assumptionsTitle": "Check your assumptions",
+    "editHint": "Edit your plan to adjust it.",
+    "backHint": "Go back and adjust it."
+  },
+  "progressCard": {
+    "title": "Your retirement goal",
+    "target": "Target portfolio needed",
+    "in": "In",
+    "progressToday": "Progress today (conservative)",
+    "growth": "Your current <b>{current}</b> grows to <b>{projected}</b> by retirement at a cautious {rate} per year — that's <b>{pct}%</b> of the target shown above (before adding any monthly savings). At the expected {expectedRate} it would be {expectedPct}%.",
+    "netDebt": "Your liabilities exceed your assets by {debt}. Your plan starts from {zero}, so paying down that debt comes on top of the monthly savings we calculate.",
+    "pensionsCoverAll": "Your pension income already covers your expected expenses — no portfolio drawdown required."
+  },
+  "savingsCard": {
+    "title": "How much to save each month",
+    "pensionsCoverAll": "Your pensions cover your expected expenses, so you don't need to save toward a retirement portfolio.",
+    "onTrack": "Based on your current assets and expected growth, you're on track to reach your goal without saving anything extra. Keep it up!",
+    "expectedCase": "Expected case",
+    "conservativeCase": "Conservative case",
+    "expectedHint": "assumes {rate} / yr — a portfolio that doubles roughly every {years, plural, one {# year} other {# years}}",
+    "expectedHintNoGrowth": "assumes {rate} / yr",
+    "conservativeHint": "assumes a cautious {rate} / yr",
+    "indexed": "First month's amount, rising with inflation — to {amount} (expected) by retirement.",
+    "flat": "A flat nominal amount each month until retirement; inflation makes the later payments worth less.",
+    "netDebt": "These amounts start from {zero} and don't include paying down your current debt.",
+    "mortgageNotProjected": "Your home mortgage's full balance of {balance} counts as still owed at retirement and is part of your target: add its rate and repayment in the plan to project it.",
+    "mortgageOwedAtRetirement": "On top of this, your home mortgage repayments of {payment}/mo continue from your income; the {balance} still owed at retirement is part of your target.",
+    "mortgageRepaidBefore": "On top of this, your home mortgage repayments of {payment}/mo continue from your income until the loan is repaid."
+  },
+  "coverage": {
+    "title": "Monthly expenses at retirement",
+    "expensesGrow": "Your <b>{today}/mo</b> of expenses today grows to <b>{future}/mo</b> in {years} after inflation.",
+    "pensions": "Your pensions of <b>{today}/mo</b> in today's money come to <b>{future}/mo</b>.",
+    "pensionsAfterDeductions": "Your pensions of <b>{today}/mo</b> in today's money (after {deductions}/mo tax & health insurance) come to <b>{future}/mo</b>.",
+    "coveredByPensions": "Covered by pensions",
+    "fundedByPortfolio": "Funded by portfolio"
+  },
+  "chart": {
+    "title": "Projected portfolio growth",
+    "age": "Age {age}",
+    "target": "Target",
+    "expectedSaving": "Expected + saving",
+    "conservativeSaving": "Conservative + saving",
+    "expectedNoSaving": "Expected, no saving",
+    "conservativeNoSaving": "Conservative, no saving",
+    "footnote": "Four paths: your expected and conservative returns, each shown with your monthly saving plan and with your current portfolio left to grow on its own. The dashed line is your target."
+  },
+  "explainer": {
+    "trigger": "Why these numbers? The 4% rule, explained",
+    "rule": "The <b>4% rule</b> is a simple guideline: each year you can withdraw about 4% of your portfolio without running it down over a long retirement. Flip that around and your portfolio needs to be <b>25×</b> the yearly amount it has to cover.",
+    "customRate": "Your plan uses <b>{rate}</b> instead, so your portfolio needs to be <b>{multiple}×</b> that amount.",
+    "whereFrom": "Where does 4% come from?",
+    "marketReturn": "<b>≈ 7–8%</b> long-run expected market return per year",
+    "inflation": "<b>− ~2%</b> inflation, so your money keeps its purchasing power",
+    "buffer": "<b>− a buffer</b> to stay safe in bad market years",
+    "result": "= about 4% you can spend each year",
+    "inflationHandlingRate": "Because the withdrawal rate already accounts for inflation during retirement, we don't add inflation twice. Before retirement we grow your expenses and pensions by {rate} a year and grow each part of your portfolio at its own expected return — keeping everything consistent.",
+    "inflationHandling": "Because the withdrawal rate already accounts for inflation during retirement, we don't add inflation twice. Before retirement we grow your expenses and pensions by the inflation rate and grow each part of your portfolio at its own expected return — keeping everything consistent.",
+    "simpleTarget": "For your plan, using today's expenses and today's pensions (no inflation) the target would be <b>{target}</b>.",
+    "adjustedTargetRate": "Adjusted for {years} of {rate} inflation, the realistic target is <b>{target}</b>.",
+    "adjustedTarget": "Adjusted for {years} of inflation, the realistic target is <b>{target}</b>.",
+    "difference": "{reason, select, fixedPensionsAndMortgage {The difference is inflation, which your fixed pensions don't keep up with, plus the mortgage still owed when you retire.} fixedPensions {The difference is inflation, which your fixed pensions don't keep up with.} mortgage {The difference is inflation, plus the mortgage still owed when you retire.} other {The difference is inflation.}}",
+    "taxIncluded": "Both include {rate} tax on withdrawals.",
+    "taxExcluded": "Both are pre-tax: tax on withdrawals is not included."
+  },
+  "teaser": {
+    "titleActive": "Your retirement plan",
+    "titleDraft": "Finish your retirement plan",
+    "titleNew": "Plan your retirement",
+    "needsReview": "Your plan needs a quick review — open it to adjust your retirement age or assumptions.",
+    "pensionsCoverAll": "Your pensions already cover your expected expenses.",
+    "netDebt": "Your liabilities currently exceed your assets — paying them down is the first step.",
+    "onTrack": "You're on track for your {target} target.",
+    "onTrackExpected": "On track at the expected {rate} return; saving {amount}/mo covers the conservative case.",
+    "progress": "You're {pct}% of the way to your {target} target.",
+    "draft": "Pick up where you left off and see your number.",
+    "new": "Turn your retirement goal into a monthly savings plan in a couple of minutes.",
+    "viewPlan": "View plan",
+    "getStarted": "Get started"
+  }
+}

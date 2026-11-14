@@ -1,13 +1,15 @@
 "use client";
 
 import { AlertTriangle, Target, TrendingUp } from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import {
 	Card,
 	CardContent,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import { formatYears, type RetirementResults } from "@/lib/types/retirement";
+import { type RetirementResults, roundYears } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency, formatRate } from "@/lib/utils/currency";
@@ -19,6 +21,11 @@ interface Props {
 	className?: string;
 }
 
+/** An amount called out in the copy (the <b> tag of its messages). */
+function strong(chunks: ReactNode) {
+	return <span className="font-medium text-foreground">{chunks}</span>;
+}
+
 export function RetirementProgressCard({ results, currency, className }: Props) {
 	// Headline progress is the conservative scenario's (the one isOnTrack also
 	// requires). Never negative but may exceed 1 (ahead of the target).
@@ -27,29 +34,32 @@ export function RetirementProgressCard({ results, currency, className }: Props) 
 	const barPct = Math.max(0, Math.min(1, rawPct));
 	const pctLabel = (rawPct * 100).toFixed(0);
 	const hasTarget = Number.isFinite(results.targetPortfolio);
+	const t = useTranslations("retirement");
 
 	return (
 		<Card className={className}>
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2 text-base">
 					<Target className="h-4 w-4 text-primary" />
-					Your retirement goal
+					{t("progressCard.title")}
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-5">
 				<div className="flex items-end justify-between">
 					<div>
 						<p className="text-sm text-muted-foreground">
-							Target portfolio needed
+							{t("progressCard.target")}
 						</p>
 						<p className="text-3xl font-bold">
 							{hasTarget ? formatCurrency(results.targetPortfolio, currency) : "—"}
 						</p>
 					</div>
 					<div className="text-right">
-						<p className="text-sm text-muted-foreground">In</p>
+						<p className="text-sm text-muted-foreground">
+							{t("progressCard.in")}
+						</p>
 						<p className="text-xl font-semibold">
-							{formatYears(results.yearsToRetirement)}
+							{t("years", { count: roundYears(results.yearsToRetirement) })}
 						</p>
 					</div>
 				</div>
@@ -58,7 +68,7 @@ export function RetirementProgressCard({ results, currency, className }: Props) 
 				<div className="space-y-2">
 					<div className="flex items-center justify-between text-sm">
 						<span className="text-muted-foreground">
-							Progress today (conservative)
+							{t("progressCard.progressToday")}
 						</span>
 						<span className="font-medium">{pctLabel}%</span>
 					</div>
@@ -73,20 +83,18 @@ export function RetirementProgressCard({ results, currency, className }: Props) 
 					</div>
 					{hasTarget && !results.pensionsCoverAll && !results.hasNetDebt && (
 						<p className="text-xs text-muted-foreground">
-							Your current{" "}
-							<span className="font-medium text-foreground">
-								{formatCurrency(results.investableNow, currency)}
-							</span>{" "}
-							grows to{" "}
-							<span className="font-medium text-foreground">
-								{formatCurrency(results.conservative.projectedFromCurrent, currency)}
-							</span>{" "}
-							by retirement at a cautious{" "}
-							{formatRate(results.conservative.baseReturn)} per year — that&apos;s{" "}
-							<span className="font-medium text-foreground">{pctLabel}%</span>{" "}
-							of the target shown above (before adding any monthly savings). At
-							the expected {formatRate(results.optimistic.baseReturn)} it would
-							be {expectedPctLabel}%.
+							{t.rich("progressCard.growth", {
+								b: strong,
+								current: formatCurrency(results.investableNow, currency),
+								projected: formatCurrency(
+									results.conservative.projectedFromCurrent,
+									currency,
+								),
+								rate: formatRate(results.conservative.baseReturn),
+								pct: pctLabel,
+								expectedRate: formatRate(results.optimistic.baseReturn),
+								expectedPct: expectedPctLabel,
+							})}
 						</p>
 					)}
 				</div>
@@ -95,10 +103,10 @@ export function RetirementProgressCard({ results, currency, className }: Props) 
 					<div className="flex items-start gap-2 rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
 						<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
 						<span>
-							Your liabilities exceed your assets by{" "}
-							{formatCurrency(-results.fundableNow, currency)}. Your plan starts
-							from {formatCurrency(0, currency, { compact: true })}, so paying down that debt comes on top of the monthly
-							savings we calculate.
+							{t("progressCard.netDebt", {
+								debt: formatCurrency(-results.fundableNow, currency),
+								zero: formatCurrency(0, currency, { compact: true }),
+							})}
 						</span>
 					</div>
 				)}
@@ -106,10 +114,7 @@ export function RetirementProgressCard({ results, currency, className }: Props) 
 				{results.pensionsCoverAll && (
 					<div className="flex items-start gap-2 rounded-lg bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400">
 						<TrendingUp className="mt-0.5 h-4 w-4 shrink-0" />
-						<span>
-							Your pension income already covers your expected expenses — no
-							portfolio drawdown required.
-						</span>
+						<span>{t("progressCard.pensionsCoverAll")}</span>
 					</div>
 				)}
 			</CardContent>

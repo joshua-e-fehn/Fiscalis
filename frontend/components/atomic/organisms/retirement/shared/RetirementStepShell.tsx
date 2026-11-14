@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, type LucideIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/shadcn/button";
 import {
 	Card,
@@ -39,12 +40,14 @@ export function RetirementStepShell({
 	children,
 	onNext,
 	onBack,
-	nextLabel = "Continue",
+	nextLabel,
 	nextDisabled = false,
 	isSaving = false,
 	hideFooter = false,
 	className,
 }: RetirementStepShellProps) {
+	const t = useTranslations("retirement.stepShell");
+	const tActions = useTranslations("common.actions");
 	return (
 		<div className={cn("w-full", className)}>
 			<Card>
@@ -71,14 +74,14 @@ export function RetirementStepShell({
 					{onBack ? (
 						<Button variant="ghost" onClick={onBack} disabled={isSaving}>
 							<ArrowLeft className="mr-1 h-4 w-4" />
-							Back
+							{tActions("back")}
 						</Button>
 					) : (
 						<span />
 					)}
 					{onNext && (
 						<Button onClick={onNext} disabled={nextDisabled || isSaving}>
-							{isSaving ? "Saving..." : nextLabel}
+							{isSaving ? t("saving") : (nextLabel ?? tActions("continue"))}
 							{!isSaving && <ArrowRight className="ml-1 h-4 w-4" />}
 						</Button>
 					)}

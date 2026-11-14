@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import {
 	Area,
@@ -55,6 +56,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 			),
 		}));
 	}, [results]);
+	const t = useTranslations("retirement.chart");
 
 	if (data.length < 2 || !Number.isFinite(results.targetPortfolio)) {
 		return null;
@@ -63,7 +65,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 	return (
 		<Card className={className}>
 			<CardHeader>
-				<CardTitle className="text-base">Projected portfolio growth</CardTitle>
+				<CardTitle className="text-base">{t("title")}</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<div className="h-80 w-full">
@@ -116,7 +118,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 									formatCurrency(value, currency),
 									name,
 								]}
-								labelFormatter={(label) => `Age ${label}`}
+								labelFormatter={(label) => t("age", { age: String(label) })}
 								contentStyle={{
 									background: "hsl(var(--popover))",
 									border: "1px solid hsl(var(--border))",
@@ -130,7 +132,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 								stroke="hsl(var(--foreground))"
 								strokeDasharray="4 4"
 								label={{
-									value: "Target",
+									value: t("target"),
 									position: "insideTopRight",
 									fontSize: 11,
 									fill: "hsl(var(--foreground))",
@@ -140,7 +142,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 							<Area
 								type="monotone"
 								dataKey="expectedSaving"
-								name="Expected + saving"
+								name={t("expectedSaving")}
 								stroke="hsl(var(--primary))"
 								strokeWidth={2.5}
 								fill="url(#rp-expected)"
@@ -149,7 +151,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 							<Area
 								type="monotone"
 								dataKey="conservativeSaving"
-								name="Conservative + saving"
+								name={t("conservativeSaving")}
 								stroke={EMERALD}
 								strokeWidth={2}
 								fill="none"
@@ -158,7 +160,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 							<Area
 								type="monotone"
 								dataKey="expectedNoSaving"
-								name="Expected, no saving"
+								name={t("expectedNoSaving")}
 								stroke="hsl(var(--primary))"
 								strokeWidth={1.5}
 								strokeDasharray="5 3"
@@ -168,7 +170,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 							<Area
 								type="monotone"
 								dataKey="conservativeNoSaving"
-								name="Conservative, no saving"
+								name={t("conservativeNoSaving")}
 								stroke="hsl(var(--muted-foreground))"
 								strokeWidth={1.5}
 								strokeDasharray="5 3"
@@ -177,11 +179,7 @@ export function RetirementProjectionChart({ results, currency, className }: Prop
 						</AreaChart>
 					</ResponsiveContainer>
 				</div>
-				<p className="mt-2 text-xs text-muted-foreground">
-					Four paths: your expected and conservative returns, each shown with
-					your monthly saving plan and with your current portfolio left to grow
-					on its own. The dashed line is your target.
-				</p>
+				<p className="mt-2 text-xs text-muted-foreground">{t("footnote")}</p>
 			</CardContent>
 		</Card>
 	);

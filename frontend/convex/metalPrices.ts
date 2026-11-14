@@ -45,6 +45,12 @@ const CLOSE_RESOLUTIONS: readonly CloseResolution[] = ["hour", "day"];
 const MAX_CLOSES = 4000;
 /** Ticks deleted per prune mutation; it reschedules itself until done. */
 const PRUNE_BATCH = 1000;
+/**
+ * The spot mirror is rewritten only when a price moves or its timestamp is
+ * this stale: every per-user net-worth query reads it, so a minutely patch
+ * would re-run them all every minute.
+ */
+const SPOT_REFRESH_MS = 15 * 60 * 1000;
 
 type SnapshotDoc = Pick<
   Doc<"metalPriceTicks">,
@@ -163,7 +169,9 @@ async function writeSpotPrices(
     if (!existing) {
       await ctx.db.insert("metalSpotPrices", { ...price, fetchedAt });
     } else if (
-      price.sourceTimestamp > existing.sourceTimestamp ||
+      (price.sourceTimestamp > existing.sourceTimestamp &&
+        (price.eurPerOunce !== existing.eurPerOunce ||
+          price.sourceTimestamp - existing.sourceTimestamp >= SPOT_REFRESH_MS)) ||
       // Self-heal a stored row whose timestamp lies in the future.
       existing.sourceTimestamp - fetchedAt > SPOT_PRICE_MAX_FUTURE_SKEW_MS
     ) {
@@ -176,12 +184,22 @@ async function writeSpotPrices(
 // Retention (cron, daily) and one-off backfill
 // ═══════════════════════════════════════════════════════════════
 
-/** Delete ticks older than TICK_RETENTION_MS; closes are kept. */
+/**
+ * Delete ticks older than TICK_RETENTION_MS; closes are kept. The newest
+ * tick always stays, so `latest` survives a feed outage longer than the
+ * retention window.
+ */
 export const pruneTicks = internalMutation({
   args: {},
   returns: v.number(),
   handler: async (ctx) => {
-    const cutoff = Date.now() - TICK_RETENTION_MS;
+    const newest = await ctx.db
+      .query("metalPriceTicks")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .first();
+    if (!newest) return 0;
+    const cutoff = Math.min(Date.now() - TICK_RETENTION_MS, newest.timestamp);
     const old = await ctx.db
       .query("metalPriceTicks")
       .withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff))

@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  addUtcMonths,
   bucketStart,
   chartSeries,
   chartWindow,
@@ -261,5 +262,18 @@ describe("historyWindow / historyPoints", () => {
       ["2026-11-02", 3400],
       ["2026-11-16", 3700],
     ]);
+  });
+});
+
+describe("addUtcMonths", () => {
+  const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+  it("clamps to the target month's last day", () => {
+    expect(iso(addUtcMonths(Date.parse("2027-03-31T00:00:00Z"), -1))).toBe("2027-02-28");
+    expect(iso(addUtcMonths(Date.parse("2028-03-31T00:00:00Z"), -1))).toBe("2028-02-29");
+    expect(iso(addUtcMonths(Date.parse("2026-08-31T00:00:00Z"), -6))).toBe("2026-02-28");
+  });
+  it("crosses year boundaries", () => {
+    expect(iso(addUtcMonths(Date.parse("2026-01-15T00:00:00Z"), -12))).toBe("2025-01-15");
+    expect(iso(addUtcMonths(Date.parse("2026-11-14T00:00:00Z"), 3))).toBe("2027-02-14");
   });
 });

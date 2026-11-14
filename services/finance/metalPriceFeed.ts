@@ -165,10 +165,24 @@ export type StoredClose = Pick<MetalPriceSnapshot, "timestamp" | "prices"> & {
 export const dayCloseLabel = (ms: number) =>
   bucketStart(ms, "day") + MS_PER_DAY - MS_PER_MINUTE;
 
-function addUtcMonths(ms: number, months: number): number {
+/**
+ * `ms` shifted by whole UTC months, the day clamped to the target month's
+ * last day (31 Mar - 1 month = 28/29 Feb), as Postgres interval arithmetic
+ * does.
+ */
+export function addUtcMonths(ms: number, months: number): number {
   const d = new Date(ms);
-  d.setUTCMonth(d.getUTCMonth() + months);
-  return d.getTime();
+  const target = d.getUTCMonth() + months;
+  const lastDay = new Date(Date.UTC(d.getUTCFullYear(), target + 1, 0)).getUTCDate();
+  return Date.UTC(
+    d.getUTCFullYear(),
+    target,
+    Math.min(d.getUTCDate(), lastDay),
+    d.getUTCHours(),
+    d.getUTCMinutes(),
+    d.getUTCSeconds(),
+    d.getUTCMilliseconds(),
+  );
 }
 
 /**

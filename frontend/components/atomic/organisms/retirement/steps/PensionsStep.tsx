@@ -1,6 +1,7 @@
 "use client";
 
 import { Landmark, Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
@@ -11,11 +12,16 @@ import {
 	DEFAULT_PENSION_DEDUCTION_RATE,
 	netPensionMonthly,
 	type PensionSource,
-	validatePensionSources,
-	validateRetirementDeductions,
+	pensionSourceIssues,
+	retirementDeductionIssues,
 } from "@/lib/types/retirement";
-import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
+import {
+	currencySymbols,
+	formatCurrency,
+	formatRate,
+} from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
+import { useRetirementIssueMessage } from "../shared/useRetirementIssueMessage";
 import type { RetirementStepProps } from "./types";
 
 /** The monthly gross pension the deduction hint works through */
@@ -29,6 +35,8 @@ export function PensionsStep({
 	isSaving,
 	currency: inputsCurrency,
 }: RetirementStepProps) {
+	const t = useTranslations("retirement");
+	const issueMessage = useRetirementIssueMessage();
 	const currency = useRetirementAmountsCurrency(inputsCurrency);
 	const sources = data.pensionSources;
 	const deductionRate =
@@ -38,9 +46,11 @@ export function PensionsStep({
 		(s, p) => s + netPensionMonthly(p, deductionRate),
 		0,
 	);
-	const error = validatePensionSources(sources).pensionSources;
-	const deductionError =
-		validateRetirementDeductions(data).pensionDeductionRate;
+	const issue = pensionSourceIssues(sources).pensionSources;
+	const deductionIssue = retirementDeductionIssues(data).pensionDeductionRate;
+	const symbol = currencySymbols[currency].trim();
+	const perMonth = (amount: number) =>
+		t("perMonth", { amount: formatCurrency(amount, currency) });
 	// Raw text while typing, so a cleared field shows empty (and invalid).
 	const [deductionDraft, setDeductionDraft] = useState<string | null>(null);
 
@@ -63,11 +73,11 @@ export function PensionsStep({
 	return (
 		<RetirementStepShell
 			icon={Landmark}
-			title="Pension income"
-			description="Monthly income you'll receive in retirement, before touching your portfolio. Enter it in today's money, e.g. the gross amount on your Renteninformation. We take tax and health insurance off gross amounts and adjust indexed pensions for inflation like your expenses."
+			title={t("pensionsStep.title")}
+			description={t("pensionsStep.description")}
 			onNext={onNext}
 			onBack={onBack}
-			nextDisabled={!!error || !!deductionError}
+			nextDisabled={!!issue || !!deductionIssue}
 			isSaving={isSaving}
 		>
 			<div className="space-y-3">
@@ -77,10 +87,12 @@ export function PensionsStep({
 						<div className="flex items-end gap-2">
 							<div className="flex-1 space-y-1.5">
 								{i === 0 && (
-									<Label className="text-xs text-muted-foreground">Source</Label>
+									<Label className="text-xs text-muted-foreground">
+										{t("pensionsStep.source")}
+									</Label>
 								)}
 								<Input
-									placeholder="e.g. State pension"
+									placeholder={t("pensionsStep.sourcePlaceholder")}
 									value={source.label}
 									onChange={(e) => setSource(i, { label: e.target.value })}
 								/>
@@ -88,7 +100,7 @@ export function PensionsStep({
 							<div className="w-36 space-y-1.5">
 								{i === 0 && (
 									<Label className="text-xs text-muted-foreground">
-										{currencySymbols[currency].trim()} / month (today)
+										{t("pensionsStep.amountLabel", { symbol })}
 									</Label>
 								)}
 								<Input
@@ -106,7 +118,7 @@ export function PensionsStep({
 								size="icon"
 								onClick={() => removeSource(i)}
 								disabled={sources.length === 1}
-								aria-label="Remove source"
+								aria-label={t("pensionsStep.removeSource")}
 							>
 								<Trash2 className="h-4 w-4" />
 							</Button>
@@ -115,11 +127,13 @@ export function PensionsStep({
 							<label className="flex items-center gap-2">
 								<Switch
 									checked={source.gross !== false}
-									onCheckedChange={(checked) => setSource(i, { gross: checked })}
+									onCheckedChange={(checked) =>
+										setSource(i, { gross: checked })
+									}
 								/>
 								{source.gross !== false
-									? "Gross (before tax & health insurance)"
-									: "Net (already after deductions)"}
+									? t("pensionsStep.gross")
+									: t("pensionsStep.net")}
 							</label>
 							<label className="flex items-center gap-2">
 								<Switch
@@ -129,24 +143,26 @@ export function PensionsStep({
 									}
 								/>
 								{source.indexed !== false
-									? "Rises with inflation"
-									: "Fixed amount (e.g. many company pensions)"}
+									? t("pensionsStep.indexed")
+									: t("pensionsStep.fixed")}
 							</label>
 						</div>
 					</div>
 				))}
 			</div>
 
-			{error && <p className="text-xs text-destructive">{error}.</p>}
+			{issue && (
+				<p className="text-xs text-destructive">{issueMessage(issue)}.</p>
+			)}
 
 			<Button variant="outline" size="sm" onClick={addSource}>
 				<Plus className="mr-1 h-4 w-4" />
-				Add income source
+				{t("pensionsStep.addSource")}
 			</Button>
 
 			<div className="space-y-1.5">
 				<Label htmlFor="pensionDeduction">
-					Tax &amp; health insurance on gross pensions
+					{t("pensionsStep.deductionLabel")}
 				</Label>
 				<div className="relative w-36">
 					<Input
@@ -156,7 +172,7 @@ export function PensionsStep({
 						max={60}
 						step={1}
 						className="pr-8"
-						aria-invalid={!!deductionError}
+						aria-invalid={!!deductionIssue}
 						value={deductionDraft ?? +(deductionRate * 100).toFixed(2)}
 						onChange={(e) => {
 							setDeductionDraft(e.target.value);
@@ -174,28 +190,37 @@ export function PensionsStep({
 				</div>
 				<p
 					className={
-						deductionError
+						deductionIssue
 							? "text-xs text-destructive"
 							: "text-xs text-muted-foreground"
 					}
 				>
-					{deductionError ??
-						`A flat rate for health & care insurance (≈ 11–12% in the KVdR) plus income tax. The default ${Math.round(DEFAULT_PENSION_DEDUCTION_RATE * 100)}% turns ${formatCurrency(EXAMPLE_GROSS_PENSION, currency, { fractionDigits: 0 })} gross into about ${formatCurrency(EXAMPLE_GROSS_PENSION * (1 - DEFAULT_PENSION_DEDUCTION_RATE), currency, { fractionDigits: 0 })} net.`}
+					{deductionIssue
+						? issueMessage(deductionIssue)
+						: t("pensionsStep.deductionHint", {
+								rate: formatRate(DEFAULT_PENSION_DEDUCTION_RATE),
+								gross: formatCurrency(EXAMPLE_GROSS_PENSION, currency, {
+									fractionDigits: 0,
+								}),
+								net: formatCurrency(
+									EXAMPLE_GROSS_PENSION * (1 - DEFAULT_PENSION_DEDUCTION_RATE),
+									currency,
+									{ fractionDigits: 0 },
+								),
+							})}
 				</p>
 			</div>
 
 			<div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-4">
 				<span className="text-sm text-muted-foreground">
-					Total pension income, net (today&apos;s money)
+					{t("pensionsStep.totalNet")}
 					{netTotal !== total && (
 						<span className="block text-xs">
-							{formatCurrency(total, currency)}/mo as entered
+							{t("pensionsStep.asEntered", { amount: perMonth(total) })}
 						</span>
 					)}
 				</span>
-				<span className="text-lg font-semibold">
-					{formatCurrency(netTotal, currency)}/mo
-				</span>
+				<span className="text-lg font-semibold">{perMonth(netTotal)}</span>
 			</div>
 		</RetirementStepShell>
 	);

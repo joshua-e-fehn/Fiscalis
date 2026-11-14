@@ -1,6 +1,8 @@
 "use client";
 
 import { Home, Info } from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import {
@@ -18,9 +20,10 @@ import {
 	useRetirementMortgageCandidates,
 	useRetirementAmountsCurrency,
 } from "@/hooks/convex/retirement";
-import { validateRetirementInputs } from "@/lib/types/retirement";
+import { retirementInputIssues } from "@/lib/types/retirement";
 import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
+import { useRetirementIssueMessage } from "../shared/useRetirementIssueMessage";
 import type { RetirementStepProps } from "./types";
 
 /** Select value for "no residence mortgage linked". */
@@ -28,6 +31,15 @@ const NO_LOAN = "none";
 /** Select value prefixes: a tracked loan or a bank (Plaid) mortgage account. */
 const LOAN_PREFIX = "loan:";
 const ACCOUNT_PREFIX = "account:";
+
+/** The "(optional)" suffix of a label (the <muted> tag of its messages). */
+function muted(chunks: ReactNode) {
+	return <span className="font-normal text-muted-foreground">{chunks}</span>;
+}
+
+function strong(chunks: ReactNode) {
+	return <span className="font-medium text-foreground">{chunks}</span>;
+}
 
 export function HousingStep({
 	data,
@@ -37,12 +49,14 @@ export function HousingStep({
 	isSaving,
 	currency: inputsCurrency,
 }: RetirementStepProps) {
+	const t = useTranslations("retirement.housingStep");
+	const issueMessage = useRetirementIssueMessage();
 	const currency = useRetirementAmountsCurrency(inputsCurrency);
-	const errors = validateRetirementInputs(data);
-	const equityError = errors.fundableRealEstateEquity;
-	const mortgageError =
-		errors.primaryResidenceMortgageRate ??
-		errors.primaryResidenceMortgagePayment;
+	const issues = retirementInputIssues(data);
+	const equityIssue = issues.fundableRealEstateEquity;
+	const mortgageIssue =
+		issues.primaryResidenceMortgageRate ??
+		issues.primaryResidenceMortgagePayment;
 	const loans = useRetirementMortgageCandidates();
 	const accounts = useRetirementMortgageAccounts(inputsCurrency);
 	const linkedAccount = data.primaryResidenceAccountId;
@@ -58,19 +72,17 @@ export function HousingStep({
 	return (
 		<RetirementStepShell
 			icon={Home}
-			title="Your home"
-			description="Property is handled differently from investments — let's get it right."
+			title={t("title")}
+			description={t("description")}
 			onNext={onNext}
 			onBack={onBack}
-			nextDisabled={!!equityError || !!mortgageError}
+			nextDisabled={!!equityIssue || !!mortgageIssue}
 			isSaving={isSaving}
 		>
 			<div className="flex items-center justify-between rounded-lg border border-border p-4">
 				<div className="space-y-0.5 pr-4">
-					<Label htmlFor="ownsHome">I own the home I live in</Label>
-					<p className="text-xs text-muted-foreground">
-						An owner-occupied home isn&apos;t counted as retirement funding.
-					</p>
+					<Label htmlFor="ownsHome">{t("ownsHome")}</Label>
+					<p className="text-xs text-muted-foreground">{t("ownsHomeHint")}</p>
 				</div>
 				<Switch
 					id="ownsHome"
@@ -85,10 +97,7 @@ export function HousingStep({
 				<div className="flex items-start gap-2 rounded-lg bg-primary/5 p-4 text-sm">
 					<Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
 					<p className="text-muted-foreground">
-						We <span className="font-medium text-foreground">don&apos;t</span>{" "}
-						count your home toward the portfolio that funds retirement — you
-						can&apos;t sell it and still live in it. Its real benefit is already
-						reflected in your lower monthly expenses (no rent).
+						{t.rich("homeNotCounted", { b: strong })}
 					</p>
 				</div>
 			)}
@@ -96,8 +105,7 @@ export function HousingStep({
 			{data.ownsPrimaryResidence && (
 				<div className="space-y-2">
 					<Label htmlFor="residenceLoan">
-						Mortgage on this home{" "}
-						<span className="font-normal text-muted-foreground">(optional)</span>
+						{t.rich("mortgageLabel", { muted })}
 					</Label>
 					<Select
 						value={selected}
@@ -123,54 +131,56 @@ export function HousingStep({
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value={NO_LOAN}>No mortgage / not tracked</SelectItem>
+							<SelectItem value={NO_LOAN}>{t("noMortgage")}</SelectItem>
 							{!!loans?.length && (
 								<SelectGroup>
-									<SelectLabel>Tracked loans</SelectLabel>
+									<SelectLabel>{t("trackedLoans")}</SelectLabel>
 									{loans.map((loan) => (
 										<SelectItem
 											key={loan._id}
 											value={`${LOAN_PREFIX}${loan._id}`}
 										>
-											{loan.name} —{" "}
-											{formatCurrency(loan.currentBalance, loan.currency)}
+											{t("mortgageOption", {
+												name: loan.name,
+												balance: formatCurrency(
+													loan.currentBalance,
+													loan.currency,
+												),
+											})}
 										</SelectItem>
 									))}
 								</SelectGroup>
 							)}
 							{!!accounts?.length && (
 								<SelectGroup>
-									<SelectLabel>Bank mortgage accounts</SelectLabel>
+									<SelectLabel>{t("bankMortgages")}</SelectLabel>
 									{accounts.map((account) => (
 										<SelectItem
 											key={account._id}
 											value={`${ACCOUNT_PREFIX}${account._id}`}
 										>
-											{account.name} —{" "}
-											{formatCurrency(account.balance, currency)}
+											{t("mortgageOption", {
+												name: account.name,
+												balance: formatCurrency(account.balance, currency),
+											})}
 										</SelectItem>
 									))}
 								</SelectGroup>
 							)}
 						</SelectContent>
 					</Select>
-					<p className="text-xs text-muted-foreground">
-						Its balance is not subtracted from your retirement funding: you pay
-						the repayments from your income until retirement, like rent. Any
-						balance still owed when you retire is added to your target.
-					</p>
+					<p className="text-xs text-muted-foreground">{t("mortgageHint")}</p>
 				</div>
 			)}
 
 			{data.ownsPrimaryResidence && linkedAccount && (
 				<div className="space-y-3 rounded-lg border border-border p-4">
 					<p className="text-sm text-muted-foreground">
-						Your bank reports only the balance. Add the interest rate and
-						monthly repayment to project what is still owed when you retire.
+						{t("bankBalanceOnly")}
 					</p>
 					<div className="grid gap-3 sm:grid-cols-2">
 						<div className="space-y-2">
-							<Label htmlFor="mortgageRate">Interest rate (% a year)</Label>
+							<Label htmlFor="mortgageRate">{t("interestRate")}</Label>
 							<Input
 								id="mortgageRate"
 								type="number"
@@ -194,7 +204,9 @@ export function HousingStep({
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="mortgagePayment">
-								Monthly repayment ({currencySymbols[currency].trim()})
+								{t("monthlyRepayment", {
+									symbol: currencySymbols[currency].trim(),
+								})}
 							</Label>
 							<Input
 								id="mortgagePayment"
@@ -213,13 +225,14 @@ export function HousingStep({
 							/>
 						</div>
 					</div>
-					{mortgageError ? (
-						<p className="text-xs text-destructive">{mortgageError}.</p>
+					{mortgageIssue ? (
+						<p className="text-xs text-destructive">
+							{issueMessage(mortgageIssue)}.
+						</p>
 					) : (
 						!hasTerms && (
 							<p className="text-xs text-muted-foreground">
-								Without both, the full current balance counts as still owed at
-								retirement.
+								{t("withoutTerms")}
 							</p>
 						)
 					)}
@@ -228,8 +241,7 @@ export function HousingStep({
 
 			<div className="space-y-2">
 				<Label htmlFor="fundableEquity">
-					Sellable property equity to fund retirement{" "}
-					<span className="font-normal text-muted-foreground">(optional)</span>
+					{t.rich("equityLabel", { muted })}
 				</Label>
 				<div className="relative">
 					<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -249,14 +261,12 @@ export function HousingStep({
 						}
 					/>
 				</div>
-				{equityError ? (
-					<p className="text-xs text-destructive">{equityError}.</p>
-				) : (
-					<p className="text-xs text-muted-foreground">
-						For a rental or second property you plan to sell: its value minus
-						any loan on it that isn&apos;t tracked in Fiscalis (tracked loans
-						are already subtracted from your net worth). Leave at 0 if none.
+				{equityIssue ? (
+					<p className="text-xs text-destructive">
+						{issueMessage(equityIssue)}.
 					</p>
+				) : (
+					<p className="text-xs text-muted-foreground">{t("equityHint")}</p>
 				)}
 			</div>
 		</RetirementStepShell>

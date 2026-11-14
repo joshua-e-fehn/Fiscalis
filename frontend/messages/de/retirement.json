@@ -118,5 +118,147 @@
     "new": "Mach aus deinem Ruhestandsziel in wenigen Minuten einen monatlichen Sparplan.",
     "viewPlan": "Plan ansehen",
     "getStarted": "Loslegen"
+  },
+  "introStep": {
+    "title": "Plane deinen Ruhestand",
+    "body": "Ein paar kurze Fragen, und aus deinem Ruhestandsziel wird ein konkreter, nachverfolgbarer Sparplan – auf Basis deines echten Portfolios.",
+    "points": {
+      "age": {
+        "title": "Wähle dein Rentenalter",
+        "body": "Sag uns, wann du aufhören möchtest zu arbeiten und welchen Lebensstil du dir wünschst."
+      },
+      "pensions": {
+        "title": "Erfasse deine Renteneinkünfte",
+        "body": "Gesetzliche, betriebliche oder private Renten decken einen Teil deiner monatlichen Kosten."
+      },
+      "number": {
+        "title": "Sieh deine Zielsumme",
+        "body": "Mit der 4-%-Regel berechnen wir, welches Portfolio du brauchst – und wie viel du dafür jeden Monat sparen musst."
+      }
+    },
+    "reviewPlan": "Meinen Plan prüfen",
+    "getStarted": "Los geht's"
+  },
+  "personalStep": {
+    "title": "Dein Zeitplan",
+    "description": "Wann bist du geboren, und wann möchtest du in den Ruhestand gehen?",
+    "birthDate": "Geburtsdatum",
+    "retirementAge": "Rentenalter",
+    "currentAge": "{age, plural, one {Du bist <b>#</b> Jahr alt.} other {Du bist <b>#</b> Jahre alt.}}",
+    "yearsLeft": "Du hast <b>{years}</b>, um dein Ruhestandsportfolio aufzubauen.",
+    "enterBirthDate": "Gib dein Geburtsdatum ein, damit wir dein Alter berechnen können."
+  },
+  "expensesStep": {
+    "title": "Gewünschter Lebensstil",
+    "description": "Das monatliche Mindesteinkommen, das du dir im Ruhestand wünschst, in heutigem Geld.",
+    "label": "Monatliche Lebenshaltungskosten (heute)",
+    "hint": "Wenn dir dein Zuhause gehört, lass die Miete weg – das Eigentum senkt diesen Betrag bereits.",
+    "future": "Nach {years} mit {rate} Inflation sind das zum Ruhestand etwa <b>{amount}</b> – derselbe Lebensstil kostet dann einfach mehr."
+  },
+  "housingStep": {
+    "title": "Dein Zuhause",
+    "description": "Immobilien werden anders behandelt als Anlagen – lass uns das richtig erfassen.",
+    "ownsHome": "Ich wohne in meiner eigenen Immobilie",
+    "ownsHomeHint": "Eine selbst genutzte Immobilie zählt nicht zum Kapital für deinen Ruhestand.",
+    "homeNotCounted": "Wir rechnen dein Zuhause <b>nicht</b> zum Portfolio, das deinen Ruhestand finanziert – du kannst es nicht verkaufen und trotzdem darin wohnen. Sein echter Vorteil steckt bereits in deinen niedrigeren monatlichen Ausgaben (keine Miete).",
+    "mortgageLabel": "Hypothek auf diese Immobilie <muted>(optional)</muted>",
+    "noMortgage": "Keine Hypothek / nicht erfasst",
+    "trackedLoans": "Erfasste Kredite",
+    "bankMortgages": "Hypothekenkonten bei Banken",
+    "mortgageOption": "{name} – {balance}",
+    "mortgageHint": "Ihr Saldo wird nicht von deinem Ruhestandskapital abgezogen: Du zahlst die Raten bis zum Ruhestand aus deinem Einkommen, wie eine Miete. Eine Restschuld beim Renteneintritt wird zu deinem Ziel addiert.",
+    "bankBalanceOnly": "Deine Bank meldet nur den Saldo. Gib Zinssatz und Monatsrate an, damit wir die Restschuld beim Renteneintritt berechnen können.",
+    "interestRate": "Zinssatz (% pro Jahr)",
+    "monthlyRepayment": "Monatsrate ({symbol})",
+    "withoutTerms": "Ohne beide Angaben gilt der gesamte aktuelle Saldo beim Renteneintritt als Restschuld.",
+    "equityLabel": "Verkaufbares Immobilienkapital für den Ruhestand <muted>(optional)</muted>",
+    "equityHint": "Für eine vermietete oder zweite Immobilie, die du verkaufen willst: ihr Wert abzüglich eines Kredits darauf, der nicht in Fiscalis erfasst ist (erfasste Kredite sind bereits von deinem Nettovermögen abgezogen). Lass 0 stehen, wenn es keine gibt."
+  },
+  "pensionsStep": {
+    "title": "Renteneinkommen",
+    "description": "Monatliches Einkommen im Ruhestand, bevor du dein Portfolio anrührst. Gib es in heutigem Geld an, z. B. den Bruttobetrag aus deiner Renteninformation. Von Bruttobeträgen ziehen wir Steuern und Krankenversicherung ab, und dynamisierte Renten passen wir wie deine Ausgaben an die Inflation an.",
+    "source": "Quelle",
+    "sourcePlaceholder": "z. B. gesetzliche Rente",
+    "amountLabel": "{symbol} / Monat (heute)",
+    "removeSource": "Quelle entfernen",
+    "gross": "Brutto (vor Steuern & Krankenversicherung)",
+    "net": "Netto (bereits nach Abzügen)",
+    "indexed": "Steigt mit der Inflation",
+    "fixed": "Fester Betrag (z. B. viele Betriebsrenten)",
+    "addSource": "Einkommensquelle hinzufügen",
+    "deductionLabel": "Steuern & Krankenversicherung auf Bruttorenten",
+    "deductionHint": "Ein Pauschalsatz für Kranken- und Pflegeversicherung (≈ 11–12 % in der KVdR) plus Einkommensteuer. Der Standardwert von {rate} macht aus {gross} brutto etwa {net} netto.",
+    "totalNet": "Renteneinkommen gesamt, netto (heutiges Geld)",
+    "asEntered": "{amount} laut Eingabe"
+  },
+  "portfolioStep": {
+    "title": "Dein Portfolio heute",
+    "description": "Das ist der Ausgangspunkt, den wir bis zu deinem Ziel wachsen lassen. Wähle, wie jeder Teil wachsen soll, oder lass Geld weg, das du nicht anlegen willst, etwa einen Notgroschen.",
+    "noAssets": "Noch keine Vermögenswerte erfasst – dein Plan startet bei {zero}.",
+    "growthLabel": "{category}: Wachstum",
+    "categories": {
+      "equities": "Aktien",
+      "real-estate": "Immobilienfonds",
+      "crypto": "Krypto",
+      "bonds": "Anleihen",
+      "commodities": "Rohstoffe & Metalle",
+      "cash": "Liquidität & Ersparnisse",
+      "collectibles": "Sammlerstücke",
+      "property": "Verkaufbare Immobilien"
+    },
+    "treatments": {
+      "growth": "Wächst mit der Szenariorendite",
+      "moderate": "Auf halbem Weg zwischen Rendite und Inflation",
+      "inflation": "Hält mit der Inflation Schritt",
+      "exclude": "Nicht berücksichtigt (z. B. Notgroschen)"
+    },
+    "fundable": "Anrechenbares Vermögen",
+    "expectedGrowth": "Erwartetes Wachstum {expected} / Jahr (konservativ {conservative})",
+    "netDebt": "Deine Verbindlichkeiten übersteigen deine Vermögenswerte um <b>{debt}</b>. Dein Plan startet bei {zero} – Schulden wachsen nicht mit der Anlagerendite –, daher kommt ihre Tilgung zu den berechneten Sparbeträgen hinzu.",
+    "mortgageWithPayment": "Die Hypothek von <b>{balance}</b> auf dein Zuhause wird hier nicht abgezogen: Ihre Raten von {payment} zahlst du bis zum Ruhestand aus deinem Einkommen.",
+    "mortgage": "Die Hypothek von <b>{balance}</b> auf dein Zuhause wird hier nicht abgezogen: Ihre Raten zahlst du bis zum Ruhestand aus deinem Einkommen.",
+    "mortgageNotProjected": "Ohne Zinssatz und Monatsrate gilt der gesamte Saldo beim Renteneintritt als Restschuld.",
+    "footnote": "Die Werte aktualisieren sich automatisch, wenn deine Konten synchronisiert werden, so bleibt dein Fortschritt aktuell. Jeder Teil wächst mit seiner eigenen Rate; neue Ersparnisse wachsen mit der Szenariorendite. Ein selbst bewohntes Zuhause ist nicht enthalten."
+  },
+  "assumptionsStep": {
+    "title": "Annahmen",
+    "description": "Sinnvolle Standardwerte sind bereits eingetragen – ändere sie nur, wenn du weißt, was du tust.",
+    "seePlan": "Meinen Plan ansehen",
+    "fields": {
+      "optimisticReturn": {
+        "label": "Erwartete jährliche Rendite",
+        "hint": "Langfristiges Marktwachstum. Der Standardwert von {rate} verdoppelt ein Portfolio alle 10 Jahre."
+      },
+      "conservativeReturn": {
+        "label": "Konservative jährliche Rendite",
+        "hint": "Eine vorsichtige Wachstumsannahme für die sicherere Schätzung."
+      },
+      "inflationRate": {
+        "label": "Inflationsrate",
+        "hint": "Wie schnell die Preise steigen; erhöht dein künftiges Ausgabenziel."
+      },
+      "withdrawalRate": {
+        "label": "Sichere Entnahmerate",
+        "hint": "Die 4-%-Regel. Niedriger = sicherer, braucht aber ein größeres Portfolio."
+      }
+    },
+    "withdrawalTax": "Steuer auf Entnahmen",
+    "withdrawalTaxHint": "Effektive Steuer auf deine Entnahmen (z. B. Abgeltungsteuer auf den Gewinnanteil). Bei 0 % ist das Ziel ein Betrag vor Steuern.",
+    "indexContributions": "Meine Sparrate mit der Inflation erhöhen",
+    "indexContributionsHint": "Aus: ein fester Betrag in heutigem Geld, der jedes Jahr weniger wert ist. An: ein niedrigerer Anfangsbetrag, der mit der Inflation wächst.",
+    "reset": "Auf empfohlene Standardwerte zurücksetzen"
+  },
+  "resultsStep": {
+    "save": "Meinen Plan speichern",
+    "fixToSave": "{reason}. Korrigiere das, um deinen Plan zu speichern."
+  },
+  "validation": {
+    "ageRange": "{field, select, currentAge {Das aktuelle Alter muss} retirementAge {Das Rentenalter muss} other {Das Alter muss}} eine ganze Zahl zwischen {min} und {max} sein",
+    "retirementNotAfterCurrent": "Das Rentenalter muss über deinem aktuellen Alter liegen",
+    "rateRange": "{field, select, optimisticReturn {Die erwartete Rendite muss} conservativeReturn {Die konservative Rendite muss} inflationRate {Die Inflationsrate muss} primaryResidenceMortgageRate {Der Hypothekenzins muss} pensionDeductionRate {Der Satz für Steuern & Krankenversicherung muss} withdrawalTaxRate {Die Steuer auf Entnahmen muss} other {Der Satz muss}} zwischen 0 % und {max} % liegen",
+    "withdrawalRateRange": "Die Entnahmerate muss über 0 % und höchstens bei {max} % liegen",
+    "conservativeAboveExpected": "Die konservative Rendite darf nicht höher als die erwartete Rendite sein",
+    "amountNegative": "{field, select, monthlyExpensesToday {Die monatlichen Ausgaben dürfen nicht negativ sein} fundableRealEstateEquity {Der Immobilienwert darf nicht negativ sein} primaryResidenceMortgagePayment {Die Monatsrate der Hypothek darf nicht negativ sein} other {Rentenbeträge dürfen nicht negativ sein}}",
+    "expensesNotPositive": "Die monatlichen Ausgaben müssen größer als null sein"
   }
 }

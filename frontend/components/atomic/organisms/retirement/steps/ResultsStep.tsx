@@ -1,13 +1,15 @@
 "use client";
 
 import { ArrowLeft, Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/shadcn/button";
 import { useRetirementPreview } from "@/hooks/convex/retirement";
 import {
-	firstRetirementInputError,
+	firstRetirementInputIssue,
 	type RetirementInputs,
 } from "@/lib/types/retirement";
 import { RetirementResultsView } from "../RetirementResultsView";
+import { useRetirementIssueMessage } from "../shared/useRetirementIssueMessage";
 
 interface ResultsStepProps {
 	data: RetirementInputs;
@@ -30,10 +32,14 @@ export function ResultsStep({
 	blockingError,
 	currency,
 }: ResultsStepProps) {
+	const t = useTranslations("retirement");
+	const tActions = useTranslations("common.actions");
+	const issueMessage = useRetirementIssueMessage();
 	const results = useRetirementPreview(data, currency);
 	// Only a complete, valid plan (incl. retirement after today's age and a valid
 	// date of birth) can be saved.
-	const invalidReason = blockingError ?? firstRetirementInputError(data);
+	const issue = firstRetirementInputIssue(data);
+	const invalidReason = blockingError ?? (issue && issueMessage(issue));
 
 	return (
 		<div className="w-full space-y-5">
@@ -46,24 +52,24 @@ export function ResultsStep({
 			<div className="flex items-center justify-between">
 				<Button variant="ghost" onClick={onBack} disabled={isSaving}>
 					<ArrowLeft className="mr-1 h-4 w-4" />
-					Back
+					{tActions("back")}
 				</Button>
 				<Button onClick={onSave} disabled={isSaving || !!invalidReason}>
 					{saved ? (
 						<>
 							<Check className="mr-1 h-4 w-4" />
-							Saved
+							{tActions("saved")}
 						</>
 					) : isSaving ? (
-						"Saving..."
+						t("stepShell.saving")
 					) : (
-						"Save my plan"
+						t("resultsStep.save")
 					)}
 				</Button>
 			</div>
 			{invalidReason && (
 				<p className="text-right text-sm text-muted-foreground">
-					{invalidReason}. Fix it to save your plan.
+					{t("resultsStep.fixToSave", { reason: invalidReason })}
 				</p>
 			)}
 		</div>

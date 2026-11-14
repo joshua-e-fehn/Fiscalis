@@ -1,6 +1,8 @@
 "use client";
 
 import { Briefcase, Info } from "lucide-react";
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import {
 	Select,
 	SelectContent,
@@ -23,6 +25,30 @@ import type { RetirementStepProps } from "./types";
 
 const TREATMENTS = Object.keys(FUNDING_TREATMENT_LABELS) as FundingTreatment[];
 
+/**
+ * The ids of FUNDING_CATEGORIES (services/finance/retirementService.ts), each
+ * with a name under retirement.portfolioStep.categories.
+ */
+const CATEGORY_KEYS = [
+	"equities",
+	"real-estate",
+	"crypto",
+	"bonds",
+	"commodities",
+	"cash",
+	"collectibles",
+	"property",
+] as const;
+type CategoryKey = (typeof CATEGORY_KEYS)[number];
+
+function isCategoryKey(id: string): id is CategoryKey {
+	return (CATEGORY_KEYS as readonly string[]).includes(id);
+}
+
+function strong(chunks: ReactNode) {
+	return <span className="font-medium text-foreground">{chunks}</span>;
+}
+
 export function PortfolioStep({
 	data,
 	update,
@@ -31,11 +57,18 @@ export function PortfolioStep({
 	isSaving,
 	currency: inputsCurrency,
 }: RetirementStepProps) {
+	const t = useTranslations("retirement.portfolioStep");
+	const tRetirement = useTranslations("retirement");
+	const tFinance = useTranslations("common.finance");
 	const currency = useRetirementAmountsCurrency(inputsCurrency);
 	// The funding base exactly as the plan uses it (dashboard assets per
 	// category, liabilities, the residence mortgage taken out).
 	const results = useRetirementPreview(data, inputsCurrency);
 	const loading = !results;
+	const zero = formatCurrency(0, currency, { compact: true });
+	// The service's English label is the fallback for an unknown category.
+	const categoryName = (id: string, label: string) =>
+		isCategoryKey(id) ? t(`categories.${id}`) : label;
 
 	const setTreatment = (category: string, treatment: FundingTreatment) =>
 		update({
@@ -45,8 +78,8 @@ export function PortfolioStep({
 	return (
 		<RetirementStepShell
 			icon={Briefcase}
-			title="Your portfolio today"
-			description="This is the starting point we grow toward your target. Choose how each part is expected to grow, or leave out money you won't invest, like an emergency fund."
+			title={t("title")}
+			description={t("description")}
 			onNext={onNext}
 			onBack={onBack}
 			isSaving={isSaving}
@@ -57,52 +90,55 @@ export function PortfolioStep({
 				<div className="space-y-3">
 					{results.fundingLines.length === 0 && (
 						<p className="text-sm text-muted-foreground">
-							No assets tracked yet — your plan starts from {formatCurrency(0, currency, { compact: true })}.
+							{t("noAssets", { zero })}
 						</p>
 					)}
-					{results.fundingLines.map((line) => (
-						<div
-							key={line.category}
-							className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
-						>
-							<div>
-								<p className="text-sm font-medium">{line.label}</p>
-								<p
-									className={
-										line.treatment === "exclude"
-											? "text-xs text-muted-foreground line-through"
-											: "text-xs text-muted-foreground"
+					{results.fundingLines.map((line) => {
+						const name = categoryName(line.category, line.label);
+						return (
+							<div
+								key={line.category}
+								className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+							>
+								<div>
+									<p className="text-sm font-medium">{name}</p>
+									<p
+										className={
+											line.treatment === "exclude"
+												? "text-xs text-muted-foreground line-through"
+												: "text-xs text-muted-foreground"
+										}
+									>
+										{formatCurrency(line.value, currency)}
+									</p>
+								</div>
+								<Select
+									value={line.treatment}
+									onValueChange={(value: FundingTreatment) =>
+										setTreatment(line.category, value)
 									}
 								>
-									{formatCurrency(line.value, currency)}
-								</p>
+									<SelectTrigger
+										className="w-64"
+										aria-label={t("growthLabel", { category: name })}
+									>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										{TREATMENTS.map((treatment) => (
+											<SelectItem key={treatment} value={treatment}>
+												{t(`treatments.${treatment}`)}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
 							</div>
-							<Select
-								value={line.treatment}
-								onValueChange={(value: FundingTreatment) =>
-									setTreatment(line.category, value)
-								}
-							>
-								<SelectTrigger
-									className="w-64"
-									aria-label={`${line.label}: growth`}
-								>
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent>
-									{TREATMENTS.map((t) => (
-										<SelectItem key={t} value={t}>
-											{FUNDING_TREATMENT_LABELS[t]}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						</div>
-					))}
+						);
+					})}
 
 					{results.liabilitiesCounted > 0 && (
 						<div className="flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-							<span>Liabilities</span>
+							<span>{tFinance("liabilities")}</span>
 							<span className="font-medium">
 								−{formatCurrency(results.liabilitiesCounted, currency)}
 							</span>
@@ -111,10 +147,12 @@ export function PortfolioStep({
 
 					<div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-4">
 						<div>
-							<p className="font-medium">Fundable assets</p>
+							<p className="font-medium">{t("fundable")}</p>
 							<p className="text-xs text-muted-foreground">
-								Expected growth {formatRate(results.optimistic.baseReturn)} / yr
-								(conservative {formatRate(results.conservative.baseReturn)})
+								{t("expectedGrowth", {
+									expected: formatRate(results.optimistic.baseReturn),
+									conservative: formatRate(results.conservative.baseReturn),
+								})}
 							</p>
 						</div>
 						<span className="text-xl font-bold">
@@ -126,41 +164,48 @@ export function PortfolioStep({
 
 			{results?.hasNetDebt && (
 				<Note>
-					Your liabilities exceed your assets by{" "}
-					<span className="font-medium text-foreground">
-						{formatCurrency(-results.fundableNow, currency)}
-					</span>
-					. Your plan starts from{" "}
-					{formatCurrency(0, currency, { compact: true })} — debt isn&apos;t grown at the investment
-					return — so paying it down comes on top of the savings we calculate.
+					{t.rich("netDebt", {
+						b: strong,
+						debt: formatCurrency(-results.fundableNow, currency),
+						zero,
+					})}
 				</Note>
 			)}
 			{results?.residenceMortgage && (
 				<Note>
-					The{" "}
-					<span className="font-medium text-foreground">
-						{formatCurrency(results.residenceMortgage.balance, currency)}
-					</span>{" "}
-					mortgage on your home is not subtracted here: its
 					{results.residenceMortgage.monthlyPayment > 0
-						? ` ${formatCurrency(results.residenceMortgage.monthlyPayment, currency)}/mo`
-						: ""}{" "}
-					repayments come from your income until retirement.
-					{!results.residenceMortgage.balanceProjected &&
-						" Without its rate and repayment, the full balance counts as still owed when you retire."}
+						? t.rich("mortgageWithPayment", {
+								b: strong,
+								balance: formatCurrency(
+									results.residenceMortgage.balance,
+									currency,
+								),
+								payment: tRetirement("perMonth", {
+									amount: formatCurrency(
+										results.residenceMortgage.monthlyPayment,
+										currency,
+									),
+								}),
+							})
+						: t.rich("mortgage", {
+								b: strong,
+								balance: formatCurrency(
+									results.residenceMortgage.balance,
+									currency,
+								),
+							})}
+					{!results.residenceMortgage.balanceProjected && (
+						<> {t("mortgageNotProjected")}</>
+					)}
 				</Note>
 			)}
 
-			<p className="text-xs text-muted-foreground">
-				Asset values update automatically as your accounts sync, so your
-				progress stays live. Each part grows at its own rate; new savings grow
-				at the scenario return. A home you live in is not included.
-			</p>
+			<p className="text-xs text-muted-foreground">{t("footnote")}</p>
 		</RetirementStepShell>
 	);
 }
 
-function Note({ children }: { children: React.ReactNode }) {
+function Note({ children }: { children: ReactNode }) {
 	return (
 		<div className="flex items-start gap-2 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
 			<Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />

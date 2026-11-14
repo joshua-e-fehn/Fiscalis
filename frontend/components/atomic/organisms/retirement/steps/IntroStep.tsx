@@ -7,6 +7,7 @@ import {
 	PiggyBank,
 	Wallet,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 
@@ -16,24 +17,13 @@ interface IntroStepProps {
 }
 
 const POINTS = [
-	{
-		icon: CalendarClock,
-		title: "Pick your retirement age",
-		body: "Tell us when you'd like to stop working and the lifestyle you want.",
-	},
-	{
-		icon: Wallet,
-		title: "Add your pension income",
-		body: "State, company or private pensions cover part of your monthly costs.",
-	},
-	{
-		icon: LineChart,
-		title: "See your number",
-		body: "We use the 4% rule to compute the portfolio you need — and how much to save each month to get there.",
-	},
-];
+	{ key: "age", icon: CalendarClock },
+	{ key: "pensions", icon: Wallet },
+	{ key: "number", icon: LineChart },
+] as const;
 
 export function IntroStep({ onNext, hasExistingPlan }: IntroStepProps) {
+	const t = useTranslations("retirement.introStep");
 	return (
 		<div className="w-full">
 			<Card>
@@ -42,30 +32,30 @@ export function IntroStep({ onNext, hasExistingPlan }: IntroStepProps) {
 						<PiggyBank className="h-8 w-8" />
 					</div>
 					<div className="space-y-2">
-						<h1 className="text-3xl font-bold tracking-tight">
-							Plan your retirement
-						</h1>
+						<h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
 						<p className="mx-auto max-w-md text-muted-foreground">
-							A few quick questions to turn your retirement goal into a
-							concrete, trackable savings plan — grounded in your real
-							portfolio.
+							{t("body")}
 						</p>
 					</div>
 
 					<div className="grid gap-4 text-left sm:grid-cols-3">
 						{POINTS.map((p) => (
-							<div key={p.title} className="space-y-2">
+							<div key={p.key} className="space-y-2">
 								<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-foreground">
 									<p.icon className="h-4 w-4" />
 								</div>
-								<p className="text-sm font-medium">{p.title}</p>
-								<p className="text-xs text-muted-foreground">{p.body}</p>
+								<p className="text-sm font-medium">
+									{t(`points.${p.key}.title`)}
+								</p>
+								<p className="text-xs text-muted-foreground">
+									{t(`points.${p.key}.body`)}
+								</p>
 							</div>
 						))}
 					</div>
 
 					<Button size="lg" onClick={onNext} className="w-full sm:w-auto">
-						{hasExistingPlan ? "Review my plan" : "Get started"}
+						{hasExistingPlan ? t("reviewPlan") : t("getStarted")}
 						<ArrowRight className="ml-1 h-4 w-4" />
 					</Button>
 				</CardContent>

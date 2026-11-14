@@ -118,5 +118,147 @@
     "new": "Turn your retirement goal into a monthly savings plan in a couple of minutes.",
     "viewPlan": "View plan",
     "getStarted": "Get started"
+  },
+  "introStep": {
+    "title": "Plan your retirement",
+    "body": "A few quick questions to turn your retirement goal into a concrete, trackable savings plan — grounded in your real portfolio.",
+    "points": {
+      "age": {
+        "title": "Pick your retirement age",
+        "body": "Tell us when you'd like to stop working and the lifestyle you want."
+      },
+      "pensions": {
+        "title": "Add your pension income",
+        "body": "State, company or private pensions cover part of your monthly costs."
+      },
+      "number": {
+        "title": "See your number",
+        "body": "We use the 4% rule to compute the portfolio you need — and how much to save each month to get there."
+      }
+    },
+    "reviewPlan": "Review my plan",
+    "getStarted": "Get started"
+  },
+  "personalStep": {
+    "title": "Your timeline",
+    "description": "When were you born, and when do you want to retire?",
+    "birthDate": "Date of birth",
+    "retirementAge": "Retirement age",
+    "currentAge": "{age, plural, one {You are <b>#</b> year old.} other {You are <b>#</b> years old.}}",
+    "yearsLeft": "You have <b>{years}</b> to build your retirement portfolio.",
+    "enterBirthDate": "Enter your date of birth so we can work out your age."
+  },
+  "expensesStep": {
+    "title": "Desired lifestyle",
+    "description": "The minimum monthly income you'd want in retirement, in today's money.",
+    "label": "Monthly living expenses (today)",
+    "hint": "If you own your home, exclude rent — owning it already lowers this number.",
+    "future": "After {years} of {rate} inflation, that's about <b>{amount}</b> when you retire — the same lifestyle just costs more."
+  },
+  "housingStep": {
+    "title": "Your home",
+    "description": "Property is handled differently from investments — let's get it right.",
+    "ownsHome": "I own the home I live in",
+    "ownsHomeHint": "An owner-occupied home isn't counted as retirement funding.",
+    "homeNotCounted": "We <b>don't</b> count your home toward the portfolio that funds retirement — you can't sell it and still live in it. Its real benefit is already reflected in your lower monthly expenses (no rent).",
+    "mortgageLabel": "Mortgage on this home <muted>(optional)</muted>",
+    "noMortgage": "No mortgage / not tracked",
+    "trackedLoans": "Tracked loans",
+    "bankMortgages": "Bank mortgage accounts",
+    "mortgageOption": "{name} — {balance}",
+    "mortgageHint": "Its balance is not subtracted from your retirement funding: you pay the repayments from your income until retirement, like rent. Any balance still owed when you retire is added to your target.",
+    "bankBalanceOnly": "Your bank reports only the balance. Add the interest rate and monthly repayment to project what is still owed when you retire.",
+    "interestRate": "Interest rate (% a year)",
+    "monthlyRepayment": "Monthly repayment ({symbol})",
+    "withoutTerms": "Without both, the full current balance counts as still owed at retirement.",
+    "equityLabel": "Sellable property equity to fund retirement <muted>(optional)</muted>",
+    "equityHint": "For a rental or second property you plan to sell: its value minus any loan on it that isn't tracked in Fiscalis (tracked loans are already subtracted from your net worth). Leave at 0 if none."
+  },
+  "pensionsStep": {
+    "title": "Pension income",
+    "description": "Monthly income you'll receive in retirement, before touching your portfolio. Enter it in today's money, e.g. the gross amount on your Renteninformation. We take tax and health insurance off gross amounts and adjust indexed pensions for inflation like your expenses.",
+    "source": "Source",
+    "sourcePlaceholder": "e.g. State pension",
+    "amountLabel": "{symbol} / month (today)",
+    "removeSource": "Remove source",
+    "gross": "Gross (before tax & health insurance)",
+    "net": "Net (already after deductions)",
+    "indexed": "Rises with inflation",
+    "fixed": "Fixed amount (e.g. many company pensions)",
+    "addSource": "Add income source",
+    "deductionLabel": "Tax & health insurance on gross pensions",
+    "deductionHint": "A flat rate for health & care insurance (≈ 11–12% in the KVdR) plus income tax. The default {rate} turns {gross} gross into about {net} net.",
+    "totalNet": "Total pension income, net (today's money)",
+    "asEntered": "{amount} as entered"
+  },
+  "portfolioStep": {
+    "title": "Your portfolio today",
+    "description": "This is the starting point we grow toward your target. Choose how each part is expected to grow, or leave out money you won't invest, like an emergency fund.",
+    "noAssets": "No assets tracked yet — your plan starts from {zero}.",
+    "growthLabel": "{category}: growth",
+    "categories": {
+      "equities": "Equities",
+      "real-estate": "Real estate funds",
+      "crypto": "Crypto",
+      "bonds": "Bonds",
+      "commodities": "Commodities & metals",
+      "cash": "Cash & savings",
+      "collectibles": "Collectibles",
+      "property": "Sellable property"
+    },
+    "treatments": {
+      "growth": "Grows at the scenario return",
+      "moderate": "Halfway between return and inflation",
+      "inflation": "Keeps pace with inflation",
+      "exclude": "Not counted (e.g. emergency fund)"
+    },
+    "fundable": "Fundable assets",
+    "expectedGrowth": "Expected growth {expected} / yr (conservative {conservative})",
+    "netDebt": "Your liabilities exceed your assets by <b>{debt}</b>. Your plan starts from {zero} — debt isn't grown at the investment return — so paying it down comes on top of the savings we calculate.",
+    "mortgageWithPayment": "The <b>{balance}</b> mortgage on your home is not subtracted here: its {payment} repayments come from your income until retirement.",
+    "mortgage": "The <b>{balance}</b> mortgage on your home is not subtracted here: its repayments come from your income until retirement.",
+    "mortgageNotProjected": "Without its rate and repayment, the full balance counts as still owed when you retire.",
+    "footnote": "Asset values update automatically as your accounts sync, so your progress stays live. Each part grows at its own rate; new savings grow at the scenario return. A home you live in is not included."
+  },
+  "assumptionsStep": {
+    "title": "Assumptions",
+    "description": "Sensible defaults are filled in — adjust only if you know what you're doing.",
+    "seePlan": "See my plan",
+    "fields": {
+      "optimisticReturn": {
+        "label": "Expected annual return",
+        "hint": "Long-run market growth. The default {rate} doubles a portfolio every 10 years."
+      },
+      "conservativeReturn": {
+        "label": "Conservative annual return",
+        "hint": "A cautious growth assumption for the safer estimate."
+      },
+      "inflationRate": {
+        "label": "Inflation rate",
+        "hint": "How fast prices rise; raises your future expense target."
+      },
+      "withdrawalRate": {
+        "label": "Safe withdrawal rate",
+        "hint": "The 4% rule. Lower = safer but needs a bigger portfolio."
+      }
+    },
+    "withdrawalTax": "Tax on withdrawals",
+    "withdrawalTaxHint": "Effective tax on what you withdraw (e.g. capital-gains tax on the gains share). At 0% the target is a pre-tax figure.",
+    "indexContributions": "Raise my savings with inflation",
+    "indexContributionsHint": "Off: one flat amount in today's money, worth less every year. On: a lower first amount that grows with inflation.",
+    "reset": "Reset to recommended defaults"
+  },
+  "resultsStep": {
+    "save": "Save my plan",
+    "fixToSave": "{reason}. Fix it to save your plan."
+  },
+  "validation": {
+    "ageRange": "{field, select, currentAge {Current age must} retirementAge {Retirement age must} other {Ages must}} be a whole number between {min} and {max}",
+    "retirementNotAfterCurrent": "Retirement age must be after your current age",
+    "rateRange": "{field, select, optimisticReturn {Expected return} conservativeReturn {Conservative return} inflationRate {Inflation rate} primaryResidenceMortgageRate {Mortgage rate} pensionDeductionRate {Pension tax & health insurance} withdrawalTaxRate {Tax on withdrawals} other {The rate}} must be between 0% and {max}%",
+    "withdrawalRateRange": "Withdrawal rate must be above 0% and at most {max}%",
+    "conservativeAboveExpected": "Conservative return can't be higher than the expected return",
+    "amountNegative": "{field, select, monthlyExpensesToday {Monthly expenses must be zero or more} fundableRealEstateEquity {Property value must be zero or more} primaryResidenceMortgagePayment {Mortgage repayment must be zero or more} other {Pension amounts must be zero or more}}",
+    "expensesNotPositive": "Monthly expenses must be more than zero"
   }
 }

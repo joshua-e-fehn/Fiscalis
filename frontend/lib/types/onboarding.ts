@@ -64,18 +64,19 @@ export interface ProfileFormData {
 export type Currency = DisplayCurrency;
 export type { Language, Theme };
 
-// `label` is English; onboarding renders onboarding.profile.currencies.<code>
-// instead. It stays for the settings form until that is translated.
-const CURRENCY_LABELS: Record<Currency, { label: string; flag: string }> = {
-  EUR: { label: "Euro (€)", flag: "🇪🇺" },
-  USD: { label: "US Dollar ($)", flag: "🇺🇸" },
-  GBP: { label: "British Pound (£)", flag: "🇬🇧" },
-  CHF: { label: "Swiss Franc (CHF)", flag: "🇨🇭" },
+const CURRENCY_FLAGS: Record<Currency, string> = {
+  EUR: "🇪🇺",
+  USD: "🇺🇸",
+  GBP: "🇬🇧",
+  CHF: "🇨🇭",
 };
 
-/** The display currencies in DISPLAY_CURRENCIES order, labelled. */
-export const CURRENCIES: { value: Currency; label: string; flag: string }[] =
-  DISPLAY_CURRENCIES.map((value) => ({ value, ...CURRENCY_LABELS[value] }));
+/**
+ * The display currencies in DISPLAY_CURRENCIES order, with their flags. Their
+ * names are translated: onboarding.profile.currencies.<code>.
+ */
+export const CURRENCIES: { value: Currency; flag: string }[] =
+  DISPLAY_CURRENCIES.map((value) => ({ value, flag: CURRENCY_FLAGS[value] }));
 
 /** The supported languages, each labelled in its own language. */
 export const LANGUAGES: { value: Language; label: string }[] =

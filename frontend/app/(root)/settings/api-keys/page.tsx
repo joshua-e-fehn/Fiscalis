@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Check, Copy, KeyRound, Loader2, Plus } from "lucide-react";
 
 import { PageHeader } from "@/components/atomic/molecules/investments";
@@ -50,33 +51,32 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/shadcn/alert-dialog";
 import {
-  apiKeyErrorMessage,
   netWorthEndpointUrl,
   useApiKeys,
   useCreateApiKey,
   useRevokeApiKey,
 } from "@/hooks/convex";
 import type { Id } from "@/convex/_generated/dataModel";
-import { MAX_API_KEY_NAME_LENGTH } from "@/../services/apiKeys/apiKeyService";
+import { useErrorMessage } from "@/i18n/errors";
+import {
+  API_KEY_RATE_LIMIT,
+  MAX_ACTIVE_API_KEYS_PER_USER,
+  MAX_API_KEY_NAME_LENGTH,
+} from "@/../services/apiKeys/apiKeyService";
 
-type ExpiryChoice = "30" | "90" | "365" | "never";
+const EXPIRY_CHOICES = ["30", "90", "365", "never"] as const;
+type ExpiryChoice = (typeof EXPIRY_CHOICES)[number];
 
-const EXPIRY_LABELS: Record<ExpiryChoice, string> = {
-  "30": "30 days",
-  "90": "90 days",
-  "365": "1 year",
-  never: "Never",
-};
+type KeyStatus = "active" | "revoked" | "expired";
 
-function formatDate(ms: number | undefined): string {
-  return ms === undefined ? "—" : new Date(ms).toLocaleDateString();
-}
-
-function keyStatus(k: { revokedAt?: number; expiresAt?: number }) {
-  if (k.revokedAt !== undefined) return { label: "Revoked", variant: "secondary" as const };
+function keyStatus(k: { revokedAt?: number; expiresAt?: number }): {
+  status: KeyStatus;
+  variant: "default" | "secondary";
+} {
+  if (k.revokedAt !== undefined) return { status: "revoked", variant: "secondary" };
   if (k.expiresAt !== undefined && k.expiresAt <= Date.now())
-    return { label: "Expired", variant: "secondary" as const };
-  return { label: "Active", variant: "default" as const };
+    return { status: "expired", variant: "secondary" };
+  return { status: "active", variant: "default" };
 }
 
 function CopyButton({ value, label }: { value: string; label: string }) {
@@ -99,6 +99,10 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 export default function ApiKeysPage() {
+  const t = useTranslations("settings.apiKeys");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
+  const errorMessage = useErrorMessage();
   const keys = useApiKeys();
   const createKey = useCreateApiKey();
   const revokeKey = useRevokeApiKey();
@@ -110,6 +114,19 @@ export default function ApiKeysPage() {
   const [error, setError] = useState<string | null>(null);
   // Plaintext key lives only in this state, only until the dialog closes.
   const [newKey, setNewKey] = useState<string | null>(null);
+
+  const formatDate = (ms: number | undefined) =>
+    ms === undefined ? t("list.none") : format.dateTime(new Date(ms), "date");
+
+  // Codes convex/apiKeys.ts throws, until they move to common.errors.
+  const errorOverrides = {
+    apiKeyNameRequired: t("errors.apiKeyNameRequired"),
+    apiKeyNameTooLong: t("errors.apiKeyNameTooLong", {
+      max: MAX_API_KEY_NAME_LENGTH,
+    }),
+    apiKeyNotFound: t("errors.apiKeyNotFound"),
+    apiKeyLimit: t("errors.apiKeyLimit", { max: MAX_ACTIVE_API_KEYS_PER_USER }),
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +141,7 @@ export default function ApiKeysPage() {
       setNewKey(result.key);
       setName("");
     } catch (err) {
-      setError(apiKeyErrorMessage(err, "Could not create API key."));
+      setError(errorMessage(err, "generic", errorOverrides));
     } finally {
       setIsCreating(false);
     }
@@ -135,12 +152,7 @@ export default function ApiKeysPage() {
     try {
       await revokeKey({ keyId });
     } catch (err) {
-      setError(
-        apiKeyErrorMessage(
-          err,
-          "Could not revoke the API key. Reload the page and try again.",
-        ),
-      );
+      setError(errorMessage(err, "generic", errorOverrides));
     }
   };
 
@@ -149,8 +161,8 @@ export default function ApiKeysPage() {
   return (
     <div className="flex flex-col gap-6 pb-10">
       <PageHeader
-        title="API Keys"
-        subtitle="Read your net worth programmatically. Keys are private and scoped to your account."
+        title={t("title")}
+        subtitle={t("subtitle")}
       />
 
       {error && (
@@ -164,11 +176,8 @@ export default function ApiKeysPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Create a key</CardTitle>
-          <CardDescription>
-            A key grants read-only access to your current net worth. Treat it
-            like a password: never commit it or use it in browser code.
-          </CardDescription>
+          <CardTitle>{t("create.title")}</CardTitle>
+          <CardDescription>{t("create.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -176,10 +185,10 @@ export default function ApiKeysPage() {
             className="flex flex-col gap-4 sm:flex-row sm:items-end"
           >
             <div className="flex flex-1 flex-col gap-2">
-              <Label htmlFor="api-key-name">Name</Label>
+              <Label htmlFor="api-key-name">{t("create.name")}</Label>
               <Input
                 id="api-key-name"
-                placeholder="e.g. Home dashboard"
+                placeholder={t("create.namePlaceholder")}
                 value={name}
                 maxLength={MAX_API_KEY_NAME_LENGTH}
                 onChange={(e) => setName(e.target.value)}
@@ -187,7 +196,7 @@ export default function ApiKeysPage() {
               />
             </div>
             <div className="flex flex-col gap-2 sm:w-40">
-              <Label htmlFor="api-key-expiry">Expires</Label>
+              <Label htmlFor="api-key-expiry">{t("create.expires")}</Label>
               <Select
                 value={expiry}
                 onValueChange={(v) => setExpiry(v as ExpiryChoice)}
@@ -196,9 +205,9 @@ export default function ApiKeysPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(EXPIRY_LABELS) as ExpiryChoice[]).map((k) => (
+                  {EXPIRY_CHOICES.map((k) => (
                     <SelectItem key={k} value={k}>
-                      {EXPIRY_LABELS[k]}
+                      {t(`expiry.${k}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -210,7 +219,7 @@ export default function ApiKeysPage() {
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              Create key
+              {t("create.submit")}
             </Button>
           </form>
         </CardContent>
@@ -218,29 +227,29 @@ export default function ApiKeysPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Your keys</CardTitle>
+          <CardTitle>{t("list.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {keys === undefined ? (
             <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
           ) : keys.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No API keys yet.</p>
+            <p className="text-muted-foreground text-sm">{t("list.empty")}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Last used</TableHead>
+                  <TableHead>{t("list.name")}</TableHead>
+                  <TableHead>{t("list.key")}</TableHead>
+                  <TableHead>{t("list.status")}</TableHead>
+                  <TableHead>{t("list.created")}</TableHead>
+                  <TableHead>{t("list.expires")}</TableHead>
+                  <TableHead>{t("list.lastUsed")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {keys.map((k) => {
-                  const status = keyStatus(k);
+                  const { status, variant } = keyStatus(k);
                   return (
                     <TableRow key={k._id}>
                       <TableCell className="font-medium">{k.name}</TableCell>
@@ -248,11 +257,13 @@ export default function ApiKeysPage() {
                         {k.keyPrefix}…
                       </TableCell>
                       <TableCell>
-                        <Badge variant={status.variant}>{status.label}</Badge>
+                        <Badge variant={variant}>{t(`status.${status}`)}</Badge>
                       </TableCell>
                       <TableCell>{formatDate(k.createdAt)}</TableCell>
                       <TableCell>
-                        {k.expiresAt === undefined ? "Never" : formatDate(k.expiresAt)}
+                        {k.expiresAt === undefined
+                          ? t("list.never")
+                          : formatDate(k.expiresAt)}
                       </TableCell>
                       <TableCell>{formatDate(k.lastUsedAt)}</TableCell>
                       <TableCell className="text-right">
@@ -260,25 +271,26 @@ export default function ApiKeysPage() {
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm">
-                                Revoke
+                                {t("revoke.button")}
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>
-                                  Revoke “{k.name}”?
+                                  {t("revoke.title", { name: k.name })}
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Requests using this key will be rejected
-                                  immediately. This cannot be undone.
+                                  {t("revoke.description")}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>
+                                  {tActions("cancel")}
+                                </AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() => handleRevoke(k._id)}
                                 >
-                                  Revoke
+                                  {t("revoke.confirm")}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -296,12 +308,12 @@ export default function ApiKeysPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Usage</CardTitle>
+          <CardTitle>{t("usage.title")}</CardTitle>
           <CardDescription>
-            Send the key in the Authorization header. Keys in URLs are not
-            accepted. Each key is limited to 60 requests per minute. Amounts
-            are in EUR; add <code>?currency=USD</code>, <code>GBP</code> or{" "}
-            <code>CHF</code> to convert them at the latest exchange rate.
+            {t.rich("usage.description", {
+              limit: API_KEY_RATE_LIMIT.maxRequests,
+              code: (chunks) => <code>{chunks}</code>,
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -350,12 +362,9 @@ export default function ApiKeysPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5" /> Copy your new API key
+              <KeyRound className="h-5 w-5" /> {t("newKey.title")}
             </DialogTitle>
-            <DialogDescription>
-              This is the only time the key will be shown. Store it somewhere
-              safe, such as a password manager or secret store.
-            </DialogDescription>
+            <DialogDescription>{t("newKey.description")}</DialogDescription>
           </DialogHeader>
           {newKey && (
             <div className="flex items-center gap-2">
@@ -367,11 +376,11 @@ export default function ApiKeysPage() {
                 spellCheck={false}
                 onFocus={(e) => e.currentTarget.select()}
               />
-              <CopyButton value={newKey} label="Copy API key" />
+              <CopyButton value={newKey} label={t("newKey.copy")} />
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setNewKey(null)}>Done</Button>
+            <Button onClick={() => setNewKey(null)}>{t("newKey.done")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

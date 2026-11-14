@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { SignInButton, SignedOut, SignedIn } from "@clerk/nextjs";
 import { Button } from "@/components/ui/shadcn/button";
+import { LanguageToggle } from "@/components/i18n/LanguageToggle";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import { SiteFooter } from "@/components/atomic/organisms/siteFooter";
 
 // Animation variants
@@ -49,6 +51,23 @@ const fadeInUp = {
   viewport: { once: true, margin: "-100px" },
   transition: { duration: 0.6, ease: "easeOut" },
 };
+
+type RichTag = (chunks: React.ReactNode) => React.ReactNode;
+
+/** A t.rich tag that renders its text in a gradient. */
+function gradient(classes: string): RichTag {
+  return function GradientText(chunks) {
+    return (
+      <span
+        className={`bg-gradient-to-r ${classes} bg-clip-text text-transparent`}
+      >
+        {chunks}
+      </span>
+    );
+  };
+}
+
+const goldHighlight = gradient("from-[#D4AF37] to-[#F4CF57]");
 
 export default function HomePage() {
   const t = useTranslations("landing");
@@ -84,44 +103,45 @@ export default function HomePage() {
                 href="#features"
                 className="text-white/60 hover:text-white transition-colors text-sm"
               >
-                Features
+                {t("nav.features")}
               </a>
               <a
                 href="#how-it-works"
                 className="text-white/60 hover:text-white transition-colors text-sm"
               >
-                How it Works
+                {t("nav.howItWorks")}
               </a>
               <a
                 href="#security"
                 className="text-white/60 hover:text-white transition-colors text-sm"
               >
-                Security
+                {t("nav.security")}
               </a>
             </div>
 
             {/* Auth Buttons */}
             <div className="flex items-center gap-3">
               <SignedOut>
+                <LanguageToggle />
                 <SignInButton>
                   <Button
                     variant="ghost"
                     className="text-white/70 hover:text-white hover:bg-white/5"
                   >
-                    Sign in
+                    {t("nav.signIn")}
                   </Button>
                 </SignInButton>
                 {/* Sign-up is waitlist-only (ENG-226) */}
                 <Link href="/waitlist">
                   <Button className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-medium">
-                    Join the waitlist
+                    {t("nav.joinWaitlist")}
                   </Button>
                 </Link>
               </SignedOut>
               <SignedIn>
                 <Link href="/dashboard">
                   <Button className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-medium">
-                    Dashboard
+                    {t("nav.dashboard")}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
@@ -149,7 +169,7 @@ export default function HomePage() {
             >
               <Image
                 src="/fiscalisIcon.svg"
-                alt="Fiscalis Logo"
+                alt={t("logoAlt")}
                 width={64}
                 height={64}
                 className="object-contain"
@@ -164,7 +184,7 @@ export default function HomePage() {
             >
               <Sparkles className="w-4 h-4 text-[#D4AF37]" />
               <span className="text-sm text-white/60">
-                Your wealth, simplified
+                {t("hero.badge")}
               </span>
             </motion.div>
 
@@ -173,12 +193,10 @@ export default function HomePage() {
               className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight"
               variants={itemVariants}
             >
-              Your Complete{" "}
-              <span className="bg-gradient-to-r from-[#D4AF37] to-[#F4CF57] bg-clip-text text-transparent">
-                Wealth Picture
-              </span>
-              <br />
-              In One Place
+              {t.rich("hero.headline", {
+                highlight: goldHighlight,
+                br: () => <br />,
+              })}
             </motion.h1>
 
             {/* Subheadline */}
@@ -194,7 +212,7 @@ export default function HomePage() {
               className="text-lg text-white/30 mb-10"
               variants={itemVariants}
             >
-              Think Finanzguru, but for your entire net worth.
+              {t("hero.tagline")}
             </motion.p>
 
             {/* CTA Buttons */}
@@ -208,7 +226,7 @@ export default function HomePage() {
                     size="lg"
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-8 py-6 text-lg"
                   >
-                    Join the waitlist
+                    {t("nav.joinWaitlist")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
@@ -228,7 +246,7 @@ export default function HomePage() {
                     size="lg"
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-8 py-6 text-lg"
                   >
-                    Go to Dashboard
+                    {t("nav.goToDashboard")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
@@ -250,7 +268,7 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2">
                 <Globe2 className="w-4 h-4" />
-                <span>Multi-currency</span>
+                <span>{t("trust.multiCurrency")}</span>
               </div>
             </motion.div>
           </motion.div>
@@ -275,35 +293,31 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-16" {...fadeInUp}>
             <h2 className="text-4xl font-bold text-white mb-4">
-              Everything You Need to{" "}
-              <span className="bg-gradient-to-r from-[#D4AF37] to-[#F4CF57] bg-clip-text text-transparent">
-                Master Your Wealth
-              </span>
+              {t.rich("features.headline", { highlight: goldHighlight })}
             </h2>
             <p className="text-lg text-white/50 max-w-2xl mx-auto">
-              From bank accounts to crypto wallets, track all your assets in one
-              unified dashboard.
+              {t("features.subheadline")}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <FeatureCard
               icon={Building2}
-              title="Bank Accounts"
-              description="Connect your bank accounts securely via Plaid. Track checking, savings, and credit cards."
+              title={t("features.banksTitle")}
+              description={t("features.banksDescription")}
               color="emerald"
               delay={0}
             />
             <FeatureCard
               icon={LineChart}
-              title="Investment Portfolios"
-              description="Import stocks, ETFs, bonds, and mutual funds from major brokerages automatically."
+              title={t("features.investmentsTitle")}
+              description={t("features.investmentsDescription")}
               color="blue"
               delay={0.1}
             />
             <FeatureCard
               icon={Bitcoin}
-              title="Cryptocurrency"
+              title={t("features.cryptoTitle")}
               description={t("features.cryptoDescription")}
               color="gold"
               delay={0.2}
@@ -317,15 +331,15 @@ export default function HomePage() {
             />
             <FeatureCard
               icon={Wallet}
-              title="Debts & Liabilities"
+              title={t("features.liabilitiesTitle")}
               description={t("features.liabilitiesDescription")}
               color="red"
               delay={0.4}
             />
             <FeatureCard
               icon={TrendingUp}
-              title="Net Worth Tracking"
-              description="Watch your wealth grow over time with beautiful charts and insights."
+              title={t("features.netWorthTitle")}
+              description={t("features.netWorthDescription")}
               color="cyan"
               delay={0.5}
             />
@@ -341,32 +355,31 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-16" {...fadeInUp}>
             <h2 className="text-4xl font-bold text-white mb-4">
-              Get Started in{" "}
-              <span className="bg-gradient-to-r from-[#3B82F6] to-[#60A5FA] bg-clip-text text-transparent">
-                Minutes
-              </span>
+              {t.rich("steps.headline", {
+                highlight: gradient("from-[#3B82F6] to-[#60A5FA]"),
+              })}
             </h2>
             <p className="text-lg text-white/50 max-w-2xl mx-auto">
-              Three simple steps to see your complete financial picture.
+              {t("steps.subheadline")}
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
             <StepCard
               number={1}
-              title="Create Your Account"
+              title={t("steps.createTitle")}
               description={t("steps.createDescription")}
               delay={0}
             />
             <StepCard
               number={2}
-              title="Connect Your Accounts"
-              description="Securely link your banks, brokers, and crypto exchanges. Read-only access only."
+              title={t("steps.connectTitle")}
+              description={t("steps.connectDescription")}
               delay={0.1}
             />
             <StepCard
               number={3}
-              title="See Your Net Worth"
+              title={t("steps.netWorthTitle")}
               description={t("steps.netWorthDescription")}
               delay={0.2}
             />
@@ -382,24 +395,23 @@ export default function HomePage() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6">
                 <Shield className="w-4 h-4 text-emerald-500" />
                 <span className="text-sm text-emerald-500">
-                  Security by design
+                  {t("security.badge")}
                 </span>
               </div>
               <h2 className="text-4xl font-bold text-white mb-6">
-                Your Data is{" "}
-                <span className="bg-gradient-to-r from-emerald-400 to-emerald-600 bg-clip-text text-transparent">
-                  Safe With Us
-                </span>
+                {t.rich("security.headline", {
+                  highlight: gradient("from-emerald-400 to-emerald-600"),
+                })}
               </h2>
               <p className="text-lg text-white/50 mb-8">
                 {t("security.description")}
               </p>
               <ul className="space-y-4">
-                <SecurityFeature text="AES-256-GCM encryption for all sensitive tokens" />
-                <SecurityFeature text="Read-only access — we can never move your money" />
-                <SecurityFeature text="Your bank credentials never touch our servers" />
-                <SecurityFeature text="Trusted providers: Plaid, SnapTrade, Bitpanda" />
-                <SecurityFeature text="Your data is yours — we never sell it" />
+                <SecurityFeature text={t("security.encryption")} />
+                <SecurityFeature text={t("security.readOnly")} />
+                <SecurityFeature text={t("security.credentials")} />
+                <SecurityFeature text={t("security.providers")} />
+                <SecurityFeature text={t("security.ownership")} />
               </ul>
             </motion.div>
 
@@ -438,10 +450,7 @@ export default function HomePage() {
 
             <div className="relative z-10">
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-                Ready to Take Control of{" "}
-                <span className="bg-gradient-to-r from-[#D4AF37] to-[#F4CF57] bg-clip-text text-transparent">
-                  Your Wealth?
-                </span>
+                {t.rich("cta.headline", { highlight: goldHighlight })}
               </h2>
               <p className="text-lg text-white/50 mb-10 max-w-2xl mx-auto">
                 {t("cta.description")}
@@ -452,7 +461,7 @@ export default function HomePage() {
                     size="lg"
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-10 py-6 text-lg"
                   >
-                    Join the waitlist
+                    {t("nav.joinWaitlist")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
@@ -463,7 +472,7 @@ export default function HomePage() {
                     size="lg"
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-10 py-6 text-lg"
                   >
-                    Go to Dashboard
+                    {t("nav.goToDashboard")}
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
@@ -592,26 +601,38 @@ function SecurityFeature({ text }: { text: string }) {
   );
 }
 
+const MOCKUP_ASSETS = [
+  { key: "equities", value: 112500, percent: 45, color: "#3B82F6" },
+  { key: "crypto", value: 62000, percent: 25, color: "#D4AF37" },
+  { key: "cash", value: 37200, percent: 15, color: "#22c55e" },
+  { key: "realEstate", value: 24800, percent: 10, color: "#8B5CF6" },
+] as const;
+
 // Dashboard Mockup Component
 function DashboardMockup() {
+  const t = useTranslations("landing.mockup");
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-white/40 text-sm">Total Net Worth</p>
-          <p className="text-4xl font-bold text-white">€247,832.00</p>
-          <p className="text-emerald-500 text-sm">+12.4% this year</p>
+          <p className="text-white/40 text-sm">{t("totalNetWorth")}</p>
+          <p className="text-4xl font-bold text-white">
+            {formatCurrency(247832, "EUR")}
+          </p>
+          <p className="text-emerald-500 text-sm">
+            {t("yearChange", { change: formatPercent(12.4, true, 1) })}
+          </p>
         </div>
         <div className="flex gap-2">
           <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 text-sm font-medium">
-            5 Banks
+            {t("banks", { count: 5 })}
           </div>
           <div className="px-3 py-1.5 rounded-lg bg-[#3B82F6]/10 text-[#3B82F6] text-sm font-medium">
-            2 Brokers
+            {t("brokers", { count: 2 })}
           </div>
           <div className="px-3 py-1.5 rounded-lg bg-[#D4AF37]/10 text-[#D4AF37] text-sm font-medium">
-            3 Wallets
+            {t("wallets", { count: 3 })}
           </div>
         </div>
       </div>
@@ -629,25 +650,15 @@ function DashboardMockup() {
 
       {/* Asset breakdown */}
       <div className="grid grid-cols-4 gap-4">
-        <AssetItem
-          label="Equities"
-          value="€112,500"
-          percent={45}
-          color="#3B82F6"
-        />
-        <AssetItem
-          label="Crypto"
-          value="€62,000"
-          percent={25}
-          color="#D4AF37"
-        />
-        <AssetItem label="Cash" value="€37,200" percent={15} color="#22c55e" />
-        <AssetItem
-          label="Real Estate"
-          value="€24,800"
-          percent={10}
-          color="#8B5CF6"
-        />
+        {MOCKUP_ASSETS.map(({ key, value, percent, color }) => (
+          <AssetItem
+            key={key}
+            label={t(key)}
+            value={formatCurrency(value, "EUR", { fractionDigits: 0 })}
+            percent={percent}
+            color={color}
+          />
+        ))}
       </div>
     </div>
   );
@@ -674,7 +685,7 @@ function AssetItem({
         <span className="text-white/50 text-xs">{label}</span>
       </div>
       <p className="text-white font-semibold">{value}</p>
-      <p className="text-white/30 text-xs">{percent}%</p>
+      <p className="text-white/30 text-xs">{formatPercent(percent, false, 0)}</p>
     </div>
   );
 }

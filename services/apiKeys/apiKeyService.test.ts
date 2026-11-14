@@ -12,6 +12,7 @@ import {
   hashApiKey,
   isApiKeyUsable,
   isWellFormedApiKey,
+  ApiKeyNameError,
   normalizeApiKeyName,
   parseBearerApiKey,
 } from "./apiKeyService";
@@ -104,9 +105,14 @@ describe("normalizeApiKeyName", () => {
   it("trims and collapses whitespace", () => {
     expect(normalizeApiKeyName("  my   script ")).toBe("my script");
   });
-  it("rejects empty and overlong names", () => {
-    expect(() => normalizeApiKeyName("   ")).toThrow();
-    expect(() => normalizeApiKeyName("x".repeat(65))).toThrow();
+  it("rejects empty and overlong names with a code", () => {
+    expect(() => normalizeApiKeyName("   ")).toThrow(
+      expect.objectContaining({ code: "apiKeyNameRequired" }),
+    );
+    expect(() => normalizeApiKeyName("x".repeat(65))).toThrow(
+      expect.objectContaining({ code: "apiKeyNameTooLong" }),
+    );
+    expect(() => normalizeApiKeyName("   ")).toThrow(ApiKeyNameError);
   });
 });
 

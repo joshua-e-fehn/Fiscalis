@@ -1,25 +1,77 @@
 {
   "hero": {
-    "subheadline": "Track all your investments, assets and liabilities. Know your true net worth with automatic updates across bank accounts, stocks, crypto, precious metals and more."
+    "subheadline": "Track all your investments, assets and liabilities. Know your true net worth with automatic updates across bank accounts, stocks, crypto, precious metals and more.",
+    "badge": "Your wealth, simplified",
+    "headline": "Your complete <highlight>wealth picture</highlight><br></br>in one place",
+    "tagline": "Think Finanzguru, but for your entire net worth."
   },
   "trust": {
     "readOnly": "Read-only connections",
-    "dailySync": "Daily automatic sync"
+    "dailySync": "Daily automatic sync",
+    "multiCurrency": "Multi-currency"
   },
   "features": {
     "cryptoDescription": "Import your Bitpanda holdings automatically with a read-only API key.",
     "metalsTitle": "Precious Metals",
     "metalsDescription": "Track gold and silver bars and coins, valued at current dealer prices.",
-    "liabilitiesDescription": "Track your loans and repayment schedules. See your true net worth."
+    "liabilitiesDescription": "Track your loans and repayment schedules. See your true net worth.",
+    "headline": "Everything you need to <highlight>master your wealth</highlight>",
+    "subheadline": "From bank accounts to crypto wallets, track all your assets in one unified dashboard.",
+    "banksTitle": "Bank accounts",
+    "banksDescription": "Connect your bank accounts securely via Plaid. Track checking, savings and credit cards.",
+    "investmentsTitle": "Investment portfolios",
+    "investmentsDescription": "Import stocks, ETFs, bonds and mutual funds from major brokerages automatically.",
+    "cryptoTitle": "Cryptocurrency",
+    "liabilitiesTitle": "Debts & liabilities",
+    "netWorthTitle": "Net worth tracking",
+    "netWorthDescription": "Watch your wealth grow over time with clear charts and insights."
   },
   "steps": {
     "createDescription": "Sign up with your email or a social login. Access opens gradually through a waitlist. No credit card required.",
-    "netWorthDescription": "Watch your complete wealth picture come together, refreshed automatically every day."
+    "netWorthDescription": "Watch your complete wealth picture come together, refreshed automatically every day.",
+    "headline": "Get started in <highlight>minutes</highlight>",
+    "subheadline": "Three simple steps to see your complete financial picture.",
+    "createTitle": "Create your account",
+    "connectTitle": "Connect your accounts",
+    "connectDescription": "Securely link your banks, brokers and crypto exchanges. Read-only access only.",
+    "netWorthTitle": "See your net worth"
   },
   "security": {
-    "description": "We never see your bank credentials. Access tokens and API keys are stored encrypted, and every connection is read-only."
+    "description": "We never see your bank credentials. Access tokens and API keys are stored encrypted, and every connection is read-only.",
+    "badge": "Security by design",
+    "headline": "Your data is <highlight>safe with us</highlight>",
+    "encryption": "AES-256-GCM encryption for all sensitive tokens",
+    "readOnly": "Read-only access: we can never move your money",
+    "credentials": "Your bank credentials never touch our servers",
+    "providers": "Trusted providers: Plaid, SnapTrade, Bitpanda",
+    "ownership": "Your data is yours: we never sell it"
   },
   "cta": {
-    "description": "Bring your accounts, holdings and loans together and see your whole net worth in one place."
+    "description": "Bring your accounts, holdings and loans together and see your whole net worth in one place.",
+    "headline": "Ready to take control of <highlight>your wealth?</highlight>"
+  },
+  "nav": {
+    "features": "Features",
+    "howItWorks": "How it works",
+    "security": "Security",
+    "signIn": "Sign in",
+    "joinWaitlist": "Join the waitlist",
+    "dashboard": "Dashboard",
+    "goToDashboard": "Go to dashboard"
+  },
+  "logoAlt": "Fiscalis logo",
+  "mockup": {
+    "totalNetWorth": "Total net worth",
+    "yearChange": "{change} this year",
+    "banks": "{count, plural, one {# bank} other {# banks}}",
+    "brokers": "{count, plural, one {# broker} other {# brokers}}",
+    "wallets": "{count, plural, one {# wallet} other {# wallets}}",
+    "equities": "Equities",
+    "crypto": "Crypto",
+    "cash": "Cash",
+    "realEstate": "Real estate"
+  },
+  "languageToggle": {
+    "label": "Language"
   }
 }

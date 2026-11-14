@@ -156,5 +156,4 @@ export {
   useCreateApiKey,
   useRevokeApiKey,
   netWorthEndpointUrl,
-  apiKeyErrorMessage,
 } from "./apiKeys";

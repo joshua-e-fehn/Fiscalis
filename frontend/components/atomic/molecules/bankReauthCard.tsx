@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -39,10 +40,13 @@ interface BankReauthCardProps {
 }
 
 export function BankReauthCard({ item }: BankReauthCardProps) {
+  const t = useTranslations("integrations.banking");
+  const tConnection = useTranslations("integrations.connection");
+  const tActions = useTranslations("common.actions");
   const deleteItem = useDeletePlaidItem();
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
-  const institutionName = item.institutionName || "Unknown Bank";
+  const institutionName = item.institutionName || t("unknownBank");
 
   // A failed revoke at Plaid keeps the bank (ENG-225); the hook keeps the
   // error, shown on the card, so the user can retry
@@ -98,7 +102,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
               <div>
                 <CardTitle className="text-lg">{institutionName}</CardTitle>
                 <CardDescription className="mt-0.5 text-yellow-700 dark:text-yellow-400">
-                  This connection needs to be re-authenticated
+                  {t("reauth.needsReauth")}
                 </CardDescription>
               </div>
             </div>
@@ -106,7 +110,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Open menu</span>
+                  <span className="sr-only">{tConnection("openMenu")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -116,7 +120,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <Unlink className="mr-2 h-4 w-4" />
-                  Disconnect bank
+                  {t("reauth.disconnectBank")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -130,13 +134,11 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
                   <div className="flex items-center gap-2 mb-2">
                     <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
                     <p className="font-medium text-yellow-800 dark:text-yellow-200">
-                      Connection Expired
+                      {t("reauth.expiredTitle")}
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Your bank requires you to log in again for security
-                    purposes. Click reconnect to restore access to your
-                    accounts.
+                    {t("reauth.expiredDescription")}
                   </p>
                   {deleteItem.error && (
                     <p className="mt-2 text-sm text-destructive">
@@ -163,25 +165,26 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Unlink className="h-5 w-5 text-destructive" />
-              Disconnect {institutionName}?
+              {tConnection("disconnectTitle", { name: institutionName })}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-left">
-              This will remove the connection entirely from your dashboard.
+              {t("reauth.disconnectDescription")}
               <br />
               <br />
               <span className="text-muted-foreground">
-                Your actual bank account will not be affected. You can reconnect
-                at any time.
+                {t("reauth.notAffected")}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tActions("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisconnect}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteItem.isLoading ? "Disconnecting..." : "Disconnect"}
+              {deleteItem.isLoading
+                ? tConnection("disconnecting")
+                : tConnection("disconnect")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

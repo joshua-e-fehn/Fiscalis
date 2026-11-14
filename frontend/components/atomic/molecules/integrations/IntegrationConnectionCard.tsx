@@ -11,6 +11,7 @@
  */
 
 import Image from "next/image";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { cn } from "@/lib/utils";
@@ -23,20 +24,25 @@ import {
 } from "./IntegrationStatusBadge";
 import { IntegrationConnectionMenu } from "./IntegrationConnectionMenu";
 
-// Helper function for time ago formatting
-function formatTimeAgo(timestamp: number): string {
-  const now = Date.now();
-  const diff = now - timestamp;
+const MINUTE_MS = 60_000;
+const WEEK_MS = 7 * 24 * 60 * MINUTE_MS;
 
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
+/**
+ * When the connection last synced: "just now" under a minute, relative time
+ * ("5 minutes ago") under a week, else the date.
+ */
+function useLastSyncLabel() {
+  const t = useTranslations("integrations.connection");
+  const format = useFormatter();
+  // Re-rendered every minute so the relative time stays current
+  const now = useNow({ updateInterval: MINUTE_MS });
 
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return new Date(timestamp).toLocaleDateString();
+  return (timestamp: number): string => {
+    const elapsed = now.getTime() - timestamp;
+    if (elapsed < MINUTE_MS) return t("syncedJustNow");
+    if (elapsed < WEEK_MS) return format.relativeTime(timestamp, now);
+    return format.dateTime(timestamp, "date");
+  };
 }
 
 interface IntegrationConnectionCardProps {
@@ -54,9 +60,9 @@ interface IntegrationConnectionCardProps {
   totalCashEur?: number;
   /** Last sync timestamp */
   lastSyncAt?: number;
-  /** Error message to display */
+  /** Error message to display, already translated */
   errorMessage?: string;
-  /** Secondary info (e.g., "3 accounts", "5 positions") */
+  /** Secondary info, already translated (e.g. "3 accounts") */
   secondaryInfo?: string;
   /** Called when sync is requested */
   onSync: () => void;
@@ -100,6 +106,8 @@ export function IntegrationConnectionCard({
   headerExtra,
   className,
 }: IntegrationConnectionCardProps) {
+  const t = useTranslations("integrations.connection");
+  const lastSyncLabel = useLastSyncLabel();
   const { currency, fromEur, isLoading: isRateLoading } = useDisplayCurrency();
   const formatEur = (amountEur: number) =>
     formatCurrency(fromEur(amountEur), currency, { fractionDigits: 0 });
@@ -149,7 +157,7 @@ export function IntegrationConnectionCard({
                 {lastSyncAt && (
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {formatTimeAgo(lastSyncAt)}
+                    {lastSyncLabel(lastSyncAt)}
                   </span>
                 )}
               </div>
@@ -167,7 +175,7 @@ export function IntegrationConnectionCard({
               )}
               {hasCash && !isRateLoading && (
                 <p className="text-xs text-muted-foreground">
-                  {formatEur(totalCashEur)} cash
+                  {t("cash", { amount: formatEur(totalCashEur) })}
                 </p>
               )}
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { BrokersCard } from "@/components/atomic/organisms/brokersCard";
 import { BitpandaConnectionsCard } from "@/components/atomic/molecules/BitpandaConnectionsCard";
 import { PageHeader } from "@/components/atomic/molecules/investments";
@@ -36,6 +37,8 @@ import {
 } from "@/../services/portfolio/categorySummary";
 
 export default function BrokersPage() {
+  const t = useTranslations("integrations.brokers");
+  const tConnection = useTranslations("integrations.connection");
   const connections = useBrokerConnections();
   const accounts = useBrokerAccounts();
   const positions = useBrokerPositions();
@@ -96,28 +99,28 @@ export default function BrokersPage() {
 
     return [
       {
-        label: "Total Value",
+        label: t("stats.totalValue"),
         value: formatCurrency(fromEur(totalValue), currency),
         icon: TrendingUp,
-        description: `${positionsCount} positions`,
+        description: t("stats.positions", { count: positionsCount }),
       },
       {
-        label: "Brokers",
+        label: t("stats.brokers"),
         value: snaptradeCount + bitpandaCount,
         icon: Briefcase,
-        description: "Connected brokers",
+        description: t("stats.connectedBrokers"),
       },
       {
-        label: "Accounts",
+        label: t("stats.accounts"),
         value: accounts?.length ?? 0,
         icon: PieChart,
-        description: "Trading accounts",
+        description: t("stats.tradingAccounts"),
       },
       {
-        label: "Cash",
+        label: t("stats.cash"),
         value: formatCurrency(fromEur(totalCash), currency),
         icon: Coins,
-        description: "Available cash",
+        description: t("stats.availableCash"),
       },
     ];
   }, [
@@ -130,24 +133,25 @@ export default function BrokersPage() {
     currency,
     fromEur,
     isRateLoading,
+    t,
   ]);
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Brokers"
-        subtitle="Connect your brokers and exchanges. Today: SnapTrade brokers and Bitpanda — more coming."
+        title={t("title")}
+        subtitle={t("subtitle")}
         actionsLoading={isLoading}
         actions={
           hasSnaptrade
             ? [
                 {
-                  label: "Refresh",
+                  label: t("refresh"),
                   onClick: () => syncAll(),
                   variant: "outline",
                   icon: RefreshCw,
                   isLoading: isSyncing,
-                  loadingLabel: "Syncing...",
+                  loadingLabel: tConnection("syncing"),
                   iconOnly: true,
                 },
               ]
@@ -155,7 +159,7 @@ export default function BrokersPage() {
         }
         customActions={
           <div className="flex items-center gap-2">
-            <SnaptradeConnectButton buttonText="Connect Broker" />
+            <SnaptradeConnectButton buttonText={t("connectBroker")} />
             <BitpandaConnectButton buttonVariant="outline" />
           </div>
         }

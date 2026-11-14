@@ -1,0 +1,108 @@
+{
+  "status": {
+    "connected": "Verbunden",
+    "syncing": "Synchronisierung",
+    "error": "Fehler",
+    "reauthRequired": "Erneute Anmeldung nötig",
+    "pending": "Ausstehend",
+    "disconnected": "Getrennt"
+  },
+  "connection": {
+    "openMenu": "Menü öffnen",
+    "sync": "Synchronisieren",
+    "syncing": "Wird synchronisiert…",
+    "disconnect": "Trennen",
+    "disconnecting": "Wird getrennt…",
+    "disconnectTitle": "{name} trennen?",
+    "disconnectInfo": "Dadurch werden {info} und die zugehörigen Daten aus deiner Übersicht entfernt.",
+    "disconnectDefault": "Dadurch werden diese Verbindung und alle zugehörigen Daten aus deiner Übersicht entfernt.",
+    "notAffected": "Dein eigentliches Konto bleibt davon unberührt. Du kannst die Verbindung jederzeit wiederherstellen.",
+    "cash": "{amount} Liquidität",
+    "syncedJustNow": "gerade eben"
+  },
+  "banking": {
+    "title": "Bankkonten",
+    "subtitle": "Verbinde deine Bankkonten, um Salden und Transaktionen automatisch zu verfolgen.",
+    "connectBank": "Bank verbinden",
+    "unknownBank": "Unbekannte Bank",
+    "accounts": "{count, plural, one {# Konto} other {# Konten}}",
+    "stats": {
+      "netBalance": "Nettosaldo",
+      "netBalanceDescription": "{accounts, plural, one {# Konto} other {# Konten}}, nach Abzug der Schulden",
+      "netBalanceDescriptionUnconverted": "{accounts, plural, one {# Konto} other {# Konten}}, nach Abzug der Schulden · {unconverted} ohne Wechselkurs",
+      "checking": "Girokonten",
+      "savings": "Sparkonten",
+      "owed": "Verbindlichkeiten",
+      "cards": "{cards, plural, one {# Karte} other {# Karten}}",
+      "cardsAndLoans": "{cards, plural, one {# Karte} other {# Karten}}, {loans, plural, one {# Kredit} other {# Kredite}}"
+    },
+    "empty": {
+      "loadFailedTitle": "Konten konnten nicht geladen werden",
+      "loadFailedDescription": "Wir konnten deine Bankkonten nicht laden. Bitte lade die Seite neu.",
+      "refreshPage": "Seite neu laden",
+      "syncTitle": "Synchronisiere deine Konten",
+      "syncDescription": "{count, plural, one {Du hast # Bankverbindung, aber noch keine Konten synchronisiert.} other {Du hast # Bankverbindungen, aber noch keine Konten synchronisiert.}} Klicke unten, um deine Kontodaten abzurufen.",
+      "syncAccounts": "Konten synchronisieren",
+      "noAccountsTitle": "Keine verknüpften Konten",
+      "noAccountsDescription": "Verbinde deine Bankkonten, um deine Finanzen, Salden und Transaktionen an einem Ort im Blick zu behalten."
+    },
+    "accountTypes": {
+      "checking": "Girokonto",
+      "savings": "Sparkonto",
+      "moneyMarket": "Geldmarktkonto",
+      "cd": "Festgeld",
+      "cashManagement": "Cash-Management-Konto",
+      "prepaid": "Prepaid-Karte",
+      "paypal": "PayPal",
+      "depository": "Bankkonto",
+      "creditCard": "Kreditkarte",
+      "credit": "Kreditkonto",
+      "loan": "Kredit",
+      "mortgage": "Hypothek",
+      "student": "Studienkredit",
+      "auto": "Autokredit",
+      "investment": "Anlagekonto",
+      "brokerage": "Depot"
+    },
+    "account": {
+      "fallbackName": "Bankkonto",
+      "available": "Verfügbar: {amount}"
+    },
+    "link": {
+      "connecting": "Wird verbunden…",
+      "connectAnother": "Weitere Bank verbinden",
+      "connectFirst": "Verbinde deine Bank",
+      "connected": "Bank erfolgreich verbunden"
+    },
+    "reauth": {
+      "needsReauth": "Für diese Verbindung musst du dich erneut anmelden",
+      "disconnectBank": "Bank trennen",
+      "expiredTitle": "Verbindung abgelaufen",
+      "expiredDescription": "Deine Bank verlangt aus Sicherheitsgründen eine erneute Anmeldung. Klicke auf „Erneut verbinden“, um wieder auf deine Konten zuzugreifen.",
+      "disconnectDescription": "Dadurch wird die Verbindung vollständig aus deiner Übersicht entfernt.",
+      "notAffected": "Dein eigentliches Bankkonto bleibt davon unberührt. Du kannst die Verbindung jederzeit wiederherstellen.",
+      "reconnect": "Erneut verbinden",
+      "reconnecting": "Wird erneut verbunden…",
+      "alertTitle": "{count, plural, one {Bankverbindung braucht deine Aufmerksamkeit} other {Bankverbindungen brauchen deine Aufmerksamkeit}}",
+      "alertOne": "Für deine Verbindung zu {name} musst du dich erneut anmelden.",
+      "alertOneUnnamed": "Für deine Verbindung zu einer Bank musst du dich erneut anmelden.",
+      "alertMany": "{count, plural, one {Für # Bankverbindung musst du dich erneut anmelden.} other {Für # Bankverbindungen musst du dich erneut anmelden.}}"
+    }
+  },
+  "brokers": {
+    "title": "Broker",
+    "subtitle": "Verbinde deine Broker und Börsen. Aktuell: SnapTrade-Broker und Bitpanda – weitere folgen.",
+    "refresh": "Aktualisieren",
+    "connectBroker": "Broker verbinden",
+    "stats": {
+      "totalValue": "Gesamtwert",
+      "positions": "{count, plural, one {# Position} other {# Positionen}}",
+      "brokers": "Broker",
+      "connectedBrokers": "Verbundene Broker",
+      "accounts": "Konten",
+      "tradingAccounts": "Depots",
+      "cash": "Liquidität",
+      "availableCash": "Verfügbare Liquidität"
+    }
+  }
+}

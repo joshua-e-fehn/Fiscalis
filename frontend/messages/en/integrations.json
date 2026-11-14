@@ -1,0 +1,108 @@
+{
+  "status": {
+    "connected": "Connected",
+    "syncing": "Syncing",
+    "error": "Error",
+    "reauthRequired": "Re-auth required",
+    "pending": "Pending",
+    "disconnected": "Disconnected"
+  },
+  "connection": {
+    "openMenu": "Open menu",
+    "sync": "Sync",
+    "syncing": "Syncing…",
+    "disconnect": "Disconnect",
+    "disconnecting": "Disconnecting…",
+    "disconnectTitle": "Disconnect {name}?",
+    "disconnectInfo": "This will remove {info} and their data from your dashboard.",
+    "disconnectDefault": "This will remove this connection and all associated data from your dashboard.",
+    "notAffected": "Your actual account will not be affected. You can reconnect at any time.",
+    "cash": "{amount} cash",
+    "syncedJustNow": "just now"
+  },
+  "banking": {
+    "title": "Bank accounts",
+    "subtitle": "Connect your bank accounts to automatically track balances and transactions.",
+    "connectBank": "Connect bank",
+    "unknownBank": "Unknown bank",
+    "accounts": "{count, plural, one {# account} other {# accounts}}",
+    "stats": {
+      "netBalance": "Net balance",
+      "netBalanceDescription": "{accounts, plural, one {# account} other {# accounts}}, after debts",
+      "netBalanceDescriptionUnconverted": "{accounts, plural, one {# account} other {# accounts}}, after debts · {unconverted} without an exchange rate",
+      "checking": "Checking",
+      "savings": "Savings",
+      "owed": "Owed",
+      "cards": "{cards, plural, one {# card} other {# cards}}",
+      "cardsAndLoans": "{cards, plural, one {# card} other {# cards}}, {loans, plural, one {# loan} other {# loans}}"
+    },
+    "empty": {
+      "loadFailedTitle": "Failed to load accounts",
+      "loadFailedDescription": "We couldn't load your bank accounts. Please try refreshing the page.",
+      "refreshPage": "Refresh page",
+      "syncTitle": "Sync your accounts",
+      "syncDescription": "{count, plural, one {You have # bank connection but no accounts synced yet.} other {You have # bank connections but no accounts synced yet.}} Click below to fetch your account data.",
+      "syncAccounts": "Sync accounts",
+      "noAccountsTitle": "No linked accounts",
+      "noAccountsDescription": "Connect your bank accounts to track your finances, view balances and monitor transactions all in one place."
+    },
+    "accountTypes": {
+      "checking": "Checking account",
+      "savings": "Savings account",
+      "moneyMarket": "Money market",
+      "cd": "Certificate of deposit",
+      "cashManagement": "Cash management",
+      "prepaid": "Prepaid",
+      "paypal": "PayPal",
+      "depository": "Bank account",
+      "creditCard": "Credit card",
+      "credit": "Credit",
+      "loan": "Loan",
+      "mortgage": "Mortgage",
+      "student": "Student loan",
+      "auto": "Car loan",
+      "investment": "Investment",
+      "brokerage": "Brokerage account"
+    },
+    "account": {
+      "fallbackName": "Bank account",
+      "available": "Available: {amount}"
+    },
+    "link": {
+      "connecting": "Connecting…",
+      "connectAnother": "Connect another bank",
+      "connectFirst": "Connect your bank",
+      "connected": "Bank connected successfully"
+    },
+    "reauth": {
+      "needsReauth": "This connection needs to be re-authenticated",
+      "disconnectBank": "Disconnect bank",
+      "expiredTitle": "Connection expired",
+      "expiredDescription": "Your bank requires you to log in again for security purposes. Click reconnect to restore access to your accounts.",
+      "disconnectDescription": "This will remove the connection entirely from your dashboard.",
+      "notAffected": "Your actual bank account will not be affected. You can reconnect at any time.",
+      "reconnect": "Reconnect",
+      "reconnecting": "Reconnecting…",
+      "alertTitle": "{count, plural, one {Bank connection needs attention} other {Bank connections need attention}}",
+      "alertOne": "Your connection to {name} needs to be re-authenticated.",
+      "alertOneUnnamed": "Your connection to a bank needs to be re-authenticated.",
+      "alertMany": "{count, plural, one {# bank connection needs to be re-authenticated.} other {# bank connections need to be re-authenticated.}}"
+    }
+  },
+  "brokers": {
+    "title": "Brokers",
+    "subtitle": "Connect your brokers and exchanges. Today: SnapTrade brokers and Bitpanda — more coming.",
+    "refresh": "Refresh",
+    "connectBroker": "Connect broker",
+    "stats": {
+      "totalValue": "Total value",
+      "positions": "{count, plural, one {# position} other {# positions}}",
+      "brokers": "Brokers",
+      "connectedBrokers": "Connected brokers",
+      "accounts": "Accounts",
+      "tradingAccounts": "Brokerage accounts",
+      "cash": "Cash",
+      "availableCash": "Available cash"
+    }
+  }
+}

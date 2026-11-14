@@ -2,7 +2,9 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { usePlaidLink as usePlaidLinkReact } from "react-plaid-link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/shadcn/button";
+import { useErrorMessage } from "@/i18n/errors";
 import { Loader2, AlertTriangle, RefreshCw } from "lucide-react";
 import {
   useCreateUpdateLinkToken,
@@ -35,7 +37,10 @@ export function PlaidUpdateButton({
 }: PlaidUpdateButtonProps) {
   const [token, setToken] = useState<string | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const t = useTranslations("integrations.banking.reauth");
+  const toErrorMessage = useErrorMessage();
   const createUpdateLinkToken = useCreateUpdateLinkToken();
   const refreshAccounts = useRefreshAccounts();
 
@@ -43,13 +48,15 @@ export function PlaidUpdateButton({
   const handleReconnect = useCallback(async () => {
     if (token || linkOpen || createUpdateLinkToken.isLoading) return;
 
+    setErrorMessage(null);
     try {
       const result = await createUpdateLinkToken.mutate(item.itemId);
       setToken(result.linkToken);
     } catch (error) {
       console.error("Failed to get update link token", error);
+      setErrorMessage(toErrorMessage(error));
     }
-  }, [token, linkOpen, createUpdateLinkToken, item.itemId]);
+  }, [token, linkOpen, createUpdateLinkToken, item.itemId, toErrorMessage]);
 
   // Reset states
   const resetStates = useCallback(() => {
@@ -65,10 +72,11 @@ export function PlaidUpdateButton({
       await refreshAccounts.mutate(item.itemId);
     } catch (error) {
       console.error("Failed to refresh accounts after reconnect", error);
+      setErrorMessage(toErrorMessage(error));
     }
     onSuccess?.();
     resetStates();
-  }, [refreshAccounts, item.itemId, onSuccess, resetStates]);
+  }, [refreshAccounts, item.itemId, onSuccess, resetStates, toErrorMessage]);
 
   // Initialize Plaid Link in update mode
   const { open, ready } = usePlaidLinkReact({
@@ -86,7 +94,7 @@ export function PlaidUpdateButton({
   const isDisabled =
     createUpdateLinkToken.isLoading || linkOpen || (!!token && !ready);
 
-  return (
+  const button = (
     <Button
       onClick={handleReconnect}
       disabled={isDisabled}
@@ -99,8 +107,20 @@ export function PlaidUpdateButton({
       ) : (
         <RefreshCw className="h-4 w-4" />
       )}
-      {linkOpen ? "Reconnecting..." : "Reconnect"}
+      {linkOpen ? t("reconnecting") : t("reconnect")}
     </Button>
+  );
+
+  // The layout only changes while there is an error to show
+  if (!errorMessage) return button;
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      {button}
+      <p role="alert" className="max-w-xs text-xs text-destructive">
+        {errorMessage}
+      </p>
+    </div>
   );
 }
 
@@ -109,6 +129,7 @@ interface ReauthAlertProps {
 }
 
 export function ReauthAlert({ items }: ReauthAlertProps) {
+  const t = useTranslations("integrations.banking");
   if (!items || items.length === 0) return null;
 
   return (
@@ -117,12 +138,14 @@ export function ReauthAlert({ items }: ReauthAlertProps) {
         <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
         <div className="flex-1">
           <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-            Bank Connection{items.length > 1 ? "s" : ""} Need Attention
+            {t("reauth.alertTitle", { count: items.length })}
           </h4>
           <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-            {items.length === 1
-              ? `Your connection to ${items[0].institutionName || "a bank"} needs to be re-authenticated.`
-              : `${items.length} bank connections need to be re-authenticated.`}
+            {items.length > 1
+              ? t("reauth.alertMany", { count: items.length })
+              : items[0].institutionName
+                ? t("reauth.alertOne", { name: items[0].institutionName })
+                : t("reauth.alertOneUnnamed")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {items.map((item) => (
@@ -131,7 +154,7 @@ export function ReauthAlert({ items }: ReauthAlertProps) {
                 className="flex items-center gap-2 bg-card rounded-md px-3 py-2 border border-yellow-200 dark:border-yellow-800"
               >
                 <span className="text-sm font-medium">
-                  {item.institutionName || "Unknown Bank"}
+                  {item.institutionName || t("unknownBank")}
                 </span>
                 <PlaidUpdateButton item={item} />
               </div>

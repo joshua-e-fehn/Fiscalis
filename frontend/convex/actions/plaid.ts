@@ -1,8 +1,12 @@
 "use node";
 
 import { v } from "convex/values";
-import { action, internalAction } from "../_generated/server";
-import { internal } from "../_generated/api";
+import {
+  action,
+  internalAction,
+  type ActionCtx,
+} from "../_generated/server";
+import { api, internal } from "../_generated/api";
 import {
   Configuration,
   PlaidApi,
@@ -15,6 +19,10 @@ import { NO_CURRENCY } from "../../../services/finance/currency";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
+import {
+  isLanguage,
+  type Language,
+} from "../../../services/settings/userSettings";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -59,6 +67,17 @@ function getProducts(): Products[] {
   return plaidLinkProducts(process.env.PLAID_PRODUCTS) as Products[];
 }
 
+/**
+ * The language Plaid Link opens in: the user's stored language
+ * (userSettings.language), else English. Plaid's language codes match the
+ * app's for every supported language (en, de).
+ */
+async function getLinkLanguage(ctx: ActionCtx): Promise<Language> {
+  const settings = await ctx.runQuery(api.onboarding.getUserSettings, {});
+  const stored = settings?.language;
+  return stored && isLanguage(stored) ? stored : "en";
+}
+
 // ═══════════════════════════════════════════════════════════════
 // LINK TOKEN ACTIONS
 // ═══════════════════════════════════════════════════════════════
@@ -80,7 +99,7 @@ export const createLinkToken = action({
       client_name: "Fiscalis",
       products: getProducts(),
       country_codes: getCountryCodes(),
-      language: "en",
+      language: await getLinkLanguage(ctx),
     });
 
     return { linkToken: response.data.link_token };
@@ -115,7 +134,7 @@ export const createUpdateLinkToken = action({
       client_name: "Fiscalis",
       access_token: accessToken,
       country_codes: getCountryCodes(),
-      language: "en",
+      language: await getLinkLanguage(ctx),
     });
 
     return { linkToken: response.data.link_token };

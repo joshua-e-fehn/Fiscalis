@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { BanksCard } from "@/components/atomic/organisms/banksCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
 import { PageHeader } from "@/components/atomic/molecules/investments";
@@ -25,6 +26,8 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { bankAccountTotals } from "@/../services/portfolio/categorySummary";
 
 export default function BankingPage() {
+  const t = useTranslations("integrations.banking");
+  const tConnection = useTranslations("integrations.connection");
   const accounts = usePlaidAccounts();
   // The totals are summed in EUR and shown in the display currency
   const {
@@ -50,66 +53,71 @@ export default function BankingPage() {
     if (!accounts || accounts.length === 0 || isRateLoading) return null;
 
     const totals = bankAccountTotals(accounts);
-    const plural = (n: number, word: string) =>
-      `${n} ${word}${n === 1 ? "" : "s"}`;
-    const unconvertedNote =
-      totals.unconverted > 0
-        ? ` · ${totals.unconverted} without an exchange rate`
-        : "";
 
     return [
       {
-        label: "Net Balance",
+        label: t("stats.netBalance"),
         value: formatCurrency(fromEur(totals.net), currency),
         icon: Banknote,
-        description: `${plural(totals.counts.all, "account")}, after debts${unconvertedNote}`,
+        description:
+          totals.unconverted > 0
+            ? t("stats.netBalanceDescriptionUnconverted", {
+                accounts: totals.counts.all,
+                unconverted: totals.unconverted,
+              })
+            : t("stats.netBalanceDescription", {
+                accounts: totals.counts.all,
+              }),
       },
       {
-        label: "Checking",
+        label: t("stats.checking"),
         value: formatCurrency(fromEur(totals.checking), currency),
         icon: Wallet,
-        description: plural(totals.counts.checking, "account"),
+        description: t("accounts", { count: totals.counts.checking }),
       },
       {
-        label: "Savings",
+        label: t("stats.savings"),
         value: formatCurrency(fromEur(totals.savings), currency),
         icon: Building2,
-        description: plural(totals.counts.savings, "account"),
+        description: t("accounts", { count: totals.counts.savings }),
       },
       {
-        label: "Owed",
+        label: t("stats.owed"),
         value: formatCurrency(fromEur(totals.owed), currency),
         icon: CreditCard,
         description:
           totals.counts.loans > 0
-            ? `${plural(totals.counts.cards, "card")}, ${plural(totals.counts.loans, "loan")}`
-            : plural(totals.counts.cards, "card"),
+            ? t("stats.cardsAndLoans", {
+                cards: totals.counts.cards,
+                loans: totals.counts.loans,
+              })
+            : t("stats.cards", { cards: totals.counts.cards }),
       },
     ];
-  }, [accounts, currency, fromEur, isRateLoading]);
+  }, [accounts, currency, fromEur, isRateLoading, t]);
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Bank Accounts"
-        subtitle="Connect your bank accounts to automatically track balances and transactions."
+        title={t("title")}
+        subtitle={t("subtitle")}
         actionsLoading={isLoading}
         actions={
           hasAccounts
             ? [
                 {
-                  label: "Sync",
+                  label: tConnection("sync"),
                   onClick: () => refreshAll(),
                   variant: "outline",
                   icon: RefreshCw,
                   isLoading: isSyncing,
-                  loadingLabel: "Syncing...",
+                  loadingLabel: tConnection("syncing"),
                   iconOnly: true,
                 },
               ]
             : []
         }
-        customActions={<PlaidLinkButton buttonText="Connect Bank" />}
+        customActions={<PlaidLinkButton buttonText={t("connectBank")} />}
       />
 
       {/* KPI Cards - only show if there are accounts */}

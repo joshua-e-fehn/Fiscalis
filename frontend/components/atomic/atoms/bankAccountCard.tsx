@@ -7,6 +7,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/shadcn/card";
+import { useTranslations } from "next-intl";
 import { Building, CreditCard, Wallet } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -38,6 +39,7 @@ const AccountIcon = ({ type }: { type: string }) => {
 };
 
 export function BankAccountCard({ account }: { account: ConvexAccount }) {
+  const t = useTranslations("integrations.banking.account");
   const hasBalance = account.currentBalance !== undefined;
   // The provider's balances, in the account's own currency; without one
   // they are not shown rather than labelled with a guessed currency
@@ -50,7 +52,7 @@ export function BankAccountCard({ account }: { account: ConvexAccount }) {
         <div>
           <CardTitle className="text-base">{account.name}</CardTitle>
           <CardDescription>
-            {account.officialName || account.subtype || "Bank Account"}
+            {account.officialName || account.subtype || t("fallbackName")}
           </CardDescription>
         </div>
         <div className="ml-auto">
@@ -66,8 +68,9 @@ export function BankAccountCard({ account }: { account: ConvexAccount }) {
               </p>
               {account.availableBalance !== undefined && (
                 <p className="text-sm text-muted-foreground">
-                  Available:{" "}
-                  {formatBalance(account.availableBalance)}
+                  {t("available", {
+                    amount: formatBalance(account.availableBalance),
+                  })}
                 </p>
               )}
             </>

@@ -7,6 +7,7 @@
  * Displays connection status with consistent styling across pages.
  */
 
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/shadcn/badge";
 import {
   CheckCircle2,
@@ -38,38 +39,45 @@ interface IntegrationStatusBadgeProps {
 const statusConfig: Record<
   IntegrationStatus,
   {
-    label: string;
+    /** Key under integrations.status */
+    label:
+      | "connected"
+      | "syncing"
+      | "error"
+      | "reauthRequired"
+      | "pending"
+      | "disconnected";
     icon: React.ComponentType<{ className?: string }>;
     variant: "default" | "secondary" | "destructive" | "outline";
     className: string;
   }
 > = {
   connected: {
-    label: "Connected",
+    label: "connected",
     icon: CheckCircle2,
     variant: "outline",
     className: "text-green-600 border-green-600",
   },
   active: {
-    label: "Connected",
+    label: "connected",
     icon: CheckCircle2,
     variant: "outline",
     className: "text-green-600 border-green-600",
   },
   syncing: {
-    label: "Syncing",
+    label: "syncing",
     icon: Loader2,
     variant: "outline",
     className: "text-blue-600 border-blue-600",
   },
   error: {
-    label: "Error",
+    label: "error",
     icon: AlertCircle,
     variant: "outline",
     className: "text-destructive border-destructive",
   },
   reauth_required: {
-    label: "Re-auth Required",
+    label: "reauthRequired",
     icon: AlertTriangle,
     variant: "outline",
     className: "text-orange-600 border-orange-600",
@@ -87,13 +95,13 @@ const statusConfig: Record<
     className: "text-yellow-600 border-yellow-600",
   },
   pending: {
-    label: "Pending",
+    label: "pending",
     icon: Clock,
     variant: "outline",
     className: "text-yellow-600 border-yellow-600",
   },
   disconnected: {
-    label: "Disconnected",
+    label: "disconnected",
     icon: AlertCircle,
     variant: "outline",
     className: "text-muted-foreground border-muted-foreground",
@@ -105,6 +113,7 @@ export function IntegrationStatusBadge({
   isSyncing,
   className,
 }: IntegrationStatusBadgeProps) {
+  const t = useTranslations("integrations.status");
   // If global/external syncing is active, show syncing status
   const effectiveStatus = isSyncing ? "syncing" : status;
   const config = statusConfig[effectiveStatus];
@@ -118,7 +127,7 @@ export function IntegrationStatusBadge({
           effectiveStatus === "syncing" && "animate-spin",
         )}
       />
-      {config.label}
+      {t(config.label)}
     </Badge>
   );
 }

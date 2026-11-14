@@ -21,7 +21,6 @@ function sanitizeConnection<
   T extends { apiKey?: string },
 >(connection: T): Omit<T, "apiKey"> {
   const { apiKey: _apiKey, ...rest } = connection;
-  void _apiKey;
   return rest;
 }
 

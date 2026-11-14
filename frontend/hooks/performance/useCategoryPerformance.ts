@@ -102,8 +102,15 @@ export function useSnapshots(
   );
 
   const display = useDisplayCurrency();
+  // From the earliest snapshot returned: the query includes the baseline
+  // snapshot before `since`, which needs its own day's rate too
+  const firstSnapshotAt = raw?.[0]?.timestamp;
   const rates = useDisplayRateHistory(
-    enabled ? (since ?? raw?.[0]?.timestamp) : undefined,
+    enabled
+      ? since === undefined
+        ? firstSnapshotAt
+        : Math.min(since, firstSnapshotAt ?? since)
+      : undefined,
   );
   const ratesLoading = display.isLoading || rates.isLoading;
   const rateOn = rates.rateOn;

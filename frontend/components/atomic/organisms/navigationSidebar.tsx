@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	AudioWaveform,
 	Banknote,
 	Bitcoin,
 	BookOpen,
@@ -10,9 +9,7 @@ import {
 	ChartCandlestick,
 	ChartLine,
 	ChartNoAxesCombined,
-	Command,
 	CreditCard,
-	GalleryVerticalEnd,
 	GemIcon,
 	Globe2,
 	HandCoins,
@@ -27,7 +24,7 @@ import {
 import type * as React from "react";
 
 import { NavigationDropdown } from "@/components/atomic/molecules/navigationDropdown";
-import { NavigationTeamSwitcher } from "@/components/atomic/molecules/navigationTeamSwitcher";
+import { NavigationBrand } from "@/components/atomic/molecules/navigationBrand";
 import { NavigationUserMenu } from "@/components/atomic/molecules/navigationUserMenu";
 import {
 	Sidebar,
@@ -37,25 +34,7 @@ import {
 	SidebarRail,
 } from "@/components/ui/shadcn/sidebar";
 
-// This is sample data.
 const data = {
-	teams: [
-		{
-			name: "Acme Inc",
-			logo: GalleryVerticalEnd,
-			plan: "Enterprise",
-		},
-		{
-			name: "Acme Corp.",
-			logo: AudioWaveform,
-			plan: "Startup",
-		},
-		{
-			name: "Evil Corp.",
-			logo: Command,
-			plan: "Free",
-		},
-	],
 	navigationPortfolio: [
 		{
 			title: "Dashboard",
@@ -245,7 +224,7 @@ export function NavigationSidebar({
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
-				<NavigationTeamSwitcher teams={data.teams} />
+				<NavigationBrand />
 			</SidebarHeader>
 			<SidebarContent>
 				<NavigationDropdown

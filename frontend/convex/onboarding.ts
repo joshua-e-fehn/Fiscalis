@@ -13,6 +13,9 @@ function assertValidBirthDate(birthDate: string): string {
   return result.value;
 }
 
+/** The mandatory profile step (lib/types/onboarding.ts OnboardingStep.PROFILE). */
+const PROFILE_STEP = 2;
+
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING QUERIES
 // ═══════════════════════════════════════════════════════════════
@@ -233,6 +236,9 @@ export const skipStep = mutation({
       .first();
 
     if (!progress) throw new Error("Onboarding not initialized");
+    if (args.step === PROFILE_STEP) {
+      throw new Error("The profile step cannot be skipped");
+    }
 
     const skippedSteps = progress.skippedSteps.includes(args.step)
       ? progress.skippedSteps
@@ -352,6 +358,9 @@ export const completeOnboarding = mutation({
       .first();
 
     if (!progress) throw new Error("Onboarding not initialized");
+    if (!progress.profileCompleted) {
+      throw new Error("Complete your profile before finishing onboarding");
+    }
 
     await ctx.db.patch(progress._id, {
       onboardingCompleted: true,

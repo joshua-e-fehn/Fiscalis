@@ -40,11 +40,16 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
     completeOnboarding();
   }, [completeOnboarding]);
 
-  const handleGoToDashboard = () => {
+  const handleGoToDashboard = async () => {
     setIsNavigating(true);
-    // Clear the session flag so they won't be redirected back
-    sessionStorage.removeItem("onboarding_in_progress");
-    router.push("/dashboard");
+    try {
+      // Idempotent: makes sure the completion is stored before the app's
+      // onboarding gate checks it, even on a click right after mount.
+      await completeOnboarding();
+      router.push("/dashboard");
+    } catch {
+      setIsNavigating(false);
+    }
   };
 
   const totalConnections =

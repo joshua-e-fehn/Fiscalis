@@ -35,10 +35,17 @@ export function OnboardingFlow() {
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Existing user: restore the saved step on first load only. Adjusted during
-  // render (not in an effect); the loading skeleton shows until this runs.
+  // Existing user: resume at the saved step on first load only. The profile
+  // step is mandatory, so a user who got past it without completing it
+  // resumes there. Adjusted during render (not in an effect); the loading
+  // skeleton shows until this runs.
   if (!isInitialized && progress !== undefined && progress !== null) {
-    setCurrentStep(progress.currentStep as OnboardingStepEnum);
+    setCurrentStep(
+      !progress.profileCompleted &&
+        progress.currentStep > OnboardingStepEnum.PROFILE
+        ? OnboardingStepEnum.PROFILE
+        : (progress.currentStep as OnboardingStepEnum),
+    );
     setIsInitialized(true);
   }
 
@@ -85,14 +92,21 @@ export function OnboardingFlow() {
     }
   }, [currentStep]);
 
+  // Only steps already reached can be revisited, and nothing past the
+  // mandatory profile step until it is completed: the funnel is left only by
+  // finishing it.
   const handleStepClick = useCallback(
     (step: OnboardingStepEnum) => {
-      if (step !== currentStep) {
+      const reached = Math.max(progress?.currentStep ?? 1, currentStep);
+      const blocked =
+        step > reached ||
+        (step > OnboardingStepEnum.PROFILE && !progress?.profileCompleted);
+      if (step !== currentStep && !blocked) {
         setDirection(step > currentStep ? "forward" : "backward");
         setCurrentStep(step);
       }
     },
-    [currentStep],
+    [currentStep, progress],
   );
 
   const handleAddMore = useCallback(() => {
@@ -156,11 +170,7 @@ export function OnboardingFlow() {
               <WelcomeStep onNext={handleNext} />
             )}
             {currentStep === OnboardingStepEnum.PROFILE && (
-              <ProfileStep
-                onNext={handleNext}
-                onSkip={handleSkip}
-                onBack={handleBack}
-              />
+              <ProfileStep onNext={handleNext} onBack={handleBack} />
             )}
             {currentStep === OnboardingStepEnum.BANKING && (
               <BankingStep

@@ -2,7 +2,7 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { OnboardingFlow } from "@/components/atomic/organisms/onboarding";
 import { useHasCompletedOnboarding } from "@/hooks/convex/onboarding";
 
@@ -10,6 +10,13 @@ export default function OnboardingPage() {
   const { isSignedIn, isLoaded } = useAuth();
   const router = useRouter();
   const hasCompleted = useHasCompletedOnboarding();
+  // Whether this visit started with onboarding unfinished. Completing it on
+  // the final step then does not redirect: the CompletionStep sends the user
+  // to the dashboard when they click its button.
+  const [startedIncomplete, setStartedIncomplete] = useState(false);
+  if (hasCompleted === false && !startedIncomplete) {
+    setStartedIncomplete(true);
+  }
 
   // Redirect if not signed in
   useEffect(() => {
@@ -18,30 +25,15 @@ export default function OnboardingPage() {
     }
   }, [isLoaded, isSignedIn, router]);
 
-  // Note: We don't auto-redirect on completion here anymore.
-  // The CompletionStep handles the redirect when user clicks the button.
-  // This only redirects users who return to /onboarding after already completing it.
+  // Already onboarded: nothing to do here.
   useEffect(() => {
-    // Only redirect if they completed onboarding in a previous session
-    // and are trying to access the onboarding page again
-    if (hasCompleted === true && typeof window !== "undefined") {
-      const isReturningUser =
-        sessionStorage.getItem("onboarding_in_progress") !== "true";
-      if (isReturningUser) {
-        router.push("/dashboard");
-      }
+    if (hasCompleted === true && !startedIncomplete) {
+      router.replace("/dashboard");
     }
-  }, [hasCompleted, router]);
+  }, [hasCompleted, startedIncomplete, router]);
 
-  // Mark that onboarding is in progress for this session
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      sessionStorage.setItem("onboarding_in_progress", "true");
-    }
-  }, [isLoaded, isSignedIn]);
-
-  // Don't render until auth is loaded
-  if (!isLoaded || !isSignedIn) {
+  // Don't render until auth and the onboarding status are loaded
+  if (!isLoaded || !isSignedIn || !startedIncomplete) {
     return null;
   }
 

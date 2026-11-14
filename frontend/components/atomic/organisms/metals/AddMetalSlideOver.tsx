@@ -38,7 +38,9 @@ import {
 import { Textarea } from "@/components/ui/shadcn/textarea";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { MetalBadge, MetalIcon } from "@/components/atomic/atoms/metals";
-import { MetalsType, MetalsCurrency } from "@/lib/types/metals-extended";
+import { CurrencySelect } from "@/components/atomic/atoms/currencySelect";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
+import { MetalsType } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/utils/date";
 import { Search, Loader2, Package, Plus } from "lucide-react";
@@ -68,8 +70,11 @@ export function AddMetalSlideOver({
   const [quantity, setQuantity] = useState("1");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
-  const [purchaseCurrency, setPurchaseCurrency] =
-    useState<MetalsCurrency>("eur");
+  // The purchase currency as an ISO code; until the user picks one it
+  // follows the display currency (null), which may still be loading
+  const display = useDisplayCurrency();
+  const [chosenCurrency, setChosenCurrency] = useState<string | null>(null);
+  const purchaseCurrency = chosenCurrency ?? display.code;
   const [storageLocation, setStorageLocation] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -151,7 +156,7 @@ export function AddMetalSlideOver({
     setQuantity("1");
     setPurchasePrice("");
     setPurchaseDate("");
-    setPurchaseCurrency("eur");
+    setChosenCurrency(null);
     setStorageLocation("");
     setNotes("");
     setSelectedCatalogItem(null);
@@ -177,7 +182,7 @@ export function AddMetalSlideOver({
             ? parseFloat(purchasePrice)
             : undefined,
           purchaseDate,
-          purchaseCurrency: purchaseCurrency.toUpperCase(),
+          purchaseCurrency,
           storageLocation: storageLocation || undefined,
           notes: notes || undefined,
         });
@@ -195,7 +200,7 @@ export function AddMetalSlideOver({
             ? parseFloat(purchasePrice)
             : undefined,
           purchaseDate,
-          purchaseCurrency: purchaseCurrency.toUpperCase(),
+          purchaseCurrency,
           storageLocation: storageLocation || undefined,
           notes: notes || undefined,
         });
@@ -481,19 +486,10 @@ export function AddMetalSlideOver({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Currency</Label>
-              <Select
+              <CurrencySelect
                 value={purchaseCurrency}
-                onValueChange={(v) => setPurchaseCurrency(v as MetalsCurrency)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="eur">€ EUR</SelectItem>
-                  <SelectItem value="usd">$ USD</SelectItem>
-                  <SelectItem value="chf">₣ CHF</SelectItem>
-                </SelectContent>
-              </Select>
+                onValueChange={setChosenCurrency}
+              />
             </div>
           </div>
 

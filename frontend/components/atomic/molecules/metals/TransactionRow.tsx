@@ -1,9 +1,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { formatCurrency, toInvestmentCurrency } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import { MetalBadge } from "@/components/atomic/atoms/metals";
-import { MetalsType, MetalsCurrency } from "@/lib/types/metals-extended";
+import { MetalsType } from "@/lib/types/metals-extended";
 import { ArrowDownLeft, ArrowUpRight, Gift, GiftIcon } from "lucide-react";
 
 export interface Transaction {
@@ -27,7 +27,6 @@ export interface Transaction {
 
 interface TransactionRowProps {
   transaction: Transaction;
-  displayCurrency?: MetalsCurrency;
   className?: string;
 }
 
@@ -65,8 +64,9 @@ export function TransactionRow({
   className,
 }: TransactionRowProps) {
   const Icon = transactionIcons[transaction.transactionType];
-  // Stored as an ISO code ("EUR"); unknown codes fall back to EUR as before
-  const currency = toInvestmentCurrency(transaction.currency) ?? "eur";
+  // The purchase or sale currency as entered, an ISO code ("EUR", "GBP");
+  // formatCurrency writes any code after the amount
+  const currency = transaction.currency;
   const totalValue =
     transaction.pricePerUnit === null
       ? null

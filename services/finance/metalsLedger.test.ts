@@ -14,6 +14,8 @@ import {
   sortLedger,
   sumSaleProfitLoss,
   transactionTotals,
+  ledgerUnitsPerEur,
+  saleProfitLossIn,
   transactionUnitAmount,
   validateTransactionInput,
 } from "./metalsLedger";
@@ -481,7 +483,7 @@ describe("ledgerHoldings in another currency (PF-13)", () => {
 });
 
 describe("transactionTotals (M-C5)", () => {
-  const rates = { eurToUsd: 2, eurToChf: 0.5 };
+  const rates = ledgerUnitsPerEur({ eurToUsd: 2, eurToChf: 0.5 });
   const txs = [
     // EUR buy: 2 × 100 €
     { ...buy(2, 100, "2026-01-05"), pricePerUnitBase: 100 },
@@ -519,7 +521,7 @@ describe("transactionTotals (M-C5)", () => {
   });
 
   it("counts rows without a rate instead of mixing currencies", () => {
-    const noUsd = { eurToUsd: null, eurToChf: 0.5 };
+    const noUsd = ledgerUnitsPerEur({ eurToUsd: null, eurToChf: 0.5 });
     expect(transactionTotals(txs, "usd", noUsd)).toEqual({
       totalBought: 120,
       totalSold: 0,
@@ -528,6 +530,81 @@ describe("transactionTotals (M-C5)", () => {
       notConverted: 2,
       unknownCost: 1,
     });
+  });
+  it("converts into a display currency the spot rates lack (GBP)", () => {
+    const gbp = ledgerUnitsPerEur(
+      { eurToUsd: 2, eurToChf: 0.5 },
+      { code: "GBP", unitsPerEur: 0.8 },
+    );
+    // Bought: 200 € + 50 € (the USD row's EUR price) = 250 € × 0.8;
+    // sold 150 € × 0.8
+    expect(transactionTotals(txs, "gbp", gbp)).toEqual({
+      totalBought: 200,
+      totalSold: 120,
+      buyCount: 3,
+      sellCount: 1,
+      notConverted: 0,
+      unknownCost: 1,
+    });
+    // An older USD row without an EUR price crosses through EUR
+    const older = [buy(1, 100, "2026-01-05", "USD")];
+    expect(transactionTotals(older, "GBP", gbp).totalBought).toBeCloseTo(40);
+    // A GBP row in a GBP view counts at its own price
+    const own = [buy(2, 30, "2026-01-05", "GBP")];
+    expect(transactionTotals(own, "gbp", gbp).totalBought).toBe(60);
+  });
+
+  it("without the display rate, GBP rows are counted as not converted", () => {
+    expect(transactionTotals(txs, "gbp", rates)).toMatchObject({
+      totalBought: 0,
+      totalSold: 0,
+      notConverted: 3,
+    });
+  });
+});
+
+describe("saleProfitLossIn", () => {
+  const gbp = ledgerUnitsPerEur(null, { code: "GBP", unitsPerEur: 0.8 });
+
+  it("compares a sale in the display currency with the converted EUR cost", () => {
+    // Cost 100 € = 80 £ per unit; 2 sold at 90 £
+    expect(saleProfitLossIn(100, 2, 90, "GBP", gbp)).toEqual({
+      proceeds: 180,
+      costBasis: 160,
+      profitLoss: 20,
+      profitLossPercent: 12.5,
+    });
+  });
+
+  it("takes an EUR sale at the EUR cost", () => {
+    expect(saleProfitLossIn(100, 1, 110, "EUR", gbp).profitLoss).toBe(10);
+  });
+
+  it("leaves cost and P/L unknown without a rate or a cost", () => {
+    const none = { proceeds: 90, costBasis: null, profitLoss: null, profitLossPercent: null };
+    expect(saleProfitLossIn(100, 1, 90, "USD", gbp)).toEqual(none);
+    expect(saleProfitLossIn(null, 1, 90, "GBP", gbp)).toEqual(none);
+  });
+});
+
+describe("ledgerUnitsPerEur", () => {
+  it("takes USD/CHF from the spot rates", () => {
+    expect(ledgerUnitsPerEur({ eurToUsd: 1.1, eurToChf: null })).toEqual({
+      USD: 1.1,
+    });
+    expect(ledgerUnitsPerEur(null)).toEqual({});
+  });
+
+  it("prefers the display currency's own rate, EUR staying implicit", () => {
+    expect(
+      ledgerUnitsPerEur(
+        { eurToUsd: 1.1, eurToChf: 0.95 },
+        { code: "usd", unitsPerEur: 1.2 },
+      ),
+    ).toEqual({ USD: 1.2, CHF: 0.95 });
+    expect(
+      ledgerUnitsPerEur(null, { code: "EUR", unitsPerEur: 1 }),
+    ).toEqual({});
   });
 });
 

@@ -30,8 +30,10 @@ export default async function AppLayout({
   // Clerk's strict CSP (production, proxy.ts) puts the per-request nonce in the
   // x-nonce request header; next-themes' anti-flash inline script needs it.
   const nonce = (await headers()).get("x-nonce") ?? undefined;
-  // Resolved per request in i18n/request.ts (locale cookie, Accept-Language).
-  const locale = await getLocale();
+  // Resolved per request in i18n/request.ts (locale cookie, Accept-Language),
+  // limited to the languages the UI is rendered in (RENDERED_LANGUAGES), so
+  // <html lang>, Clerk and the metadata match the language of the content.
+  const language = languageForLocale(await getLocale());
 
   return (
     // `dynamic` is required for strict CSP — the nonce is generated server-side
@@ -41,10 +43,10 @@ export default async function AppLayout({
       dynamic
       signInUrl="/sign-in"
       signUpUrl="/sign-up"
-      localization={clerkLocalization(languageForLocale(locale))}
+      localization={clerkLocalization(language)}
     >
       {/* next-themes sets the theme class on <html> before hydration */}
-      <html lang={locale} dir={localeDirection(locale)} suppressHydrationWarning>
+      <html lang={language} dir={localeDirection(language)} suppressHydrationWarning>
         <body className={inter.className}>
           {/* Inherits locale, messages, time zone and formats from i18n/request.ts */}
           <NextIntlClientProvider>

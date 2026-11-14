@@ -22,6 +22,28 @@ export { LANGUAGES, isLanguage, type Language };
 
 export const DEFAULT_LANGUAGE: Language = "en";
 
+/**
+ * The languages the UI is rendered in, which can be narrower than LANGUAGES
+ * (the languages a user can store). German has a catalogue and can be picked,
+ * but until the feature batches translate the screens nearly every string is
+ * English. Rendering that as <html lang="de">, with German Clerk screens and
+ * German metadata, would make browsers offer to translate the page and screen
+ * readers read English with German pronunciation. So the page language, Clerk
+ * and the catalogue follow this list; "de" joins it once the app shell is
+ * translated. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language, for checking
+ * the catalogues locally (inlined at build time on both server and client).
+ */
+export const RENDERED_LANGUAGES: readonly Language[] =
+  process.env.NEXT_PUBLIC_I18N_PREVIEW === "1" ? LANGUAGES : [DEFAULT_LANGUAGE];
+
+/** The language a stored or requested language is rendered in. */
+export function renderedLanguage(
+  language: Language,
+  rendered: readonly Language[] = RENDERED_LANGUAGES,
+): Language {
+  return rendered.includes(language) ? language : DEFAULT_LANGUAGE;
+}
+
 /** Mirrors userSettings.language for the server render (i18n/request.ts). */
 export const LOCALE_COOKIE = "fiscalis-locale";
 /** The browser's IANA time zone, set client-side (providers/localeSync.tsx). */
@@ -104,20 +126,25 @@ export function parseAcceptLanguage(header: string | null | undefined): string[]
 }
 
 /**
- * The language to render in: the locale cookie if it holds a supported code,
- * else the first supported language in Accept-Language, else English.
+ * The language to render in: the locale cookie if it holds a rendered
+ * language, else the first rendered language in Accept-Language, else
+ * English. `rendered` defaults to RENDERED_LANGUAGES.
  */
 export function resolveLocale({
   cookie,
   acceptLanguage,
+  rendered = RENDERED_LANGUAGES,
 }: {
   cookie?: string | null;
   acceptLanguage?: string | null;
+  rendered?: readonly Language[];
 }): Language {
-  if (cookie && isLanguage(cookie)) return cookie;
+  const isRendered = (code: string): code is Language =>
+    isLanguage(code) && rendered.includes(code);
+  if (cookie && isRendered(cookie)) return cookie;
   for (const range of parseAcceptLanguage(acceptLanguage)) {
     const primary = range.split("-")[0].toLowerCase();
-    if (isLanguage(primary)) return primary;
+    if (isRendered(primary)) return primary;
   }
   return DEFAULT_LANGUAGE;
 }

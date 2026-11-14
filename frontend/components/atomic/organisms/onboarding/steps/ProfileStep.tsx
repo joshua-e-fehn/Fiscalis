@@ -60,7 +60,8 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const existingSettings = useUserSettings();
   const { setTheme } = useTheme();
   const applyLanguage = useApplyLanguage();
-  // Preselect the language the app is shown in (cookie or browser language)
+  // Preselect the language the app is shown in (cookie or browser language,
+  // limited to RENDERED_LANGUAGES, so English until German is rendered)
   const currentLanguage = languageForLocale(useLocale());
 
   const [formData, setFormData] = useState<ProfileFormData>({

@@ -10,6 +10,7 @@ import {
   TIME_ZONE_COOKIE,
   isLanguage,
   languageForLocale,
+  renderedLanguage,
   type Language,
 } from "@/i18n/locales";
 import { useUserSettings } from "@/hooks/convex/onboarding";
@@ -17,7 +18,9 @@ import { useUserSettings } from "@/hooks/convex/onboarding";
 /**
  * Switch the UI to `language`: write the locale cookie the server renders
  * from and re-render the server components. Persist userSettings.language
- * first; it is the source of truth for signed-in users.
+ * first; it is the source of truth for signed-in users. A language the UI is
+ * not rendered in yet (RENDERED_LANGUAGES) renders as English, so storing it
+ * changes nothing visible and causes no refresh.
  */
 export function useApplyLanguage() {
   const router = useRouter();
@@ -25,8 +28,9 @@ export function useApplyLanguage() {
 
   return useCallback(
     async (language: Language) => {
-      if (language === current) return;
-      await setLocaleCookie(language);
+      const target = renderedLanguage(language);
+      if (target === current) return;
+      await setLocaleCookie(target);
       router.refresh();
     },
     [current, router],

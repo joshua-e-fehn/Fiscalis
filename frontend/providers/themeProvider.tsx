@@ -36,7 +36,8 @@ export function ThemeProvider({
  * only when the stored value changes, so a live preview on the settings page
  * is not undone until it is saved or discarded. Must sit under
  * ConvexClientProvider. (userSettings.language is applied by
- * providers/localeSync.tsx; <html lang> comes from app/layout.tsx.)
+ * providers/localeSync.tsx; <html lang> comes from app/layout.tsx and stays
+ * "en" until a language is in RENDERED_LANGUAGES, i18n/locales.ts.)
  */
 export function ThemeSync() {
   const settings = useUserSettings();

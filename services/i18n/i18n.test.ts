@@ -15,7 +15,9 @@ import {
   PLANNED_LOCALES,
   languageForLocale,
   localeDirection,
+  RENDERED_LANGUAGES,
   parseAcceptLanguage,
+  renderedLanguage,
   resolveLocale,
   validTimeZone,
 } from "@/i18n/locales";
@@ -157,23 +159,51 @@ describe("parseAcceptLanguage", () => {
 });
 
 describe("resolveLocale", () => {
+  // Every supported language rendered, as once the UI is translated.
+  const rendered = LANGUAGES;
+
   it("prefers a supported cookie", () => {
-    expect(resolveLocale({ cookie: "de", acceptLanguage: "en-US" })).toBe("de");
+    expect(
+      resolveLocale({ cookie: "de", acceptLanguage: "en-US", rendered }),
+    ).toBe("de");
   });
 
   it("ignores an unsupported cookie", () => {
-    expect(resolveLocale({ cookie: "xx", acceptLanguage: "de-AT" })).toBe("de");
+    expect(
+      resolveLocale({ cookie: "xx", acceptLanguage: "de-AT", rendered }),
+    ).toBe("de");
   });
 
   it("takes the first supported browser language", () => {
     expect(
-      resolveLocale({ acceptLanguage: "fr-FR,fr;q=0.9,de;q=0.8,en;q=0.7" }),
+      resolveLocale({
+        acceptLanguage: "fr-FR,fr;q=0.9,de;q=0.8,en;q=0.7",
+        rendered,
+      }),
     ).toBe("de");
   });
 
   it("falls back to English", () => {
-    expect(resolveLocale({})).toBe("en");
-    expect(resolveLocale({ acceptLanguage: "fr, es" })).toBe("en");
+    expect(resolveLocale({ rendered })).toBe("en");
+    expect(resolveLocale({ acceptLanguage: "fr, es", rendered })).toBe("en");
+  });
+});
+
+// The defaults assume NEXT_PUBLIC_I18N_PREVIEW is unset.
+describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered languages", () => {
+  it("renders English only until the UI is translated", () => {
+    expect(RENDERED_LANGUAGES).toEqual(["en"]);
+  });
+
+  it("keeps German visitors and users on English by default", () => {
+    expect(resolveLocale({ cookie: "de", acceptLanguage: "de-DE" })).toBe("en");
+    expect(resolveLocale({ acceptLanguage: "de-CH,de;q=0.9" })).toBe("en");
+  });
+
+  it("maps a stored language to the one it renders in", () => {
+    expect(renderedLanguage("de")).toBe("en");
+    expect(renderedLanguage("en")).toBe("en");
+    expect(renderedLanguage("de", LANGUAGES)).toBe("de");
   });
 });
 

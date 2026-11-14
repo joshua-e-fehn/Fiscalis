@@ -38,6 +38,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  Tooltip as UiTooltip,
+  TooltipContent as UiTooltipContent,
+  TooltipProvider as UiTooltipProvider,
+  TooltipTrigger as UiTooltipTrigger,
+} from "@/components/ui/shadcn/tooltip";
 import { useNetWorthYTD, usePortfolioChartData } from "@/hooks/performance";
 import { TIME_RANGE_LABEL_MAP } from "@/lib/performance";
 import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
@@ -177,18 +183,29 @@ function YTDNetWorthCard({
               {formatCurrency(ytdChange, currency)}
             </div>
             {ytdChangePercent !== null && (
-              <p
-                className="text-xs text-muted-foreground mt-1"
-                // Converted per day, so the change includes the currency's
-                // move against the euro (amounts are stored in EUR)
-                title={
-                  currency === "eur"
-                    ? undefined
-                    : `Measured in ${currency.toUpperCase()}: includes the change in the euro exchange rate since Jan 1.`
-                }
-              >
-                {formatPercent(ytdChangePercent)} change since Jan 1
-              </p>
+              // Converted per day, so for a non-EUR currency the change
+              // includes its move against the euro (amounts are stored in EUR)
+              currency === "eur" ? (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatPercent(ytdChangePercent)} change since Jan 1
+                </p>
+              ) : (
+                <UiTooltipProvider>
+                  <UiTooltip>
+                    <UiTooltipTrigger asChild>
+                      <p
+                        className="text-xs text-muted-foreground mt-1"
+                        tabIndex={0}
+                      >
+                        {formatPercent(ytdChangePercent)} change since Jan 1
+                      </p>
+                    </UiTooltipTrigger>
+                    <UiTooltipContent className="max-w-xs">
+                      {`Measured in ${currency.toUpperCase()}: includes the change in the euro exchange rate since Jan 1.`}
+                    </UiTooltipContent>
+                  </UiTooltip>
+                </UiTooltipProvider>
+              )
             )}
             {partial && (
               <p className="text-xs text-muted-foreground mt-1">

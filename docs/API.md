@@ -35,7 +35,8 @@ The settings page shows the exact URL for your deployment.
 Amounts are stored and aggregated in EUR. Without `currency` the response is
 in EUR, whatever display currency is set in the app, so existing clients see
 no change. With another currency every amount is converted from EUR at the
-latest mirrored daily exchange rate (ECB reference rates), then rounded to
+latest mirrored daily exchange rate (the app's USD/CHF rate store first,
+ECB reference rates otherwise), then rounded to
 cents; `fxRateDate` says which day's rate was used.
 
 ```bash

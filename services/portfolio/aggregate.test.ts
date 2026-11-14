@@ -505,7 +505,7 @@ describe("netWorthApiBody in another currency", () => {
   });
 
   it("drops a part that rounds to zero only after converting", () => {
-    // 0.008 EUR is 0.01 at 1.25 per EUR but rounds away in EUR
+    // 0.008 EUR rounds to 0.01 in EUR, but is 0.004 at 0.5 per EUR: dropped
     const tiny = aggregateNetWorth([
       holding({ source: "bank", category: "cash", subcategory: "checking-accounts", valueBase: 0.008 }),
     ]);

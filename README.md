@@ -46,7 +46,8 @@ The same fields are asked once during onboarding.
   in EUR; the app converts at the presentation boundary, so switching back and
   forth changes no data:
   - Totals, positions, profit and loss and allocations use the latest daily
-    exchange rate (ECB reference rates, mirrored daily).
+    exchange rate (mirrored daily: the USD/CHF rate store first, ECB
+    reference rates otherwise).
   - Charts, year-to-date and performance figures convert each day at that
     day's rate, so their returns are returns in your currency and include the
     exchange-rate effect. They can differ from the EUR figures.

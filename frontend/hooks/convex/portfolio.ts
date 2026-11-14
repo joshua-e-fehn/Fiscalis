@@ -14,7 +14,7 @@ import {
   InvestmentCurrency,
 } from "@/lib/types/investments";
 import { categoryPrimaryColors } from "@/lib/config/categoryUI";
-import { useUserSettings } from "./onboarding";
+import { useDisplayCurrency } from "./displayCurrency";
 import { costLine } from "@/../services/portfolio/unrealizedProfitLoss";
 import {
   Briefcase,
@@ -33,22 +33,12 @@ import React from "react";
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Base currencies the stored values can be in. Every *InBaseCurrency field
- * and the FX mirror are EUR-based, so EUR is the only one today.
- */
-const SUPPORTED_BASE_CURRENCIES: readonly InvestmentCurrency[] = ["eur"];
-
-/**
- * The user's base currency, from userSettings.defaultCurrency, for display
- * and formatting (lib/utils/currency formatCurrency). A preference the data
- * cannot be shown in yet falls back to EUR.
+ * The display currency, for formatting (lib/utils/currency formatCurrency).
+ * Transitional: callers move to useDisplayCurrency (./displayCurrency),
+ * which also carries the rate; this is removed once none is left.
  */
 export function useBaseCurrency(): InvestmentCurrency {
-  const preferred = useUserSettings()?.defaultCurrency?.toLowerCase();
-  return (
-    SUPPORTED_BASE_CURRENCIES.find((c) => c === preferred) ??
-    SUPPORTED_BASE_CURRENCIES[0]
-  );
+  return useDisplayCurrency().currency;
 }
 
 // ═══════════════════════════════════════════════════════════════

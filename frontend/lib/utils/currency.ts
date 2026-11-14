@@ -13,6 +13,7 @@ import type { InvestmentCurrency } from "@/lib/types/investments";
 export const currencySymbols: Record<InvestmentCurrency, string> = {
   eur: "€",
   usd: "$",
+  gbp: "£",
   chf: "CHF ",
 };
 
@@ -24,6 +25,7 @@ export const currencySymbols: Record<InvestmentCurrency, string> = {
 export const currencySuffixes: Record<InvestmentCurrency, string> = {
   eur: "€",
   usd: "$",
+  gbp: "£",
   chf: " CHF",
 };
 
@@ -41,6 +43,7 @@ export function withCurrency(
 export const currencyCodes: Record<InvestmentCurrency, string> = {
   eur: "EUR",
   usd: "USD",
+  gbp: "GBP",
   chf: "CHF",
 };
 
@@ -80,7 +83,6 @@ function formatCompactAmount(absValue: number, suffix: string): string {
  * these, see add-loan-dialog.tsx CURRENCIES), written after the amount.
  */
 const otherCurrencySuffixes: Record<string, string> = {
-  gbp: "£",
   jpy: "¥",
   cad: "C$",
   aud: "A$",

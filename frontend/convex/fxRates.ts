@@ -1,7 +1,8 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import {
   internalAction,
   internalMutation,
+  query,
   type QueryCtx,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -15,6 +16,10 @@ import {
   type FxDailyRate,
   type FxRates,
 } from "../../services/finance/currency";
+import {
+  toDisplayCurrency,
+  type DisplayRatePoint,
+} from "../../services/finance/displayCurrency";
 
 /**
  * Mirror of the daily EUR-base FX rates into Convex, the single rate source
@@ -227,3 +232,103 @@ export async function loadFxRates(
     Number.isFinite(now) ? now : Date.now(),
   );
 }
+
+/** Most daily rows getDisplayRates returns (about 15 years of ECB days). */
+const MAX_HISTORY_ROWS = 4_000;
+
+const displayRateSource = v.union(
+  v.literal("identity"),
+  v.literal("market"),
+  v.literal("stale"),
+  v.literal("fallback"),
+);
+
+/**
+ * Rates for showing EUR figures in a display currency
+ * (services/finance/displayCurrency.ts). Public market data, no user data:
+ * a live subscription, so a new day's rate updates every converted figure.
+ *
+ * `latest` is the rate for point-in-time figures, from loadFxRates (flagged
+ * "stale" or "fallback" when degraded). With `since` (ms), `history` holds
+ * the daily rows from that day on, led by the row on or before it, so a
+ * series can be converted per date (displayCurrency.ts rateOn). Past
+ * MAX_HISTORY_ROWS the newest rows are kept and the oldest dropped (days
+ * before the first row then take its rate). EUR is the
+ * identity and reads nothing. Codes outside DISPLAY_CURRENCIES are rejected.
+ */
+export const getDisplayRates = query({
+  args: { currency: v.string(), since: v.optional(v.number()) },
+  returns: v.object({
+    currency: v.string(),
+    latest: v.object({
+      unitsPerEur: v.number(),
+      date: v.union(v.string(), v.null()),
+      source: displayRateSource,
+    }),
+    history: v.optional(
+      v.array(v.object({ date: v.string(), unitsPerEur: v.number() })),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const currency = toDisplayCurrency(args.currency);
+    if (!currency) {
+      throw new ConvexError(`Unsupported display currency: ${args.currency}`);
+    }
+    // Validated for every currency, EUR included; the bound is the range a
+    // JS Date (isoDay) accepts
+    if (
+      args.since !== undefined &&
+      !(Number.isFinite(args.since) && Math.abs(args.since) <= 8.64e15)
+    ) {
+      throw new ConvexError("`since` must be a timestamp in ms");
+    }
+    if (currency === "EUR") {
+      return {
+        currency,
+        latest: { unitsPerEur: 1, date: null, source: "identity" as const },
+        ...(args.since === undefined ? {} : { history: [] }),
+      };
+    }
+
+    const rate = (await loadFxRates(ctx, { currencies: [currency] }))[currency];
+    if (!rate) {
+      // Unreachable for the allowlist: the fallback table covers it
+      throw new ConvexError(`No rate for display currency: ${currency}`);
+    }
+    const latest = {
+      unitsPerEur: 1 / rate.eurPerUnit,
+      date: rate.date ?? null,
+      source: rate.source,
+    };
+    if (args.since === undefined) return { currency, latest };
+
+    const sinceDay = isoDay(args.since);
+    // Newest first, so a cap drops the oldest days rather than the recent
+    // ones (portfolioSnapshots.getSnapshots does the same)
+    const newestFirst = await ctx.db
+      .query("fxRates")
+      .withIndex("by_currency_date", (q) =>
+        q.eq("currency", currency).gt("date", sinceDay),
+      )
+      .order("desc")
+      .take(MAX_HISTORY_ROWS);
+    const rows = newestFirst.reverse();
+    // The baseline (the row on or before `since`) leads the history only
+    // when the rows still reach back to `since`; after a cut it would
+    // bridge the dropped gap with a years-old rate
+    const baseline =
+      newestFirst.length < MAX_HISTORY_ROWS
+        ? await ctx.db
+            .query("fxRates")
+            .withIndex("by_currency_date", (q) =>
+              q.eq("currency", currency).lte("date", sinceDay),
+            )
+            .order("desc")
+            .first()
+        : null;
+    const history: DisplayRatePoint[] = (baseline ? [baseline, ...rows] : rows)
+      .filter((row) => row.unitsPerEur > 0)
+      .map((row) => ({ date: row.date, unitsPerEur: row.unitsPerEur }));
+    return { currency, latest, history };
+  },
+});

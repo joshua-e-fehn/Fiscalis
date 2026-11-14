@@ -7,6 +7,7 @@ import {
   bankAccountWithBaseFields,
   brokerAccountBaseFields,
   brokerAccountWithBaseFields,
+  convertBetween,
   dayWindows,
   fxRatesFromDaily,
   mergeFxDailyRates,
@@ -406,5 +407,43 @@ describe("brokerAccountBaseFields options", () => {
       brokerAccountBaseFields(stored, rates, { balanceIsMixed: false })
         .balanceInBaseCurrency,
     ).toBeCloseTo(5_000 / 1.17, 6);
+  });
+});
+
+describe("convertBetween", () => {
+  const unitsPerEur = { USD: 1.17, CHF: 0.94, GBP: 0.88 };
+
+  it("is the identity within one currency, with or without rates", () => {
+    expect(convertBetween(100, "EUR", "eur", {})).toBe(100);
+    expect(convertBetween(100, "SEK", "SEK", {})).toBe(100);
+  });
+
+  it("converts from and to EUR", () => {
+    expect(convertBetween(100, "EUR", "USD", unitsPerEur)).toBeCloseTo(117);
+    expect(convertBetween(117, "USD", "EUR", unitsPerEur)).toBeCloseTo(100);
+  });
+
+  it("crosses USD to CHF through EUR", () => {
+    expect(convertBetween(117, "USD", "CHF", unitsPerEur)).toBeCloseTo(94);
+    expect(convertBetween(94, "chf", "usd", unitsPerEur)).toBeCloseTo(117);
+  });
+
+  it("is null when a rate is missing or invalid", () => {
+    expect(convertBetween(100, "EUR", "JPY", unitsPerEur)).toBeNull();
+    expect(convertBetween(100, "JPY", "EUR", unitsPerEur)).toBeNull();
+    expect(convertBetween(100, "EUR", "USD", { USD: 0 })).toBeNull();
+    expect(convertBetween(100, "EUR", "USD", { USD: Number.NaN })).toBeNull();
+  });
+
+  it("is null for missing or malformed codes", () => {
+    expect(convertBetween(100, "", "EUR", unitsPerEur)).toBeNull();
+    expect(convertBetween(100, "EUR", "XXX", unitsPerEur)).toBeNull();
+    expect(convertBetween(100, "euro", "USD", unitsPerEur)).toBeNull();
+  });
+
+  it("reads GBX pence as 1/100 GBP", () => {
+    expect(convertBetween(8_800, "GBX", "EUR", unitsPerEur)).toBeCloseTo(100);
+    expect(convertBetween(8_800, "GBp", "GBP", unitsPerEur)).toBeCloseTo(88);
+    expect(convertBetween(1, "GBP", "GBX", unitsPerEur)).toBeCloseTo(100);
   });
 });

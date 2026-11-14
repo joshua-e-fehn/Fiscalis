@@ -380,6 +380,38 @@ export function toBase(
   };
 }
 
+/**
+ * `amount` in `from` expressed in `to`, crossing through EUR:
+ * amount / unitsPerEur[from] * unitsPerEur[to]. `unitsPerEur` holds units of
+ * a currency per 1 EUR keyed by ISO code (the fxRates table's shape); EUR
+ * is implicit (1). Minor-unit codes convert too ("GBX" pence is 1/100 GBP).
+ * Null when either code is invalid or has no positive finite rate: never a
+ * silent 1.0. The one cross-currency conversion; metals.ts
+ * convertAtSpotRates and the display-currency helpers build on it.
+ */
+export function convertBetween(
+  amount: number,
+  from: string,
+  to: string,
+  unitsPerEur: Readonly<Record<string, number>>,
+): number | null {
+  const source = normalizeCurrency(from);
+  const target = normalizeCurrency(to);
+  if (!source || !target) return null;
+  const perEur = (code: string): number | null => {
+    if (code === BASE_CURRENCY) return 1;
+    const rate = Object.prototype.hasOwnProperty.call(unitsPerEur, code)
+      ? unitsPerEur[code]
+      : undefined;
+    return rate !== undefined && Number.isFinite(rate) && rate > 0 ? rate : null;
+  };
+  const sourceRate = source.code === target.code ? 1 : perEur(source.code);
+  const targetRate = source.code === target.code ? 1 : perEur(target.code);
+  if (sourceRate === null || targetRate === null) return null;
+  const major = amount / source.divisor;
+  return (major / sourceRate) * targetRate * target.divisor;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Base-currency fields stamped on provider documents at sync time
 // ═══════════════════════════════════════════════════════════════

@@ -12,6 +12,7 @@ import {
   summarizeHoldings,
   type HoldingValuation,
 } from "../portfolio/categorySummary";
+import { convertBetween } from "./currency";
 import type { ItemLedger, ToBaseAmount } from "./metalsLedger";
 
 // ============================================
@@ -250,7 +251,8 @@ export interface SpotExchangeRates {
  * `amount` in `from` expressed in `to` (EUR, USD or CHF) at the rates the
  * spot prices were served with, so a cost compares with a spot value in
  * the same currency. Null when a rate is missing or a currency is not one
- * of the three.
+ * of the three. An adapter over currency.ts convertBetween, the one FX
+ * conversion.
  */
 export function convertAtSpotRates(
   amount: number,
@@ -258,24 +260,14 @@ export function convertAtSpotRates(
   to: string,
   rates: SpotExchangeRates | null | undefined,
 ): number | null {
-  const source = from.toUpperCase();
-  const target = to.toUpperCase();
-  if (source === target) return amount;
-  const perEur = (currency: string): number | null => {
-    const rate =
-      currency === "EUR"
-        ? 1
-        : currency === "USD"
-          ? rates?.eurToUsd
-          : currency === "CHF"
-            ? rates?.eurToChf
-            : null;
-    return rate != null && Number.isFinite(rate) && rate > 0 ? rate : null;
-  };
-  const sourceRate = perEur(source);
-  const targetRate = perEur(target);
-  if (sourceRate === null || targetRate === null) return null;
-  return (amount / sourceRate) * targetRate;
+  if (from.toUpperCase() === to.toUpperCase()) return amount;
+  const unitsPerEur: Record<string, number> = {};
+  if (rates?.eurToUsd != null) unitsPerEur.USD = rates.eurToUsd;
+  if (rates?.eurToChf != null) unitsPerEur.CHF = rates.eurToChf;
+  const spotCurrencies = ["EUR", "USD", "CHF"];
+  if (!spotCurrencies.includes(from.toUpperCase())) return null;
+  if (!spotCurrencies.includes(to.toUpperCase())) return null;
+  return convertBetween(amount, from, to, unitsPerEur);
 }
 
 // ============================================

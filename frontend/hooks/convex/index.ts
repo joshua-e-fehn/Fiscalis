@@ -119,6 +119,15 @@ export {
   type PortfolioSummary,
 } from "./portfolio";
 
+// Re-export display currency hooks
+export {
+  useDisplayCurrency,
+  useDisplayRateHistory,
+  type DisplayCurrencyState,
+  type DisplayRateHistory,
+  type DisplayRateSource,
+} from "./displayCurrency";
+
 // Re-export liabilities summary hook
 export { useLiabilitiesSummary } from "./liabilities";
 

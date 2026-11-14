@@ -19,8 +19,11 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
 
+/** One slice row: the value under `dataKey`, the name under `nameKey`, plus any extra fields (e.g. `fill`). */
+export type PieChartDatum = Record<string, string | number | undefined>;
+
 interface PieChartDonutWithTextProps {
-  chartData: any[] | undefined;
+  chartData: PieChartDatum[] | undefined;
   chartConfig: ChartConfig;
   dataKey: string;
   nameKey: string;
@@ -119,7 +122,12 @@ export function PieChartDonutWithText({
   customSize,
 }: PieChartDonutWithTextProps) {
   const totalQuantity = React.useMemo(() => {
-    return chartData?.reduce((acc, curr) => acc + (curr[dataKey] || 0), 0) || 0;
+    return (
+      chartData?.reduce((acc, curr) => {
+        const value = curr[dataKey];
+        return acc + ((typeof value === "number" ? value : 0) || 0);
+      }, 0) || 0
+    );
   }, [chartData, dataKey]);
 
   const capitalizeString = (str: string) =>

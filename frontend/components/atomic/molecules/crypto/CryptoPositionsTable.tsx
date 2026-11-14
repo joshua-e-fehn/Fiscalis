@@ -60,6 +60,32 @@ interface CryptoPositionsTableProps {
 type SortField = "symbol" | "quantity" | "value";
 type SortDirection = "asc" | "desc";
 
+function SortButton({
+  field,
+  activeField,
+  onSort,
+  children,
+}: {
+  field: SortField;
+  activeField: SortField;
+  onSort: (field: SortField) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-3 h-8"
+      onClick={() => onSort(field)}
+    >
+      {children}
+      <ArrowUpDown
+        className={cn("ml-2 h-3 w-3", activeField === field && "text-primary")}
+      />
+    </Button>
+  );
+}
+
 export function CryptoPositionsTable({
   className,
   showFilters = true,
@@ -116,26 +142,6 @@ export function CryptoPositionsTable({
     }
   };
 
-  const SortButton = ({
-    field,
-    children,
-  }: {
-    field: SortField;
-    children: React.ReactNode;
-  }) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="-ml-3 h-8"
-      onClick={() => handleSort(field)}
-    >
-      {children}
-      <ArrowUpDown
-        className={cn("ml-2 h-3 w-3", sortField === field && "text-primary")}
-      />
-    </Button>
-  );
-
   return (
     <Card className={cn("", className)}>
       <CardHeader className="pb-3">
@@ -181,13 +187,31 @@ export function CryptoPositionsTable({
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[200px]">
-                    <SortButton field="symbol">Token</SortButton>
+                    <SortButton
+                      field="symbol"
+                      activeField={sortField}
+                      onSort={handleSort}
+                    >
+                      Token
+                    </SortButton>
                   </TableHead>
                   <TableHead>
-                    <SortButton field="quantity">Quantity</SortButton>
+                    <SortButton
+                      field="quantity"
+                      activeField={sortField}
+                      onSort={handleSort}
+                    >
+                      Quantity
+                    </SortButton>
                   </TableHead>
                   <TableHead>
-                    <SortButton field="value">Value</SortButton>
+                    <SortButton
+                      field="value"
+                      activeField={sortField}
+                      onSort={handleSort}
+                    >
+                      Value
+                    </SortButton>
                   </TableHead>
                   <TableHead>Category</TableHead>
                 </TableRow>

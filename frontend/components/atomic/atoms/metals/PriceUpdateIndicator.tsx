@@ -35,13 +35,11 @@ export function PriceUpdateIndicator({
   useEffect(() => {
     if (!lastUpdated) return;
 
-    // Update immediately
-    setTimeAgo(formatTimeAgo(lastUpdated));
+    const tick = () => setTimeAgo(formatTimeAgo(lastUpdated));
 
-    // Update every second
-    const interval = setInterval(() => {
-      setTimeAgo(formatTimeAgo(lastUpdated));
-    }, 1000);
+    // Update immediately, then every second
+    tick();
+    const interval = setInterval(tick, 1000);
 
     return () => clearInterval(interval);
   }, [lastUpdated]);

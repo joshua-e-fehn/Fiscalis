@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/shadcn/button";
-import { Loader2, CheckCircle2, TrendingUp, Plus } from "lucide-react";
+import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import { useSnaptradeConnect, useBrokerConnections } from "@/hooks/convex";
 
 // Use the window message hook from snaptrade-react for handling messages

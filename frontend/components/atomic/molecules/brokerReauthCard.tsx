@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useCreateConnectUrl, useHandleCallback } from "@/hooks/convex";
 import { useWindowMessage } from "snaptrade-react";
@@ -115,9 +116,13 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {connection.brokerLogo ? (
-                <img
+                <Image
                   src={connection.brokerLogo}
                   alt={connection.brokerName || "Broker"}
+                  width={40}
+                  height={40}
+                  unoptimized
+                  loading="eager"
                   className="h-10 w-10 rounded-lg object-contain"
                 />
               ) : (

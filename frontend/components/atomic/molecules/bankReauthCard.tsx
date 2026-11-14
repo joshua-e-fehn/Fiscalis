@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import {
   Card,
@@ -55,9 +56,13 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
             <div className="flex items-center gap-3">
               {item.institutionLogo ? (
                 <div className="relative">
-                  <img
+                  <Image
                     src={`data:image/png;base64,${item.institutionLogo}`}
                     alt={institutionName}
+                    width={40}
+                    height={40}
+                    unoptimized
+                    loading="eager"
                     className="h-10 w-10 rounded-lg object-contain"
                   />
                   <div className="absolute -top-1 -right-1 rounded-full bg-yellow-500 p-0.5">

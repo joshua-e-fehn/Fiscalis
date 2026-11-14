@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { TrendingUp } from "lucide-react";
-import { Label, Pie, PieChart } from "recharts";
+import { Pie, PieChart } from "recharts";
 
 import {
   Card,
@@ -18,10 +18,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
+import type { PieChartDatum } from "./donutWithText";
 
 interface PieChartDonutWithTextProps {
-  innerChartData: any[] | undefined;
-  outerChartData: any[] | undefined;
+  innerChartData: PieChartDatum[] | undefined;
+  outerChartData: PieChartDatum[] | undefined;
   chartConfig: ChartConfig;
   innerDataKey: string;
   outerDataKey: string;

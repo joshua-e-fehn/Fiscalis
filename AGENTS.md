@@ -68,6 +68,7 @@ cd frontend && bun install && bunx convex dev   # codegen + live backend, keep r
 bun run dev                                     # app on :3000
 bun run build                                   # convex codegen, then webpack build
 bun run lint
+bun run check                                   # lint + tsc (app, convex) + services tests = CI
 bun run db:generate | db:migrate | db:studio    # SQL schema only
 # (no manual backend deploy: Vercel production builds run `convex deploy`)
 
@@ -90,7 +91,11 @@ cd services && bun install && bun run test      # vitest — the repo's only tes
   against prod, pass the prod key explicitly (for example
   `--env-file <prod env file>`).
 
-There is no CI config. `frontend/` has no test runner; put testable logic in
-`services/`.
+CI is `.github/workflows/ci.yml`: frozen installs (text `bun.lock` in both
+`frontend/` and `services/`), `convex codegen` against the **dev** deployment
+(secret `CONVEX_DEPLOY_KEY_DEV`), then `bun run check`. The `check` job is a
+required status on `main`. After changing dependencies, commit the regenerated
+`bun.lock` or CI and Vercel (`--frozen-lockfile`) fail. `frontend/` has no test
+runner; put testable logic in `services/`.
 
 - Third-party source is vendored under `.vibe/sources/`. To read a dependency's real implementation instead of guessing, run `vibe vendor <pkg>`. Prefer this over recalling the API from memory.

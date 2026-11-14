@@ -59,7 +59,7 @@ export function RetirementProgressCard({ results, currency, className }: Props) 
 							{t("progressCard.in")}
 						</p>
 						<p className="text-xl font-semibold">
-							{t("years", { count: roundYears(results.yearsToRetirement) })}
+							{t("yearsDative", { count: roundYears(results.yearsToRetirement) })}
 						</p>
 					</div>
 				</div>

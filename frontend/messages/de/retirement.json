@@ -1,5 +1,6 @@
 {
   "years": "{count, plural, one {# Jahr} other {# Jahre}}",
+  "yearsDative": "{count, plural, one {# Jahr} other {# Jahren}}",
   "perMonth": "{amount}/Monat",
   "perMonthUnit": "/ Monat",
   "pensions": "Renten",

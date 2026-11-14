@@ -55,7 +55,7 @@ export function PensionCoverageBreakdown({ results, currency, className }: Props
 						b: strong,
 						today: formatCurrency(results.expenseTodayMonthly, currency),
 						future: formatCurrency(expense, currency),
-						years: t("years", { count: roundYears(results.yearsToRetirement) }),
+						years: t("yearsDative", { count: roundYears(results.yearsToRetirement) }),
 					})}
 					{results.pensionTodayMonthly > 0 && (
 						<>

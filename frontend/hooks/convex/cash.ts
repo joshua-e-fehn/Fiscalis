@@ -14,6 +14,7 @@ import {
   CategorySummary,
   SubcategoryData,
   Holding,
+  InvestmentCurrency,
 } from "@/lib/types/investments";
 import {
   cashSubcategoryUI,
@@ -24,22 +25,28 @@ import {
   brokerAccountCash as accountCash,
   positionValue,
 } from "@/../services/portfolio/categorySummary";
+import { categorySummaryInCurrency } from "@/../services/finance/displayCurrency";
+import { useDisplayCurrency } from "./displayCurrency";
 
 /**
- * Hook to get the cash category summary
+ * Hook to get the cash category summary, in the display currency
+ * (`currency`) at the latest rate
  */
 export function useCashSummary(): {
   summary: CategorySummary | null;
+  currency: InvestmentCurrency;
   isLoading: boolean;
 } {
   // Fetch real cash data from Convex
   const cashData = useQuery(api.categories.getCashHoldings);
+  const display = useDisplayCurrency();
+  const { unitsPerEur } = display;
 
-  const isLoading = cashData === undefined;
+  const isLoading = cashData === undefined || display.isLoading;
 
   const summary = useMemo<CategorySummary | null>(() => {
-    // Return null if not authenticated or still loading
-    if (cashData === undefined || cashData === null) return null;
+    // Null if not authenticated, or until the data and the rate are known
+    if (cashData == null || display.isLoading) return null;
 
     const {
       bankAccounts,
@@ -57,7 +64,8 @@ export function useCashSummary(): {
       const holdings: Holding[] = [];
 
       // Every value is in EUR, as the server totals are (an amount
-      // without a base value counts as 0 there too)
+      // without a base value counts as 0 there too); the summary is
+      // converted as a whole below
 
       // Add bank accounts matching this subcategory
       bankAccounts
@@ -148,20 +156,24 @@ export function useCashSummary(): {
     // Calculate totals
     const totalValue = dataSummary.totalValue;
 
-    return {
-      totalValue,
-      totalCost: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      ytdProfitLoss: null,
-      ytdProfitLossPercent: null,
-      valueAtYearStart: null,
-      subcategories,
-    };
-  }, [cashData]);
+    return categorySummaryInCurrency(
+      {
+        totalValue,
+        totalCost: null,
+        profitLoss: null,
+        profitLossPercent: null,
+        ytdProfitLoss: null,
+        ytdProfitLossPercent: null,
+        valueAtYearStart: null,
+        subcategories,
+      },
+      unitsPerEur,
+    );
+  }, [cashData, display.isLoading, unitsPerEur]);
 
   return {
     summary,
+    currency: display.currency,
     isLoading,
   };
 }

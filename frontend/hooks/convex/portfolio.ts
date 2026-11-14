@@ -16,6 +16,7 @@ import {
 import { categoryPrimaryColors } from "@/lib/config/categoryUI";
 import { useDisplayCurrency } from "./displayCurrency";
 import { costLine } from "@/../services/portfolio/unrealizedProfitLoss";
+import { portfolioSummaryInCurrency } from "@/../services/finance/displayCurrency";
 import {
   Briefcase,
   Coins,
@@ -72,7 +73,7 @@ export interface AssetCategoryData {
  * Liabilities summary for portfolio overview
  */
 export interface LiabilitiesSummaryData {
-  /** Amount owed in the base currency */
+  /** Amount owed, in the display currency */
   totalBalance: number;
   /** Loans' scheduled payments as a monthly equivalent */
   monthlyPayment: number;
@@ -137,17 +138,22 @@ const CATEGORY_CARDS: Array<{
 ];
 
 /**
- * Hook to get the complete portfolio overview (base currency).
+ * Hook to get the complete portfolio overview, in the display currency
+ * (`currency`) at the latest rate. The server aggregates in EUR.
  */
 export function usePortfolioOverview(): {
   summary: PortfolioSummary | null;
+  currency: InvestmentCurrency;
   isLoading: boolean;
 } {
   const overview = useQuery(api.portfolio.getOverview);
-  const isLoading = overview === undefined;
+  const display = useDisplayCurrency();
+  const { unitsPerEur } = display;
+  const isLoading = overview === undefined || display.isLoading;
 
   const summary = useMemo<PortfolioSummary | null>(() => {
-    if (!overview) return null;
+    // No figures until the rate is known
+    if (!overview || display.isLoading) return null;
 
     const byId = new Map(overview.categories.map((c) => [c.category, c]));
     const assetCategories: AssetCategoryData[] = CATEGORY_CARDS.flatMap(
@@ -171,7 +177,7 @@ export function usePortfolioOverview(): {
     const { totalAssets, unrealized } = overview;
     const totalCostLine = costLine(totalAssets, unrealized.profitLoss);
 
-    return {
+    const eur: PortfolioSummary = {
       totalAssets,
       totalLiabilities: overview.totalLiabilities,
       netWorth: overview.netWorth,
@@ -184,7 +190,8 @@ export function usePortfolioOverview(): {
       liabilities: overview.liabilities,
       asOf: overview.asOf,
     };
-  }, [overview]);
+    return portfolioSummaryInCurrency(eur, unitsPerEur);
+  }, [overview, display.isLoading, unitsPerEur]);
 
-  return { summary, isLoading };
+  return { summary, currency: display.currency, isLoading };
 }

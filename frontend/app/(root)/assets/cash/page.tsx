@@ -7,16 +7,12 @@ import {
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useCashSummary } from "@/hooks/convex/cash";
-import {
-  useBaseCurrency,
-  usePortfolioOverview,
-} from "@/hooks/convex/portfolio";
+import { usePortfolioOverview } from "@/hooks/convex/portfolio";
 import { cashCategoryCards } from "@/lib/config/categoryUI";
 
 export default function CashPage() {
-  const { summary, isLoading } = useCashSummary();
+  const { summary, currency, isLoading } = useCashSummary();
   const { summary: portfolioSummary } = usePortfolioOverview();
-  const currency = useBaseCurrency();
 
   return (
     <div className="container mx-auto py-6 space-y-8">

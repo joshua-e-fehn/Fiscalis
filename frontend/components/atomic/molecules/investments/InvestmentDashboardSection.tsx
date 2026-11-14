@@ -26,6 +26,7 @@ import {
   InvestmentCategory,
 } from "@/lib/types/investments";
 import { currencySuffixes } from "@/lib/utils/currency";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import {
   useCategoryChartData,
   useCategoryYTD,
@@ -105,7 +106,10 @@ export interface InvestmentDashboardSectionProps {
   category: InvestmentCategory;
   /** Summary data from the category hook */
   summary: CategorySummary | null;
-  /** Display currency */
+  /**
+   * Currency the summary is in; defaults to the display currency, which
+   * the summary hooks return their figures in
+   */
   currency?: InvestmentCurrency;
   /** Loading state */
   isLoading?: boolean;
@@ -538,7 +542,7 @@ function AccountsCountCard({
 export function InvestmentDashboardSection({
   category,
   summary,
-  currency = "eur",
+  currency: currencyOverride,
   isLoading = false,
   showTopHoldings = true,
   maxHoldingsPerSubcategory = 3,
@@ -553,6 +557,9 @@ export function InvestmentDashboardSection({
   invertColors = category === "liabilities",
   className,
 }: InvestmentDashboardSectionProps) {
+  // The summary hooks return their figures in the display currency
+  const displayCurrency = useDisplayCurrency().currency;
+  const currency = currencyOverride ?? displayCurrency;
   // ─────────────────────────────────────────────────────────────
   // Performance Calculations
   // ─────────────────────────────────────────────────────────────

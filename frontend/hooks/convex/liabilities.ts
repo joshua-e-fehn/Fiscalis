@@ -16,11 +16,14 @@ import {
   CategorySummary,
   SubcategoryData,
   Holding,
+  InvestmentCurrency,
 } from "@/lib/types/investments";
 import {
   liabilitiesSubcategoryUI,
   makeSubcategoryBase,
 } from "@/lib/config/categoryUI";
+import { categorySummaryInCurrency } from "@/../services/finance/displayCurrency";
+import { useDisplayCurrency } from "./displayCurrency";
 
 /**
  * Hook to get the liabilities category summary
@@ -30,19 +33,25 @@ import {
  * - Loans (via Plaid connections + manual entry)
  * - Credit Cards (via Plaid connections)
  * - Margin Loans (via broker connections)
+ *
+ * Amounts are in the display currency (`currency`) at the latest rate:
+ * the server owes them in EUR, whatever each loan's own currency.
  */
 export function useLiabilitiesSummary(): {
   summary: CategorySummary | null;
+  currency: InvestmentCurrency;
   isLoading: boolean;
 } {
   // Fetch real liabilities data from Convex
   const liabilitiesData = useQuery(api.categories.getLiabilities);
+  const display = useDisplayCurrency();
+  const { unitsPerEur } = display;
 
-  const isLoading = liabilitiesData === undefined;
+  const isLoading = liabilitiesData === undefined || display.isLoading;
 
   const summary = useMemo<CategorySummary | null>(() => {
-    // Return null if not authenticated or still loading
-    if (liabilitiesData === undefined || liabilitiesData === null) return null;
+    // Null if not authenticated, or until the data and the rate are known
+    if (liabilitiesData == null || display.isLoading) return null;
 
     const { rows, summary: dataSummary } = liabilitiesData;
     const bySubcategory = dataSummary.bySubcategory;
@@ -88,20 +97,24 @@ export function useLiabilitiesSummary(): {
     // Calculate totals - liabilities are shown as positive values for display
     const totalValue = dataSummary.totalLiabilities;
 
-    return {
-      totalValue,
-      totalCost: null,
-      profitLoss: null,
-      profitLossPercent: null,
-      ytdProfitLoss: null,
-      ytdProfitLossPercent: null,
-      valueAtYearStart: null,
-      subcategories,
-    };
-  }, [liabilitiesData]);
+    return categorySummaryInCurrency(
+      {
+        totalValue,
+        totalCost: null,
+        profitLoss: null,
+        profitLossPercent: null,
+        ytdProfitLoss: null,
+        ytdProfitLossPercent: null,
+        valueAtYearStart: null,
+        subcategories,
+      },
+      unitsPerEur,
+    );
+  }, [liabilitiesData, display.isLoading, unitsPerEur]);
 
   return {
     summary,
+    currency: display.currency,
     isLoading,
   };
 }

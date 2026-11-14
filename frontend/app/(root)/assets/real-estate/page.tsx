@@ -23,7 +23,6 @@ export default function RealEstatePage() {
       <InvestmentDashboardSection
         category="real-estate"
         summary={summary}
-        currency="eur"
         isLoading={isLoading}
       />
 

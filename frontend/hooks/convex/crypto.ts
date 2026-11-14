@@ -6,6 +6,10 @@
  * Crypto is an asset class aggregated across all providers (brokers + Bitpanda)
  * via the unified `categories.getCrypto` / `categories.getCryptoTransactions`
  * queries. (Vezgo has been removed.)
+ *
+ * The server values positions in EUR; these hooks return them in the
+ * display currency at the latest rate (`currency`). A position's native
+ * amounts (marketValue, prices) and transactions stay in their own currency.
  */
 
 import { useMemo } from "react";
@@ -13,7 +17,11 @@ import { useQuery } from "convex/react";
 import { createElement } from "react";
 import { api } from "@/convex/_generated/api";
 import type { CategoryPosition } from "@/convex/categories";
-import { CategorySummary, SubcategoryData } from "@/lib/types/investments";
+import {
+  CategorySummary,
+  InvestmentCurrency,
+  SubcategoryData,
+} from "@/lib/types/investments";
 import {
   cryptoSubcategoryUI,
   cryptoDisplayGroups,
@@ -25,6 +33,12 @@ import {
   positionValue,
   summarizeHoldings,
 } from "@/../services/portfolio/categorySummary";
+import {
+  categorySummaryInCurrency,
+  fromEur,
+  scaleMoney,
+} from "@/../services/finance/displayCurrency";
+import { useDisplayCurrency } from "./displayCurrency";
 import {
   summaryProfitLoss,
   toCategorySummary,
@@ -56,14 +70,38 @@ function displayBucket(subcategory?: string): CryptoBucket {
 // DATA HOOKS
 // ═══════════════════════════════════════════════════════════════
 
-/** Raw unified crypto data (positions + summary) for the current user. */
+/** Raw unified crypto data (positions + summary, EUR) for the current user. */
 export function useCryptoData() {
   return useQuery(api.categories.getCrypto);
 }
 
-/** All crypto positions across providers; undefined while loading. */
+/**
+ * EUR fields of a crypto position. A broker position may have all three; a
+ * Bitpanda holding has valueInBaseCurrency and, when its trades give one,
+ * costBasisInBaseCurrency (convex/lib/netWorth.ts). Absent fields stay absent.
+ */
+const BASE_FIELDS = [
+  "valueInBaseCurrency",
+  "costBasisInBaseCurrency",
+  "unrealizedPLInBaseCurrency",
+] as const;
+
+/**
+ * All crypto positions across providers, their base-currency fields
+ * (valueInBaseCurrency, costBasisInBaseCurrency, …) in the display
+ * currency; undefined while loading.
+ */
 export function useCryptoPositions(): CategoryPosition[] | undefined {
-  return useCryptoData()?.positions;
+  const positions = useCryptoData()?.positions;
+  const display = useDisplayCurrency();
+  const { unitsPerEur } = display;
+  return useMemo(() => {
+    if (positions === undefined || display.isLoading) return undefined;
+    if (unitsPerEur === 1) return positions;
+    return positions.map(
+      (p): CategoryPosition => scaleMoney(p, BASE_FIELDS, unitsPerEur),
+    );
+  }, [positions, display.isLoading, unitsPerEur]);
 }
 
 /**
@@ -129,12 +167,16 @@ const BUCKETS: { id: CryptoBucket; base: SubcategoryData }[] = [
  */
 export function useCryptoSummary(): {
   summary: CategorySummary | null;
+  currency: InvestmentCurrency;
   isLoading: boolean;
 } {
   const data = useCryptoData();
+  const display = useDisplayCurrency();
+  const { unitsPerEur } = display;
 
   const summary = useMemo<CategorySummary | null>(() => {
-    if (data === undefined || data === null) return null;
+    // No figures until the rate is known
+    if (data == null || display.isLoading) return null;
     const { positions, summary: total } = data;
 
     const subcategories = BUCKETS.map(({ id, base }): SubcategoryData => {
@@ -158,10 +200,17 @@ export function useCryptoSummary(): {
       };
     });
 
-    return toCategorySummary(total, subcategories);
-  }, [data]);
+    return categorySummaryInCurrency(
+      toCategorySummary(total, subcategories),
+      unitsPerEur,
+    );
+  }, [data, display.isLoading, unitsPerEur]);
 
-  return { summary, isLoading: data === undefined };
+  return {
+    summary,
+    currency: display.currency,
+    isLoading: data === undefined || display.isLoading,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -190,17 +239,22 @@ export interface PositionAllocation {
 }
 
 /**
- * Crypto positions aggregated by symbol for allocation charts.
+ * Crypto positions aggregated by symbol for allocation charts, values in
+ * the display currency (`currency`).
  */
 export function useCryptoPositionAllocations(maxPositions: number = 8): {
   allocations: PositionAllocation[];
   totalValue: number;
+  currency: InvestmentCurrency;
   isLoading: boolean;
 } {
   const data = useCryptoData();
+  const display = useDisplayCurrency();
+  const { unitsPerEur } = display;
 
   const result = useMemo(() => {
-    const positions = data?.positions ?? [];
+    // No figures until the rate is known
+    const positions = display.isLoading ? [] : (data?.positions ?? []);
     if (positions.length === 0) {
       return { allocations: [] as PositionAllocation[], totalValue: 0 };
     }
@@ -231,20 +285,22 @@ export function useCryptoPositionAllocations(maxPositions: number = 8): {
         ? [...shown, { symbol: "OTHER", name: "Other (<2%)", value: otherValue }]
         : shown;
 
+    // Shares are scale-invariant: computed on EUR, amounts converted
     const allocations: PositionAllocation[] = top.map((p, index) => ({
       symbol: p.symbol,
       name: p.name,
-      value: p.value,
+      value: fromEur(p.value, unitsPerEur),
       percentage: total > 0 ? (p.value / total) * 100 : 0,
       color: positionColors[index % positionColors.length],
     }));
 
-    return { allocations, totalValue: total };
-  }, [data, maxPositions]);
+    return { allocations, totalValue: fromEur(total, unitsPerEur) };
+  }, [data, display.isLoading, maxPositions, unitsPerEur]);
 
   return {
     allocations: result.allocations,
     totalValue: result.totalValue,
-    isLoading: data === undefined,
+    currency: display.currency,
+    isLoading: data === undefined || display.isLoading,
   };
 }

@@ -56,7 +56,6 @@ import type { FinancialProvider } from "@/lib/types/portfolio";
 
 interface UnifiedPositionsTableProps {
   className?: string;
-  currency?: InvestmentCurrency;
   showFilters?: boolean;
   maxRows?: number;
   compact?: boolean;
@@ -76,9 +75,9 @@ interface UnifiedPositionData {
   /** Native amount (signed) */
   marketValue: number;
   currency: string;
-  /** Value in EUR (signed: a liability is negative) */
+  /** Value in the display currency (signed: a liability is negative) */
   valueInBaseCurrency: number;
-  /** Cost basis in EUR */
+  /** Cost basis in the display currency */
   costBasis?: number;
   unrealizedPL?: number;
   unrealizedPLPercent?: number;
@@ -160,12 +159,17 @@ function formatQuantity(value: number | undefined | null): string {
 
 export function UnifiedPositionsTable({
   className,
-  currency = "eur",
   showFilters = true,
   maxRows,
   compact = false,
 }: UnifiedPositionsTableProps) {
-  const { positions: rawPositions, isLoading } = useUnifiedPositions();
+  // Values and P/L in the display currency (`currency`); each position's
+  // native amount in its own
+  const {
+    positions: rawPositions,
+    currency,
+    isLoading,
+  } = useUnifiedPositions();
 
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<SortField>("value");
@@ -174,8 +178,8 @@ export function UnifiedPositionsTable({
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAll, setShowAll] = useState(false);
 
-  // Valued on the server in EUR (vault metals at spot included), with the
-  // classified category and P/L in EUR (convex/portfolio.ts)
+  // Valued on the server (vault metals at spot included), with the
+  // classified category and P/L (convex/portfolio.ts)
   const positions = rawPositions as UnifiedPositionData[];
 
   // Get unique categories from positions

@@ -23,7 +23,6 @@ export default function BondsPage() {
       <InvestmentDashboardSection
         category="bonds"
         summary={summary}
-        currency="eur"
         isLoading={isLoading}
       />
 

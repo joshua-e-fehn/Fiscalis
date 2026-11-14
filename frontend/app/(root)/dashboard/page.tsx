@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import {
-  useBaseCurrency,
   usePortfolioOverview,
   AssetCategoryData,
   LiabilitiesSummaryData,
@@ -556,8 +555,8 @@ function LiabilitiesCard({
 // ═══════════════════════════════════════════════════════════════
 
 export default function DashboardPage() {
-  const currency = useBaseCurrency();
-  const { summary, isLoading } = usePortfolioOverview();
+  // Figures in the display currency, tagged with it
+  const { summary, currency, isLoading } = usePortfolioOverview();
   // The live totals the headline cards show: the YTD card and the chart end
   // there (PF-05), at zero too once everything is sold or repaid. Without
   // any history a zero live figure plots nothing (withLiveEnd).
@@ -679,7 +678,6 @@ export default function DashboardPage() {
       {/* Row 4: Unified Positions Table */}
       <div className="mb-6">
         <UnifiedPositionsTable
-          currency={currency}
           maxRows={10}
           showFilters={true}
         />

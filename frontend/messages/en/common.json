@@ -1,0 +1,57 @@
+{
+  "metadata": {
+    "title": "Fiscalis",
+    "description": "Have a look at your financial future!"
+  },
+  "actions": {
+    "save": "Save",
+    "saveChanges": "Save changes",
+    "saved": "Saved",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "back": "Back",
+    "close": "Close",
+    "edit": "Edit",
+    "delete": "Delete",
+    "retry": "Try again",
+    "loading": "Loading…"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "de": "German"
+  },
+  "finance": {
+    "netWorth": "Net worth",
+    "assets": "Assets",
+    "liabilities": "Liabilities",
+    "investments": "Investments",
+    "portfolio": "Portfolio",
+    "holdings": "Holdings",
+    "position": "Position",
+    "allocation": "Allocation",
+    "performance": "Performance",
+    "ytd": "YTD",
+    "costBasis": "Cost basis",
+    "unrealisedPnl": "Unrealised P&L",
+    "realisedPnl": "Realised P&L",
+    "dividend": "Dividend",
+    "equities": "Equities",
+    "bonds": "Bonds",
+    "commodities": "Commodities",
+    "preciousMetals": "Precious metals",
+    "realEstate": "Real estate",
+    "crypto": "Crypto",
+    "cash": "Cash & money market",
+    "transaction": "Transaction",
+    "loan": "Loan",
+    "interestRate": "Interest rate",
+    "baseCurrency": "Base currency",
+    "exchangeRate": "Exchange rate",
+    "account": "Account"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again.",
+    "saveFailed": "We couldn't save your changes. Please try again."
+  }
+}

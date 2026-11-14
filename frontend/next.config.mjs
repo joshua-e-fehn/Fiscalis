@@ -13,8 +13,13 @@
  */
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+import createNextIntlPlugin from "next-intl/plugin";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// next-intl without locale routing: the per-request locale, messages and
+// formats come from i18n/request.ts (no middleware, no [locale] segment).
+const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 // ═══════════════════════════════════════════════════════════════
 // Security headers (non-CSP)
@@ -75,4 +80,4 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

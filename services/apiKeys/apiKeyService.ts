@@ -113,14 +113,30 @@ export function parseBearerApiKey(header: string | null): string | null {
   return isWellFormedApiKey(token) ? token : null;
 }
 
-/** Normalise and validate a user-supplied key name. Throws on invalid input. */
+/** Why a key name was rejected; also the user-facing error code. */
+export type ApiKeyNameErrorCode = "apiKeyNameRequired" | "apiKeyNameTooLong";
+
+/** Thrown by {@link normalizeApiKeyName}; `code` names the rule broken. */
+export class ApiKeyNameError extends Error {
+  constructor(readonly code: ApiKeyNameErrorCode) {
+    super(
+      code === "apiKeyNameRequired"
+        ? "API key name is required"
+        : `API key name must be at most ${MAX_API_KEY_NAME_LENGTH} characters`,
+    );
+    this.name = "ApiKeyNameError";
+  }
+}
+
+/**
+ * Normalise and validate a user-supplied key name. Throws an
+ * {@link ApiKeyNameError} on invalid input.
+ */
 export function normalizeApiKeyName(name: string): string {
   const trimmed = name.trim().replace(/\s+/g, " ");
-  if (trimmed.length === 0) throw new Error("API key name is required");
+  if (trimmed.length === 0) throw new ApiKeyNameError("apiKeyNameRequired");
   if (trimmed.length > MAX_API_KEY_NAME_LENGTH) {
-    throw new Error(
-      `API key name must be at most ${MAX_API_KEY_NAME_LENGTH} characters`,
-    );
+    throw new ApiKeyNameError("apiKeyNameTooLong");
   }
   return trimmed;
 }

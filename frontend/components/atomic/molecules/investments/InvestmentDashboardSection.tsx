@@ -405,10 +405,12 @@ function YTDPerformanceCard({
     : null;
 
 
-  // 1 January of the current year, for "Since …"
+  // 1 January of the current year, for "Since …". A calendar date, so it is
+  // built at UTC midnight and formatted with the UTC-pinned dateOnly format;
+  // the configured time zone could otherwise shift it to 31 December.
   const yearStart = format.dateTime(
-    new Date(new Date().getFullYear(), 0, 1),
-    "date",
+    Date.UTC(new Date().getFullYear(), 0, 1),
+    "dateOnly",
   );
 
   return (

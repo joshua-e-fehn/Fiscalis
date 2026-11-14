@@ -261,13 +261,68 @@ export function convertAtSpotRates(
   rates: SpotExchangeRates | null | undefined,
 ): number | null {
   if (from.toUpperCase() === to.toUpperCase()) return amount;
-  const unitsPerEur: Record<string, number> = {};
-  if (rates?.eurToUsd != null) unitsPerEur.USD = rates.eurToUsd;
-  if (rates?.eurToChf != null) unitsPerEur.CHF = rates.eurToChf;
   const spotCurrencies = ["EUR", "USD", "CHF"];
   if (!spotCurrencies.includes(from.toUpperCase())) return null;
   if (!spotCurrencies.includes(to.toUpperCase())) return null;
-  return convertBetween(amount, from, to, unitsPerEur);
+  return convertBetween(amount, from, to, unitsPerEurFromSpot(rates));
+}
+
+/** The spot payload's rates as a units-per-EUR map (convertBetween), missing rates left out. */
+export function unitsPerEurFromSpot(
+  rates: SpotExchangeRates | null | undefined,
+): Record<string, number> {
+  const unitsPerEur: Record<string, number> = {};
+  if (rates?.eurToUsd != null) unitsPerEur.USD = rates.eurToUsd;
+  if (rates?.eurToChf != null) unitsPerEur.CHF = rates.eurToChf;
+  return unitsPerEur;
+}
+
+/**
+ * The rates a vault view in a display currency converts with: the display
+ * currency's own rate (the fxRates mirror, useDisplayCurrency), so holdings
+ * agree with every other display-currency figure, plus the spot payload's
+ * USD and CHF rates for legacy item costs stored in another currency. The
+ * display rate wins where both exist. EUR needs no rate.
+ */
+export function vaultDisplayRates(
+  spot: SpotExchangeRates | null | undefined,
+  display: { code: string; unitsPerEur: number },
+): Record<string, number> {
+  const unitsPerEur = unitsPerEurFromSpot(spot);
+  const code = display.code.toUpperCase();
+  if (code !== "EUR") unitsPerEur[code] = display.unitsPerEur;
+  return unitsPerEur;
+}
+
+/** One metal's quote columns per troy ounce (an AllMetalPrices entry). */
+export interface SpotQuoteColumns {
+  eur: number | null;
+  usd: number | null;
+  chf: number | null;
+}
+
+/**
+ * A metal's spot quote per troy ounce in `currency`: the native column for
+ * EUR, USD and CHF (the price table's own fixes), else the EUR quote at
+ * `unitsPerEur` (units of `currency` per EUR, the display rate), so a GBP
+ * quote is derived from the EUR fix. Null without a usable quote.
+ */
+export function spotQuoteIn(
+  quote: SpotQuoteColumns | null | undefined,
+  currency: string,
+  unitsPerEur: number,
+): number | null {
+  if (!quote) return null;
+  const usable = (n: number | null | undefined): n is number =>
+    typeof n === "number" && Number.isFinite(n) && n > 0;
+  const code = currency.toLowerCase();
+  if (code === "eur" || code === "usd" || code === "chf") {
+    const native = quote[code];
+    return usable(native) ? native : null;
+  }
+  return usable(quote.eur) && usable(unitsPerEur)
+    ? quote.eur * unitsPerEur
+    : null;
 }
 
 // ============================================
@@ -400,8 +455,8 @@ export interface BaseVaultValuation extends VaultItemValue {
 /**
  * Full dashboard valuation of one vault item from its server valuation
  * (`vault.getUserVaultItems`, EUR at the spot mirror): value and cost are
- * the server's, converted to the display currency at the rates the spot
- * prices are served with (`convertAtSpotRates`); the per-unit and melt
+ * the server's, converted to the display currency at `unitsPerEur`
+ * (`vaultDisplayRates`, through convertBetween); the per-unit and melt
  * figures are taken at the same spot. The client never revalues an item
  * from a price feed of its own. Without a rate for the display currency the
  * value is unknown (null) and the item is not counted as priced at spot.
@@ -415,10 +470,10 @@ export function valueMetalItem(
   },
   base: BaseVaultValuation,
   currency: string,
-  rates: SpotExchangeRates | null | undefined,
+  unitsPerEur: Readonly<Record<string, number>>,
 ): MetalItemValuation {
   const toDisplay = (eur: number | null) =>
-    eur === null ? null : convertAtSpotRates(eur, "EUR", currency, rates);
+    eur === null ? null : convertBetween(eur, "EUR", currency, unitsPerEur);
   const value = toDisplay(base.value);
   const cost = toDisplay(base.cost);
   const perOunce =

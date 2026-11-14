@@ -33,6 +33,9 @@ export default getRequestConfig(async () => {
       validTimeZone(cookieStore.get(TIME_ZONE_COOKIE)?.value) ??
       DEFAULT_TIME_ZONE,
     formats,
+    // The request time, passed to the client provider, so relative times
+    // (format.relativeTime with useNow) render the same on server and client
+    now: new Date(),
     onError(error) {
       // A missing key renders its path (getMessageFallback); say so in dev.
       if (process.env.NODE_ENV !== "production") console.error(error);

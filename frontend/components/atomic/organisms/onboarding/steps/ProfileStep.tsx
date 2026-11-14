@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/nextjs";
+import { useLocale } from "next-intl";
 import { useTheme } from "next-themes";
 import {
   User,
@@ -44,6 +45,8 @@ import {
   useUserSettings,
   useCompleteProfileStep,
 } from "@/hooks/convex/onboarding";
+import { languageForLocale } from "@/i18n/locales";
+import { useApplyLanguage } from "@/providers/localeSync";
 
 interface ProfileStepProps {
   onNext: () => void;
@@ -56,12 +59,15 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const completeProfile = useCompleteProfileStep();
   const existingSettings = useUserSettings();
   const { setTheme } = useTheme();
+  const applyLanguage = useApplyLanguage();
+  // Preselect the language the app is shown in (cookie or browser language)
+  const currentLanguage = languageForLocale(useLocale());
 
   const [formData, setFormData] = useState<ProfileFormData>({
     displayName: "",
     birthDate: "",
     defaultCurrency: "EUR",
-    language: "en",
+    language: currentLanguage,
     // Same default as ThemeProvider and the server-side insert defaults
     theme: "system",
   });
@@ -114,6 +120,10 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
         theme: formData.theme,
       });
       await completeProfile();
+      // Switch the UI to the chosen language; LocaleSync retries on failure.
+      applyLanguage(formData.language).catch((error: unknown) =>
+        console.error("Failed to apply the language:", error),
+      );
       onNext();
     } catch (error) {
       console.error("Failed to save settings:", error);

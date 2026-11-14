@@ -23,6 +23,7 @@ import { BenefitItem } from "../shared/FeatureItem";
 import { ConnectionCard } from "../shared/ConnectionCard";
 import { containerVariants, itemVariants } from "@/lib/types/onboarding";
 import { useUpdateConnectionStatus } from "@/hooks/convex/onboarding";
+import { useCreateLinkToken } from "@/hooks/convex/banking";
 
 interface BankingStepProps {
   onNext: () => void;
@@ -35,7 +36,8 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [isExchanging, setIsExchanging] = useState(false);
 
-  const createLinkToken = useAction(api.actions.plaid.createLinkToken);
+  // Passes the rendered UI language to Plaid Link
+  const createLinkToken = useCreateLinkToken();
   const exchangePublicToken = useAction(api.actions.plaid.exchangeToken);
   const updateConnectionStatus = useUpdateConnectionStatus();
 
@@ -46,7 +48,7 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
   const handleCreateLink = async () => {
     setIsCreatingLink(true);
     try {
-      const result = await createLinkToken();
+      const result = await createLinkToken.mutate();
       setLinkToken(result.linkToken);
     } catch (error) {
       console.error("Failed to create link token:", error);

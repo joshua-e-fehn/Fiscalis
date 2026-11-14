@@ -1,12 +1,9 @@
 "use node";
 
 import { v } from "convex/values";
-import {
-  action,
-  internalAction,
-  type ActionCtx,
-} from "../_generated/server";
-import { api, internal } from "../_generated/api";
+import { action, internalAction } from "../_generated/server";
+import { internal } from "../_generated/api";
+import { languageValidator } from "../onboarding";
 import {
   Configuration,
   PlaidApi,
@@ -19,10 +16,6 @@ import { NO_CURRENCY } from "../../../services/finance/currency";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
-import {
-  isLanguage,
-  type Language,
-} from "../../../services/settings/userSettings";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -68,15 +61,14 @@ function getProducts(): Products[] {
 }
 
 /**
- * The language Plaid Link opens in: the user's stored language
- * (userSettings.language), else English. Plaid's language codes match the
- * app's for every supported language (en, de).
+ * Plaid Link opens in the language the UI is rendered in, which the client
+ * passes (languageForLocale(useLocale()), hooks/convex/banking.ts), else
+ * English. Not the stored userSettings.language: that can be a language the
+ * UI does not render yet (i18n/locales.ts RENDERED_LANGUAGES), and Plaid
+ * should not be German inside an English app. Plaid's language codes match
+ * the app's for every supported language (en, de).
  */
-async function getLinkLanguage(ctx: ActionCtx): Promise<Language> {
-  const settings = await ctx.runQuery(api.onboarding.getUserSettings, {});
-  const stored = settings?.language;
-  return stored && isLanguage(stored) ? stored : "en";
-}
+const linkLanguageArg = v.optional(languageValidator);
 
 // ═══════════════════════════════════════════════════════════════
 // LINK TOKEN ACTIONS
@@ -86,8 +78,8 @@ async function getLinkLanguage(ctx: ActionCtx): Promise<Language> {
  * Create a link token for Plaid Link initialization
  */
 export const createLinkToken = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { language: linkLanguageArg },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
@@ -99,7 +91,7 @@ export const createLinkToken = action({
       client_name: "Fiscalis",
       products: getProducts(),
       country_codes: getCountryCodes(),
-      language: await getLinkLanguage(ctx),
+      language: args.language ?? "en",
     });
 
     return { linkToken: response.data.link_token };
@@ -110,7 +102,7 @@ export const createLinkToken = action({
  * Create an update link token for re-authentication
  */
 export const createUpdateLinkToken = action({
-  args: { itemId: v.string() },
+  args: { itemId: v.string(), language: linkLanguageArg },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
@@ -134,7 +126,7 @@ export const createUpdateLinkToken = action({
       client_name: "Fiscalis",
       access_token: accessToken,
       country_codes: getCountryCodes(),
-      language: await getLinkLanguage(ctx),
+      language: args.language ?? "en",
     });
 
     return { linkToken: response.data.link_token };

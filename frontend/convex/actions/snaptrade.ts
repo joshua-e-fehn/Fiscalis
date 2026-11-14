@@ -25,6 +25,7 @@ import {
   type StoredSnaptradeActivity,
 } from "../../../services/brokers/snaptradeActivity";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
+import { describeError } from "../../../services/security/providerError";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -107,7 +108,7 @@ export const registerUser = action({
         snaptradeUserId,
       };
     } catch (error: unknown) {
-      console.error("SnapTrade user registration error:", error);
+      console.error("SnapTrade user registration error:", describeError(error));
 
       // Check if user already exists on SnapTrade side
       const errorMessage =
@@ -158,7 +159,7 @@ export const deleteUser = action({
         userId: snaptradeUser.snaptradeUserId,
       });
     } catch (error) {
-      console.error("SnapTrade user deletion error:", error);
+      console.error("SnapTrade user deletion error:", describeError(error));
       // Continue to clean up our database even if SnapTrade call fails
     }
 
@@ -192,8 +193,9 @@ export const deleteUser = action({
 export const createConnectUrl = action({
   args: {
     broker: v.optional(v.string()), // Optional: pre-select a specific broker
-    reconnect: v.optional(v.string()), // Connection ID to reconnect (string, not boolean)
-    connectionId: v.optional(v.id("brokerConnections")), // For reconnection
+    // Repair this existing connection: the server sends its SnapTrade
+    // authorization ID as `reconnect` (never a client-supplied value)
+    connectionId: v.optional(v.id("brokerConnections")),
   },
   handler: async (
     ctx,
@@ -216,6 +218,22 @@ export const createConnectUrl = action({
       );
     }
 
+    // Reconnect: SnapTrade expects the authorization ID of the connection
+    // to repair, not the broker slug. Only the caller's own connection.
+    let broker = args.broker;
+    let reconnect: string | undefined;
+    if (args.connectionId) {
+      const connection = await ctx.runQuery(
+        internal.brokers.getConnectionInternal,
+        { connectionId: args.connectionId },
+      );
+      if (!connection || connection.userId !== userId) {
+        throw new Error("Connection not found");
+      }
+      reconnect = connection.authorizationId;
+      broker = connection.brokerSlug;
+    }
+
     const snaptrade = getSnaptradeClient();
     const encryptionKey = getEncryptionKey();
     const userSecret = decrypt(
@@ -228,8 +246,8 @@ export const createConnectUrl = action({
       const response = await snaptrade.authentication.loginSnapTradeUser({
         userId: snaptradeUser.snaptradeUserId,
         userSecret,
-        broker: args.broker,
-        reconnect: args.reconnect,
+        broker,
+        reconnect,
       });
 
       // Type guard: response can be EncryptedResponse or LoginRedirectURI
@@ -245,7 +263,7 @@ export const createConnectUrl = action({
         connectUrl: redirectUri,
       };
     } catch (error: unknown) {
-      console.error("SnapTrade connect URL error:", error);
+      console.error("SnapTrade connect URL error:", describeError(error));
 
       // Check if re-authentication is needed
       if (requiresReauthentication(error)) {
@@ -371,7 +389,7 @@ export const handleCallback = action({
         brokerName,
       };
     } catch (error: unknown) {
-      console.error("SnapTrade callback error:", error);
+      console.error("SnapTrade callback error:", describeError(error));
 
       // Provide user-friendly error message
       const parsedError = parseSnapTradeError(error);
@@ -431,7 +449,7 @@ export const listConnections = action({
         })),
       };
     } catch (error: unknown) {
-      console.error("SnapTrade list connections error:", error);
+      console.error("SnapTrade list connections error:", describeError(error));
       throw new Error(formatErrorForUser(error));
     }
   },
@@ -482,7 +500,7 @@ export const deleteConnection = action({
           authorizationId: connection.authorizationId,
         });
       } catch (error) {
-        console.error("SnapTrade delete connection error:", error);
+        console.error("SnapTrade delete connection error:", describeError(error));
         // Continue to delete from our database even if SnapTrade call fails
       }
     }
@@ -551,7 +569,7 @@ async function refreshConnectionLogo(
   } catch (logoError) {
     console.warn(
       `[SNAPTRADE SYNC] Failed to fetch broker logo for ${connection.brokerName}:`,
-      logoError,
+      describeError(logoError),
     );
   }
 }
@@ -762,7 +780,7 @@ async function syncSnaptrade(
         } catch (accountError) {
           console.error(
             `[SNAPTRADE SYNC] Account ${apiAccount.id} failed:`,
-            accountError,
+            describeError(accountError),
           );
           const parsed = parseSnapTradeError(accountError);
           accountsFailed++;
@@ -1016,7 +1034,7 @@ export const updateAllBrokerLogos = action({
       } catch (error) {
         console.error(
           `[UPDATE_LOGOS] Failed to update logo for ${connection.brokerName}:`,
-          error,
+          describeError(error),
         );
         failed++;
       }
@@ -1060,7 +1078,7 @@ export const syncAll = action({
           partial: snapshot.partial,
         });
       } catch (snapshotError) {
-        console.error("Failed to take portfolio snapshot:", snapshotError);
+        console.error("Failed to take portfolio snapshot:", describeError(snapshotError));
         // Don't fail the sync if snapshot fails
       }
     }
@@ -1104,7 +1122,7 @@ export const listBrokers = action({
         })),
       };
     } catch (error: unknown) {
-      console.error("List brokers error:", error);
+      console.error("List brokers error:", describeError(error));
       throw new Error(formatErrorForUser(error));
     }
   },
@@ -1144,7 +1162,7 @@ export const searchBrokers = action({
         })),
       };
     } catch (error: unknown) {
-      console.error("Search brokers error:", error);
+      console.error("Search brokers error:", describeError(error));
       throw new Error(formatErrorForUser(error));
     }
   },
@@ -1197,7 +1215,7 @@ export const syncAllForUserInternal = internalAction({
         ...(errors.length > 0 ? { error: errors.join("; ") } : {}),
       };
     } catch (error) {
-      console.error(`[SNAPTRADE SCHEDULED] Sync error for ${userId}:`, error);
+      console.error(`[SNAPTRADE SCHEDULED] Sync error for ${userId}:`, describeError(error));
       return {
         success: false,
         connectionsProcessed: 0,

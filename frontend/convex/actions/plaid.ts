@@ -13,6 +13,7 @@ import {
 import { encrypt, decrypt } from "../lib/encryption";
 import { NO_CURRENCY } from "../../../services/finance/currency";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
+import { describeError } from "../../../services/security/providerError";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -172,7 +173,7 @@ export const exchangeToken = action({
         institutionPrimaryColor = institution.primary_color ?? undefined;
       } catch (error) {
         // Log but don't fail the entire operation if we can't get the logo
-        console.warn("Failed to fetch institution metadata:", error);
+        console.warn("Failed to fetch institution metadata:", describeError(error));
       }
     }
 
@@ -260,7 +261,7 @@ export const updateInstitutionLogoInternal = internalAction({
 
       return { success: true, message: "Logo updated" };
     } catch (error) {
-      console.error("Failed to fetch institution logo:", error);
+      console.error("Failed to fetch institution logo:", describeError(error));
       return { success: false, message: "Failed to fetch logo from Plaid" };
     }
   },
@@ -347,7 +348,7 @@ export const updateAllInstitutionLogos = action({
           failed++;
         }
       } catch (error) {
-        console.error(`Failed to update logo for item ${item.itemId}:`, error);
+        console.error(`Failed to update logo for item ${item.itemId}:`, describeError(error));
         failed++;
       }
     }
@@ -425,7 +426,7 @@ export const syncAccountsInternal = internalAction({
           // Don't fail the sync if logo fetch fails
           console.warn(
             "Failed to fetch institution logo during sync:",
-            logoError,
+            describeError(logoError),
           );
         }
       }
@@ -492,7 +493,7 @@ export const refreshAccounts = action({
             source: "plaid",
           });
         } catch (snapshotError) {
-          console.error("Failed to take portfolio snapshot:", snapshotError);
+          console.error("Failed to take portfolio snapshot:", describeError(snapshotError));
         }
       }
 
@@ -515,7 +516,7 @@ export const refreshAccounts = action({
         });
       } catch (error) {
         failed++;
-        console.error(`Error syncing item ${item.itemId}:`, error);
+        console.error(`Error syncing item ${item.itemId}:`, describeError(error));
       }
     }
     const synced = userItems.length - failed;
@@ -531,7 +532,7 @@ export const refreshAccounts = action({
           partial: snapshot.partial,
         });
       } catch (snapshotError) {
-        console.error("Failed to take portfolio snapshot:", snapshotError);
+        console.error("Failed to take portfolio snapshot:", describeError(snapshotError));
       }
     }
 
@@ -568,7 +569,7 @@ export const syncAccountsForUserAdmin = internalAction({
         console.log(`Synced accounts for item ${item.itemId}`);
       } catch (error) {
         failed++;
-        console.error(`Error syncing item ${item.itemId}:`, error);
+        console.error(`Error syncing item ${item.itemId}:`, describeError(error));
       }
     }
 
@@ -650,7 +651,7 @@ export const syncTransactions = action({
       } catch (error: unknown) {
         console.error(
           `Error syncing transactions for item ${item.itemId}:`,
-          error,
+          describeError(error),
         );
         const plaidError = error as {
           response?: { data?: { error_code?: string } };
@@ -737,7 +738,7 @@ export const getAuth = action({
           });
         }
       } catch (error) {
-        console.error(`Error getting auth for item ${item.itemId}:`, error);
+        console.error(`Error getting auth for item ${item.itemId}:`, describeError(error));
       }
     }
 
@@ -834,7 +835,7 @@ export const getIdentity = action({
           })),
         });
       } catch (error) {
-        console.error(`Error getting identity for item ${item.itemId}:`, error);
+        console.error(`Error getting identity for item ${item.itemId}:`, describeError(error));
       }
     }
 

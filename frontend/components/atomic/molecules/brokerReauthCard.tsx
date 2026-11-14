@@ -89,12 +89,9 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
     setSuccessMessage(null);
 
     try {
-      // Create URL for reconnecting - use broker slug as reconnect ID
-      // The reconnect param tells SnapTrade to refresh/fix the existing connection
-      const result = await createUrl({
-        reconnect: connection.brokerSlug,
-        broker: connection.brokerSlug,
-      });
+      // Repair this connection: the server passes its SnapTrade
+      // authorization ID as SnapTrade's `reconnect` parameter
+      const result = await createUrl({ connectionId: connection._id });
 
       if (result?.connectUrl) {
         setConnectUrl(result.connectUrl);

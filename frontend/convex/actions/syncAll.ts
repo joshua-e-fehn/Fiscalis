@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
 import { internal, api } from "../_generated/api";
 import { scheduledSyncEnabled } from "../lib/scheduledSync";
+import { describeError } from "../../../services/security/providerError";
 
 // ═══════════════════════════════════════════════════════════════
 // SYNC ALL ACTION
@@ -105,7 +106,7 @@ export const syncAllProviders = action({
         itemsSynced: plaidResult.itemsSynced,
       };
     } catch (error) {
-      console.error("Plaid sync error:", error);
+      console.error("Plaid sync error:", describeError(error));
       result.plaid = {
         success: false,
         itemsSynced: 0,
@@ -137,7 +138,7 @@ export const syncAllProviders = action({
         };
       }
     } catch (error) {
-      console.error("Snaptrade sync error:", error);
+      console.error("Snaptrade sync error:", describeError(error));
       result.snaptrade = {
         success: false,
         connectionsProcessed: 0,
@@ -158,7 +159,7 @@ export const syncAllProviders = action({
         connectionsSynced: bitpandaResult.count,
       };
     } catch (error) {
-      console.error("Bitpanda sync error:", error);
+      console.error("Bitpanda sync error:", describeError(error));
       result.bitpanda = {
         success: false,
         connectionsSynced: 0,
@@ -190,7 +191,7 @@ export const syncAllProviders = action({
         netWorth: snapshotResult.netWorth,
       };
     } catch (error) {
-      console.error("Snapshot error:", error);
+      console.error("Snapshot error:", describeError(error));
       result.snapshot = {
         success: false,
         error:
@@ -259,7 +260,7 @@ export const syncAllForUserInternal = internalAction({
         `[SCHEDULED SYNC] Plaid sync for ${userId}: ${plaidResult.itemsSynced} items`,
       );
     } catch (error) {
-      console.error(`[SCHEDULED SYNC] Plaid sync failed for ${userId}:`, error);
+      console.error(`[SCHEDULED SYNC] Plaid sync failed for ${userId}:`, describeError(error));
     }
 
     // 2. Sync Snaptrade broker data
@@ -278,7 +279,7 @@ export const syncAllForUserInternal = internalAction({
     } catch (error) {
       console.error(
         `[SCHEDULED SYNC] Snaptrade sync failed for ${userId}:`,
-        error,
+        describeError(error),
       );
     }
 
@@ -295,7 +296,7 @@ export const syncAllForUserInternal = internalAction({
     } catch (error) {
       console.error(
         `[SCHEDULED SYNC] Bitpanda sync failed for ${userId}:`,
-        error,
+        describeError(error),
       );
     }
 
@@ -311,7 +312,7 @@ export const syncAllForUserInternal = internalAction({
       snapshotSuccess = true;
       console.log(`[SCHEDULED SYNC] Snapshot created for ${userId}`);
     } catch (error) {
-      console.error(`[SCHEDULED SYNC] Snapshot failed for ${userId}:`, error);
+      console.error(`[SCHEDULED SYNC] Snapshot failed for ${userId}:`, describeError(error));
     }
 
     // Consider successful if at least one provider synced and snapshot created

@@ -25,6 +25,7 @@ import {
 } from "../../../services/classification/engine";
 import { scheduledSyncEnabled } from "../lib/scheduledSync";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
+import { describeError } from "../../../services/security/providerError";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -211,7 +212,7 @@ export const syncAllConnections = action({
       } catch (error) {
         console.error(
           `Error syncing Bitpanda connection ${connection._id}:`,
-          error,
+          describeError(error),
         );
       }
     }
@@ -228,7 +229,7 @@ export const syncAllConnections = action({
           partial: snapshot.partial,
         });
       } catch (snapshotError) {
-        console.error("Failed to take portfolio snapshot:", snapshotError);
+        console.error("Failed to take portfolio snapshot:", describeError(snapshotError));
       }
     }
 
@@ -320,7 +321,7 @@ export const syncConnectionInternal = internalAction({
       });
       return { ok: true };
     } catch (error) {
-      console.error("Bitpanda sync error:", error);
+      console.error("Bitpanda sync error:", describeError(error));
       const isAuth = error instanceof BitpandaAuthError;
       await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
         connectionId: args.connectionId,
@@ -379,7 +380,7 @@ export const syncTransactionsInternal = internalAction({
         });
       }
     } catch (error) {
-      console.error("Bitpanda transaction sync error:", error);
+      console.error("Bitpanda transaction sync error:", describeError(error));
     }
   },
 });
@@ -465,7 +466,7 @@ export const syncAllForUserInternal = internalAction({
       } catch (error) {
         console.error(
           `[BITPANDA SCHEDULED] Failed to sync connection ${connection._id}:`,
-          error,
+          describeError(error),
         );
       }
     }

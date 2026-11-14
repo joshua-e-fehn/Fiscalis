@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -26,6 +27,7 @@ import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
+import { useErrorMessage } from "@/i18n/errors";
 import {
   ledgerUnitsPerEur,
   saleProfitLossIn,
@@ -47,6 +49,9 @@ export function SellItemDialog({
   onClose,
   currency: valuationCurrency,
 }: SellItemDialogProps) {
+  const t = useTranslations("metals.sell");
+  const tActions = useTranslations("common.actions");
+  const toErrorMessage = useErrorMessage();
   const display = useDisplayCurrency();
   const currency = valuationCurrency ?? display.currency;
   // EUR and the display currency's latest rate: the item's EUR average
@@ -112,12 +117,12 @@ export function SellItemDialog({
     setError(null);
 
     if (quantity <= 0 || quantity > maxQuantity) {
-      setError(`Quantity must be between 1 and ${maxQuantity}`);
+      setError(t("errors.quantityRange", { max: maxQuantity }));
       return;
     }
 
     if (parsedPrice <= 0) {
-      setError("Please enter a valid sale price");
+      setError(t("errors.invalidPrice"));
       return;
     }
 
@@ -136,9 +141,7 @@ export function SellItemDialog({
     } catch (err) {
       console.error("Failed to record sale:", err);
       setError(
-        err instanceof ConvexError
-          ? String(err.data)
-          : "Failed to record sale. Please try again.",
+        err instanceof ConvexError ? toErrorMessage(err) : t("errors.failed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -150,12 +153,11 @@ export function SellItemDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Sell {item.displayName}
+            {t("title", { name: item.displayName })}
             <MetalBadge metal={item.metalType} size="sm" />
           </DialogTitle>
           <DialogDescription>
-            Record a sale transaction for this item. The quantity will be
-            deducted from your holdings.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -164,12 +166,16 @@ export function SellItemDialog({
             {/* Current Holdings Info */}
             <div className="p-3 rounded-lg bg-muted/50 space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Current Holdings</span>
-                <span className="font-medium">{item.quantity} units</span>
+                <span className="text-muted-foreground">
+                  {t("currentHoldings")}
+                </span>
+                <span className="font-medium">
+                  {t("units", { count: item.quantity })}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Current Sell Price (each)
+                  {t("currentSellPrice")}
                 </span>
                 <span className="text-sm">
                   {formatCurrency(item.currentSellPrice, currency)}
@@ -178,7 +184,7 @@ export function SellItemDialog({
               {item.averageCost !== null && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Average Cost (each)
+                    {t("averageCost")}
                   </span>
                   <span className="text-sm">
                     {averageCostConverted === null
@@ -193,7 +199,7 @@ export function SellItemDialog({
 
             {/* Quantity */}
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity to Sell</Label>
+              <Label htmlFor="quantity">{t("quantity")}</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="quantity"
@@ -212,7 +218,7 @@ export function SellItemDialog({
                   className="w-24"
                 />
                 <span className="text-sm text-muted-foreground">
-                  of {maxQuantity} available
+                  {t("ofAvailable", { count: maxQuantity })}
                 </span>
                 {maxQuantity > 1 && (
                   <Button
@@ -221,7 +227,7 @@ export function SellItemDialog({
                     size="sm"
                     onClick={() => setQuantity(maxQuantity)}
                   >
-                    Sell All
+                    {t("sellAll")}
                   </Button>
                 )}
               </div>
@@ -230,7 +236,7 @@ export function SellItemDialog({
             {/* Price & Currency */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="price">Sale Price (per unit)</Label>
+                <Label htmlFor="price">{t("salePrice")}</Label>
                 <Input
                   id="price"
                   type="number"
@@ -242,7 +248,7 @@ export function SellItemDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
+                <Label htmlFor="currency">{t("currency")}</Label>
                 <CurrencySelect
                   id="currency"
                   value={saleCurrency}
@@ -253,7 +259,7 @@ export function SellItemDialog({
 
             {/* Sale Date */}
             <div className="space-y-2">
-              <Label htmlFor="saleDate">Sale Date</Label>
+              <Label htmlFor="saleDate">{t("saleDate")}</Label>
               <Input
                 id="saleDate"
                 type="date"
@@ -265,10 +271,10 @@ export function SellItemDialog({
 
             {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (optional)</Label>
+              <Label htmlFor="notes">{t("notes")}</Label>
               <Textarea
                 id="notes"
-                placeholder="e.g., Sold to dealer, auction sale..."
+                placeholder={t("notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={2}
@@ -280,7 +286,9 @@ export function SellItemDialog({
             {/* Sale Summary */}
             <div className="p-3 rounded-lg bg-muted/50 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Sale Value</span>
+                <span className="text-muted-foreground">
+                  {t("totalSaleValue")}
+                </span>
                 <span className="font-semibold">
                   {formatCurrency(totalSaleValue, saleCurrency)}
                 </span>
@@ -288,7 +296,7 @@ export function SellItemDialog({
               {saleProfit !== null && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Estimated Profit/Loss
+                    {t("estimatedProfitLoss")}
                   </span>
                   <div className="flex items-center gap-1">
                     {saleProfit >= 0 ? (
@@ -326,7 +334,7 @@ export function SellItemDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button
               type="submit"
@@ -335,7 +343,7 @@ export function SellItemDialog({
               {isSubmitting && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Record Sale
+              {t("submit")}
             </Button>
           </DialogFooter>
         </form>

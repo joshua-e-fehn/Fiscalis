@@ -12,6 +12,7 @@
 
 import { useState, useMemo } from "react";
 import * as React from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Tabs,
   TabsContent,
@@ -95,35 +96,26 @@ import { Checkbox } from "@/components/ui/shadcn/checkbox";
 import { MetalDetailSlideOver } from "./MetalDetailSlideOver";
 import { AddMetalSlideOver } from "./AddMetalSlideOver";
 import { BulkSellDialog } from "./BulkSellDialog";
-import { exportTransactionsToCSV } from "@/lib/utils/export";
+import {
+  exportTransactionsToCSV,
+  TRANSACTION_CSV_COLUMNS,
+  type TransactionCsvHeaders,
+} from "@/lib/utils/export";
 
 // ═══════════════════════════════════════════════════════════════
 // CONSTANTS FOR PRICES TAB
 // ═══════════════════════════════════════════════════════════════
 
-const chartConfig = {
-  price: {
-    label: "Price",
-    color: "hsl(var(--chart-1))",
-  },
-} as const;
-
-const timeRangeButtons: Array<[TimeRange, string]> = [
-  ["Day", "1D"],
-  ["Week", "1W"],
-  ["Month", "1M"],
-  ["YTD", "YTD"],
-  ["Year", "1Y"],
-  ["ALL", "All"],
+const timeRangeButtons: TimeRange[] = [
+  "Day",
+  "Week",
+  "Month",
+  "YTD",
+  "Year",
+  "ALL",
 ];
 
 const metalTypes: MetalType[] = ["gold", "silver", "platinum", "palladium"];
-const metalNames: Record<MetalType, string> = {
-  gold: "Gold",
-  silver: "Silver",
-  platinum: "Platinum",
-  palladium: "Palladium",
-};
 
 const metalColors: Record<MetalType, string> = {
   gold: "#FFD700",
@@ -179,6 +171,7 @@ const MetalPriceCard = ({
   isSelected: boolean;
   showCheckbox?: boolean;
 }) => {
+  const t = useTranslations("metals");
   const config = metalConfig[metal];
   const { data, isLoading } = useMetalPriceLatest(metal, currency);
 
@@ -217,7 +210,7 @@ const MetalPriceCard = ({
               <Checkbox checked={isSelected} className="pointer-events-none" />
             )}
             <MetalIcon metal={metal} />
-            {metalNames[metal]}
+            {t(`metal.${metal}`)}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -245,9 +238,11 @@ const MetalPriceCard = ({
               <Checkbox checked={isSelected} className="pointer-events-none" />
             )}
             <MetalIcon metal={metal} />
-            {metalNames[metal]}
+            {t(`metal.${metal}`)}
           </div>
-          <span className="text-xs text-muted-foreground">/oz</span>
+          <span className="text-xs text-muted-foreground">
+            {t("prices.perOz")}
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -271,7 +266,11 @@ const MetalPriceCard = ({
             ) : (
               <TrendingDown className="h-3 w-3" />
             )}
-            <span>{performancePercent?.toFixed(2)}% YTD</span>
+            <span>
+              {t("prices.ytd", {
+                percent: `${performancePercent?.toFixed(2)}%`,
+              })}
+            </span>
           </div>
         ) : null}
       </CardContent>
@@ -288,6 +287,14 @@ interface MetalsPageProps {
 }
 
 export function MetalsPage({ className }: MetalsPageProps) {
+  const t = useTranslations("metals");
+  const format = useFormatter();
+  const chartConfig = useMemo(
+    () => ({
+      price: { label: t("chart.price"), color: "hsl(var(--chart-1))" },
+    }),
+    [t],
+  );
   // ─────────────────────────────────────────────────────────────
   // DATA HOOKS
   // ─────────────────────────────────────────────────────────────
@@ -560,8 +567,12 @@ export function MetalsPage({ className }: MetalsPageProps) {
   const handleExportCSV = () => {
     if (transactions.length > 0) {
       const dateStr = new Date().toISOString().split("T")[0];
+      const headers = Object.fromEntries(
+        TRANSACTION_CSV_COLUMNS.map((column) => [column, t(`csv.${column}`)]),
+      ) as TransactionCsvHeaders;
       exportTransactionsToCSV(
         transactions,
+        headers,
         `metal-transactions-${dateStr}.csv`,
       );
     }
@@ -590,8 +601,8 @@ export function MetalsPage({ className }: MetalsPageProps) {
     >
       {/* Header */}
       <PageHeader
-        title="Precious Metals"
-        subtitle="Track prices and manage your precious metals portfolio"
+        title={t("page.title")}
+        subtitle={t("page.subtitle")}
       />
 
       {/* Tabs */}
@@ -601,10 +612,10 @@ export function MetalsPage({ className }: MetalsPageProps) {
         className="w-full space-y-6"
       >
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="prices">Prices</TabsTrigger>
-          <TabsTrigger value="holdings">Holdings</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="overview">{t("page.tabs.overview")}</TabsTrigger>
+          <TabsTrigger value="prices">{t("page.tabs.prices")}</TabsTrigger>
+          <TabsTrigger value="holdings">{t("page.tabs.holdings")}</TabsTrigger>
+          <TabsTrigger value="history">{t("page.tabs.history")}</TabsTrigger>
         </TabsList>
 
         {/* ═══════════════════════════════════════════════════════ */}
@@ -638,16 +649,16 @@ export function MetalsPage({ className }: MetalsPageProps) {
 
           {!summaryLoading && !isEmpty && (
             <p className="text-xs text-muted-foreground -mt-3">
-              {summary?.pricedAtSpot && pricesAsOf !== null
-                ? `Spot prices as of ${new Date(pricesAsOf).toLocaleString("de-DE")}`
-                : "Spot prices unavailable or out of date: holdings are valued at cost"}
-              {/* Neither a spot nor a purchase price (M-C6) */}
-              {(summary?.unvaluedCount ?? 0) > 0 &&
-                ` · ${summary!.unvaluedCount} ${
-                  summary!.unvaluedCount === 1 ? "item has" : "items have"
-                } no price or cost and ${
-                  summary!.unvaluedCount === 1 ? "shows" : "show"
-                } "—" (counted as 0)`}
+              {/* count: items with neither a spot nor a purchase price (M-C6) */}
+              {t("page.pricesNote", {
+                spot:
+                  summary?.pricedAtSpot && pricesAsOf !== null
+                    ? t("page.spotAsOf", {
+                        date: format.dateTime(pricesAsOf, "full"),
+                      })
+                    : t("page.spotUnavailable"),
+                count: summary?.unvaluedCount ?? 0,
+              })}
             </p>
           )}
 
@@ -799,7 +810,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
         <TabsContent value="history" className="space-y-4">
           {isEmpty ? (
             <div className="flex items-center justify-center h-48 text-muted-foreground">
-              No transactions yet. Add items to your vault to track history.
+              {t("page.noTransactions")}
             </div>
           ) : (
             <>
@@ -847,14 +858,16 @@ export function MetalsPage({ className }: MetalsPageProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <GitCompare className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Compare Mode</span>
+                    <span className="text-sm font-medium">
+                      {t("prices.compareMode")}
+                    </span>
                   </div>
                   <Button
                     variant={compareMode ? "default" : "outline"}
                     size="sm"
                     onClick={() => setCompareMode(!compareMode)}
                   >
-                    {compareMode ? "On" : "Off"}
+                    {compareMode ? t("prices.on") : t("prices.off")}
                   </Button>
                 </div>
               </Card>
@@ -890,12 +903,14 @@ export function MetalsPage({ className }: MetalsPageProps) {
                     {compareMode ? (
                       <>
                         <GitCompare className="h-4 w-4" />
-                        Performance Comparison (% Change)
+                        {t("prices.comparisonTitle")}
                       </>
                     ) : (
                       <>
                         <MetalIcon metal={selectedMetal} />
-                        {metalNames[selectedMetal]} Price
+                        {t("prices.metalPrice", {
+                          metal: t(`metal.${selectedMetal}`),
+                        })}
                       </>
                     )}
                   </CardTitle>
@@ -903,7 +918,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
                   <div className="flex items-center gap-3">
                     {/* Time Range Selector */}
                     <div className="flex gap-1">
-                      {timeRangeButtons.map(([value, label]) => (
+                      {timeRangeButtons.map((value) => (
                         <button
                           key={value}
                           onClick={() => setTimeRange(value)}
@@ -914,7 +929,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
                               : "text-muted-foreground hover:bg-muted",
                           )}
                         >
-                          {label}
+                          {t(`prices.range.${value}`)}
                         </button>
                       ))}
                     </div>
@@ -950,7 +965,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
                             {formatCurrency(currentPrice, priceCurrency)}
                           </span>
                           <span className="text-sm text-muted-foreground">
-                            /oz
+                            {t("prices.perOz")}
                           </span>
                         </>
                       ) : null}
@@ -967,20 +982,6 @@ export function MetalsPage({ className }: MetalsPageProps) {
                         const performancePercent = change.percentage;
                         const isPositive = performancePercent >= 0;
 
-                        const timeRangeLabels: Record<TimeRange, string> = {
-                          Hour: "1H",
-                          Day: "1D",
-                          Week: "1W",
-                          Month: "1M",
-                          "3Month": "3M",
-                          "6Month": "6M",
-                          Year: "1Y",
-                          "3Year": "3Y",
-                          "5Year": "5Y",
-                          YTD: "YTD",
-                          ALL: "All",
-                        };
-
                         return (
                           <div
                             className={cn(
@@ -994,9 +995,10 @@ export function MetalsPage({ className }: MetalsPageProps) {
                               <TrendingDown className="h-4 w-4" />
                             )}
                             <span>
-                              {isPositive ? "+" : ""}
-                              {performancePercent.toFixed(2)}% (
-                              {timeRangeLabels[timeRange]})
+                              {t("prices.change", {
+                                percent: `${isPositive ? "+" : ""}${performancePercent.toFixed(2)}%`,
+                                range: t(`prices.range.${timeRange}`),
+                              })}
                             </span>
                           </div>
                         );
@@ -1022,7 +1024,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: metalColors[m] }}
                           />
-                          <span className="text-sm capitalize">{m}</span>
+                          <span className="text-sm">{t(`metal.${m}`)}</span>
                           {performancePercent !== null && (
                             <span
                               className={cn(

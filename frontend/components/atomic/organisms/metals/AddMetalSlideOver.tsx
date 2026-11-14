@@ -10,6 +10,7 @@ function percentOrDefault(value: string, fallback: number): number {
   return Number.isFinite(n) ? n / 100 : fallback;
 }
 import { useQuery, useMutation } from "convex/react";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -45,6 +46,19 @@ import { cn } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/utils/date";
 import { Search, Loader2, Package, Plus } from "lucide-react";
 
+const METALS: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
+const METAL_EMOJI: Record<MetalsType, string> = {
+  gold: "🥇",
+  silver: "🥈",
+  platinum: "⚪",
+  palladium: "⬜",
+};
+const ITEM_CATEGORIES = ["coin", "bar", "jewelry", "scrap"] as const;
+
+/** A premium as a signed percentage with one decimal: "+2.5%", "-1.0%" */
+const signedPremium = (decimal: number) =>
+  `${decimal >= 0 ? "+" : ""}${(decimal * 100).toFixed(1)}%`;
+
 interface AddMetalSlideOverProps {
   isOpen: boolean;
   onClose: () => void;
@@ -60,6 +74,8 @@ export function AddMetalSlideOver({
   onModeChange,
   onSuccess,
 }: AddMetalSlideOverProps) {
+  const t = useTranslations("metals");
+  const tActions = useTranslations("common.actions");
   // Catalog state
   const [searchQuery, setSearchQuery] = useState("");
   const [metalFilter, setMetalFilter] = useState<MetalsType | "all">("all");
@@ -81,9 +97,8 @@ export function AddMetalSlideOver({
   // Custom item state
   const [customName, setCustomName] = useState("");
   const [customMetal, setCustomMetal] = useState<MetalsType>("gold");
-  const [customCategory, setCustomCategory] = useState<
-    "coin" | "bar" | "jewelry" | "scrap"
-  >("coin");
+  const [customCategory, setCustomCategory] =
+    useState<(typeof ITEM_CATEGORIES)[number]>("coin");
   const [customPurity, setCustomPurity] = useState("999");
   const [customWeight, setCustomWeight] = useState("");
   // Premium fields stay empty until the user types; empty = calibrated default
@@ -231,11 +246,8 @@ export function AddMetalSlideOver({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="sm:max-w-xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle>Add to Vault</SheetTitle>
-          <SheetDescription>
-            Add precious metals to your inventory from the catalog or create a
-            custom entry.
-          </SheetDescription>
+          <SheetTitle>{t("add.title")}</SheetTitle>
+          <SheetDescription>{t("add.description")}</SheetDescription>
         </SheetHeader>
 
         <Tabs
@@ -246,11 +258,11 @@ export function AddMetalSlideOver({
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="catalog">
               <Package className="h-4 w-4 mr-2" />
-              From Catalog
+              {t("add.fromCatalog")}
             </TabsTrigger>
             <TabsTrigger value="custom">
               <Plus className="h-4 w-4 mr-2" />
-              Custom Item
+              {t("add.customItem")}
             </TabsTrigger>
           </TabsList>
 
@@ -261,7 +273,7 @@ export function AddMetalSlideOver({
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search coins, bars..."
+                  placeholder={t("add.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
@@ -275,11 +287,12 @@ export function AddMetalSlideOver({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="gold">🥇 Gold</SelectItem>
-                  <SelectItem value="silver">🥈 Silver</SelectItem>
-                  <SelectItem value="platinum">⚪ Platinum</SelectItem>
-                  <SelectItem value="palladium">⬜ Palladium</SelectItem>
+                  <SelectItem value="all">{t("add.allMetals")}</SelectItem>
+                  {METALS.map((metal) => (
+                    <SelectItem key={metal} value={metal}>
+                      {METAL_EMOJI[metal]} {t(`metal.${metal}`)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -293,7 +306,7 @@ export function AddMetalSlideOver({
               )}
               {catalog && filteredCatalog.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground text-sm">
-                  No items found
+                  {t("add.noItems")}
                 </div>
               )}
               {filteredCatalog.map((item) => (
@@ -314,8 +327,16 @@ export function AddMetalSlideOver({
                         {item.name}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {item.fineWeightOz.toFixed(2)} oz · {item.purity}‰
-                        {item.mint && ` · ${item.mint}`}
+                        {item.mint
+                          ? t("add.catalogLineWithMint", {
+                              weight: item.fineWeightOz.toFixed(2),
+                              purity: item.purity,
+                              mint: item.mint,
+                            })
+                          : t("add.catalogLine", {
+                              weight: item.fineWeightOz.toFixed(2),
+                              purity: item.purity,
+                            })}
                       </div>
                     </div>
                     <MetalBadge
@@ -332,11 +353,12 @@ export function AddMetalSlideOver({
               <div className="p-3 bg-muted/50 rounded-lg">
                 <div className="font-medium">{selectedItem.name}</div>
                 <div className="text-sm text-muted-foreground">
-                  {selectedItem.weightGrams}g · {selectedItem.purity}‰ · Buy +
-                  {(selectedPremiums!.buyPremium * 100).toFixed(1)}
-                  % / Sell{" "}
-                  {selectedPremiums!.sellPremium >= 0 ? "+" : ""}
-                  {(selectedPremiums!.sellPremium * 100).toFixed(1)}%
+                  {t("add.selectedLine", {
+                    weight: selectedItem.weightGrams,
+                    purity: selectedItem.purity,
+                    buy: signedPremium(selectedPremiums!.buyPremium),
+                    sell: signedPremium(selectedPremiums!.sellPremium),
+                  })}
                 </div>
               </div>
             )}
@@ -346,10 +368,10 @@ export function AddMetalSlideOver({
           <TabsContent value="custom" className="space-y-4 mt-4">
             <div className="space-y-3">
               <div>
-                <Label htmlFor="customName">Name *</Label>
+                <Label htmlFor="customName">{t("add.name")}</Label>
                 <Input
                   id="customName"
-                  placeholder="e.g., Grandma's wedding ring"
+                  placeholder={t("add.namePlaceholder")}
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
                 />
@@ -357,7 +379,7 @@ export function AddMetalSlideOver({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Metal Type *</Label>
+                  <Label>{t("add.metalType")}</Label>
                   <Select
                     value={customMetal}
                     onValueChange={(v) => setCustomMetal(v as MetalsType)}
@@ -366,15 +388,16 @@ export function AddMetalSlideOver({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gold">🥇 Gold</SelectItem>
-                      <SelectItem value="silver">🥈 Silver</SelectItem>
-                      <SelectItem value="platinum">⚪ Platinum</SelectItem>
-                      <SelectItem value="palladium">⬜ Palladium</SelectItem>
+                      {METALS.map((metal) => (
+                        <SelectItem key={metal} value={metal}>
+                          {METAL_EMOJI[metal]} {t(`metal.${metal}`)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Category *</Label>
+                  <Label>{t("add.category")}</Label>
                   <Select
                     value={customCategory}
                     onValueChange={(v) =>
@@ -385,10 +408,11 @@ export function AddMetalSlideOver({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="coin">Coin</SelectItem>
-                      <SelectItem value="bar">Bar</SelectItem>
-                      <SelectItem value="jewelry">Jewelry</SelectItem>
-                      <SelectItem value="scrap">Scrap</SelectItem>
+                      {ITEM_CATEGORIES.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {t(`itemCategory.${category}`)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -396,7 +420,7 @@ export function AddMetalSlideOver({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="customWeight">Weight (grams) *</Label>
+                  <Label htmlFor="customWeight">{t("add.weight")}</Label>
                   <Input
                     id="customWeight"
                     type="number"
@@ -407,7 +431,7 @@ export function AddMetalSlideOver({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="customPurity">Purity (‰) *</Label>
+                  <Label htmlFor="customPurity">{t("add.purity")}</Label>
                   <Input
                     id="customPurity"
                     type="number"
@@ -416,14 +440,14 @@ export function AddMetalSlideOver({
                     onChange={(e) => setCustomPurity(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    e.g., 999, 916.7, 750, 585
+                    {t("add.purityHint")}
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="customBuyPremium">Buy Premium (%)</Label>
+                  <Label htmlFor="customBuyPremium">{t("add.buyPremium")}</Label>
                   <Input
                     id="customBuyPremium"
                     type="number"
@@ -433,11 +457,11 @@ export function AddMetalSlideOver({
                     onChange={(e) => setCustomBuyPremium(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Above spot when buying. Empty = calibrated default
+                    {t("add.buyPremiumHint")}
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="customSellPremium">Sell Premium (%)</Label>
+                  <Label htmlFor="customSellPremium">{t("add.sellPremium")}</Label>
                   <Input
                     id="customSellPremium"
                     type="number"
@@ -447,7 +471,7 @@ export function AddMetalSlideOver({
                     onChange={(e) => setCustomSellPremium(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    What a dealer pays you. Negative = below spot
+                    {t("add.sellPremiumHint")}
                   </p>
                 </div>
               </div>
@@ -457,11 +481,11 @@ export function AddMetalSlideOver({
 
         {/* Common Fields */}
         <div className="space-y-4 mt-6 pt-6 border-t">
-          <h4 className="font-medium text-sm">Purchase Details</h4>
+          <h4 className="font-medium text-sm">{t("add.purchaseDetails")}</h4>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="quantity">Quantity *</Label>
+              <Label htmlFor="quantity">{t("add.quantity")}</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -471,12 +495,12 @@ export function AddMetalSlideOver({
               />
             </div>
             <div>
-              <Label htmlFor="purchasePrice">Price per Unit</Label>
+              <Label htmlFor="purchasePrice">{t("add.pricePerUnit")}</Label>
               <Input
                 id="purchasePrice"
                 type="number"
                 step="0.01"
-                placeholder="Optional"
+                placeholder={t("add.optional")}
                 value={purchasePrice}
                 onChange={(e) => setPurchasePrice(e.target.value)}
               />
@@ -485,7 +509,7 @@ export function AddMetalSlideOver({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Currency</Label>
+              <Label>{t("add.currency")}</Label>
               <CurrencySelect
                 value={purchaseCurrency}
                 onValueChange={setChosenCurrency}
@@ -494,7 +518,7 @@ export function AddMetalSlideOver({
           </div>
 
           <div>
-            <Label htmlFor="purchaseDate">Purchase Date *</Label>
+            <Label htmlFor="purchaseDate">{t("add.purchaseDate")}</Label>
             <Input
               id="purchaseDate"
               type="date"
@@ -504,26 +528,25 @@ export function AddMetalSlideOver({
               onChange={(e) => setPurchaseDate(e.target.value)}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              When you acquired it. Performance counts the purchase as money
-              invested on that day, not as a gain.
+              {t("add.purchaseDateHint")}
             </p>
           </div>
 
           <div>
-            <Label htmlFor="storageLocation">Storage Location</Label>
+            <Label htmlFor="storageLocation">{t("add.storageLocation")}</Label>
             <Input
               id="storageLocation"
-              placeholder="e.g., Home safe, Bank deposit box"
+              placeholder={t("add.storagePlaceholder")}
               value={storageLocation}
               onChange={(e) => setStorageLocation(e.target.value)}
             />
           </div>
 
           <div>
-            <Label htmlFor="notes">Notes</Label>
+            <Label htmlFor="notes">{t("add.notes")}</Label>
             <Textarea
               id="notes"
-              placeholder="Any additional notes..."
+              placeholder={t("add.notesPlaceholder")}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
@@ -534,7 +557,7 @@ export function AddMetalSlideOver({
         {/* Actions */}
         <div className="flex gap-3 mt-6 pt-6 border-t">
           <Button variant="outline" onClick={onClose} className="flex-1">
-            Cancel
+            {tActions("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -542,7 +565,7 @@ export function AddMetalSlideOver({
             className="flex-1"
           >
             {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Add to Vault
+            {t("add.submit")}
           </Button>
         </div>
       </SheetContent>

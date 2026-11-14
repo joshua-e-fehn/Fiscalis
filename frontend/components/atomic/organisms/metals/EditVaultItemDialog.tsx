@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ConvexError } from "convex/values";
+import { useTranslations } from "next-intl";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   Dialog,
@@ -21,6 +21,7 @@ import { CurrencySelect } from "@/components/atomic/atoms/currencySelect";
 import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import { useMetalItem, useUpdateMetalItem } from "@/hooks/convex/metals";
 import { todayLocalISO } from "@/lib/utils/date";
+import { useErrorMessage } from "@/i18n/errors";
 import { Loader2, AlertCircle } from "lucide-react";
 
 interface EditVaultItemDialogProps {
@@ -43,13 +44,17 @@ const toPercent = (decimal: number) => String(Math.round(decimal * 10000) / 100)
  * Edit a vault item: its name, premiums, storage and notes, and its opening
  * balance (quantity, price, currency, date) through vault.updateVaultItem,
  * which validates the ledger. Only changed fields are sent, so an unchanged
- * opening keeps its stored EUR price. A server rejection is shown as is.
+ * opening keeps its stored EUR price. A server rejection is shown in the
+ * user's language (useErrorMessage).
  */
 export function EditVaultItemDialog({
   item,
   isOpen,
   onClose,
 }: EditVaultItemDialogProps) {
+  const t = useTranslations("metals.edit");
+  const tActions = useTranslations("common.actions");
+  const toErrorMessage = useErrorMessage();
   const updateItem = useUpdateMetalItem();
   const { item: liveItem, transactions } = useMetalItem(
     item._id as Id<"vaultItems">,
@@ -101,7 +106,7 @@ export function EditVaultItemDialog({
     }
     const buy = parsePercent(buyPremium);
     const sell = parsePercent(sellPremium);
-    if (buy === null || sell === null) return "Premiums must be numbers";
+    if (buy === null || sell === null) return t("errors.premiumsNotNumbers");
     if (Math.abs(buy - current.buyPremium) > 1e-9) update.buyPremium = buy;
     if (Math.abs(sell - current.sellPremium) > 1e-9) update.sellPremium = sell;
     if (storageLocation !== (current.storageLocation ?? "")) {
@@ -111,14 +116,14 @@ export function EditVaultItemDialog({
 
     if (opening) {
       const quantity = parseFloat(openingQuantity);
-      if (!Number.isFinite(quantity)) return "Opening quantity must be a number";
+      if (!Number.isFinite(quantity)) return t("errors.quantityNotNumber");
       // Sent as the opening's own quantity: the mutation resolves it against
       // the ledger it reads, so no client-side total (which can be stale
       // after an earlier edit) feeds into it
       if (quantity !== opening.quantity) update.openingQuantity = quantity;
       if (openingPrice.trim() !== "") {
         const price = parseFloat(openingPrice);
-        if (!Number.isFinite(price)) return "Price per unit must be a number";
+        if (!Number.isFinite(price)) return t("errors.priceNotNumber");
         if (price !== opening.pricePerUnit) update.purchasePricePerUnit = price;
       }
       if (openingCurrency !== opening.currency) {
@@ -149,11 +154,7 @@ export function EditVaultItemDialog({
       onClose();
     } catch (err) {
       console.error("Failed to update item:", err);
-      setError(
-        err instanceof ConvexError
-          ? String(err.data)
-          : "Failed to save the changes. Please try again.",
-      );
+      setError(toErrorMessage(err, "saveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -164,19 +165,18 @@ export function EditVaultItemDialog({
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Edit {item.displayName}
+            {t("title", { name: item.displayName })}
             <MetalBadge metal={item.metalType} size="sm" />
           </DialogTitle>
           <DialogDescription>
-            Change the item&apos;s details and its opening balance. Later buys
-            and sales are edited as transactions.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Name</Label>
+              <Label htmlFor="edit-name">{t("name")}</Label>
               <Input
                 id="edit-name"
                 placeholder={item.displayName}
@@ -187,7 +187,7 @@ export function EditVaultItemDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="edit-buy-premium">Buy premium (%)</Label>
+                <Label htmlFor="edit-buy-premium">{t("buyPremium")}</Label>
                 <Input
                   id="edit-buy-premium"
                   type="number"
@@ -197,7 +197,7 @@ export function EditVaultItemDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-sell-premium">Sell premium (%)</Label>
+                <Label htmlFor="edit-sell-premium">{t("sellPremium")}</Label>
                 <Input
                   id="edit-sell-premium"
                   type="number"
@@ -209,7 +209,7 @@ export function EditVaultItemDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-storage">Storage location</Label>
+              <Label htmlFor="edit-storage">{t("storageLocation")}</Label>
               <Input
                 id="edit-storage"
                 value={storageLocation}
@@ -218,7 +218,7 @@ export function EditVaultItemDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes</Label>
+              <Label htmlFor="edit-notes">{t("notes")}</Label>
               <Textarea
                 id="edit-notes"
                 value={notes}
@@ -230,21 +230,20 @@ export function EditVaultItemDialog({
             <Separator />
 
             <div className="space-y-3">
-              <h4 className="text-sm font-medium">Opening balance</h4>
+              <h4 className="text-sm font-medium">{t("openingBalance")}</h4>
               {transactions === undefined ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading…
+                  {tActions("loading")}
                 </div>
               ) : !opening ? (
                 <p className="text-sm text-muted-foreground">
-                  This item has no opening balance; record a buy or sale
-                  instead.
+                  {t("noOpening")}
                 </p>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-opening-quantity">Quantity</Label>
+                    <Label htmlFor="edit-opening-quantity">{t("quantity")}</Label>
                     <Input
                       id="edit-opening-quantity"
                       type="number"
@@ -256,18 +255,18 @@ export function EditVaultItemDialog({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label htmlFor="edit-opening-price">Price per unit</Label>
+                      <Label htmlFor="edit-opening-price">{t("pricePerUnit")}</Label>
                       <Input
                         id="edit-opening-price"
                         type="number"
                         step="0.01"
-                        placeholder="Unknown"
+                        placeholder={t("unknown")}
                         value={openingPrice}
                         onChange={(e) => setOpeningPrice(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="edit-opening-currency">Currency</Label>
+                      <Label htmlFor="edit-opening-currency">{t("currency")}</Label>
                       {/* The opening's stored currency, kept even when it
                           is not a display currency */}
                       <CurrencySelect
@@ -278,7 +277,7 @@ export function EditVaultItemDialog({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-opening-date">Purchase date</Label>
+                    <Label htmlFor="edit-opening-date">{t("purchaseDate")}</Label>
                     <Input
                       id="edit-opening-date"
                       type="date"
@@ -288,7 +287,7 @@ export function EditVaultItemDialog({
                     />
                     {opening.transactionDate == null && openingDate === "" && (
                       <p className="text-xs text-muted-foreground">
-                        Unknown: held since before any range
+                        {t("unknownDate")}
                       </p>
                     )}
                   </div>
@@ -306,11 +305,11 @@ export function EditVaultItemDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save
+              {tActions("save")}
             </Button>
           </DialogFooter>
         </form>

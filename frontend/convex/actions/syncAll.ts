@@ -306,6 +306,12 @@ export const syncAllForUserInternal = internalAction({
     // Consider successful if at least one provider synced and snapshot created
     const overallSuccess =
       (plaidSuccess || snaptradeSuccess || bitpandaSuccess) && snapshotSuccess;
+    if (overallSuccess) {
+      // Freshness for GET /health/deep (convex/health.ts)
+      await ctx.runMutation(internal.health.recordJobSuccess, {
+        job: "provider-sync",
+      });
+    }
 
     return {
       success: overallSuccess,
@@ -355,6 +361,13 @@ export const scheduledDailySync = internalAction({
     const users: string[] = await ctx.runQuery(
       internal.portfolioSnapshots.getUsersWithConnections,
     );
+
+    if (users.length === 0) {
+      // Nothing to sync is a successful run for GET /health/deep
+      await ctx.runMutation(internal.health.recordJobSuccess, {
+        job: "provider-sync",
+      });
+    }
 
     for (const [i, userId] of users.entries()) {
       const delay = i * USER_SYNC_STAGGER_MS;

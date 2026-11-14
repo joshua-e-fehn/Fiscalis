@@ -7,10 +7,12 @@ import {
 } from "../../services/apiKeys/apiKeyService";
 import { netWorthApiCurrency } from "../../services/portfolio/aggregate";
 import { DISPLAY_CURRENCIES } from "../../services/finance/displayCurrency";
+import { evaluateFreshness } from "../../services/health/freshness";
+import { metalArchiveEnabled, scheduledSyncEnabled } from "./lib/scheduledSync";
 
 // ═══════════════════════════════════════════════════════════════
 // Convex HTTP Router
-// Health check + the public, API-key authenticated REST API.
+// Health checks + the public, API-key authenticated REST API.
 // Served from https://<deployment>.convex.site
 // ═══════════════════════════════════════════════════════════════
 
@@ -36,6 +38,42 @@ http.route({
         },
       },
     );
+  }),
+});
+
+// Feed and cron freshness, polled by the uptime monitor
+// (ops/health-monitor/): 200 when every check passes, 503 otherwise. The
+// body holds only check names and ages (services/health/freshness.ts),
+// never user data, so it needs no auth.
+http.route({
+  path: "/health/deep",
+  method: "GET",
+  handler: httpAction(async (ctx) => {
+    const headers = {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store, max-age=0",
+    };
+    try {
+      const inputs = await ctx.runQuery(internal.health.freshnessInputs, {});
+      const report = evaluateFreshness(
+        inputs,
+        {
+          archiveEnabled: metalArchiveEnabled(),
+          scheduledSyncEnabled: scheduledSyncEnabled(),
+        },
+        Date.now(),
+      );
+      return new Response(JSON.stringify(report), {
+        status: report.ok ? 200 : 503,
+        headers,
+      });
+    } catch {
+      console.error("GET /health/deep failed");
+      return new Response(JSON.stringify({ ok: false, checks: [] }), {
+        status: 503,
+        headers,
+      });
+    }
   }),
 });
 

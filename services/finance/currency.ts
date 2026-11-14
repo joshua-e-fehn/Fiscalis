@@ -290,6 +290,15 @@ export function dayWindows(
   return windows;
 }
 
+/**
+ * End of a UTC day YYYY-MM-DD (the next day's midnight), epoch ms: the
+ * moment a daily rate of that day stops being the latest. NaN if malformed.
+ */
+export function utcDayEnd(day: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return Number.NaN;
+  return Date.parse(`${day}T00:00:00.000Z`) + DAY_MS;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Currency codes
 // ═══════════════════════════════════════════════════════════════

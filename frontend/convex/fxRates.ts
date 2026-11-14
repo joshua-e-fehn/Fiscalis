@@ -123,6 +123,8 @@ export const refreshFxRates = internalAction({
       );
       return { ok: false, updated };
     }
+    // Freshness for GET /health/deep: rows were fetched, changed or not
+    await ctx.runMutation(internal.health.recordJobSuccess, { job: "fx-refresh" });
     return { ok: true, updated };
   },
 });

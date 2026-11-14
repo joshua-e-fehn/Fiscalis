@@ -11,8 +11,14 @@ import { RetirementWizard } from "./RetirementWizard";
  * active, and the step-by-step wizard otherwise (new plan, draft, or editing).
  */
 export function RetirementFlow() {
-	const plan = useRetirementPlan();
+	const livePlan = useRetirementPlan();
 	const [editing, setEditing] = useState(false);
+	// The plan reloads (undefined) whenever the display currency or its rate
+	// changes. Keep the last loaded one meanwhile, so the wizard stays mounted
+	// with its unsaved edits and its currency-change banner can show.
+	const [lastPlan, setLastPlan] = useState(livePlan);
+	if (livePlan !== undefined && livePlan !== lastPlan) setLastPlan(livePlan);
+	const plan = livePlan === undefined ? lastPlan : livePlan;
 
 	if (plan === undefined) {
 		return (

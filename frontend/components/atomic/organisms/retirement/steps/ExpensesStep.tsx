@@ -3,7 +3,7 @@
 import { Wallet } from "lucide-react";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useRetirementAmountsCurrency } from "@/hooks/convex/retirement";
 import {
 	inflateToFuture,
 	retirementTimeline,
@@ -19,8 +19,9 @@ export function ExpensesStep({
 	onNext,
 	onBack,
 	isSaving,
+	currency: inputsCurrency,
 }: RetirementStepProps) {
-	const currency = useBaseCurrency();
+	const currency = useRetirementAmountsCurrency(inputsCurrency);
 	const years = Math.max(0, retirementTimeline(data).yearsToRetirement);
 	const future = inflateToFuture(
 		data.monthlyExpensesToday,

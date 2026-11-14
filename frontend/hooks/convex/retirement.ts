@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
+import type { FunctionArgs } from "convex/server";
 import { useMemo } from "react";
 import {
 	computeRetirementResults,
@@ -9,25 +10,74 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocalToday } from "@/hooks/useLocalToday";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import { toInvestmentCurrency } from "@/lib/utils/currency";
+import { useDisplayCurrency } from "./displayCurrency";
 import { useLoans } from "./loans";
 
 // ═══════════════════════════════════════════════════════════════
 // RETIREMENT PLANNER ("Rentenplaner") HOOKS
 // ═══════════════════════════════════════════════════════════════
+//
+// Every amount these hooks read or write is in the display currency
+// (useDisplayCurrency): the server converts the plan's stored amounts and
+// the EUR net worth into it, and a save in it rebases the stored plan once
+// (convex/retirement.ts). Components only format, in the display currency.
 
-/** The current user's stored retirement plan (undefined while loading, null if none). */
+/** The display currency code to ask the server for; undefined while loading. */
+function useRetirementCurrency(): string | undefined {
+	const display = useDisplayCurrency();
+	return display.isLoading ? undefined : display.code;
+}
+
+/**
+ * The currency to label retirement amounts with: `currency`, the one they
+ * are in (the wizard's form currency, a result's currency), else the
+ * display currency.
+ */
+export function useRetirementAmountsCurrency(
+	currency: string | undefined,
+): InvestmentCurrency {
+	const display = useDisplayCurrency();
+	return (currency && toInvestmentCurrency(currency)) || display.currency;
+}
+
+/**
+ * The current user's stored retirement plan with its amounts in the display
+ * currency (undefined while loading, null if none). `storedCurrency` differs
+ * from `currency` until the plan is saved in the display currency.
+ */
 export function useRetirementPlan() {
-	return useQuery(api.retirement.getRetirementPlan);
+	const currency = useRetirementCurrency();
+	return useQuery(
+		api.retirement.getRetirementPlan,
+		currency === undefined ? "skip" : { currency },
+	);
 }
 
-/** Upsert the plan (incremental, partial fields supported). */
+type SavePlanArgs = Omit<
+	FunctionArgs<typeof api.retirement.saveRetirementPlan>,
+	"currency"
+>;
+
+/**
+ * Upsert the plan (incremental, partial fields supported), with amounts in
+ * the display currency, or in `currency` when the caller holds amounts
+ * filled in another one (the wizard keeps the currency it was filled in).
+ */
 export function useSaveRetirementPlan() {
-	return useMutation(api.retirement.saveRetirementPlan);
+	const save = useMutation(api.retirement.saveRetirementPlan);
+	const displayCurrency = useRetirementCurrency();
+	// Without a known currency the amounts count as the plan's own
+	return (args: SavePlanArgs, currency: string | undefined = displayCurrency) =>
+		save({ ...args, currency });
 }
 
-/** Persist the current wizard step. */
+/** Persist the current wizard step (rebasing the plan into the display currency). */
 export function useUpdateRetirementStep() {
-	return useMutation(api.retirement.updateRetirementStep);
+	const update = useMutation(api.retirement.updateRetirementStep);
+	const currency = useRetirementCurrency();
+	return (args: { step: number }) => update({ ...args, currency });
 }
 
 /** Delete the plan and start over. */
@@ -45,9 +95,18 @@ export function useRetirementMortgageCandidates() {
 	);
 }
 
-/** Bank (Plaid) mortgage accounts the home can be linked to instead. */
-export function useRetirementMortgageAccounts() {
-	return useQuery(api.retirement.getResidenceMortgageAccounts);
+/**
+ * Bank (Plaid) mortgage accounts the home can be linked to instead, with
+ * balances in `inputsCurrency` (the wizard's form currency) when given,
+ * else in the display currency.
+ */
+export function useRetirementMortgageAccounts(inputsCurrency?: string) {
+	const displayCurrency = useRetirementCurrency();
+	const currency = inputsCurrency ?? displayCurrency;
+	return useQuery(
+		api.retirement.getResidenceMortgageAccounts,
+		currency === undefined ? "skip" : { currency },
+	);
 }
 
 /**
@@ -56,33 +115,53 @@ export function useRetirementMortgageAccounts() {
  * current net worth, on the viewer's local day. Reactive: recomputes when any
  * of them changes, and at local midnight (the day is a query argument).
  *
- * Returns `undefined` while loading, `null` when no plan exists.
+ * In the display currency, which the result carries. Returns `undefined`
+ * while loading, `null` when no plan exists.
  */
-export function useRetirementResults(): RetirementResults | null | undefined {
+export function useRetirementResults():
+	| (RetirementResults & { currency: string })
+	| null
+	| undefined {
 	const today = useLocalToday();
-	return useQuery(api.retirement.getResults, { today });
+	const currency = useRetirementCurrency();
+	return useQuery(
+		api.retirement.getResults,
+		currency === undefined ? "skip" : { today, currency },
+	);
 }
 
 /**
  * Preview for the wizard: the in-progress (unsaved) inputs computed on the
  * client, on the server's funding base for the inputs' mortgage link
- * (retirement.getFundingBase, the same base getResults uses).
+ * (retirement.getFundingBase, the same base getResults uses), both in the
+ * display currency, or in `inputsCurrency` (the currency the inputs were
+ * filled in) when given.
  */
 export function useRetirementPreview(
 	inputs: RetirementInputs | null,
+	inputsCurrency?: string,
 ): RetirementResults | null | undefined {
 	const today = useLocalToday();
-	const fundingBase = useQuery(api.retirement.getFundingBase, {
-		today,
-		primaryResidenceLoanId: inputs?.primaryResidenceLoanId as
-			| Id<"loans">
-			| undefined,
-		primaryResidenceAccountId: inputs?.primaryResidenceAccountId as
-			| Id<"plaidAccounts">
-			| undefined,
-		primaryResidenceMortgageRate: inputs?.primaryResidenceMortgageRate,
-		primaryResidenceMortgagePayment: inputs?.primaryResidenceMortgagePayment,
-	});
+	const displayCurrency = useRetirementCurrency();
+	const currency = inputsCurrency ?? displayCurrency;
+	const fundingBase = useQuery(
+		api.retirement.getFundingBase,
+		currency === undefined
+			? "skip"
+			: {
+					today,
+					currency,
+					primaryResidenceLoanId: inputs?.primaryResidenceLoanId as
+						| Id<"loans">
+						| undefined,
+					primaryResidenceAccountId: inputs?.primaryResidenceAccountId as
+						| Id<"plaidAccounts">
+						| undefined,
+					primaryResidenceMortgageRate: inputs?.primaryResidenceMortgageRate,
+					primaryResidenceMortgagePayment:
+						inputs?.primaryResidenceMortgagePayment,
+				},
+	);
 
 	return useMemo(() => {
 		if (fundingBase === undefined) return undefined;

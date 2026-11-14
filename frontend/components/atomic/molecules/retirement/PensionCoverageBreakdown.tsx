@@ -6,11 +6,13 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import { formatYears, type RetirementResults } from "@/lib/types/retirement";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency } from "@/lib/utils/currency";
 
 interface Props {
+	/** The currency `results` is in */
+	currency: InvestmentCurrency;
 	results: RetirementResults;
 	className?: string;
 }
@@ -20,8 +22,7 @@ interface Props {
  * part covered by fixed pensions vs. the part the portfolio must fund. Both are
  * entered in today's money and inflated to the retirement date.
  */
-export function PensionCoverageBreakdown({ results, className }: Props) {
-	const currency = useBaseCurrency();
+export function PensionCoverageBreakdown({ results, currency, className }: Props) {
 	const expense = results.expenseFutureMonthly;
 	const pension = Math.min(results.pensionFutureMonthly, expense);
 	const portfolio = results.gapMonthly;

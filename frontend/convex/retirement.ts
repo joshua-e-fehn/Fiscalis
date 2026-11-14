@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import {
 	DEFAULT_CONSERVATIVE_RETURN,
 	DEFAULT_INFLATION_RATE,
@@ -16,11 +16,24 @@ import {
 	retirementFundingBase,
 	retirementValuationDay,
 } from "../../services/finance/retirementService";
+import {
+	fundingBaseIn,
+	LEGACY_PLAN_CURRENCY,
+	planCurrencyOf,
+	retirementAmountsIn,
+	type RetirementPlanAmounts,
+} from "../../services/finance/retirementCurrency";
+import { convertBetween } from "../../services/finance/currency";
+import {
+	toDisplayCurrency,
+	type DisplayCurrency,
+} from "../../services/finance/displayCurrency";
 import { aggregateNetWorth } from "../../services/portfolio/aggregate";
 import { validateBirthDate } from "../lib/utils/date";
 import type { Id } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { getOwnedDoc, getUserId } from "./lib/auth";
+import { loadFxRates } from "./fxRates";
 import { loadHoldings } from "./lib/netWorth";
 import {
 	retirementFundingTreatmentValidator,
@@ -52,6 +65,70 @@ function assertValidStep(step: number) {
 }
 
 // ───────────────────────────────────────────────────────────────
+// Currency
+// ───────────────────────────────────────────────────────────────
+//
+// A plan's typed amounts are stored in the plan's currency (absent = EUR,
+// services/finance/retirementCurrency.ts); the net worth is EUR. Queries
+// take the viewer's display currency and answer in it: the plan's amounts
+// and the funding base are converted at the latest mirrored rates. Saving
+// in another currency rebases the stored amounts once and switches the
+// plan's currency.
+
+/** The display currency a query or mutation is asked to work in. */
+const currencyArg = v.optional(v.string());
+
+/** A requested currency code, validated; undefined when none was given. */
+function requestedCurrency(
+	code: string | undefined,
+): DisplayCurrency | undefined {
+	if (code === undefined) return undefined;
+	const currency = toDisplayCurrency(code);
+	if (!currency) throw new ConvexError(`Unsupported currency: ${code}`);
+	return currency;
+}
+
+/**
+ * Units of `to` per unit of `from`, at the latest mirrored rates (the
+ * fallback table when the mirror has none). 1 for the same currency, with
+ * no reads.
+ */
+async function currencyFactor(
+	ctx: { db: QueryCtx["db"] },
+	from: DisplayCurrency,
+	to: DisplayCurrency,
+): Promise<number> {
+	if (from === to) return 1;
+	const foreign = [from, to].filter((code) => code !== "EUR");
+	const rates = await loadFxRates(ctx, { currencies: foreign });
+	const unitsPerEur = Object.fromEntries(
+		Object.entries(rates).map(([code, rate]) => [code, 1 / rate.eurPerUnit]),
+	);
+	const factor = convertBetween(1, from, to, unitsPerEur);
+	if (factor === null || !(factor > 0)) {
+		throw new ConvexError(`No exchange rate from ${from} to ${to}`);
+	}
+	return factor;
+}
+
+/**
+ * A stored plan's amounts rebased into `target`, or null when the plan is
+ * already in it (or no target was given).
+ */
+async function rebasedAmounts(
+	ctx: { db: QueryCtx["db"] },
+	plan: RetirementPlanAmounts & { currency?: string },
+	target: DisplayCurrency | undefined,
+): Promise<RetirementPlanAmounts | null> {
+	const stored = planCurrencyOf(plan);
+	if (target === undefined || target === stored) return null;
+	return retirementAmountsIn(
+		plan,
+		await currencyFactor(ctx, stored, target),
+	);
+}
+
+// ───────────────────────────────────────────────────────────────
 // Funding base
 // ───────────────────────────────────────────────────────────────
 
@@ -69,12 +146,16 @@ interface ResidenceMortgageLink {
  * schedule and payments (only one the liabilities count, D1); a Plaid
  * mortgage account from the plan's optional rate and repayment, both from
  * `today` (`YYYY-MM-DD`).
+ *
+ * Everything is in the currency `unitsPerEur` converts EUR into (units per
+ * 1 EUR), the one the link's repayment is given in.
  */
 async function loadFundingBase(
 	ctx: QueryCtx,
 	userId: string,
 	link: ResidenceMortgageLink,
 	today: string,
+	unitsPerEur: number,
 ): Promise<RetirementFundingBase> {
 	const holdings = await loadHoldings(ctx, userId);
 	let mortgage: ResidenceMortgage | null = null;
@@ -92,7 +173,9 @@ async function loadFundingBase(
 				loan,
 				payments,
 				today,
-				loan.currentBalance > 0 ? holding.valueBase / loan.currentBalance : 1,
+				(loan.currentBalance > 0
+					? holding.valueBase / loan.currentBalance
+					: 1) * unitsPerEur,
 			);
 		}
 	} else if (link.primaryResidenceAccountId) {
@@ -101,7 +184,7 @@ async function loadFundingBase(
 		);
 		if (account) {
 			mortgage = residenceMortgageFromAccount(
-				account.valueBase,
+				account.valueBase * unitsPerEur,
 				{
 					annualInterestRate: link.primaryResidenceMortgageRate,
 					monthlyPayment: link.primaryResidenceMortgagePayment,
@@ -111,24 +194,41 @@ async function loadFundingBase(
 			);
 		}
 	}
-	return retirementFundingBase(aggregateNetWorth(holdings), mortgage);
+	return fundingBaseIn(
+		retirementFundingBase(aggregateNetWorth(holdings), mortgage),
+		unitsPerEur,
+	);
 }
 
 // ───────────────────────────────────────────────────────────────
 // Queries
 // ───────────────────────────────────────────────────────────────
 
-/** Get the current user's retirement plan, or null if none exists yet. */
+/**
+ * Get the current user's retirement plan, or null if none exists yet. With
+ * `currency`, its amounts are converted into it (in memory; saving in that
+ * currency rebases them) and `currency` is that one; `storedCurrency` is
+ * the currency the amounts are stored in.
+ */
 export const getRetirementPlan = query({
-	args: {},
-	handler: async (ctx) => {
+	args: { currency: currencyArg },
+	handler: async (ctx, args) => {
 		const identity = await ctx.auth.getUserIdentity();
 		if (!identity) return null;
 
-		return await ctx.db
+		const plan = await ctx.db
 			.query("retirementPlans")
 			.withIndex("by_user", (q) => q.eq("userId", identity.subject))
 			.first();
+		if (!plan) return null;
+		const storedCurrency = planCurrencyOf(plan);
+		const currency = requestedCurrency(args.currency) ?? storedCurrency;
+		return {
+			...plan,
+			...(await rebasedAmounts(ctx, plan, currency)),
+			currency,
+			storedCurrency,
+		};
 	},
 });
 
@@ -142,10 +242,11 @@ const valuationDayArg = v.optional(v.string());
 
 /**
  * The stored plan's results on `today`, computed from the user's current net
- * worth. null when signed out or without a plan.
+ * worth, in `currency` (default: the plan's), which the result carries.
+ * null when signed out or without a plan.
  */
 export const getResults = query({
-	args: { today: valuationDayArg },
+	args: { today: valuationDayArg, currency: currencyArg },
 	handler: async (ctx, args) => {
 		const userId = await getUserId(ctx);
 		if (!userId) return null;
@@ -158,22 +259,37 @@ export const getResults = query({
 			.query("userSettings")
 			.withIndex("by_user", (q) => q.eq("userId", userId))
 			.first();
+		const currency =
+			requestedCurrency(args.currency) ?? planCurrencyOf(plan);
+		const inCurrency = {
+			...plan,
+			...(await rebasedAmounts(ctx, plan, currency)),
+		};
 		const day = retirementValuationDay(args.today);
-		return computeRetirementResults(
-			planToInputs(plan, settings?.birthDate, day.date),
-			await loadFundingBase(ctx, userId, plan, day.iso),
+		const results = computeRetirementResults(
+			planToInputs(inCurrency, settings?.birthDate, day.date),
+			await loadFundingBase(
+				ctx,
+				userId,
+				inCurrency,
+				day.iso,
+				await currencyFactor(ctx, "EUR", currency),
+			),
 			day.date,
 		);
+		return { ...results, currency };
 	},
 });
 
 /**
  * The funding base for a residence-mortgage link on `today`, for the
- * wizard's preview of unsaved inputs. null when signed out.
+ * wizard's preview of unsaved inputs, in `currency` (default EUR; the
+ * link's repayment is in it too). null when signed out.
  */
 export const getFundingBase = query({
 	args: {
 		today: valuationDayArg,
+		currency: currencyArg,
 		primaryResidenceLoanId: v.optional(v.id("loans")),
 		primaryResidenceAccountId: v.optional(v.id("plaidAccounts")),
 		primaryResidenceMortgageRate: v.optional(v.number()),
@@ -182,28 +298,41 @@ export const getFundingBase = query({
 	handler: async (ctx, args) => {
 		const userId = await getUserId(ctx);
 		if (!userId) return null;
-		const { today, ...link } = args;
+		const { today, currency, ...link } = args;
 		return await loadFundingBase(
 			ctx,
 			userId,
 			link,
 			retirementValuationDay(today).iso,
+			await currencyFactor(
+				ctx,
+				"EUR",
+				requestedCurrency(currency) ?? LEGACY_PLAN_CURRENCY,
+			),
 		);
 	},
 });
 
-/** Bank (Plaid) mortgage accounts the residence can be linked to. */
+/**
+ * Bank (Plaid) mortgage accounts the residence can be linked to, with
+ * their balance in `currency` (default EUR).
+ */
 export const getResidenceMortgageAccounts = query({
-	args: {},
-	handler: async (ctx) => {
+	args: { currency: currencyArg },
+	handler: async (ctx, args) => {
 		const userId = await getUserId(ctx);
 		if (!userId) return [];
+		const unitsPerEur = await currencyFactor(
+			ctx,
+			"EUR",
+			requestedCurrency(args.currency) ?? LEGACY_PLAN_CURRENCY,
+		);
 		return mortgageAccountHoldings(await loadHoldings(ctx, userId)).map(
 			(h) => ({
 				_id: h.id as Id<"plaidAccounts">,
 				name: h.name,
-				/** Amount owed today, base currency */
-				balance: h.valueBase,
+				/** Amount owed today, in `currency` */
+				balance: h.valueBase * unitsPerEur,
 			}),
 		);
 	},
@@ -217,9 +346,15 @@ export const getResidenceMortgageAccounts = query({
  * Upsert the user's single retirement plan. All input fields are optional so
  * the wizard can save incrementally; provided fields are merged over existing
  * values (or over sensible defaults when first created).
+ *
+ * `currency` is the currency the provided amounts are in. When it differs
+ * from the stored plan's, the stored amounts are first rebased into it at
+ * the latest rate (once: they are stored in it from then on). Without it,
+ * amounts are taken as in the plan's own currency.
  */
 export const saveRetirementPlan = mutation({
 	args: {
+		currency: currencyArg,
 		currentStep: v.optional(v.number()),
 		status: v.optional(v.union(v.literal("draft"), v.literal("active"))),
 
@@ -265,10 +400,16 @@ export const saveRetirementPlan = mutation({
 
 		if (args.currentStep !== undefined) assertValidStep(args.currentStep);
 
-		const existing = await ctx.db
+		const stored = await ctx.db
 			.query("retirementPlans")
 			.withIndex("by_user", (q) => q.eq("userId", userId))
 			.first();
+		const currency = requestedCurrency(args.currency);
+		const rebased = stored
+			? await rebasedAmounts(ctx, stored, currency)
+			: null;
+		// The stored plan as it reads in `currency`
+		const existing = stored && { ...stored, ...rebased };
 
 		// Validate the plan as it will be stored (provided fields merged over the
 		// existing plan or the create defaults) with the same rules as the wizard.
@@ -364,6 +505,7 @@ export const saveRetirementPlan = mutation({
 		if (!existing) {
 			const id = await ctx.db.insert("retirementPlans", {
 				userId,
+				currency: currency ?? LEGACY_PLAN_CURRENCY,
 				currentStep: args.currentStep ?? 1,
 				status,
 				birthDate,
@@ -376,8 +518,9 @@ export const saveRetirementPlan = mutation({
 			return id;
 		}
 
-		// Patch only provided fields.
+		// Patch only provided fields, over the rebased amounts.
 		const updates: Record<string, unknown> = { updatedAt: now };
+		if (rebased) Object.assign(updates, rebased, { currency });
 		if (args.currentStep !== undefined) updates.currentStep = args.currentStep;
 		if (args.status !== undefined) updates.status = args.status;
 		if (birthDate !== undefined) updates.birthDate = birthDate;
@@ -424,9 +567,13 @@ export const saveRetirementPlan = mutation({
 	},
 });
 
-/** Lightweight step persistence between wizard screens. */
+/**
+ * Lightweight step persistence between wizard screens. With a `currency`
+ * other than the plan's, the stored amounts are rebased into it (as on
+ * saveRetirementPlan).
+ */
 export const updateRetirementStep = mutation({
-	args: { step: v.number() },
+	args: { step: v.number(), currency: currencyArg },
 	handler: async (ctx, args) => {
 		const identity = await ctx.auth.getUserIdentity();
 		if (!identity) throw new Error("Not authenticated");
@@ -439,7 +586,10 @@ export const updateRetirementStep = mutation({
 		if (!plan) throw new Error("Retirement plan not initialized");
 		assertValidStep(args.step);
 
+		const currency = requestedCurrency(args.currency);
+		const rebased = await rebasedAmounts(ctx, plan, currency);
 		await ctx.db.patch(plan._id, {
+			...(rebased ? { ...rebased, currency } : {}),
 			currentStep: args.step,
 			updatedAt: Date.now(),
 		});

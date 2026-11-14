@@ -5,8 +5,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import {
+	useRetirementAmountsCurrency,
 	useRetirementPlan,
 	useRetirementResults,
 } from "@/hooks/convex/retirement";
@@ -51,9 +51,10 @@ function activePlanSummary(
  * has no plan, a draft in progress, or a saved (active) plan.
  */
 export function RetirementTeaserCard() {
-	const currency = useBaseCurrency();
 	const plan = useRetirementPlan();
 	const results = useRetirementResults();
+	// Labelled with the currency the server computed the results in
+	const currency = useRetirementAmountsCurrency(results?.currency);
 
 	const isActive = plan?.status === "active";
 	const isDraft = !!plan && plan.status !== "active";

@@ -13,11 +13,15 @@
   holdings, loans, vault, portfolio snapshots, World Bank indicators. Queries
   push over WebSocket, so there is no cache to invalidate. Scheduled jobs live
   here too: nightly full-provider sync + snapshot, 6-hourly Bitpanda refresh,
-  weekly World Bank sync.
-- A second, SQL time-series store reached through a typed query builder, fronted
-  by a small typed-RPC HTTP router mounted inside the app's route tree. It
-  serves **only** precious-metal price history and FX rates, read-only, fetched
-  through a request-cache client rather than the reactive store.
+  weekly World Bank sync, and the minutely precious-metal price ingest.
+- It also holds the market data: a minutely scrape of an undocumented public
+  gold-price JSON feed (all four metals in EUR/USD/CHF plus EUR/USD and
+  EUR/CHF), stored as raw ticks pruned after 7 days and as hour/day closes kept
+  forever, plus daily FX rates merged from those closes and the ECB. Every
+  finished UTC day of ticks is archived to S3 (one gzipped JSON-lines file per
+  day, all the old SQL columns) before the ticks are pruned, so the S3 bucket
+  is the minutely history for backtesting. There is no SQL store any more
+  (retired 2026-11-14; the Supabase history is in the same bucket).
 - Hosted auth guards every route except the marketing page and the public world
   data endpoints, and additionally owns the app's Content-Security-Policy.
 - Three account-aggregation providers supply raw account/position/transaction
@@ -37,14 +41,13 @@
 - Server functions import types *upward* out of `frontend/lib/types/`
   (classification is the main one). The backend depends on the app, not the
   reverse. Do not "fix" this by duplicating the types.
-- The SQL schema still declares `plaidItems`, `plaidTransactions`,
-  `brokerConnections`, `brokerPositions`. **Those tables are dead** — the live
-  ones with the same names are document-store tables. Only
-  `precious_metal_prices` and `currency_exchange_rates` are actually read.
-- Nothing in this repo writes those price tables. The writer is the deprecated
-  Deno edge function under `backend/`, deployed out-of-band. `frontend/drizzle/`
-  and `backend/edge_functions/supabase/migrations/` are byte-identical copies
-  and must be changed together.
+- Every price chart and performance range reads the stored **closes**, never
+  the ticks: `services/finance/metalPriceFeed.ts` turns them into the slot
+  series (daily/weekly/quarterly, gaps kept as null). Close subscriptions stop
+  at the current bucket and end at the `latest` query, so the minutely write
+  only re-runs that one-row query. Keep it that way when adding a range.
+- The remaining Hono router in `app/(api)/api/[[...route]]` serves only the
+  World Bank routes.
 - World Bank data has two independent paths: the public API route hits the
   upstream API live behind an in-memory TTL cache, while the document store
   separately mirrors indicators for search and favourites. Neither feeds the
@@ -69,7 +72,6 @@ bun run dev                                     # app on :3000
 bun run build                                   # convex codegen, then webpack build
 bun run lint
 bun run check                                   # lint + tsc (app, convex) + services tests = CI
-bun run db:generate | db:migrate | db:studio    # SQL schema only
 # (no manual backend deploy: Vercel production builds run `convex deploy`)
 
 cd services && bun install && bun run test      # vitest — the repo's only tests

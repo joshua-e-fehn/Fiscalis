@@ -78,15 +78,15 @@ Fiscalis uses a **hybrid architecture** optimized for different data patterns:
          │                                           │
          ▼                                           ▼
 ┌─────────────────────────┐             ┌─────────────────────────┐
-│       CONVEX            │             │     HONO + NEON         │
-│   (Real-time Backend)   │             │   (Time-series API)     │
+│       CONVEX            │             │         HONO            │
+│   (Real-time Backend)   │             │   (World Bank routes)   │
 ├─────────────────────────┤             ├─────────────────────────┤
-│ • User data (banking,   │             │ • Precious metal prices │
-│   brokers, crypto)      │             │ • Exchange rates        │
-│ • Portfolio snapshots   │             │ • World Bank data       │
+│ • User data (banking,   │             │ • World Bank data       │
+│   brokers, crypto)      │             │   (live upstream, TTL   │
+│ • Portfolio snapshots   │             │   cache)                │
 │ • Loans & vault items   │             │                         │
-│ • Onboarding progress   │             │ Drizzle ORM + PostgreSQL│
-│                         │             │                         │
+│ • Metal prices (minute  │             │                         │
+│   ingest) & FX rates    │             │                         │
 │ WebSocket subscriptions │             │ REST API (React Query)  │
 └─────────────────────────┘             └─────────────────────────┘
          │
@@ -103,8 +103,8 @@ Fiscalis uses a **hybrid architecture** optimized for different data patterns:
 
 **Why Hybrid?**
 
-- **Convex** provides real-time reactivity for user data with automatic cache invalidation via WebSocket
-- **Neon PostgreSQL** is better suited for time-series data with periodic batch updates
+- **Convex** holds all data, user data and market data alike (a minutely gold.de price ingest stored as hour/day closes, plus daily FX), with automatic cache invalidation via WebSocket
+- **Hono** only fronts the public World Bank routes, which proxy the upstream API live
 
 ---
 
@@ -117,15 +117,11 @@ Fiscalis/
 │   ├── convex/            # Convex backend (schemas, queries, mutations, actions)
 │   ├── components/        # React components (Atomic Design)
 │   ├── hooks/             # Data fetching hooks (Convex + React Query)
-│   ├── db/                # Neon/Drizzle configuration
 │   └── lib/               # Utilities and type definitions
 │
 ├── services/              # Shared calculation services
 │   ├── finance/           # Financial calculations (loans, interest, time-series)
 │   └── performance/       # Portfolio performance calculation strategies
-│
-├── backend/               # Legacy backend services
-│   └── edge_functions/    # Supabase edge functions (price fetching)
 │
 └── docs/                  # Architecture and specification documents
     ├── ARCHITECTURE.md    # Comprehensive architecture guide
@@ -141,8 +137,7 @@ Fiscalis/
 | --------------------- | ------------------------------ | ---------------------------------- |
 | **Frontend**          | Next.js 16, React 19           | App framework with App Router      |
 | **Real-time Backend** | Convex                         | User data, WebSocket subscriptions |
-| **API Layer**         | Hono (Edge Runtime)            | Time-series data endpoints         |
-| **Database**          | Neon PostgreSQL + Drizzle      | Time-series storage                |
+| **API Layer**         | Hono                           | Public World Bank routes           |
 | **Auth**              | Clerk                          | Authentication & user management   |
 | **State**             | TanStack Query                 | Server state for REST endpoints    |
 | **UI**                | Tailwind CSS, shadcn/ui, Radix | Styling & components               |
@@ -158,7 +153,6 @@ Fiscalis/
 
 - [Bun](https://bun.sh/) (recommended) or Node.js 20+
 - [Convex](https://convex.dev/) account (free tier available)
-- [Neon](https://neon.tech/) PostgreSQL database
 - [Clerk](https://clerk.com/) account for authentication
 - API credentials for: Plaid, SnapTrade, Vezgo (optional)
 
@@ -217,20 +211,6 @@ bun test
 
 # Run specific test file
 bun test finance/financeService.test.ts
-```
-
-### Database Migrations
-
-```bash
-# Generate new migration
-cd frontend
-bun run db:generate
-
-# Apply migrations
-bun run db:migrate
-
-# Open Drizzle Studio
-bun run db:studio
 ```
 
 ### Convex Development

@@ -723,7 +723,8 @@ async function syncSnaptrade(
       let accountsFailed = 0;
       let reauthError: string | undefined;
       let lastAccountError: string | undefined;
-      let lastAccountRetryable = false;
+      // transient_error only when every failure was worth retrying
+      let allFailuresRetryable = true;
       for (const apiAccount of apiAccounts) {
         if (!belongsTo(apiAccount, connection)) continue;
         accountsAttempted++;
@@ -792,7 +793,7 @@ async function syncSnaptrade(
           const parsed = parseSnapTradeError(accountError);
           accountsFailed++;
           lastAccountError = parsed.userMessage;
-          lastAccountRetryable = parsed.isRetryable;
+          if (!parsed.isRetryable) allFailuresRetryable = false;
           if (parsed.requiresReauth) reauthError = parsed.userMessage;
           result.errors.push(`Account ${accountName}: ${parsed.userMessage}`);
         }
@@ -809,7 +810,7 @@ async function syncSnaptrade(
       } else if (accountsAttempted > 0 && accountsFailed === accountsAttempted) {
         await ctx.runMutation(internal.brokers.updateConnectionStatus, {
           connectionId: connection._id,
-          status: lastAccountRetryable ? "transient_error" : "error",
+          status: allFailuresRetryable ? "transient_error" : "error",
           errorMessage: lastAccountError,
         });
       } else if (accountsAttempted === 0 && unplacedAccounts.length > 0) {

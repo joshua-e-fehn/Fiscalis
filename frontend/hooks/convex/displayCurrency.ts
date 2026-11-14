@@ -8,6 +8,7 @@
  * (useDisplayCurrency), series each day's rate (useDisplayRateHistory).
  */
 
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { InvestmentCurrency } from "@/lib/types/investments";
@@ -100,6 +101,11 @@ export interface DisplayRateHistory {
    * useDisplayCurrency().isLoading)
    */
   isLoading: boolean;
+  /**
+   * A history was asked for (`sinceMs`) but none came back (an empty
+   * mirror): every day takes the latest rate, so flag the series partial
+   */
+  partial: boolean;
 }
 
 /**
@@ -120,13 +126,21 @@ export function useDisplayRateHistory(sinceMs: number | undefined): DisplayRateH
         : { currency: code, since: sinceMs },
   );
 
-  const history = rates?.history ?? [];
-  // The identity only for EUR or while loading (isLoading is set then)
-  const latest = rates?.latest.unitsPerEur ?? 1;
+  // Kept stable while the query result is: series hooks memoize on rateOn
+  // (the app does not run the React Compiler)
+  const isLoading = settingsLoading || (code !== "EUR" && rates === undefined);
+  const asked = sinceMs !== undefined;
+  const rateOn = useMemo(() => {
+    const history = rates?.history ?? [];
+    // The identity only for EUR or while loading (isLoading is set then)
+    const latest = rates?.latest.unitsPerEur ?? 1;
+    return (timestamp: number) => rateOnHistory(history, timestamp) ?? latest;
+  }, [rates]);
+  const partial =
+    code !== "EUR" && asked && rates !== undefined && (rates.history ?? []).length === 0;
 
-  // Memoized by the React Compiler
-  return {
-    rateOn: (timestamp: number) => rateOnHistory(history, timestamp) ?? latest,
-    isLoading: settingsLoading || (code !== "EUR" && rates === undefined),
-  };
+  return useMemo(
+    () => ({ rateOn, isLoading, partial }),
+    [rateOn, isLoading, partial],
+  );
 }

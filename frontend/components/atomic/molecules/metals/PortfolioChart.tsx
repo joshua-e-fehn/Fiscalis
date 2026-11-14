@@ -19,7 +19,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ChartPoint, PerformanceTimeRangeLabel } from "@/lib/performance";
@@ -52,7 +52,8 @@ interface PortfolioChartProps {
   dataPoints: ChartPoint[];
   timeRange: ChartTimeRange;
   onTimeRangeChange: (range: ChartTimeRange) => void;
-  currency?: MetalsCurrency;
+  /** The currency of the series (useVaultPerformance's `currency`) */
+  currency: InvestmentCurrency;
   isLoading?: boolean;
   className?: string;
 }
@@ -75,7 +76,7 @@ function CustomTooltip({
   active?: boolean;
   payload?: Array<{ value: number; dataKey: string }>;
   label?: string;
-  currency: MetalsCurrency;
+  currency: InvestmentCurrency;
 }) {
   if (!active || !payload || payload.length === 0) return null;
 
@@ -125,7 +126,7 @@ export function PortfolioChart({
   dataPoints,
   timeRange,
   onTimeRangeChange,
-  currency = "eur",
+  currency,
   isLoading = false,
   className,
 }: PortfolioChartProps) {

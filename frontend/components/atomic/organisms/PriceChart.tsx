@@ -14,6 +14,7 @@ import {
   ChartTooltip,
 } from "@/components/ui/shadcn/chart";
 import { MetalChartData } from "@/lib/types/metals";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { TimeRange } from "@/../services/finance/financeService";
@@ -26,7 +27,8 @@ import {
 interface PriceChartProps {
   chartData: MetalChartData[];
   timeRange: TimeRange;
-  currency: string;
+  /** The currency of the closes */
+  currency: InvestmentCurrency;
   chartConfig: ChartConfig;
   dataKey: string;
 }
@@ -43,7 +45,7 @@ const CustomTooltipContent = ({
   currency,
 }: Pick<TooltipProps<number, string>, "active" | "payload" | "label"> & {
   timeRange: TimeRange;
-  currency: string;
+  currency: InvestmentCurrency;
 }) => {
   if (!active || !payload || !payload[0]) return null;
 

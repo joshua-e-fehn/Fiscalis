@@ -24,6 +24,7 @@ import {
 import { calculateContinuousPerformance } from "./strategies/continuous";
 import { calculateHybridPerformance } from "./strategies/hybrid";
 import { TROY_OUNCE_GRAMS, calculateSellPrice, valueVaultItem } from "../finance/metals";
+import { rateOn, snapshotInCurrency } from "../finance/displayCurrency";
 import type { HoldingData, SnapshotData } from "./types";
 
 const DAY = 86_400_000;
@@ -672,5 +673,77 @@ describe("netWorthCostLine", () => {
   it("is the assets' cost line less the debt, null when unknown", () => {
     expect(netWorthCostLine(8_000, 1_000)).toBe(7_000);
     expect(netWorthCostLine(null, 1_000)).toBeNull();
+  });
+});
+
+describe("returns in a display currency (converted inputs)", () => {
+  const EQUITIES = { kind: "category", category: "equities" } as const;
+  const MAR1 = Date.UTC(2026, 2, 1);
+  const ytd = { timeRange: "YTD" as const };
+
+  /** An equities-only snapshot in EUR, with the flow the writer stored */
+  function equities(timestamp: number, value: number, netFlow?: number): SnapshotData {
+    return {
+      timestamp,
+      date: new Date(timestamp).toISOString().slice(0, 10),
+      totalAssets: value,
+      totalLiabilities: 0,
+      netWorth: value,
+      totalCostBasis: value,
+      categoryBreakdown: [
+        { category: "equities", value, costBasis: value, ...(netFlow === undefined ? {} : { netFlow }) },
+      ],
+    };
+  }
+  const eurSnapshots = [
+    equities(JAN1, 1_000),
+    equities(MAR1, 2_100, 1_000),
+    equities(NOW, 2_310, 0),
+  ];
+  /** Each snapshot at its own day's rate, as useSnapshots converts them */
+  const inCurrency = (history: { date: string; unitsPerEur: number }[]) =>
+    eurSnapshots.map((s) => snapshotInCurrency(s, rateOn(history, s.timestamp) ?? 1));
+  const run = (snapshots: SnapshotData[]) =>
+    calculateDiscretePerformance({ snapshots, metric: EQUITIES }, ytd).metrics;
+
+  it("gives identical returns at a constant rate, amounts scaled", () => {
+    const eur = run(eurSnapshots);
+    const usd = run(inCurrency([{ date: "2025-12-01", unitsPerEur: 1.25 }]));
+    expect(eur.timeWeightedPercent).toBeGreaterThan(0);
+    expect(usd.timeWeightedPercent).toBeCloseTo(eur.timeWeightedPercent!, 9);
+    expect(usd.modifiedDietzPercent).toBeCloseTo(eur.modifiedDietzPercent!, 9);
+    expect(usd.percentChange).toBeCloseTo(eur.percentChange!, 9);
+    expect(usd.profitLoss).toBeCloseTo(eur.profitLoss! * 1.25, 6);
+    expect(usd.endValue).toBeCloseTo(eur.endValue! * 1.25, 6);
+    expect(usd.netFlows).toBeCloseTo(eur.netFlows! * 1.25, 6);
+  });
+
+  it("includes the exchange-rate move with a rate that varies by date", () => {
+    // +10% in EUR while the display currency's units per EUR rise 20%
+    const history = [
+      { date: "2025-12-31", unitsPerEur: 1 },
+      { date: "2026-06-15", unitsPerEur: 1.2 },
+    ];
+    const snapshots = [equities(JAN1, 1_000), equities(NOW, 1_100, 0)].map((s) =>
+      snapshotInCurrency(s, rateOn(history, s.timestamp) ?? 1),
+    );
+    const gbp = run(snapshots);
+    // (1 + 10%) × (1 + 20%) − 1
+    expect(gbp.timeWeightedPercent).toBeCloseTo(32, 6);
+    expect(gbp.percentChange).toBeCloseTo(32, 6);
+    expect(gbp.profitLoss).toBeCloseTo(1_320 - 1_000, 6);
+  });
+
+  it("counts a deposit at its own day's rate", () => {
+    const history = [
+      { date: "2025-12-31", unitsPerEur: 1 },
+      { date: "2026-03-01", unitsPerEur: 1.1 },
+      { date: "2026-06-15", unitsPerEur: 1.2 },
+    ];
+    const gbp = run(inCurrency(history));
+    expect(gbp.netFlows).toBeCloseTo(1_000 * 1.1, 6);
+    expect(gbp.profitLoss).toBeCloseTo(2_310 * 1.2 - 1_000 - 1_100, 6);
+    // More than the EUR return: the display currency's FX gain is in it
+    expect(gbp.timeWeightedPercent!).toBeGreaterThan(run(eurSnapshots).timeWeightedPercent!);
   });
 });

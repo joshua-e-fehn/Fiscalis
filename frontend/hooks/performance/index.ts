@@ -18,9 +18,11 @@ export {
 } from "./useCategoryPerformance";
 
 export {
+  useVaultPerformance,
   useVaultPerformanceInput,
   type UseVaultPerformanceInputOptions,
   type VaultPerformanceInput,
+  type VaultPerformanceResult,
 } from "./useContinuousPerformance";
 
 // YTD card adapters (net worth, one category)

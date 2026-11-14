@@ -7,6 +7,12 @@
  * with a price feed (vault metals) are valued continuously, everything else
  * from the shared snapshot series, combined by the hybrid strategy on one
  * grid. KPI presets only choose how the result is shown.
+ *
+ * Every amount is in the display currency (useDisplayCurrency): each
+ * snapshot at its own day's rate, the vault in the display currency, so
+ * returns are returns in that currency and include the exchange-rate move.
+ * A live end comes from the overview's figures, which are converted at the
+ * latest rate already, and is used as given.
  */
 
 import { useMemo, useState } from "react";
@@ -28,9 +34,14 @@ import {
 } from "@/lib/performance";
 import { MS, getTimeRangeStartTimestamp } from "@/../services/finance/financeService";
 import type { HoldingCategory } from "@/../services/portfolio/aggregate";
-import type { MetalsCurrency } from "@/lib/types/metals-extended";
+import { snapshotInCurrency } from "@/../services/finance/displayCurrency";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import {
+  useDisplayCurrency,
+  useDisplayRateHistory,
+} from "@/hooks/convex/displayCurrency";
 
-import { useVaultPerformanceInput } from "./useContinuousPerformance";
+import { useVaultPerformanceInput, withPartial } from "./useContinuousPerformance";
 
 // ═══════════════════════════════════════════════════════════════
 // The one snapshot reader
@@ -40,13 +51,20 @@ import { useVaultPerformanceInput } from "./useContinuousPerformance";
 // the range start plus every snapshot after it (newest-inclusive). The start
 // is floored to the UTC day, so widgets asking for the same range share one
 // subscription, and the baseline still lies at or before the exact start.
+// Each snapshot is converted into the display currency at its own day's
+// rate (snapshotInCurrency), from daily rates since the range start, or
+// for "ALL" since the first snapshot.
 
 /** Guard only: about five years of daily rows plus intraday ones */
 const SNAPSHOT_LIMIT = 2000;
 
 export interface UseSnapshotsResult {
-  /** Ascending, base-currency snapshots */
+  /** Ascending snapshots, every amount in `currency` */
   snapshots: SnapshotData[];
+  /** The display currency */
+  currency: InvestmentCurrency;
+  /** Converted at the latest rate for want of daily rates */
+  partial: boolean;
   isLoading: boolean;
 }
 
@@ -83,9 +101,24 @@ export function useSnapshots(
       : "skip",
   );
 
-  const snapshots = useMemo<SnapshotData[]>(
-    () =>
-      (raw ?? []).map((s) => ({
+  const display = useDisplayCurrency();
+  // From the earliest snapshot returned: the query includes the baseline
+  // snapshot before `since`, which needs its own day's rate too
+  const firstSnapshotAt = raw?.[0]?.timestamp;
+  const rates = useDisplayRateHistory(
+    enabled
+      ? since === undefined
+        ? firstSnapshotAt
+        : Math.min(since, firstSnapshotAt ?? since)
+      : undefined,
+  );
+  const ratesLoading = display.isLoading || rates.isLoading;
+  const rateOn = rates.rateOn;
+
+  const snapshots = useMemo<SnapshotData[]>(() => {
+    if (ratesLoading) return [];
+    return (raw ?? []).map((s) => {
+      const snapshot: SnapshotData = {
         timestamp: s.timestamp,
         date: s.date,
         totalAssets: s.totalAssets,
@@ -104,11 +137,17 @@ export function useSnapshots(
         })),
         source: s.source,
         partial: s.partial,
-      })),
-    [raw],
-  );
+      };
+      return snapshotInCurrency(snapshot, rateOn(s.timestamp));
+    });
+  }, [raw, ratesLoading, rateOn]);
 
-  return { snapshots, isLoading: enabled && raw === undefined };
+  return {
+    snapshots,
+    currency: display.currency,
+    partial: rates.partial && snapshots.length > 0,
+    isLoading: enabled && (raw === undefined || ratesLoading),
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -117,11 +156,13 @@ export function useSnapshots(
 
 export interface UseCategoryPerformanceOptions {
   includeDataPoints?: boolean;
-  currency?: MetalsCurrency;
   enabled?: boolean;
   /** "firstPoint": measure since tracking started when that is later */
   baseline?: PerformanceCalculationOptions["baseline"];
-  /** End the series at this live value (portfolioLiveEnd) */
+  /**
+   * End the series at this live value (portfolioLiveEnd), in the display
+   * currency (the overview's converted figures)
+   */
   liveEnd?: LiveEnd;
 }
 
@@ -130,6 +171,8 @@ export interface CategoryPerformanceResult {
   dataPoints: PerformanceDataPoint[];
   /** Timestamps of the real snapshots behind the series, ascending */
   actualSnapshotTimestamps: number[];
+  /** The display currency every amount is in */
+  currency: InvestmentCurrency;
   isLoading: boolean;
 }
 
@@ -140,7 +183,6 @@ export function useCategoryPerformance(
 ): CategoryPerformanceResult {
   const {
     includeDataPoints = false,
-    currency = "eur",
     enabled = true,
     baseline,
     liveEnd,
@@ -161,15 +203,21 @@ export function useCategoryPerformance(
   }, [measureKey]);
   const needsVault = continuousSources.some((s) => s.source === "vault");
 
-  const { snapshots, isLoading: snapshotsLoading } = useSnapshots(timeRange, {
+  const {
+    snapshots,
+    currency,
+    partial: snapshotsPartial,
+    isLoading: snapshotsLoading,
+  } = useSnapshots(timeRange, {
     enabled: enabled && needsSnapshots,
   });
   const vault = useVaultPerformanceInput({
     timeRange,
-    currency,
     enabled: enabled && needsVault,
   });
   const isLoading = snapshotsLoading || (needsVault && vault.isLoading);
+  const ratesPartial =
+    (needsSnapshots && snapshotsPartial) || (needsVault && vault.partial);
 
   const liveValue = liveEnd?.value;
   const liveCost = liveEnd?.costBasis;
@@ -212,10 +260,19 @@ export function useCategoryPerformance(
     liveCost,
   ]);
 
+  const metrics = useMemo(
+    () =>
+      result && result.metrics.dataPointCount > 0
+        ? withPartial(result.metrics, ratesPartial)
+        : null,
+    [result, ratesPartial],
+  );
+
   return {
-    metrics: result && result.metrics.dataPointCount > 0 ? result.metrics : null,
+    metrics,
     dataPoints: result?.dataPoints ?? [],
     actualSnapshotTimestamps: result?.actualSnapshotTimestamps ?? [],
+    currency,
     isLoading,
   };
 }

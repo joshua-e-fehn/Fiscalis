@@ -6,6 +6,7 @@
  */
 
 import { useMemo } from "react";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import {
   portfolioLiveEnd,
   toPeriodChange,
@@ -26,6 +27,8 @@ export interface PortfolioYTDResult {
   flowAdjusted: boolean;
   /** Some flows were assumed (holdings without a cost basis) */
   flowsEstimated: boolean;
+  /** The display currency the amounts are in */
+  currency: InvestmentCurrency;
   isLoading: boolean;
 }
 
@@ -38,6 +41,8 @@ export interface NetWorthYTDResult {
   trackingSince: number | null;
   /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
+  /** The display currency the amounts are in */
+  currency: InvestmentCurrency;
   isLoading: boolean;
 }
 
@@ -54,7 +59,7 @@ export function useNetWorthYTD(options?: {
   enabled?: boolean;
 }): NetWorthYTDResult {
   const live = options?.live;
-  const { metrics, isLoading } = useCategoryPerformance(NET_WORTH, "YTD", {
+  const { metrics, currency, isLoading } = useCategoryPerformance(NET_WORTH, "YTD", {
     enabled: options?.enabled ?? true,
     liveEnd: live && portfolioLiveEnd("netWorth", live),
   });
@@ -67,9 +72,10 @@ export function useNetWorthYTD(options?: {
       currentValue: metrics?.endValue ?? null,
       trackingSince: ytd.trackingSince,
       partial: ytd.partial,
+      currency,
       isLoading,
     };
-  }, [metrics, isLoading]);
+  }, [metrics, currency, isLoading]);
 }
 
 /**
@@ -84,7 +90,7 @@ export function useCategoryYTD(
     () => ({ kind: "category" as const, category }),
     [category],
   );
-  const { metrics, isLoading } = useCategoryPerformance(measure, "YTD", {
+  const { metrics, currency, isLoading } = useCategoryPerformance(measure, "YTD", {
     enabled: options?.enabled ?? true,
   });
   return useMemo(() => {
@@ -97,7 +103,8 @@ export function useCategoryYTD(
       partial: ytd.partial,
       flowAdjusted: ytd.flowAdjusted,
       flowsEstimated: ytd.flowsEstimated,
+      currency,
       isLoading,
     };
-  }, [metrics, isLoading]);
+  }, [metrics, currency, isLoading]);
 }

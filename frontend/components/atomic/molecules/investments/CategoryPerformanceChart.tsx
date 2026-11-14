@@ -37,7 +37,8 @@ interface CategoryPerformanceChartProps {
    * gap) where unknown.
    */
   dataPoints: ChartPoint[];
-  currency?: InvestmentCurrency;
+  /** The currency of the series (the performance hook's `currency`) */
+  currency: InvestmentCurrency;
   isLoading?: boolean;
   className?: string;
   /** Title override - defaults to "Portfolio Performance" */
@@ -60,7 +61,7 @@ interface CategoryPerformanceChartProps {
   emptyHint?: string;
 }
 
-/** Whole units for axis ticks and tooltip rows: "84'998€". */
+/** Whole units for axis ticks and tooltip rows, e.g. "84'998€" or "84'998$". */
 function formatWhole(value: number, currency: InvestmentCurrency): string {
   return formatCurrency(value, currency, { fractionDigits: 0 });
 }
@@ -75,7 +76,7 @@ function formatDate(timestamp: number, range: ChartTimeRange): string {
 
 export function CategoryPerformanceChart({
   dataPoints,
-  currency = "eur",
+  currency,
   isLoading = false,
   className,
   title,

@@ -541,6 +541,12 @@ export function transactionTotals(
  * at its price in the series' currency (gifts at their value that day), and
  * the cost line moves by each lot's share of the cost pool (unknown-cost
  * units at their value).
+ *
+ * In another currency than EUR each lot is converted at the rate of its own
+ * date, so a purchase costs what it cost then and a return in that
+ * currency includes the exchange-rate move since. A sale or gift removes
+ * its share of the pool as converted (not its EUR cost at the sale's
+ * rate), so a sold-out item still leaves nothing on the cost line.
  */
 export function ledgerHoldings(
   item: {
@@ -551,31 +557,75 @@ export function ledgerHoldings(
   },
   lots: readonly LedgerLot[],
   /**
-   * The series' currency and the rates its spot prices are served with:
-   * the lots' EUR prices and costs are converted into it
-   * (convertAtSpotRates), so the cost line never mixes currencies. Without
-   * a rate a lot's cost is unknown and its flow is taken at its value.
-   * Omitted: the series is in EUR.
+   * The series' currency and its units per 1 EUR on a lot's date (null for
+   * an undated opening balance): the lots' EUR prices and costs are
+   * converted into it, so the cost line never mixes currencies. Without a
+   * rate (null) a lot's cost is unknown and its flow is taken at its
+   * value, and so is every later removal from that pool until it is sold
+   * out. Omitted: the series is in EUR.
    */
-  conversion?: { currency: string; rates: SpotExchangeRates | null | undefined },
+  conversion?: {
+    currency: string;
+    unitsPerEurOn: (timestamp: number | null) => number | null;
+  },
 ): HoldingData[] {
   const currency = (conversion?.currency ?? "EUR").toUpperCase();
-  const toSeries = (eur: number): number | null =>
-    convertAtSpotRates(eur, "EUR", currency, conversion?.rates);
+  const base = (lot: LedgerLot, i: number): HoldingData => ({
+    id: `${item.id}:${i}`,
+    assetType: item.metalType,
+    quantity: lot.quantity,
+    fineWeightGrams: item.fineWeightGrams,
+    sellPremium: item.sellPremium,
+    purchaseDate: lot.timestamp ?? undefined,
+    purchaseCurrency: currency,
+  });
+  if (!conversion || currency === "EUR") {
+    return lots.map((lot, i) => ({
+      ...base(lot, i),
+      purchasePricePerUnit: lot.flowPricePerUnit ?? undefined,
+      costPerUnit: lot.costPerUnit,
+      costLine: lot.costLine,
+    }));
+  }
+
+  // The item's pool in the series' currency, replayed beside the EUR one:
+  // its quantity, known cost and whether every known cost was converted
+  let held = 0;
+  let poolKnownCost = 0;
+  let poolConverted = true;
   return lots.map((lot, i) => {
-    const flowPrice =
-      lot.flowPricePerUnit === null ? null : toSeries(lot.flowPricePerUnit);
-    const knownCost = toSeries(lot.costLine.knownCost);
-    const costPerUnit = lot.costPerUnit === null ? null : toSeries(lot.costPerUnit);
+    const rate = conversion.unitsPerEurOn(lot.timestamp);
+    const toSeries = (eur: number | null): number | null =>
+      eur === null || rate === null ? null : eur * rate;
+    const flowPrice = toSeries(lot.flowPricePerUnit);
+    let knownCost: number | null;
+    let costPerUnit: number | null;
+    if (lot.quantity >= 0) {
+      knownCost = toSeries(lot.costLine.knownCost);
+      costPerUnit = toSeries(lot.costPerUnit);
+      if (knownCost === null) poolConverted = false;
+      else poolKnownCost += knownCost;
+      held += lot.quantity;
+    } else {
+      // The share of the pool leaving, as replayLedger takes it
+      const share = held > 0 ? Math.min(-lot.quantity / held, 1) : 0;
+      knownCost = poolConverted ? 0 - poolKnownCost * share : null;
+      costPerUnit =
+        poolConverted && lot.costPerUnit !== null && held > 0
+          ? poolKnownCost / held
+          : null;
+      if (knownCost !== null) poolKnownCost += knownCost;
+      held += lot.quantity;
+    }
+    if (held <= EPSILON) {
+      // Sold out: the next buy starts a new, known pool (replayLedger)
+      held = 0;
+      poolKnownCost = 0;
+      poolConverted = true;
+    }
     return {
-      id: `${item.id}:${i}`,
-      assetType: item.metalType,
-      quantity: lot.quantity,
-      fineWeightGrams: item.fineWeightGrams,
-      sellPremium: item.sellPremium,
-      purchaseDate: lot.timestamp ?? undefined,
+      ...base(lot, i),
       purchasePricePerUnit: flowPrice ?? undefined,
-      purchaseCurrency: currency,
       // No rate: the whole lot's cost is unknown (taken at its value)
       costPerUnit: knownCost === null ? null : costPerUnit,
       costLine:

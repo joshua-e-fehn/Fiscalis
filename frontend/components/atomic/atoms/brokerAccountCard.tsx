@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -29,10 +30,12 @@ interface BrokerAccountCardProps {
 }
 
 export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
+  const t = useTranslations("integrations.brokers.account");
   // The provider's amounts, in the account's own currency; without one
   // the amount is not shown rather than labelled with a guessed currency
   const formatAmount = (amount: number | undefined) => {
-    if (amount === undefined || amount === null || !account.currency) return "—";
+    if (amount === undefined || amount === null || !account.currency)
+      return "—";
     return formatCurrency(amount, account.currency);
   };
 
@@ -56,9 +59,9 @@ export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
     return <Wallet className="h-4 w-4" />;
   };
 
-  // Format account type for display
+  // Format account type for display; the broker's own type stays as sent
   const formatAccountType = (type?: string) => {
-    if (!type) return "Investment";
+    if (!type) return t("fallbackType");
     // Convert snake_case or UPPER_CASE to Title Case
     return type
       .toLowerCase()
@@ -85,7 +88,7 @@ export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
         </div>
         {maskedAccountNumber && (
           <CardDescription className="text-xs">
-            Account {maskedAccountNumber}
+            {t("accountNumber", { number: maskedAccountNumber })}
           </CardDescription>
         )}
       </CardHeader>
@@ -96,13 +99,13 @@ export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
             <div className="text-2xl font-bold">
               {formatAmount(account.balance)}
             </div>
-            <p className="text-xs text-muted-foreground">Total Value</p>
+            <p className="text-xs text-muted-foreground">{t("totalValue")}</p>
           </div>
 
           {/* Cash Balance */}
           {account.cash !== undefined && account.cash !== null && (
             <div className="flex justify-between items-center pt-2 border-t">
-              <span className="text-sm text-muted-foreground">Cash</span>
+              <span className="text-sm text-muted-foreground">{t("cash")}</span>
               <span className="text-sm font-medium">
                 {formatAmount(account.cash)}
               </span>
@@ -112,7 +115,9 @@ export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
           {/* Invested (Total - Cash) */}
           {account.balance !== undefined && account.cash !== undefined && (
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Invested</span>
+              <span className="text-sm text-muted-foreground">
+                {t("invested")}
+              </span>
               <span className="text-sm font-medium">
                 {formatAmount((account.balance || 0) - (account.cash || 0))}
               </span>

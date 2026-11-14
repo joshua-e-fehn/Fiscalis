@@ -1,6 +1,6 @@
 "use node";
 
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { encrypt, decrypt } from "../lib/encryption";
@@ -71,15 +71,14 @@ export const connect = action({
     try {
       await validateApiKey(apiKey);
     } catch (error) {
+      // Codes, not text: the client shows them in the user's language
+      // (integrations.bitpanda.connect.errors), and ConvexError data
+      // survives production error redaction
       if (error instanceof BitpandaAuthError) {
-        throw new Error(
-          "That Bitpanda API key was rejected. Make sure it's a valid read-only key.",
-        );
+        throw new ConvexError({ code: "bitpandaKeyRejected" });
       }
       if (classifyProviderFailure(error) === "transient") {
-        throw new Error(
-          "Bitpanda is not responding right now. Please try again in a few minutes.",
-        );
+        throw new ConvexError({ code: "bitpandaUnavailable" });
       }
       throw error;
     }

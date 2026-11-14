@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useBrokerConnections,
   useBrokerAccounts,
@@ -17,6 +18,8 @@ import { useSyncContextSafe } from "@/providers/syncProvider";
 import { IntegrationEmptyState } from "@/components/atomic/molecules/integrations";
 
 export function BrokersCard() {
+  const t = useTranslations("integrations.brokers.empty");
+  const tConnection = useTranslations("integrations.connection");
   const connections = useBrokerConnections();
   const accounts = useBrokerAccounts();
   const connectionsNeedingAttention = useConnectionsNeedingAttention();
@@ -88,19 +91,21 @@ export function BrokersCard() {
       return (
         <IntegrationEmptyState
           icon={RefreshCw}
-          title="Sync Your Accounts"
-          description={`You have ${connections?.length} broker connection${connections?.length !== 1 ? "s" : ""} but no accounts synced yet. Click below to fetch your account data.`}
+          title={t("syncTitle")}
+          description={t("syncDescription", {
+            count: connections?.length ?? 0,
+          })}
         >
           <Button onClick={() => syncAll()} disabled={isSyncing} size="lg">
             {isSyncing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Syncing...
+                {tConnection("syncing")}
               </>
             ) : (
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Sync Accounts
+                {t("syncAccounts")}
               </>
             )}
           </Button>
@@ -111,8 +116,8 @@ export function BrokersCard() {
     return (
       <IntegrationEmptyState
         icon={TrendingUp}
-        title="No Brokers Connected"
-        description="Connect your brokerage accounts to track your investments, positions, and portfolio performance all in one place."
+        title={t("noBrokersTitle")}
+        description={t("noBrokersDescription")}
       >
         <SnaptradeConnectButton />
       </IntegrationEmptyState>

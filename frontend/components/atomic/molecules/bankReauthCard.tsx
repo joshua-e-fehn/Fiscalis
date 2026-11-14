@@ -29,7 +29,6 @@ import {
 import { Button } from "@/components/ui/shadcn/button";
 import { Landmark, AlertCircle, MoreHorizontal, Unlink } from "lucide-react";
 import { useDeletePlaidItem } from "@/hooks/convex/banking";
-import { DISCONNECT_FAILED_MESSAGE } from "@/components/atomic/molecules/integrations";
 import {
   PlaidUpdateButton,
   ItemNeedingReauth,
@@ -42,6 +41,7 @@ interface BankReauthCardProps {
 export function BankReauthCard({ item }: BankReauthCardProps) {
   const t = useTranslations("integrations.banking");
   const tConnection = useTranslations("integrations.connection");
+  const tNotices = useTranslations("integrations.connectionNotices");
   const tActions = useTranslations("common.actions");
   const deleteItem = useDeletePlaidItem();
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
@@ -142,7 +142,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
                   </p>
                   {deleteItem.error && (
                     <p className="mt-2 text-sm text-destructive">
-                      {DISCONNECT_FAILED_MESSAGE}
+                      {tNotices("disconnectFailed")}
                     </p>
                   )}
                 </div>

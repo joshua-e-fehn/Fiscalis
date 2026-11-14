@@ -7,6 +7,7 @@
  * Uses the unified IntegrationConnectionCard for consistent styling.
  */
 
+import { useTranslations } from "next-intl";
 import { TrendingUp, Briefcase, LineChart, Coins } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import { useDeleteConnection, useSyncAll } from "@/hooks/convex";
@@ -19,7 +20,6 @@ import { useSyncContextSafe } from "@/providers/syncProvider";
 import {
   IntegrationConnectionCard,
   IntegrationAccountItem,
-  DISCONNECT_FAILED_MESSAGE,
 } from "@/components/atomic/molecules/integrations";
 
 // Type for broker connection from Convex
@@ -81,6 +81,8 @@ export function BrokerAccountsCard({
   connection,
   accounts,
 }: BrokerAccountsCardProps) {
+  const t = useTranslations("integrations.brokers.connection");
+  const tNotices = useTranslations("integrations.connectionNotices");
   const {
     deleteConnection,
     isLoading: isDeleting,
@@ -132,9 +134,9 @@ export function BrokerAccountsCard({
       totalCashEur={totalCash}
       lastSyncAt={connection.lastSyncAt}
       errorMessage={
-        deleteError ? DISCONNECT_FAILED_MESSAGE : connection.errorMessage
+        deleteError ? tNotices("disconnectFailed") : connection.errorMessage
       }
-      secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
+      secondaryInfo={t("accounts", { count: accounts.length })}
       onSync={handleSync}
       onDisconnect={handleDisconnect}
       isSyncing={isSyncing}

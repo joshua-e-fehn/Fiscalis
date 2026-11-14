@@ -9,6 +9,7 @@
  */
 
 import { useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { RefreshCw, Trash2, AlertCircle, Clock, Wallet } from "lucide-react";
 import {
   Card,
@@ -30,6 +31,11 @@ import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export function BitpandaConnectionsCard() {
+  const t = useTranslations("integrations.bitpanda");
+  const tStatus = useTranslations("integrations.status");
+  const tConnection = useTranslations("integrations.connection");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
   const connections = useBitpandaConnections();
   const holdings = useBitpandaHoldings();
   const { sync } = useSyncBitpandaConnection();
@@ -53,10 +59,8 @@ export function BitpandaConnectionsCard() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <div>
-          <CardTitle>Bitpanda</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Crypto, metals, commodities, stocks & cash via a read-only API key.
-          </p>
+          <CardTitle>{t("title")}</CardTitle>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         {hasConnections && (
           <div className="text-right">
@@ -69,7 +73,7 @@ export function BitpandaConnectionsCard() {
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              {holdings?.length ?? 0} holdings
+              {t("holdings", { count: holdings?.length ?? 0 })}
             </p>
           </div>
         )}
@@ -77,88 +81,94 @@ export function BitpandaConnectionsCard() {
 
       <CardContent className="space-y-3">
         {isLoading && (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-sm text-muted-foreground">{tActions("loading")}</p>
         )}
 
         {!isLoading && !hasConnections && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
             <Wallet className="h-8 w-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Connect your Bitpanda account with a read-only API key to track all
-              your holdings.
+              {t("emptyDescription")}
             </p>
             <BitpandaConnectButton />
           </div>
         )}
 
-        {connections?.map((conn) => (
-          <div
-            key={conn._id}
-            className="flex items-center justify-between rounded-lg border p-3"
-          >
-            <div className="flex flex-col">
-              <span className="font-medium">
-                {conn.label ?? "Bitpanda account"}
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                {conn.status === "needs_reauth" ? (
-                  <>
-                    <AlertCircle className="h-3 w-3 text-destructive" />
-                    {conn.errorMessage ??
-                      "API key rejected — reconnect with a new read-only key"}
-                  </>
-                ) : conn.status === "error" ? (
-                  <>
-                    <AlertCircle className="h-3 w-3 text-destructive" />
-                    {conn.errorMessage ?? "Sync failed — try again"}
-                  </>
-                ) : conn.status === "transient_error" ? (
-                  <>
-                    <Clock className="h-3 w-3 text-yellow-600" />
-                    Temporary problem at Bitpanda — will retry automatically
-                    {conn.lastSyncAt
-                      ? ` · last synced ${new Date(conn.lastSyncAt).toLocaleString()}`
-                      : ""}
-                  </>
-                ) : (
-                  <>
-                    {conn.status === "syncing" ? "Syncing…" : "Connected"}
-                    {conn.lastSyncAt
-                      ? ` · last synced ${new Date(conn.lastSyncAt).toLocaleString()}`
-                      : ""}
-                  </>
-                )}
-              </span>
+        {connections?.map((conn) => {
+          const lastSynced = conn.lastSyncAt ? (
+            <span>
+              ·{" "}
+              {t("lastSynced", {
+                date: format.dateTime(conn.lastSyncAt, "full"),
+              })}
+            </span>
+          ) : null;
+          return (
+            <div
+              key={conn._id}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <div className="flex flex-col">
+                <span className="font-medium">
+                  {conn.label ?? t("fallbackLabel")}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  {conn.status === "needs_reauth" ? (
+                    <>
+                      <AlertCircle className="h-3 w-3 text-destructive" />
+                      {conn.errorMessage ?? t("keyRejected")}
+                    </>
+                  ) : conn.status === "error" ? (
+                    <>
+                      <AlertCircle className="h-3 w-3 text-destructive" />
+                      {conn.errorMessage ?? t("syncFailed")}
+                    </>
+                  ) : conn.status === "transient_error" ? (
+                    <>
+                      <Clock className="h-3 w-3 text-yellow-600" />
+                      {t("transient")}
+                      {lastSynced}
+                    </>
+                  ) : (
+                    <>
+                      {conn.status === "syncing"
+                        ? tConnection("syncing")
+                        : tStatus("connected")}
+                      {lastSynced}
+                    </>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => sync(conn._id as Id<"bitpandaConnections">)}
+                  title={t("syncNow")}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive"
+                  onClick={() =>
+                    deleteConnection(conn._id as Id<"bitpandaConnections">)
+                  }
+                  title={tConnection("disconnect")}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => sync(conn._id as Id<"bitpandaConnections">)}
-                title="Sync now"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive"
-                onClick={() =>
-                  deleteConnection(conn._id as Id<"bitpandaConnections">)
-                }
-                title="Disconnect"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {hasConnections && (
           <div className="pt-1">
             <BitpandaConnectButton buttonVariant="outline" size="sm">
-              Add another Bitpanda key
+              {t("addAnother")}
             </BitpandaConnectButton>
           </div>
         )}

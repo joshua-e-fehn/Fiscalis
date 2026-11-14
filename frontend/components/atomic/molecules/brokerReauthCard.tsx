@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useCreateConnectUrl, useHandleCallback } from "@/hooks/convex";
 import { useWindowMessage } from "snaptrade-react";
 import {
@@ -28,6 +29,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Doc } from "@/convex/_generated/dataModel";
+import { useErrorMessage } from "@/i18n/errors";
 
 interface BrokerReauthCardProps {
   connection: Doc<"brokerConnections">;
@@ -36,8 +38,14 @@ interface BrokerReauthCardProps {
 export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [connectUrl, setConnectUrl] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [succeeded, setSucceeded] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const t = useTranslations("integrations.brokers");
+  const tStatus = useTranslations("integrations.status");
+  const tActions = useTranslations("common.actions");
+  const toErrorMessage = useErrorMessage();
+  const brokerName = connection.brokerName || t("connection.unknownBroker");
 
   const { createUrl, isLoading: isCreatingUrl, reset } = useCreateConnectUrl();
   const { handleCallback, isLoading: isProcessingCallback } =
@@ -47,17 +55,15 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
   const handleSuccess = async (authorizationId: string) => {
     try {
       await handleCallback(authorizationId);
-      setSuccessMessage("Successfully re-authenticated!");
+      setSucceeded(true);
       setTimeout(() => {
         setIsModalOpen(false);
-        setSuccessMessage(null);
+        setSucceeded(false);
         setConnectUrl(null);
         reset();
       }, 2000);
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Failed to complete callback",
-      );
+      setErrorMessage(toErrorMessage(error));
     }
   };
 
@@ -66,7 +72,9 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
     statusCode?: string;
     detail?: string;
   }) => {
-    setErrorMessage(errorData.detail || "Connection failed");
+    // SnapTrade's detail is English provider text: logged, not shown
+    console.error("SnapTrade error:", errorData.detail ?? errorData.errorCode);
+    setErrorMessage(t("reauth.failed"));
   };
 
   const handleExit = () => {
@@ -86,7 +94,7 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
 
   const handleReauthenticate = async () => {
     setErrorMessage(null);
-    setSuccessMessage(null);
+    setSucceeded(false);
 
     try {
       // Repair this connection: the server passes its SnapTrade
@@ -97,12 +105,10 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
         setConnectUrl(result.connectUrl);
         setIsModalOpen(true);
       } else {
-        setErrorMessage("Failed to create reconnection URL");
+        setErrorMessage(t("reauth.failed"));
       }
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Failed to start reconnection",
-      );
+      setErrorMessage(toErrorMessage(error));
     }
   };
 
@@ -115,7 +121,7 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
               {connection.brokerLogo ? (
                 <Image
                   src={connection.brokerLogo}
-                  alt={connection.brokerName || "Broker"}
+                  alt={brokerName}
                   width={40}
                   height={40}
                   unoptimized
@@ -128,11 +134,9 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
                 </div>
               )}
               <div>
-                <CardTitle className="text-base">
-                  {connection.brokerName || "Unknown Broker"}
-                </CardTitle>
+                <CardTitle className="text-base">{brokerName}</CardTitle>
                 <CardDescription className="text-xs">
-                  Connection needs attention
+                  {t("reauth.needsAttention")}
                 </CardDescription>
               </div>
             </div>
@@ -141,15 +145,14 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
               className="border-yellow-500 text-yellow-600"
             >
               <AlertTriangle className="h-3 w-3 mr-1" />
-              Re-auth Required
+              {tStatus("reauthRequired")}
             </Badge>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              This connection has expired or needs to be re-authenticated.
-              Please reconnect to continue syncing your data.
+              {t("reauth.description")}
             </p>
             <Button
               variant="outline"
@@ -161,12 +164,12 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
               {isCreatingUrl ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Loading...
+                  {tActions("loading")}
                 </>
               ) : (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Reconnect
+                  {t("reauth.reconnect")}
                 </>
               )}
             </Button>
@@ -186,33 +189,33 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5" />
-              Reconnect {connection.brokerName || "Broker"}
+              {t("reauth.dialogTitle", { name: brokerName })}
             </DialogTitle>
             <DialogDescription>
-              Re-authenticate your connection to continue syncing data.
+              {t("reauth.dialogDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex-1 px-6 pb-6 relative">
-            {successMessage ? (
+            {succeeded ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
                 <p className="text-lg font-medium text-green-700 dark:text-green-400">
-                  {successMessage}
+                  {t("reauth.success")}
                 </p>
               </div>
             ) : isProcessingCallback ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
                 <p className="text-muted-foreground">
-                  Completing re-authentication...
+                  {t("reauth.completing")}
                 </p>
               </div>
             ) : errorMessage ? (
               <div className="flex flex-col items-center justify-center h-full">
                 <X className="h-16 w-16 text-destructive mb-4" />
                 <p className="text-lg font-medium text-destructive mb-2">
-                  Connection Failed
+                  {t("reauth.failedTitle")}
                 </p>
                 <p className="text-sm text-muted-foreground text-center max-w-sm">
                   {errorMessage}
@@ -222,7 +225,7 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
                   onClick={handleReauthenticate}
                   className="mt-4"
                 >
-                  Try Again
+                  {tActions("retry")}
                 </Button>
               </div>
             ) : connectUrl ? (
@@ -230,7 +233,7 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
                 src={connectUrl}
                 className="w-full h-full border-0 rounded-lg"
                 allow="camera *"
-                title="SnapTrade Reconnection"
+                title={t("reauth.portalTitle")}
               />
             ) : (
               <div className="flex items-center justify-center h-full">

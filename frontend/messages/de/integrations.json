@@ -104,6 +104,100 @@
       "tradingAccounts": "Depots",
       "cash": "Liquidität",
       "availableCash": "Verfügbare Liquidität"
+    },
+    "connect": {
+      "connectFirst": "Verbinde deinen Broker",
+      "connectAnother": "Weiteren Broker verbinden",
+      "add": "Broker hinzufügen",
+      "preparing": "Wird vorbereitet…",
+      "connecting": "Wird verbunden…",
+      "connected": "Broker verbunden",
+      "connectingAccount": "Dein Broker-Konto wird verbunden…",
+      "portalTitle": "SnapTrade-Verbindungsportal",
+      "failed": "Wir konnten deinen Broker nicht verbinden. Bitte versuche es erneut."
+    },
+    "connection": {
+      "unknownBroker": "Unbekannter Broker",
+      "fallbackName": "Broker",
+      "accounts": "{count, plural, one {# Konto} other {# Konten}}",
+      "status": "Status",
+      "accountId": "Konto-ID",
+      "username": "Benutzername",
+      "lastSynced": "Zuletzt synchronisiert",
+      "never": "Nie",
+      "pendingNotice": "API-Anbindung ausstehend. Die Daten werden synchronisiert, sobald die Verbindung steht.",
+      "transientNotice": "Vorübergehendes Problem beim Broker. Es wird automatisch erneut versucht.",
+      "disconnectTitle": "Broker trennen",
+      "disconnectDescription": "Möchtest du „{name}“ wirklich trennen? Dadurch werden die Broker-Verbindung und alle zugehörigen Positionsdaten aus deinem Konto entfernt. Das kann nicht rückgängig gemacht werden."
+    },
+    "connections": {
+      "title": "Broker-Verbindungen",
+      "description": "Verwalte deine Broker-Verbindungen",
+      "loadFailed": "Die Broker-Verbindungen konnten nicht geladen werden. Bitte versuche es später erneut.",
+      "connectedCount": "{count, plural, one {# Broker verbunden} other {# Broker verbunden}}",
+      "connectPrompt": "Verbinde deine Depots, um deine Anlagen zu verfolgen",
+      "emptyTitle": "Keine Broker verbunden",
+      "emptyDescription": "Verbinde dein Depot, um deine Anlagen und die Wertentwicklung deines Portfolios automatisch zu verfolgen."
+    },
+    "account": {
+      "fallbackType": "Anlage",
+      "accountNumber": "Konto {number}",
+      "totalValue": "Gesamtwert",
+      "cash": "Liquidität",
+      "invested": "Investiert"
+    },
+    "empty": {
+      "syncTitle": "Synchronisiere deine Konten",
+      "syncDescription": "{count, plural, one {Du hast # Broker-Verbindung, aber noch keine Konten synchronisiert.} other {Du hast # Broker-Verbindungen, aber noch keine Konten synchronisiert.}} Klicke unten, um deine Kontodaten abzurufen.",
+      "syncAccounts": "Konten synchronisieren",
+      "noBrokersTitle": "Keine Broker verbunden",
+      "noBrokersDescription": "Verbinde deine Depots, um deine Anlagen, Positionen und die Wertentwicklung deines Portfolios an einem Ort zu verfolgen."
+    },
+    "reauth": {
+      "needsAttention": "Verbindung braucht deine Aufmerksamkeit",
+      "description": "Diese Verbindung ist abgelaufen oder du musst dich erneut anmelden. Verbinde sie erneut, damit deine Daten weiter synchronisiert werden.",
+      "reconnect": "Erneut verbinden",
+      "dialogTitle": "{name} erneut verbinden",
+      "dialogDescription": "Melde dich erneut an, damit deine Daten weiter synchronisiert werden.",
+      "completing": "Erneute Anmeldung wird abgeschlossen…",
+      "success": "Erneute Anmeldung erfolgreich!",
+      "failedTitle": "Verbindung fehlgeschlagen",
+      "failed": "Die erneute Verbindung ist fehlgeschlagen. Bitte versuche es erneut.",
+      "portalTitle": "SnapTrade – erneut verbinden"
     }
+  },
+  "bitpanda": {
+    "title": "Bitpanda",
+    "subtitle": "Krypto, Metalle, Rohstoffe, Aktien & Liquidität über einen API-Schlüssel mit Lesezugriff.",
+    "holdings": "{count, plural, one {# Bestand} other {# Bestände}}",
+    "emptyDescription": "Verbinde dein Bitpanda-Konto mit einem API-Schlüssel mit Lesezugriff, um alle deine Bestände zu verfolgen.",
+    "fallbackLabel": "Bitpanda-Konto",
+    "keyRejected": "API-Schlüssel abgelehnt – verbinde dich erneut mit einem neuen Schlüssel mit Lesezugriff",
+    "syncFailed": "Synchronisierung fehlgeschlagen – versuche es erneut",
+    "transient": "Vorübergehendes Problem bei Bitpanda – es wird automatisch erneut versucht",
+    "lastSynced": "zuletzt synchronisiert {date}",
+    "syncNow": "Jetzt synchronisieren",
+    "addAnother": "Weiteren Bitpanda-Schlüssel hinzufügen",
+    "connect": {
+      "button": "Bitpanda verbinden",
+      "title": "Bitpanda verbinden",
+      "description": "Füge einen Bitpanda-API-Schlüssel <strong>mit Lesezugriff</strong> ein. Fiscalis synchronisiert damit deine Bestände an Krypto, Metallen, Rohstoffen, Aktien und Liquidität. Der Schlüssel wird verschlüsselt und nie weitergegeben.",
+      "apiKey": "API-Schlüssel",
+      "apiKeyPlaceholder": "Dein Bitpanda-API-Schlüssel mit Lesezugriff",
+      "createKey": "Schlüssel mit Lesezugriff in Bitpanda erstellen",
+      "label": "Bezeichnung (optional)",
+      "labelPlaceholder": "z. B. Mein Bitpanda",
+      "submit": "Verbinden",
+      "connecting": "Wird verbunden…",
+      "keyMissing": "Bitte füge deinen Bitpanda-API-Schlüssel ein.",
+      "errors": {
+        "bitpandaKeyRejected": "Dieser Bitpanda-API-Schlüssel wurde abgelehnt. Prüfe, ob es ein gültiger Schlüssel mit Lesezugriff ist.",
+        "bitpandaUnavailable": "Bitpanda antwortet gerade nicht. Bitte versuche es in ein paar Minuten erneut."
+      }
+    }
+  },
+  "connectionNotices": {
+    "disconnectFailed": "Trennen nicht möglich. Es wurde nichts entfernt; bitte versuche es erneut.",
+    "transientError": "Vorübergehendes Problem beim Anbieter. Deine Verbindung ist in Ordnung; es wird automatisch erneut versucht."
   }
 }

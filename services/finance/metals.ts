@@ -212,35 +212,6 @@ export function freshSpotPerOunce(
   return pricePerOunce;
 }
 
-/**
- * Parse the JSON of `GET /api/metals/prices/all/latest` into EUR spot prices.
- * Untrusted input: anything missing, non-numeric or non-positive is dropped,
- * and an unparseable or future timestamp rejects the whole payload.
- */
-export function parseLatestMetalPrices(
-  json: unknown,
-  now: number,
-): SpotPrice[] {
-  if (typeof json !== "object" || json === null) return [];
-  const body = json as Record<string, unknown>;
-  const sourceTimestamp =
-    typeof body.timestamp === "string" ? Date.parse(body.timestamp) : NaN;
-  if (!Number.isFinite(sourceTimestamp)) return [];
-  // A future timestamp would freeze the mirror (newer-wins upsert) and look
-  // fresh forever, so reject it outright.
-  if (sourceTimestamp - now > SPOT_PRICE_MAX_FUTURE_SKEW_MS) return [];
-
-  const prices: SpotPrice[] = [];
-  for (const metalType of SPOT_METALS) {
-    const entry = body[metalType] as Record<string, unknown> | undefined;
-    const eur = entry?.eur;
-    if (typeof eur === "number" && Number.isFinite(eur) && eur > 0) {
-      prices.push({ metalType, eurPerOunce: eur, sourceTimestamp });
-    }
-  }
-  return prices;
-}
-
 /** EUR rates served with the spot prices (`exchangeRates` of the latest payload). */
 export interface SpotExchangeRates {
   eurToUsd: number | null;

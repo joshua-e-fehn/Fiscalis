@@ -12,7 +12,6 @@ import {
   mergeFxDailyRates,
   MIRRORED_CURRENCIES,
   parseEcbCsv,
-  parseFxDailyRates,
   type FxDailyRate,
   type FxRates,
 } from "../../services/finance/currency";
@@ -22,37 +21,28 @@ import {
 } from "../../services/finance/displayCurrency";
 
 /**
- * Mirror of the daily EUR-base FX rates into Convex, the single rate source
- * for base-currency conversion (services/finance/currency.ts).
+ * The daily EUR-base FX rates in Convex, the single rate source for
+ * base-currency conversion (services/finance/currency.ts).
  *
  * Two sources, merged per (day, currency) with the first one winning:
- * 1. the SQL `currency_exchange_rates` store (USD, CHF), which Convex
- *    functions can't read: the app serves it at `GET /api/fx/rates/daily`
- *    (public market data, no user data);
+ * 1. the minutely gold.de feed (USD, CHF): the last rate of each UTC day,
+ *    read from the metal price day closes (convex/metalPrices.ts);
  * 2. the ECB euro reference rates (about 30 currencies, GBP included) from
  *    the public ECB data API.
- * A cron pulls the last days here, the same way convex/metalPrices.ts
- * mirrors spot prices.
+ * A cron folds the last days in here.
  *
  * The refresh fails softly: a source or window that fails is logged and
  * skipped, and the stored rates are kept, so conversions keep using the
  * last known rate (flagged "stale" after FX_MAX_AGE_DAYS) or the flagged
  * fallback table while the mirror is empty.
- *
- * Override the app source with the `FX_RATES_URL` Convex env var (e.g. for
- * a local or preview app).
  */
 
-const DEFAULT_FX_RATES_URL = "https://fiscalis.joshua-fehn.de/api/fx/rates/daily";
 const ECB_RATES_URL =
   "https://data-api.ecb.europa.eu/service/data/EXR/D..EUR.SP00.A";
 
 /** Days the cron re-reads, so a late or corrected row is picked up. */
 const REFRESH_DAYS = 10;
-/**
- * Days per request; a backfill is fetched window by window (the app route
- * accepts at most 4000 days per request).
- */
+/** Days per ECB request; a backfill is fetched window by window. */
 const WINDOW_DAYS = 365;
 /** Rows per upsert mutation when backfilling a long history. */
 const UPSERT_BATCH = 500;
@@ -61,18 +51,6 @@ const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
-
-async function fetchAppRates(from: string, to: string): Promise<FxDailyRate[]> {
-  const url = new URL(process.env.FX_RATES_URL ?? DEFAULT_FX_RATES_URL);
-  url.searchParams.set("from", from);
-  url.searchParams.set("to", to);
-  const response = await fetch(url, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  return parseFxDailyRates(await response.json());
-}
 
 async function fetchEcbRates(from: string, to: string): Promise<FxDailyRate[]> {
   const url = new URL(ECB_RATES_URL);
@@ -103,12 +81,12 @@ export const refreshFxRates = internalAction({
     let updated = 0;
     let windowsWithRows = 0;
     for (const window of dayWindows(from, to, WINDOW_DAYS)) {
-      const [app, ecb] = await Promise.allSettled([
-        fetchAppRates(window.from, window.to),
+      const [feed, ecb] = await Promise.allSettled([
+        ctx.runQuery(internal.metalPrices.dailyFxRates, window),
         fetchEcbRates(window.from, window.to),
       ]);
       for (const [name, result] of [
-        ["app", app],
+        ["metal feed", feed],
         ["ECB", ecb],
       ] as const) {
         if (result.status === "rejected") {
@@ -118,7 +96,7 @@ export const refreshFxRates = internalAction({
         }
       }
       const rows = mergeFxDailyRates(
-        app.status === "fulfilled" ? app.value : [],
+        feed.status === "fulfilled" ? feed.value : [],
         ecb.status === "fulfilled" ? ecb.value : [],
       );
       if (rows.length === 0) continue;

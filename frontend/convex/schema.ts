@@ -1,6 +1,10 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
+	closeResolutionValidator,
+	metalPriceSnapshotFields,
+} from "./lib/metalPriceValidators";
+import {
 	DAY_COUNT_CONVENTIONS,
 	LOAN_PAYMENT_FREQUENCIES,
 	LOAN_PAYMENT_TYPES,
@@ -933,8 +937,8 @@ export default defineSchema({
 	// ═══════════════════════════════════════════════════════════════
 	// METAL SPOT PRICES
 	// ═══════════════════════════════════════════════════════════════
-	// Latest EUR spot price per troy ounce, one row per metal, mirrored from
-	// the SQL price store by convex/metalPrices.ts so server-side net worth
+	// Latest EUR spot price per troy ounce, one row per metal, written by the
+	// minutely gold.de ingest (convex/metalPrices.ts) so server-side net worth
 	// (lib/netWorth.ts) can value vault items at market like the dashboard.
 
 	metalSpotPrices: defineTable({
@@ -950,10 +954,31 @@ export default defineSchema({
 	}).index("by_metal", ["metalType"]),
 
 	// ═══════════════════════════════════════════════════════════════
+	// METAL PRICE HISTORY
+	// ═══════════════════════════════════════════════════════════════
+	// Minutely gold.de snapshots (all four metals in EUR/USD/CHF plus the
+	// EUR/USD and EUR/CHF rates), recorded by convex/metalPrices.ts.
+	// Ticks are the raw minutes, pruned after TICK_RETENTION_MS
+	// (services/finance/metalPriceFeed.ts). Closes are the last snapshot of
+	// every UTC hour and day, kept forever; every chart reads them.
+
+	metalPriceTicks: defineTable(metalPriceSnapshotFields).index(
+		"by_timestamp",
+		["timestamp"],
+	),
+
+	metalPriceCloses: defineTable({
+		resolution: closeResolutionValidator,
+		bucketStart: v.number(), // UTC hour/day start (ms)
+		...metalPriceSnapshotFields, // timestamp = the last minute in the bucket
+	}).index("by_resolution_bucket", ["resolution", "bucketStart"]),
+
+	// ═══════════════════════════════════════════════════════════════
 	// FX RATES
 	// ═══════════════════════════════════════════════════════════════
-	// Daily EUR-base exchange rates, one row per (date, currency), mirrored
-	// from the SQL currency_exchange_rates store by convex/fxRates.ts. The
+	// Daily EUR-base exchange rates, one row per (date, currency), merged
+	// from the metal price day closes (USD, CHF) and the ECB by
+	// convex/fxRates.ts. The
 	// single rate source for base-currency conversion
 	// (services/finance/currency.ts).
 

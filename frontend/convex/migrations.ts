@@ -11,6 +11,7 @@ import {
   getClassificationFields,
 } from "../../services/classification";
 import { loadFxRates } from "./fxRates";
+import { USER_DATA_TABLES } from "./onboarding";
 import {
   asLedgerTransaction,
   basePricePerUnit,
@@ -753,8 +754,11 @@ export const collapseIntradaySnapshots = internalMutation({
  * the dashboard only once onboardingProgress.onboardingCompleted is true).
  * Marks every user who already has data as onboarded so the gate does not
  * send existing users back through the funnel. A user is anyone with a row in
- * one of the user-owned tables below. Patches an existing progress row
- * (other fields kept) or inserts a completed one. Idempotent.
+ * USER_DATA_TABLES (convex/onboarding.ts) or onboardingProgress. Patches an
+ * existing progress row (other fields kept) or inserts a completed one.
+ * Idempotent. Users without a progress row already pass the gate
+ * (onboarding:hasCompletedOnboarding), so this mainly settles users left with
+ * an unfinished row from the old optional funnel.
  * NOT RUN. Dry run is the default:
  *   npx convex run migrations:markExistingUsersOnboarded
  *   npx convex run migrations:markExistingUsersOnboarded '{"dryRun": false}'
@@ -765,22 +769,20 @@ export const markExistingUsersOnboarded = internalMutation({
     const dryRun = args.dryRun ?? true;
     const now = Date.now();
 
+    // Distinct userIds via a skip scan over each by_user index: one read per
+    // (table, user) instead of a full .collect(), so large tables such as
+    // portfolioSnapshots stay well inside the per-transaction read limits.
     const userIds = new Set<string>();
-    const tables = [
-      "userSettings",
-      "onboardingProgress",
-      "plaidItems",
-      "brokerConnections",
-      "bitpandaConnections",
-      "vaultItems",
-      "loans",
-      "retirementPlans",
-      "portfolioSnapshots",
-      "apiKeys",
-    ] as const;
-    for (const table of tables) {
-      const rows = await ctx.db.query(table).collect();
-      for (const row of rows) userIds.add(row.userId);
+    for (const table of [...USER_DATA_TABLES, "onboardingProgress"] as const) {
+      let row = await ctx.db.query(table).withIndex("by_user").first();
+      while (row) {
+        const userId = row.userId;
+        userIds.add(userId);
+        row = await ctx.db
+          .query(table)
+          .withIndex("by_user", (q) => q.gt("userId", userId))
+          .first();
+      }
     }
 
     const patched: string[] = [];

@@ -35,10 +35,20 @@ import {
   AlertTitle,
 } from "@/components/ui/shadcn/alert";
 import { Badge } from "@/components/ui/shadcn/badge";
+import { Switch } from "@/components/ui/shadcn/switch";
+import { Label } from "@/components/ui/shadcn/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/shadcn/select";
 import {
   Globe2,
   Database,
   TrendingUp,
+  TrendingDown,
   AlertCircle,
   RefreshCw,
   Download,
@@ -49,6 +59,7 @@ import {
   ChevronDown,
   Search,
   Heart,
+  GitCompareArrows,
 } from "lucide-react";
 
 // Custom Components
@@ -58,6 +69,7 @@ import {
   type SelectedIndicator,
 } from "@/components/atomic/molecules/indicatorSearch";
 import { PageHeader } from "@/components/atomic/molecules/investments";
+import { CountryHistoryPanel } from "@/components/atomic/organisms/worldMap/CountryHistoryPanel";
 
 // Hooks
 import {
@@ -70,12 +82,11 @@ import {
   useTopCountries,
   useIndicatorText,
   useCountryName,
+  useWorldDataDelta,
+  useIndicatorFormat,
 } from "@/hooks/worldbank";
 import { useTimePlayback } from "@/hooks/useTimePlayback";
-import {
-  useIsIndicatorFavorited,
-  useToggleFavorite,
-} from "@/hooks/convex";
+import { useIsIndicatorFavorited, useToggleFavorite } from "@/hooks/convex";
 
 // Types
 import type { IndicatorId } from "@/lib/types/worldbank";
@@ -84,8 +95,21 @@ import { YEAR_RANGE, isIndicatorId } from "@/lib/types/worldbank";
 // Auth
 import { useUser } from "@clerk/nextjs";
 
+// Logic
+import {
+  divergingStops,
+  isCountryCode,
+  rankByChange,
+  toCsv,
+  type ChangeMetric,
+  type ChangeOrder,
+  type CountryDelta,
+  type CsvCell,
+} from "@/../services/worldbank/countryViews";
+
 // Utils
 import {
+  createDivergingMapColorExpression,
   createMapColorExpression,
   getRecommendedColorScale,
   getColorPalette,
@@ -128,6 +152,14 @@ const DEFAULT_INDICATOR: SelectedIndicator = {
   unit: "$",
 };
 
+// Default years for "Compare years"
+const DEFAULT_COMPARE = { start: 2000, end: 2020 } as const;
+
+const YEARS_DESC = Array.from(
+  { length: YEAR_RANGE.max - YEAR_RANGE.min + 1 },
+  (_, i) => YEAR_RANGE.max - i,
+);
+
 // ═══════════════════════════════════════════════════════════════
 // Main Component
 // ═══════════════════════════════════════════════════════════════
@@ -159,15 +191,33 @@ export default function WorldMapPage() {
     longitude: number;
     latitude: number;
   } | null>(null);
+  // Country whose history is open in the side panel
+  const [selectedCountry, setSelectedCountry] = useState<{
+    code: string;
+    name: string;
+  } | null>(null);
+  // "Compare years": the map shows the change between two years
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareStart, setCompareStart] = useState<number>(
+    DEFAULT_COMPARE.start,
+  );
+  const [compareEnd, setCompareEnd] = useState<number>(DEFAULT_COMPARE.end);
+  const [rankOrder, setRankOrder] = useState<ChangeOrder>("increase");
+  const [rankMetric, setRankMetric] = useState<ChangeMetric>("absolute");
 
   // Determine if we're using a dynamic (searched) or featured indicator
   const isFeaturedIndicator =
     !selectedIndicator.isDynamic && isIndicatorId(selectedIndicator.id);
+  // Featured-only hooks need an IndicatorId; they are idle or unused otherwise
+  const featuredId: IndicatorId = isFeaturedIndicator
+    ? (selectedIndicator.id as IndicatorId)
+    : "gdp";
+  // Comparing needs a featured indicator and two different years
+  const isComparing =
+    compareMode && isFeaturedIndicator && compareStart !== compareEnd;
 
   // Cache check for playback (only works for featured indicators)
-  const isYearCached = useIsYearCached(
-    isFeaturedIndicator ? (selectedIndicator.id as IndicatorId) : "gdp",
-  );
+  const isYearCached = useIsYearCached(featuredId);
 
   // Time playback - skip uncached years for smooth playback at high speeds
   const {
@@ -191,10 +241,7 @@ export default function WorldMapPage() {
   });
 
   // Data fetching - use appropriate hook based on indicator type
-  const featuredQuery = useWorldData(
-    isFeaturedIndicator ? (selectedIndicator.id as IndicatorId) : "gdp",
-    year,
-  );
+  const featuredQuery = useWorldData(featuredId, year);
   const dynamicQuery = useDynamicWorldData(
     selectedIndicator.id,
     year,
@@ -214,38 +261,52 @@ export default function WorldMapPage() {
     : dynamicQuery.refetch;
 
   // Favorites
-  const { isFavorited: isCurrentFavorited } =
-    useIsIndicatorFavorited(selectedIndicator.id);
+  const { isFavorited: isCurrentFavorited } = useIsIndicatorFavorited(
+    selectedIndicator.id,
+  );
   const toggleFavorite = useToggleFavorite();
-
 
   const { data: indicatorsData } = useIndicatorsGrouped();
 
   // Top countries only works for featured indicators
   const { data: topCountries, isLoading: isLoadingTop } = useTopCountries(
-    isFeaturedIndicator ? (selectedIndicator.id as IndicatorId) : "gdp",
+    featuredId,
     year,
     5,
     "desc",
   );
 
-  // Prefetching (only for featured indicators)
-  const prefetch = usePrefetchAdjacentYears(
-    isFeaturedIndicator ? (selectedIndicator.id as IndicatorId) : "gdp",
-    year,
-    3,
+  // Change between the two compared years (featured indicators only)
+  const delta = useWorldDataDelta(
+    featuredId,
+    compareStart,
+    compareEnd,
+    isComparing,
   );
+  const deltaByCode = useMemo(
+    () => new Map((delta.data ?? []).map((d) => [d.code, d])),
+    [delta.data],
+  );
+  // English names of every country in either compared year
+  const comparedNames = useMemo(() => {
+    const names = new Map<string, { name: string; code3: string }>();
+    for (const snapshot of [delta.startYearData, delta.endYearData]) {
+      for (const c of snapshot?.countries ?? []) {
+        names.set(c.code, { name: c.name, code3: c.code3 });
+      }
+    }
+    return names;
+  }, [delta.startYearData, delta.endYearData]);
+
+  // Prefetching (only for featured indicators)
+  const prefetch = usePrefetchAdjacentYears(featuredId, year, 3);
 
   // Background prefetch for all years (only for featured indicators)
   const {
     prefetchAll,
     progress: prefetchProgress,
     isPrefetching,
-  } = usePrefetchAllYears(
-    isFeaturedIndicator ? (selectedIndicator.id as IndicatorId) : "gdp",
-    YEAR_RANGE.min,
-    YEAR_RANGE.max,
-  );
+  } = usePrefetchAllYears(featuredId, YEAR_RANGE.min, YEAR_RANGE.max);
 
   // Auto-prefetch all years when indicator changes (start in background)
   useEffect(() => {
@@ -322,11 +383,14 @@ export default function WorldMapPage() {
       const countryData =
         countryCode === undefined ? undefined : countryMap.get(countryCode);
 
-      // Use marker value for missing data, preserve actual null/0 values from API
-      const hasData =
-        countryData &&
-        countryData.value !== null &&
-        countryData.value !== undefined;
+      // Use marker value for missing data, preserve actual null/0 values from API.
+      // Comparing, the value is the change; missing in either year is no data.
+      const change =
+        isComparing && countryCode !== undefined
+          ? deltaByCode.get(countryCode)?.absolute
+          : undefined;
+      const value = isComparing ? change : countryData?.value;
+      const hasData = value !== null && value !== undefined;
 
       return {
         ...feature,
@@ -334,7 +398,7 @@ export default function WorldMapPage() {
           ...props,
           // Store the resolved country code for hover
           resolvedCode: countryCode,
-          dataValue: hasData ? countryData.value : NO_DATA_MARKER,
+          dataValue: hasData ? value : NO_DATA_MARKER,
           hasData: hasData,
           formattedValue: countryData?.formattedValue ?? "",
           countryName: countryData?.name ?? props.name ?? props.admin,
@@ -343,10 +407,19 @@ export default function WorldMapPage() {
     });
 
     return processed;
-  }, [geoJsonData, worldData]);
+  }, [geoJsonData, worldData, isComparing, deltaByCode]);
 
   // Color expression for map
   const colorExpression = useMemo((): MapColorExpression => {
+    if (isComparing) {
+      const changes = (delta.data ?? [])
+        .filter((d) => isCountryCode(d.code))
+        .map((d) => d.absolute);
+      return createDivergingMapColorExpression(
+        divergingStops(changes),
+        isInvertedIndicator(featuredId),
+      );
+    }
     if (!worldData) return ["literal", NO_DATA_COLOR];
 
     const values = worldData.countries
@@ -360,7 +433,14 @@ export default function WorldMapPage() {
       ? isInvertedIndicator(selectedIndicator.id as IndicatorId)
       : false; // Default to non-inverted for dynamic indicators
     return createMapColorExpression(values, scaleType, inverted);
-  }, [worldData, selectedIndicator.id, isFeaturedIndicator]);
+  }, [
+    worldData,
+    selectedIndicator.id,
+    isFeaturedIndicator,
+    isComparing,
+    delta.data,
+    featuredId,
+  ]);
 
   // Map layers - insert before labels to keep text visible
   const countryLayer = useMemo(
@@ -395,9 +475,7 @@ export default function WorldMapPage() {
     const layers = map.getStyle()?.layers || [];
 
     // Find first symbol layer (labels) to insert our layers before it
-    const firstSymbolLayer = layers.find(
-      (layer) => layer.type === "symbol",
-    );
+    const firstSymbolLayer = layers.find((layer) => layer.type === "symbol");
 
     if (firstSymbolLayer) {
       setFirstLabelLayerId(firstSymbolLayer.id);
@@ -425,6 +503,22 @@ export default function WorldMapPage() {
     [t, indicatorUnit],
   );
 
+  // A change between the compared years, e.g. "+1.2 pp (+8.3%)"
+  const fmt = useIndicatorFormat(indicatorUnit);
+  const displayChange = useCallback(
+    (d: CountryDelta | undefined) => {
+      if (!d || d.absolute === null) return t("map.noData");
+      const absolute = fmt.change(d.absolute);
+      return d.percent === null
+        ? absolute
+        : t("compare.changeValue", {
+            absolute,
+            percent: fmt.percentChange(d.percent),
+          });
+    },
+    [t, fmt],
+  );
+
   // Hover handler
   const onHover = useCallback(
     (event: MapLayerMouseEvent) => {
@@ -441,7 +535,9 @@ export default function WorldMapPage() {
           name: countryName(code, englishName),
           code,
           value: props.dataValue,
-          formattedValue: displayValue(props.dataValue, props.formattedValue),
+          formattedValue: isComparing
+            ? displayChange(deltaByCode.get(code))
+            : displayValue(props.dataValue, props.formattedValue),
           longitude,
           latitude,
         });
@@ -449,7 +545,20 @@ export default function WorldMapPage() {
         setHoveredCountry(null);
       }
     },
-    [countryName, displayValue],
+    [countryName, displayValue, displayChange, isComparing, deltaByCode],
+  );
+
+  // Click handler: open the country's history
+  const onClick = useCallback(
+    (event: MapLayerMouseEvent) => {
+      const props = event.features?.[0]?.properties;
+      const code: string | undefined = props?.resolvedCode || props?.iso_a2;
+      if (!props || !code || code === "-99") return;
+      const englishName: string =
+        props.countryName || props.name || props.admin || code;
+      setSelectedCountry({ code, name: countryName(code, englishName) });
+    },
+    [countryName],
   );
 
   // The selected indicator's name and description in the UI language
@@ -457,9 +566,12 @@ export default function WorldMapPage() {
   const mapTitle = isFeaturedIndicator
     ? selectedText.name
     : worldData?.indicator?.name;
-  const mapDescription = isFeaturedIndicator
-    ? selectedText.description
-    : worldData?.indicator?.description;
+  const mapDescription = isComparing
+    ? t("compare.mapDescription", { start: compareStart, end: compareEnd })
+    : isFeaturedIndicator
+      ? selectedText.description
+      : worldData?.indicator?.description;
+  const mapLoading = isLoading || delta.isLoading;
   const unitLabel =
     indicatorUnit === "years" ? t("units.years") : indicatorUnit;
 
@@ -510,17 +622,15 @@ export default function WorldMapPage() {
       .map((country) => [
         country.code,
         country.code3,
-        `"${country.name}"`,
-        country.value?.toString() ?? "",
-        year.toString(),
+        country.name,
+        country.value,
+        year,
       ]);
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.join(",")),
-    ].join("\n");
-
-    downloadCSV(csvContent, `world-data-${selectedIndicator.id}-${year}.csv`);
+    downloadCSV(
+      toCsv(headers, rows),
+      `world-data-${selectedIndicator.id}-${year}.csv`,
+    );
   }, [
     worldData,
     selectedIndicator,
@@ -600,7 +710,7 @@ export default function WorldMapPage() {
       ];
 
       // Collect all unique countries and create rows for each year
-      const rows: string[][] = [];
+      const rows: Array<[string, string, string, number, number]> = [];
 
       for (const { year: dataYear, countries } of allData) {
         for (const country of countries) {
@@ -608,28 +718,19 @@ export default function WorldMapPage() {
             rows.push([
               country.code,
               country.code3,
-              `"${country.name}"`,
-              dataYear.toString(),
-              country.value?.toString() ?? "",
+              country.name,
+              dataYear,
+              country.value,
             ]);
           }
         }
       }
 
       // Sort by country name, then by year
-      rows.sort((a, b) => {
-        const nameCompare = a[2].localeCompare(b[2]);
-        if (nameCompare !== 0) return nameCompare;
-        return parseInt(a[3]) - parseInt(b[3]);
-      });
-
-      const csvContent = [
-        headers.join(","),
-        ...rows.map((row) => row.join(",")),
-      ].join("\n");
+      rows.sort((a, b) => a[2].localeCompare(b[2]) || a[3] - b[3]);
 
       downloadCSV(
-        csvContent,
+        toCsv(headers, rows),
         `world-data-${selectedIndicator.id}-all-years.csv`,
       );
     } catch (error) {
@@ -646,8 +747,83 @@ export default function WorldMapPage() {
     t,
   ]);
 
+  // Export the comparison: both years plus the change columns. A country
+  // missing either year keeps an empty change, never 0.
+  const exportComparison = useCallback(() => {
+    if (!delta.data) return;
+    const indicatorName = indicatorText(selectedIndicator).name;
+    const unit =
+      indicatorUnit === "years" ? t("units.years") : (indicatorUnit ?? "");
+    const headers = [
+      t("csv.countryCode"),
+      t("csv.countryCodeIso3"),
+      t("csv.countryName"),
+      t("csv.yearValue", {
+        indicator: indicatorName,
+        year: compareStart,
+        unit,
+      }),
+      t("csv.yearValue", { indicator: indicatorName, year: compareEnd, unit }),
+      t("csv.absoluteChange", { start: compareStart, end: compareEnd, unit }),
+      t("csv.percentChange", { start: compareStart, end: compareEnd }),
+    ];
+    const rows: CsvCell[][] = delta.data
+      .filter((d) => d.startValue !== null || d.endValue !== null)
+      .map((d) => {
+        const names = comparedNames.get(d.code);
+        return [
+          d.code,
+          names?.code3,
+          names?.name ?? d.code,
+          d.startValue,
+          d.endValue,
+          d.absolute,
+          d.percent,
+        ];
+      })
+      .sort((a, b) => String(a[2]).localeCompare(String(b[2])));
+
+    downloadCSV(
+      toCsv(headers, rows),
+      `world-data-${selectedIndicator.id}-${compareStart}-${compareEnd}.csv`,
+    );
+  }, [
+    delta.data,
+    comparedNames,
+    selectedIndicator,
+    indicatorText,
+    indicatorUnit,
+    compareStart,
+    compareEnd,
+    downloadCSV,
+    t,
+  ]);
+
+  // Biggest increase / decrease between the compared years
+  const rankedChanges = useMemo(
+    () =>
+      delta.data ? rankByChange(delta.data, rankOrder, rankMetric, 5) : [],
+    [delta.data, rankOrder, rankMetric],
+  );
+
+  // The sidebar list: biggest changes when comparing, else top values
+  const topEntries = isComparing
+    ? rankedChanges.map((d) => ({
+        code: d.code,
+        name: countryName(d.code, comparedNames.get(d.code)?.name ?? d.code),
+        detail: displayChange(d),
+      }))
+    : (topCountries ?? []).map((c) => ({
+        code: c.code,
+        name: countryName(c.code, c.name),
+        detail: displayValue(c.value, c.formattedValue),
+      }));
+
   // Legend colors
   const legendColors = useMemo(() => {
+    if (isComparing) {
+      return getColorPalette("diverging", 5, isInvertedIndicator(featuredId));
+    }
     const scaleType = isFeaturedIndicator
       ? getRecommendedColorScale(selectedIndicator.id as IndicatorId)
       : "quantile";
@@ -655,15 +831,12 @@ export default function WorldMapPage() {
       ? isInvertedIndicator(selectedIndicator.id as IndicatorId)
       : false;
     return getColorPalette(scaleType, 5, inverted);
-  }, [selectedIndicator.id, isFeaturedIndicator]);
+  }, [selectedIndicator.id, isFeaturedIndicator, isComparing, featuredId]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <PageHeader
-        title={t("page.title")}
-        subtitle={t("page.subtitle")}
-      />
+      <PageHeader title={t("page.title")} subtitle={t("page.subtitle")} />
 
       {/* Controls Card */}
       <Card>
@@ -718,7 +891,12 @@ export default function WorldMapPage() {
 
               {/* Year Badge */}
               <Badge variant="secondary" className="text-lg px-4 py-1">
-                {year}
+                {isComparing
+                  ? t("compare.fromTo", {
+                      start: compareStart,
+                      end: compareEnd,
+                    })
+                  : year}
               </Badge>
 
               {/* Export Dropdown */}
@@ -756,6 +934,18 @@ export default function WorldMapPage() {
                       max: YEAR_RANGE.max,
                     })}
                   </DropdownMenuItem>
+                  {isComparing && (
+                    <DropdownMenuItem
+                      onClick={exportComparison}
+                      disabled={!delta.data}
+                    >
+                      <GitCompareArrows className="h-4 w-4 mr-2" />
+                      {t("export.comparison", {
+                        start: compareStart,
+                        end: compareEnd,
+                      })}
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -769,25 +959,67 @@ export default function WorldMapPage() {
               <span className="text-sm font-medium text-muted-foreground">
                 {t("controls.timePeriod")}
               </span>
-              <SpeedControl speed={speed} onSpeedChange={setSpeed} />
+              {!compareMode && (
+                <SpeedControl speed={speed} onSpeedChange={setSpeed} />
+              )}
             </div>
-            <TimeSlider
-              value={year}
-              onChange={setYear}
-              onChangeCommitted={(y) => prefetch.prefetchYear(y)}
-              min={YEAR_RANGE.min}
-              max={YEAR_RANGE.max}
-              isPlaying={isPlaying}
-              onPlayToggle={togglePlayback}
-              onStepForward={stepForward}
-              onStepBackward={stepBackward}
-              onJumpToStart={jumpToStart}
-              onJumpToEnd={jumpToEnd}
-              isLoading={
-                isLoading && (!isFeaturedIndicator || !isYearCached(year))
-              }
-              showQuickJumps={true}
-            />
+
+            {/* Compare years */}
+            <div className="flex flex-wrap items-center gap-4 mb-3">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="compare-years"
+                  checked={compareMode}
+                  onCheckedChange={setCompareMode}
+                  disabled={!isFeaturedIndicator}
+                />
+                <Label htmlFor="compare-years">{t("compare.toggle")}</Label>
+              </div>
+              {!isFeaturedIndicator && (
+                <span className="text-xs text-muted-foreground">
+                  {t("compare.featuredOnly")}
+                </span>
+              )}
+              {compareMode && isFeaturedIndicator && (
+                <>
+                  <CompareYearSelect
+                    label={t("compare.from")}
+                    value={compareStart}
+                    onChange={setCompareStart}
+                  />
+                  <CompareYearSelect
+                    label={t("compare.to")}
+                    value={compareEnd}
+                    onChange={setCompareEnd}
+                  />
+                  {compareStart === compareEnd && (
+                    <span className="text-xs text-destructive">
+                      {t("compare.sameYear")}
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+
+            {!compareMode && (
+              <TimeSlider
+                value={year}
+                onChange={setYear}
+                onChangeCommitted={(y) => prefetch.prefetchYear(y)}
+                min={YEAR_RANGE.min}
+                max={YEAR_RANGE.max}
+                isPlaying={isPlaying}
+                onPlayToggle={togglePlayback}
+                onStepForward={stepForward}
+                onStepBackward={stepBackward}
+                onJumpToStart={jumpToStart}
+                onJumpToEnd={jumpToEnd}
+                isLoading={
+                  isLoading && (!isFeaturedIndicator || !isYearCached(year))
+                }
+                showQuickJumps={true}
+              />
+            )}
 
             {/* Prefetch Progress - only show for featured indicators */}
             {isFeaturedIndicator && (
@@ -895,7 +1127,7 @@ export default function WorldMapPage() {
                       {mapTitle || t("map.fallbackTitle")}
                     </CardTitle>
                   </div>
-                  {isLoading && (
+                  {mapLoading && (
                     <Badge variant="outline" className="animate-pulse">
                       {t("map.loading")}
                     </Badge>
@@ -903,6 +1135,7 @@ export default function WorldMapPage() {
                 </div>
                 <CardDescription>
                   {mapDescription || t("map.fallbackDescription")}
+                  <span className="block text-xs">{t("country.hint")}</span>
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-[500px] relative p-0">
@@ -916,14 +1149,19 @@ export default function WorldMapPage() {
                 ) : (
                   <div className="h-full w-full relative">
                     {/* Loading Overlay */}
-                    {isLoading && (
+                    {mapLoading && (
                       <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
                         <div className="flex flex-col items-center gap-3">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                           <div className="text-sm font-medium">
-                            {t("map.loadingIndicator", {
-                              indicator: selectedText.name,
-                            })}
+                            {isComparing
+                              ? t("compare.loading", {
+                                  start: compareStart,
+                                  end: compareEnd,
+                                })
+                              : t("map.loadingIndicator", {
+                                  indicator: selectedText.name,
+                                })}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {!isFeaturedIndicator && t("map.fetchingUpstream")}
@@ -942,6 +1180,8 @@ export default function WorldMapPage() {
                       interactiveLayerIds={["country-data"]}
                       onMouseMove={onHover}
                       onMouseLeave={() => setHoveredCountry(null)}
+                      onClick={onClick}
+                      cursor={hoveredCountry ? "pointer" : "grab"}
                       onLoad={onMapLoad}
                     >
                       {processedGeoJson && (
@@ -964,7 +1204,12 @@ export default function WorldMapPage() {
                       {/* Legend */}
                       <div className="absolute bottom-4 right-4 bg-background/95 backdrop-blur p-3 rounded-lg shadow-lg border">
                         <div className="text-xs font-medium mb-2">
-                          {mapTitle || t("map.legendValue")}
+                          {isComparing
+                            ? t("compare.legendTitle", {
+                                start: compareStart,
+                                end: compareEnd,
+                              })
+                            : mapTitle || t("map.legendValue")}
                         </div>
                         <div className="flex items-center gap-1">
                           {legendColors.map((color, i) => (
@@ -976,8 +1221,15 @@ export default function WorldMapPage() {
                           ))}
                         </div>
                         <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                          <span>{t("map.low")}</span>
-                          <span>{t("map.high")}</span>
+                          <span>
+                            {isComparing ? t("compare.decrease") : t("map.low")}
+                          </span>
+                          {isComparing && <span>{t("compare.noChange")}</span>}
+                          <span>
+                            {isComparing
+                              ? t("compare.increase")
+                              : t("map.high")}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1 mt-2 pt-2 border-t">
                           <div
@@ -1035,15 +1287,53 @@ export default function WorldMapPage() {
             <Card className="lg:col-span-1">
               <CardHeader className="pb-2">
                 <div className="flex items-center space-x-2">
-                  <TrendingUp className="h-5 w-5" />
-                  <CardTitle className="text-lg">{t("top.title")}</CardTitle>
+                  {isComparing && rankOrder === "decrease" ? (
+                    <TrendingDown className="h-5 w-5" />
+                  ) : (
+                    <TrendingUp className="h-5 w-5" />
+                  )}
+                  <CardTitle className="text-lg">
+                    {!isComparing
+                      ? t("top.title")
+                      : rankOrder === "increase"
+                        ? t("top.titleIncrease")
+                        : t("top.titleDecrease")}
+                  </CardTitle>
                 </div>
                 <CardDescription>
-                  {t("top.description", { year })}
+                  {isComparing
+                    ? t("top.changeDescription", {
+                        start: compareStart,
+                        end: compareEnd,
+                      })
+                    : t("top.description", { year })}
                 </CardDescription>
+                {isComparing && (
+                  <div
+                    className="flex flex-wrap gap-2 pt-2"
+                    aria-label={t("top.sortLabel")}
+                  >
+                    <ToggleGroup
+                      value={rankOrder}
+                      onChange={setRankOrder}
+                      options={[
+                        { value: "increase", label: t("top.sortIncrease") },
+                        { value: "decrease", label: t("top.sortDecrease") },
+                      ]}
+                    />
+                    <ToggleGroup
+                      value={rankMetric}
+                      onChange={setRankMetric}
+                      options={[
+                        { value: "absolute", label: t("top.sortAbsolute") },
+                        { value: "percent", label: t("top.sortPercent") },
+                      ]}
+                    />
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
-                {isLoadingTop ? (
+                {(isComparing ? delta.isLoading : isLoadingTop) ? (
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
                       <div key={i} className="flex items-center gap-3">
@@ -1055,25 +1345,35 @@ export default function WorldMapPage() {
                       </div>
                     ))}
                   </div>
-                ) : topCountries && topCountries.length > 0 ? (
+                ) : topEntries.length > 0 ? (
                   <div className="space-y-3">
-                    {topCountries.map((country, index) => (
-                      <div
-                        key={country.code}
-                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                    {topEntries.map((entry, index) => (
+                      <button
+                        type="button"
+                        key={entry.code}
+                        onClick={() =>
+                          setSelectedCountry({
+                            code: entry.code,
+                            name: entry.name,
+                          })
+                        }
+                        aria-label={t("top.showHistory", {
+                          country: entry.name,
+                        })}
+                        className="flex w-full items-center gap-3 p-2 rounded-lg text-left hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
                           {index + 1}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
-                            {countryName(country.code, country.name)}
+                            {entry.name}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {displayValue(country.value, country.formattedValue)}
+                            {entry.detail}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -1128,6 +1428,75 @@ export default function WorldMapPage() {
           </Card>
         </CardContent>
       </Card>
+
+      <CountryHistoryPanel
+        country={selectedCountry}
+        onClose={() => setSelectedCountry(null)}
+        indicator={selectedIndicator.id}
+        isDynamic={!isFeaturedIndicator}
+        indicatorName={mapTitle || selectedText.name}
+        unit={indicatorUnit}
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Small controls
+// ═══════════════════════════════════════════════════════════════
+
+function CompareYearSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (year: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <Select value={String(value)} onValueChange={(v) => onChange(Number(v))}>
+        <SelectTrigger className="h-8 w-24" aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {YEARS_DESC.map((y) => (
+            <SelectItem key={y} value={String(y)}>
+              {y}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function ToggleGroup<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<{ value: T; label: string }>;
+}) {
+  return (
+    <div className="inline-flex rounded-md border p-0.5">
+      {options.map((option) => (
+        <Button
+          key={option.value}
+          type="button"
+          size="sm"
+          variant={option.value === value ? "secondary" : "ghost"}
+          className="h-7 px-2 text-xs"
+          aria-pressed={option.value === value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.label}
+        </Button>
+      ))}
     </div>
   );
 }

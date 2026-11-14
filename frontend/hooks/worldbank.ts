@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocale, useTranslations } from "next-intl";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 
 import { createRegionNamer } from "@/../services/i18n/regionNames";
+import {
+  computeCountryDeltas,
+  countryHistory,
+  isCountryCode,
+  type CountryValue,
+} from "@/../services/worldbank/countryViews";
 
 import {
   getWorldData,
@@ -11,7 +17,7 @@ import {
   searchWorldBankIndicators,
   getDynamicWorldData,
 } from "@/lib/api/worldbank";
-import { isIndicatorId } from "@/lib/types/worldbank";
+import { YEAR_RANGE, isIndicatorId } from "@/lib/types/worldbank";
 import type {
   IndicatorId,
   IndicatorData,
@@ -443,98 +449,92 @@ export function useWorldDataComparison(
 }
 
 /**
- * Calculate changes between two years for a given indicator
+ * Change per country between two years for a given indicator. A country
+ * missing a value in either year has a null change ("no data"), never 0.
  */
 export function useWorldDataDelta(
   indicator: IndicatorId,
   startYear: number,
   endYear: number,
+  enabled: boolean = true,
 ) {
-  const { data, isLoading, error } = useWorldDataComparison(indicator, [
-    startYear,
-    endYear,
-  ]);
+  const { data, isLoading, error } = useWorldDataComparison(
+    indicator,
+    enabled ? [startYear, endYear] : [],
+  );
 
-  const deltaData = data ? calculateDelta(data[0], data[1]) : null;
+  const deltaData = useMemo(
+    () =>
+      data ? computeCountryDeltas(data[0].countries, data[1].countries) : null,
+    [data],
+  );
 
   return {
     data: deltaData,
-    isLoading,
+    isLoading: enabled && isLoading,
     error,
     startYearData: data?.[0],
     endYearData: data?.[1],
   };
 }
 
-/**
- * Calculate the delta (change) between two indicator data snapshots
- */
-function calculateDelta(
-  startData: IndicatorData,
-  endData: IndicatorData,
-): Map<
-  string,
-  { absolute: number; percent: number; startValue: number; endValue: number }
-> {
-  const deltaMap = new Map<
-    string,
-    { absolute: number; percent: number; startValue: number; endValue: number }
-  >();
-
-  // Create a map of end year values for quick lookup
-  const endValuesMap = new Map(endData.countries.map((c) => [c.code, c.value]));
-
-  // Calculate deltas for each country
-  startData.countries.forEach((startCountry) => {
-    const endValue = endValuesMap.get(startCountry.code);
-
-    if (
-      startCountry.value !== null &&
-      endValue !== null &&
-      endValue !== undefined
-    ) {
-      const absolute = endValue - startCountry.value;
-      const percent =
-        startCountry.value !== 0
-          ? ((endValue - startCountry.value) / startCountry.value) * 100
-          : 0;
-
-      deltaMap.set(startCountry.code, {
-        absolute,
-        percent,
-        startValue: startCountry.value,
-        endValue,
-      });
-    }
-  });
-
-  return deltaMap;
-}
-
 // ═══════════════════════════════════════════════════════════════
 // Utility Hooks
 // ═══════════════════════════════════════════════════════════════
 
+const ALL_YEARS = Array.from(
+  { length: YEAR_RANGE.max - YEAR_RANGE.min + 1 },
+  (_, i) => YEAR_RANGE.min + i,
+);
+
 /**
- * Get a single country's data from the current indicator/year
+ * One country's history for an indicator across every available year. It
+ * reads the same per-year queries as the map, so years already loaded or
+ * prefetched cost nothing; a year that failed to load is a gap. Works for
+ * featured and searched (dynamic) indicators; idle while countryCode is null.
  */
 export function useCountryData(
-  indicator: IndicatorId,
-  year: number,
-  countryCode: string,
+  indicator: string,
+  countryCode: string | null,
+  isDynamic: boolean = false,
 ) {
-  const { data, isLoading, error } = useWorldData(indicator, year);
-
-  const countryData = data?.countries.find(
-    (c) => c.code === countryCode || c.code3 === countryCode,
-  );
-
-  return {
-    data: countryData,
-    indicator: data?.indicator,
-    isLoading,
-    error,
+  const enabled =
+    countryCode !== null && (isDynamic || isIndicatorId(indicator));
+  const cache = {
+    enabled,
+    staleTime: 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
   };
+
+  return useQueries({
+    queries: ALL_YEARS.map((year) =>
+      isDynamic
+        ? {
+            ...cache,
+            queryKey: worldDataKeys.dynamicDataYear(indicator, year),
+            queryFn: (): Promise<{ countries: CountryValue[] }> =>
+              getDynamicWorldData(indicator, year),
+          }
+        : {
+            ...cache,
+            queryKey: worldDataKeys.dataYear(indicator as IndicatorId, year),
+            queryFn: (): Promise<{ countries: CountryValue[] }> =>
+              getWorldData(indicator as IndicatorId, year),
+          },
+    ),
+    combine: (results) => {
+      const snapshots = results.flatMap((r, i) =>
+        r.data ? [{ year: ALL_YEARS[i], countries: r.data.countries }] : [],
+      );
+      return {
+        data: countryCode ? countryHistory(snapshots, countryCode) : [],
+        loaded: results.filter((r) => r.isSuccess || r.isError).length,
+        total: results.length,
+        isLoading: results.some((r) => r.fetchStatus === "fetching"),
+      };
+    },
+  });
 }
 
 /**
@@ -550,9 +550,8 @@ export function useTopCountries(
   const { data, isLoading, error } = useWorldData(indicator, year);
 
   const topCountries = data?.countries
-    // Filter out aggregate regions - they have 3-letter codes
-    // Actual countries have 2-letter ISO codes
-    .filter((c) => c.value !== null && c.code.length === 2)
+    // Only actual countries (ISO alpha-2), not aggregate regions
+    .filter((c) => c.value !== null && isCountryCode(c.code))
     .sort((a, b) => {
       const comparison = (b.value ?? 0) - (a.value ?? 0);
       return order === "desc" ? comparison : -comparison;
@@ -626,4 +625,57 @@ export function useIndicatorText() {
 export function useCountryName() {
   const locale = useLocale();
   return useMemo(() => createRegionNamer(locale), [locale]);
+}
+
+/**
+ * Locale-aware formatting of an indicator's values and of changes between
+ * two years, by the indicator's unit ("$", "%", "years", "t" or none). The
+ * API's formattedValue is English-only; this is for values computed here
+ * (chart axes, deltas). A change in a "%" indicator is in percentage points.
+ */
+export function useIndicatorFormat(unit: string | undefined) {
+  const t = useTranslations("worldMap.units");
+  const format = useFormatter();
+
+  return useMemo(() => {
+    const render = (value: number, signed: boolean, isChange: boolean) => {
+      const signDisplay = signed ? ("exceptZero" as const) : ("auto" as const);
+      if (unit === "$") {
+        return format.number(value, {
+          style: "currency",
+          currency: "USD",
+          notation: "compact",
+          maximumFractionDigits: 2,
+          signDisplay,
+        });
+      }
+      const number = format.number(value, {
+        notation: Math.abs(value) >= 1e6 ? "compact" : "standard",
+        maximumFractionDigits: unit === "t" ? 2 : 1,
+        signDisplay,
+      });
+      if (unit === "%") {
+        return isChange
+          ? t("percentPoints", { value: number })
+          : t("percentValue", { value: number });
+      }
+      if (unit === "years") return t("yearsValue", { value: number });
+      if (unit === "t") return t("tonnesValue", { value: number });
+      return number;
+    };
+
+    return {
+      /** A level, e.g. a chart tick or tooltip value */
+      value: (value: number) => render(value, false, false),
+      /** An absolute change, always signed */
+      change: (value: number) => render(value, true, true),
+      /** A relative change given in percent (12.5 → "+12.5%") */
+      percentChange: (percent: number) =>
+        format.number(percent / 100, {
+          style: "percent",
+          maximumFractionDigits: 1,
+          signDisplay: "exceptZero",
+        }),
+    };
+  }, [format, t, unit]);
 }

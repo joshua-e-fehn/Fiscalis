@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
@@ -13,19 +14,21 @@ import { cashCategoryCards } from "@/lib/config/categoryUI";
 export default function CashPage() {
   const { summary, currency, isLoading } = useCashSummary();
   const { summary: portfolioSummary } = usePortfolioOverview();
+  const t = useTranslations("assets.cash");
+  const tAction = useTranslations("assets.actions");
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Cash & Money Market"
-        subtitle="Track your liquid assets - savings accounts, money market funds, CDs, and foreign currency holdings."
+        title={t("title")}
+        subtitle={t("subtitle")}
         actions={[
           {
-            label: "Connect Broker",
+            label: tAction("connectBroker"),
             href: "/integrations/brokers",
             variant: "outline",
           },
-          { label: "Connect Bank", href: "/integrations/banking" },
+          { label: tAction("connectBank"), href: "/integrations/banking" },
         ]}
       />
 
@@ -37,14 +40,14 @@ export default function CashPage() {
         isLoading={isLoading}
         kpiCards={CASH_KPI_CARDS}
         totalPortfolioAssets={portfolioSummary?.totalAssets ?? 0}
-        performanceChartTitle="Cash Balance History"
+        performanceChartTitle={t("balanceHistory")}
       />
 
       {/* Category Cards */}
       <SubcategoryCardSection
-        title="Cash Categories"
+        title={t("categories")}
         cards={cashCategoryCards}
-        actionLabel="View Accounts"
+        actionLabel={tAction("viewAccounts")}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
@@ -10,13 +11,17 @@ import { bondsCategoryCards } from "@/lib/config/categoryUI";
 
 export default function BondsPage() {
   const { summary, isLoading } = useBondsSummary();
+  const t = useTranslations("assets.bonds");
+  const tAction = useTranslations("assets.actions");
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Bonds"
-        subtitle="Track your fixed income investments - government bonds, corporate bonds, and bond funds."
-        actions={[{ label: "Connect Broker", href: "/integrations/brokers" }]}
+        title={t("title")}
+        subtitle={t("subtitle")}
+        actions={[
+          { label: tAction("connectBroker"), href: "/integrations/brokers" },
+        ]}
       />
 
       {/* Dashboard Section */}
@@ -28,9 +33,9 @@ export default function BondsPage() {
 
       {/* Category Cards */}
       <SubcategoryCardSection
-        title="Bond Categories"
+        title={t("categories")}
         cards={bondsCategoryCards}
-        actionLabel="View Holdings"
+        actionLabel={tAction("viewHoldings")}
       />
     </div>
   );

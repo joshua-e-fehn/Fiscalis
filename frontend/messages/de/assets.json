@@ -1,0 +1,129 @@
+{
+  "actions": {
+    "connectBroker": "Broker verbinden",
+    "connectBank": "Bank verbinden",
+    "connectCrypto": "Krypto verbinden",
+    "addItem": "Position hinzufügen",
+    "addProperty": "Immobilie hinzufügen",
+    "viewHoldings": "Bestände ansehen",
+    "viewAccounts": "Konten ansehen",
+    "viewPortfolio": "Portfolio ansehen",
+    "viewProperties": "Immobilien ansehen",
+    "viewCollection": "Sammlung ansehen"
+  },
+  "bonds": {
+    "title": "Anleihen",
+    "subtitle": "Behalte deine festverzinslichen Anlagen im Blick – Staatsanleihen, Unternehmensanleihen und Anleihefonds.",
+    "categories": "Anleihekategorien"
+  },
+  "cash": {
+    "title": "Liquidität & Geldmarkt",
+    "subtitle": "Behalte deine liquiden Mittel im Blick – Sparkonten, Geldmarktfonds, Festgeld und Fremdwährungsbestände.",
+    "balanceHistory": "Verlauf der Liquidität",
+    "categories": "Liquiditätskategorien"
+  },
+  "equities": {
+    "title": "Aktien",
+    "subtitle": "Behalte dein Aktienportfolio, ETFs, Investmentfonds und Private-Equity-Anlagen im Blick.",
+    "publicMarkets": "Öffentliche Märkte",
+    "privateMarkets": "Private Märkte"
+  },
+  "realEstate": {
+    "title": "Immobilien",
+    "subtitle": "Behalte deine Immobilienanlagen im Blick – Wohnimmobilien, Gewerbeimmobilien, REITs und mehr.",
+    "categories": "Immobilienkategorien"
+  },
+  "collectibles": {
+    "title": "Sammlerstücke",
+    "subtitle": "Behalte deine Sammlerstücke im Blick – Kunst, Wein, Uhren, Oldtimer und mehr.",
+    "categories": "Kategorien der Sammlerstücke"
+  },
+  "commodities": {
+    "title": "Rohstoffe",
+    "subtitle": "Verfolge Echtzeitpreise und verwalte deine Bestände über verschiedene Rohstoffarten hinweg",
+    "categories": "Rohstoffkategorien"
+  },
+  "metals": {
+    "signIn": "Bitte melde dich an, um dein Edelmetall-Portfolio zu sehen."
+  },
+  "crypto": {
+    "title": "Krypto-Anlagen",
+    "subtitle": "Behalte deine Kryptowährungsanlagen und deren Wertentwicklung im Blick",
+    "tabs": {
+      "overview": "Übersicht",
+      "holdings": "Bestände",
+      "transactions": "Transaktionen"
+    },
+    "categories": "Krypto-Kategorien",
+    "holdings": {
+      "title": "Alle Krypto-Bestände",
+      "description": "Vollständige Liste deiner Kryptowährungsbestände über alle verbundenen Börsen und Wallets",
+      "emptyTitle": "Keine Krypto-Konten verbunden",
+      "emptyDescription": "Verbinde deine Krypto-Börsen und Wallets, um alle deine Bestände zu sehen",
+      "connect": "Krypto-Konten verbinden"
+    },
+    "transactions": {
+      "title": "Transaktionsverlauf",
+      "connectDescription": "Verbinde deine Krypto-Konten, um deinen Transaktionsverlauf zu sehen",
+      "notConnected": "Noch keine Krypto-Konten verbunden. Verbinde deine Börsen und Wallets, um deinen Transaktionsverlauf zu sehen.",
+      "description": "Alle Transaktionen über deine verbundenen Krypto-Konten",
+      "empty": "Keine Transaktionen gefunden. Dein Transaktionsverlauf erscheint hier nach der Synchronisierung.",
+      "justNow": "gerade eben",
+      "unknownDate": "Unbekanntes Datum",
+      "types": {
+        "buy": "Kauf",
+        "sell": "Verkauf",
+        "deposit": "Einzahlung",
+        "withdraw": "Auszahlung",
+        "withdrawal": "Auszahlung",
+        "receive": "Empfang",
+        "send": "Versand",
+        "transfer": "Übertrag",
+        "reward": "Prämie",
+        "staking": "Staking",
+        "dividend": "Dividende",
+        "interest": "Zinsen",
+        "fee": "Gebühr"
+      }
+    },
+    "allocation": {
+      "title": "Aufteilung nach Position",
+      "empty": "Noch keine Bestände",
+      "other": "Sonstige (<2 %)",
+      "otherShort": "Sonstige"
+    },
+    "positions": {
+      "title": "Alle Positionen",
+      "count": "{shown} von {total, plural, one {# Position} other {# Positionen}}",
+      "search": "Nach Token suchen...",
+      "loading": "Positionen werden geladen…",
+      "noMatch": "Keine Positionen passen zu deiner Suche",
+      "empty": "Keine Positionen gefunden",
+      "token": "Token",
+      "quantity": "Menge",
+      "value": "Wert",
+      "category": "Kategorie",
+      "priceUnavailable": "Preis nicht verfügbar",
+      "staleHint": "Bitpanda hatte keinen aktuellen Preis; der letzte bekannte Preis wird angezeigt",
+      "priceAsOf": "Preis vom {date}",
+      "lastKnownPrice": "Letzter bekannter Preis"
+    }
+  },
+  "liabilities": {
+    "title": "Verbindlichkeiten",
+    "subtitle": "Behalte deine Schulden, Kredite, Hypotheken und Kreditkartensalden im Blick.",
+    "addLoan": "Kredit hinzufügen",
+    "total": "Verbindlichkeiten gesamt",
+    "acrossAccounts": "Über {count, plural, one {# Konto} other {# Konten}}",
+    "byType": "Nach Art",
+    "noBalances": "Keine Salden",
+    "accounts": "{count, plural, one {# Konto} other {# Konten}}",
+    "viewDetails": "Details ansehen",
+    "track": "Verbindlichkeit erfassen",
+    "comingSoon": "Demnächst verfügbar",
+    "toolsTitle": "Kreditrechner & Tracker",
+    "toolsDescription": "Nutze den erweiterten Kreditrechner, um Rückzahlungen zu planen, Szenarien zu vergleichen und den Abbau deiner Schulden zu verfolgen.",
+    "loanCalculator": "Kreditrechner",
+    "connectBank": "Bank verbinden"
+  }
+}

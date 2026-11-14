@@ -26,29 +26,67 @@ import {
   History,
 } from "lucide-react";
 import Link from "next/link";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/utils/currency";
 
-// Simple time ago function from an ISO date string
-function formatTimeAgo(dateIso: string): string {
-  const timestamp = new Date(dateIso).getTime();
-  if (Number.isNaN(timestamp)) return "Unknown date";
-  const now = Date.now();
-  const diff = now - timestamp;
+/** Provider transaction types with a translated name; others show as stored */
+const KNOWN_TYPES = [
+  "buy",
+  "sell",
+  "deposit",
+  "withdraw",
+  "withdrawal",
+  "receive",
+  "send",
+  "transfer",
+  "reward",
+  "staking",
+  "dividend",
+  "interest",
+  "fee",
+] as const;
 
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
+function isKnownType(type: string): type is (typeof KNOWN_TYPES)[number] {
+  return (KNOWN_TYPES as readonly string[]).includes(type);
+}
 
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return new Date(timestamp).toLocaleDateString();
+const MINUTE_MS = 60_000;
+const WEEK_MS = 7 * 24 * 60 * MINUTE_MS;
+
+/**
+ * When a transaction happened: "just now" under a minute, relative time
+ * ("5 hours ago") under a week, else the date. A date-only value
+ * (YYYY-MM-DD) is shown as that calendar day.
+ */
+function useTransactionDateLabel() {
+  const t = useTranslations("assets.crypto.transactions");
+  const format = useFormatter();
+  // Re-rendered every minute so the relative time stays current
+  const now = useNow({ updateInterval: MINUTE_MS });
+
+  return (dateIso: string): string => {
+    const timestamp = new Date(dateIso).getTime();
+    if (Number.isNaN(timestamp)) return t("unknownDate");
+    const elapsed = now.getTime() - timestamp;
+    if (elapsed < MINUTE_MS) return t("justNow");
+    if (elapsed < WEEK_MS) return format.relativeTime(timestamp, now);
+    return format.dateTime(
+      timestamp,
+      /^\d{4}-\d{2}-\d{2}$/.test(dateIso) ? "dateOnly" : "date",
+    );
+  };
 }
 
 export default function CryptoAssetsTransactionsPage() {
   const transactions = useCryptoTransactions(100);
   const hasConnections = useHasCryptoHoldings();
+  const t = useTranslations("assets.crypto.transactions");
+  const tAction = useTranslations("assets.actions");
+  const dateLabel = useTransactionDateLabel();
+  const typeLabel = (type: string) => {
+    const key = type?.toLowerCase();
+    return isKnownType(key) ? t(`types.${key}`) : type;
+  };
 
   // Format a value in the transaction's own currency (broker
   // transactions are often USD, so a fixed EUR would mislabel them)
@@ -89,21 +127,16 @@ export default function CryptoAssetsTransactionsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <History className="h-5 w-5" />
-              Transaction History
+              {t("title")}
             </CardTitle>
-            <CardDescription>
-              Connect your crypto accounts to view your transaction history
-            </CardDescription>
+            <CardDescription>{t("connectDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8 text-muted-foreground">
-              <p className="mb-4">
-                No crypto accounts connected yet. Connect your exchanges and
-                wallets to see your transaction history.
-              </p>
+              <p className="mb-4">{t("notConnected")}</p>
               <Button variant="outline" asChild>
                 <Link href="/integrations/brokers">
-                  Connect Crypto
+                  {tAction("connectCrypto")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -120,11 +153,9 @@ export default function CryptoAssetsTransactionsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            Transaction History
+            {t("title")}
           </CardTitle>
-          <CardDescription>
-            All transactions across your connected crypto accounts
-          </CardDescription>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {transactions && transactions.length > 0 ? (
@@ -140,13 +171,13 @@ export default function CryptoAssetsTransactionsPage() {
                     </div>
                     <div>
                       <div className="font-medium flex items-center gap-2">
-                        <span className="capitalize">{tx.type}</span>
+                        <span className="capitalize">{typeLabel(tx.type)}</span>
                         <span className="text-muted-foreground">
                           {tx.symbol}
                         </span>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {tx.date ? formatTimeAgo(tx.date) : "Unknown date"}
+                        {tx.date ? dateLabel(tx.date) : t("unknownDate")}
                       </div>
                     </div>
                   </div>
@@ -163,10 +194,7 @@ export default function CryptoAssetsTransactionsPage() {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <p>
-                No transactions found. Your transaction history will appear here
-                once synced.
-              </p>
+              <p>{t("empty")}</p>
             </div>
           )}
         </CardContent>

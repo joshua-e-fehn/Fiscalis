@@ -242,6 +242,12 @@ const positionColors = [
   "#FF9500",
 ];
 
+/**
+ * Symbol of the slice that groups the positions under 2%; its name is
+ * empty, the chart writes it in the user's language.
+ */
+export const OTHER_ALLOCATION_SYMBOL = "OTHER";
+
 export interface PositionAllocation {
   symbol: string;
   name: string;
@@ -294,7 +300,10 @@ export function useCryptoPositionAllocations(maxPositions: number = 8): {
     });
     const top =
       otherValue > 0
-        ? [...shown, { symbol: "OTHER", name: "Other (<2%)", value: otherValue }]
+        ? [
+            ...shown,
+            { symbol: OTHER_ALLOCATION_SYMBOL, name: "", value: otherValue },
+          ]
         : shown;
 
     // Shares are scale-invariant: computed on EUR, amounts converted

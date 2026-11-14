@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -28,6 +29,10 @@ import { useLiabilitiesSummary } from "@/hooks/convex/liabilities";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dialog";
+import {
+  liabilitiesSubcategoryUI,
+  useCategoryLabels,
+} from "@/lib/config/categoryUI";
 
 /**
  * Liabilities Overview Page
@@ -35,51 +40,42 @@ import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dial
  * Hub for all liability types: Mortgages, Loans, Credit Cards, Margin Loans.
  */
 
+/**
+ * A liability type card. Name, description and example tags come from the
+ * liabilities subcategory catalogue (categories.liabilities.*); this page
+ * links to the loans tracker, which the shared card config does not mark as
+ * built.
+ */
 interface LiabilityCategory {
-  id: string;
-  title: string;
-  description: string;
+  id: keyof typeof liabilitiesSubcategoryUI;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  examples: string[];
   implemented: boolean;
 }
 
 const liabilityCategories: LiabilityCategory[] = [
   {
     id: "mortgages",
-    title: "Mortgages",
-    description: "Home loans and property mortgages",
     href: "/liabilities/mortgages",
     icon: Home,
-    examples: ["Primary Residence", "Investment Property", "Second Home"],
     implemented: false,
   },
   {
     id: "loans",
-    title: "Loans",
-    description: "Personal, auto, student, and other loans",
     href: "/liabilities/loans",
     icon: Banknote,
-    examples: ["Auto Loans", "Student Loans", "Personal Loans"],
     implemented: true,
   },
   {
     id: "credit-cards",
-    title: "Credit Cards",
-    description: "Credit card balances and revolving credit",
     href: "/liabilities/credit-cards",
     icon: CreditCard,
-    examples: ["Visa", "Mastercard", "Amex", "Store Cards"],
     implemented: false,
   },
   {
     id: "margin-loans",
-    title: "Margin Loans",
-    description: "Borrowed funds from brokerage accounts",
     href: "/liabilities/margin",
     icon: TrendingDown,
-    examples: ["Broker Margin", "Securities Lending"],
     implemented: false,
   },
 ];
@@ -98,6 +94,9 @@ const LiabilityCategoryCard = ({
   holdingsCount,
   currency,
 }: LiabilityCategoryCardProps) => {
+  const t = useTranslations("assets.liabilities");
+  const labels = useCategoryLabels();
+  const label = liabilitiesSubcategoryUI[category.id].label;
   const Icon = category.icon;
   const hasHoldings = holdingsCount > 0;
 
@@ -127,14 +126,14 @@ const LiabilityCategoryCard = ({
               />
             </div>
             <div>
-              <CardTitle className="text-lg">{category.title}</CardTitle>
+              <CardTitle className="text-lg">{labels.name(label)}</CardTitle>
               {hasHoldings ? (
                 <span className="text-sm font-semibold text-destructive">
                   {formatValue(value)}
                 </span>
               ) : (
                 <span className="text-xs text-muted-foreground">
-                  No balances
+                  {t("noBalances")}
                 </span>
               )}
             </div>
@@ -146,19 +145,19 @@ const LiabilityCategoryCard = ({
           )}
         </div>
         <CardDescription className="mt-2">
-          {category.description}
+          {labels.description(label)}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {hasHoldings ? (
           <div className="mb-4">
             <span className="text-sm text-muted-foreground">
-              {holdingsCount} {holdingsCount === 1 ? "account" : "accounts"}
+              {t("accounts", { count: holdingsCount })}
             </span>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2 mb-4">
-            {category.examples.map((example) => (
+            {labels.examples(label).map((example) => (
               <span
                 key={example}
                 className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground"
@@ -175,13 +174,13 @@ const LiabilityCategoryCard = ({
             variant={hasHoldings ? "destructive" : "outline"}
           >
             <Link href={category.href}>
-              {hasHoldings ? "View Details" : "Track Liability"}
+              {hasHoldings ? t("viewDetails") : t("track")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         ) : (
           <Button disabled className="w-full" variant="outline">
-            Coming Soon
+            {t("comingSoon")}
           </Button>
         )}
       </CardContent>
@@ -192,6 +191,7 @@ const LiabilityCategoryCard = ({
 export default function LiabilitiesPage() {
   const { summary, currency, isLoading } = useLiabilitiesSummary();
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const t = useTranslations("assets.liabilities");
 
   // Check if there are any liabilities
   const hasLiabilities = summary && summary.totalValue > 0;
@@ -210,14 +210,12 @@ export default function LiabilitiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Liabilities</h1>
-          <p className="text-muted-foreground mt-2">
-            Track your debts, loans, mortgages, and credit card balances.
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-muted-foreground mt-2">{t("subtitle")}</p>
         </div>
         <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Loan
+          {t("addLoan")}
         </Button>
       </div>
 
@@ -227,7 +225,7 @@ export default function LiabilitiesPage() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Total Liabilities
+              {t("total")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -235,12 +233,12 @@ export default function LiabilitiesPage() {
               {formatCurrency(summary.totalValue, currency)}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              Across{" "}
-              {summary.subcategories.reduce(
-                (sum, s) => sum + s.holdingsCount,
-                0,
-              )}{" "}
-              accounts
+              {t("acrossAccounts", {
+                count: summary.subcategories.reduce(
+                  (sum, s) => sum + s.holdingsCount,
+                  0,
+                ),
+              })}
             </p>
           </CardContent>
         </Card>
@@ -260,7 +258,7 @@ export default function LiabilitiesPage() {
         <div className="flex items-center gap-2">
           <div className="h-px flex-1 bg-border" />
           <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            By Type
+            {t("byType")}
           </h2>
           <div className="h-px flex-1 bg-border" />
         </div>
@@ -270,7 +268,7 @@ export default function LiabilitiesPage() {
             const data = getSubcategoryData(category.id);
             return (
               <LiabilityCategoryCard
-                key={category.title}
+                key={category.id}
                 category={category}
                 value={data.value}
                 holdingsCount={data.holdingsCount}
@@ -286,23 +284,20 @@ export default function LiabilitiesPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Loan Calculator & Tracker
+            {t("toolsTitle")}
           </CardTitle>
-          <CardDescription>
-            Use the advanced loan calculator to plan repayments, compare
-            scenarios, and track your debt payoff progress.
-          </CardDescription>
+          <CardDescription>{t("toolsDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex gap-4">
           <Button variant="outline" asChild>
             <Link href="/tools/calculators/loan">
-              Loan Calculator
+              {t("loanCalculator")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/integrations/banking">
-              Connect Bank
+              {t("connectBank")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

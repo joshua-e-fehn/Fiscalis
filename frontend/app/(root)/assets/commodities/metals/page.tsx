@@ -11,17 +11,17 @@
  */
 
 import { useAuth } from "@clerk/nextjs";
+import { useTranslations } from "next-intl";
 import { MetalsPage } from "@/components/atomic/organisms/metals";
 
 export default function PreciousMetalsPage() {
   const { userId } = useAuth();
+  const t = useTranslations("assets.metals");
 
   if (!userId) {
     return (
       <div className="container mx-auto py-6 text-center">
-        <p className="text-muted-foreground">
-          Please sign in to view your metals portfolio.
-        </p>
+        <p className="text-muted-foreground">{t("signIn")}</p>
       </div>
     );
   }

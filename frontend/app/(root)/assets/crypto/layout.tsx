@@ -10,15 +10,16 @@
  */
 
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/shadcn/tabs";
 import { LayoutDashboard, History, Wallet } from "lucide-react";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 
 const cryptoAssetsTabs = [
-  { name: "Overview", href: "/assets/crypto", icon: LayoutDashboard },
-  { name: "Holdings", href: "/assets/crypto/holdings", icon: Wallet },
-  { name: "Transactions", href: "/assets/crypto/transactions", icon: History },
-];
+  { id: "overview", href: "/assets/crypto", icon: LayoutDashboard },
+  { id: "holdings", href: "/assets/crypto/holdings", icon: Wallet },
+  { id: "transactions", href: "/assets/crypto/transactions", icon: History },
+] as const;
 
 export default function CryptoAssetsLayout({
   children,
@@ -27,6 +28,7 @@ export default function CryptoAssetsLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations("assets");
 
   // Determine active tab
   const activeTab =
@@ -39,9 +41,11 @@ export default function CryptoAssetsLayout({
   return (
     <div className="container mx-auto py-6 space-y-6">
       <PageHeader
-        title="Crypto Assets"
-        subtitle="Track your cryptocurrency investments and portfolio performance"
-        actions={[{ label: "Connect Crypto", href: "/integrations/brokers" }]}
+        title={t("crypto.title")}
+        subtitle={t("crypto.subtitle")}
+        actions={[
+          { label: t("actions.connectCrypto"), href: "/integrations/brokers" },
+        ]}
       />
 
       {/* Tab Navigation */}
@@ -54,7 +58,9 @@ export default function CryptoAssetsLayout({
               className="gap-2 text-xs sm:text-sm"
             >
               <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.name}</span>
+              <span className="hidden sm:inline">
+                {t(`crypto.tabs.${tab.id}`)}
+              </span>
             </TabsTrigger>
           ))}
         </TabsList>

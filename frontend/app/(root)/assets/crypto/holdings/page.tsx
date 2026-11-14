@@ -8,6 +8,7 @@
  */
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -22,6 +23,7 @@ import { useHasCryptoHoldings } from "@/hooks/convex/crypto";
 
 export default function CryptoHoldingsPage() {
   const hasConnections = useHasCryptoHoldings();
+  const t = useTranslations("assets.crypto.holdings");
 
   return (
     <div className="space-y-6">
@@ -29,12 +31,9 @@ export default function CryptoHoldingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wallet className="h-5 w-5" />
-            All Crypto Holdings
+            {t("title")}
           </CardTitle>
-          <CardDescription>
-            Complete list of your cryptocurrency holdings across all connected
-            exchanges and wallets
-          </CardDescription>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent>
           {hasConnections ? (
@@ -42,16 +41,11 @@ export default function CryptoHoldingsPage() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <Wallet className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">
-                No crypto accounts connected
-              </p>
-              <p className="mb-6">
-                Connect your crypto exchanges and wallets to see your complete
-                holdings
-              </p>
+              <p className="text-lg font-medium mb-2">{t("emptyTitle")}</p>
+              <p className="mb-6">{t("emptyDescription")}</p>
               <Button variant="outline" asChild>
                 <Link href="/integrations/brokers">
-                  Connect Crypto Accounts
+                  {t("connect")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

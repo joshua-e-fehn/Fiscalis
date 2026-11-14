@@ -1,0 +1,129 @@
+{
+  "actions": {
+    "connectBroker": "Connect Broker",
+    "connectBank": "Connect Bank",
+    "connectCrypto": "Connect Crypto",
+    "addItem": "Add Item",
+    "addProperty": "Add Property",
+    "viewHoldings": "View Holdings",
+    "viewAccounts": "View Accounts",
+    "viewPortfolio": "View Portfolio",
+    "viewProperties": "View Properties",
+    "viewCollection": "View Collection"
+  },
+  "bonds": {
+    "title": "Bonds",
+    "subtitle": "Track your fixed income investments - government bonds, corporate bonds, and bond funds.",
+    "categories": "Bond Categories"
+  },
+  "cash": {
+    "title": "Cash & Money Market",
+    "subtitle": "Track your liquid assets - savings accounts, money market funds, CDs, and foreign currency holdings.",
+    "balanceHistory": "Cash Balance History",
+    "categories": "Cash Categories"
+  },
+  "equities": {
+    "title": "Equities",
+    "subtitle": "Track your stock portfolio, ETFs, mutual funds, and private equity investments.",
+    "publicMarkets": "Public Markets",
+    "privateMarkets": "Private Markets"
+  },
+  "realEstate": {
+    "title": "Real Estate",
+    "subtitle": "Track your real estate investments - residential properties, commercial holdings, REITs, and more.",
+    "categories": "Property Categories"
+  },
+  "collectibles": {
+    "title": "Collectibles",
+    "subtitle": "Track your collectible investments - art, wine, watches, classic cars, and more.",
+    "categories": "Collectible Categories"
+  },
+  "commodities": {
+    "title": "Commodities",
+    "subtitle": "Track real-time prices and manage your holdings across different commodity types",
+    "categories": "Commodity Categories"
+  },
+  "metals": {
+    "signIn": "Please sign in to view your metals portfolio."
+  },
+  "crypto": {
+    "title": "Crypto Assets",
+    "subtitle": "Track your cryptocurrency investments and portfolio performance",
+    "tabs": {
+      "overview": "Overview",
+      "holdings": "Holdings",
+      "transactions": "Transactions"
+    },
+    "categories": "Crypto Categories",
+    "holdings": {
+      "title": "All Crypto Holdings",
+      "description": "Complete list of your cryptocurrency holdings across all connected exchanges and wallets",
+      "emptyTitle": "No crypto accounts connected",
+      "emptyDescription": "Connect your crypto exchanges and wallets to see your complete holdings",
+      "connect": "Connect Crypto Accounts"
+    },
+    "transactions": {
+      "title": "Transaction History",
+      "connectDescription": "Connect your crypto accounts to view your transaction history",
+      "notConnected": "No crypto accounts connected yet. Connect your exchanges and wallets to see your transaction history.",
+      "description": "All transactions across your connected crypto accounts",
+      "empty": "No transactions found. Your transaction history will appear here once synced.",
+      "justNow": "just now",
+      "unknownDate": "Unknown date",
+      "types": {
+        "buy": "Buy",
+        "sell": "Sell",
+        "deposit": "Deposit",
+        "withdraw": "Withdrawal",
+        "withdrawal": "Withdrawal",
+        "receive": "Receive",
+        "send": "Send",
+        "transfer": "Transfer",
+        "reward": "Reward",
+        "staking": "Staking",
+        "dividend": "Dividend",
+        "interest": "Interest",
+        "fee": "Fee"
+      }
+    },
+    "allocation": {
+      "title": "Allocation by Position",
+      "empty": "No holdings yet",
+      "other": "Other (<2%)",
+      "otherShort": "Other"
+    },
+    "positions": {
+      "title": "All Positions",
+      "count": "{shown} of {total, plural, one {# position} other {# positions}}",
+      "search": "Search by token...",
+      "loading": "Loading positions…",
+      "noMatch": "No positions match your search",
+      "empty": "No positions found",
+      "token": "Token",
+      "quantity": "Quantity",
+      "value": "Value",
+      "category": "Category",
+      "priceUnavailable": "Price unavailable",
+      "staleHint": "Bitpanda had no current price; the last known price is shown",
+      "priceAsOf": "Price as of {date}",
+      "lastKnownPrice": "Last known price"
+    }
+  },
+  "liabilities": {
+    "title": "Liabilities",
+    "subtitle": "Track your debts, loans, mortgages, and credit card balances.",
+    "addLoan": "Add Loan",
+    "total": "Total Liabilities",
+    "acrossAccounts": "Across {count, plural, one {# account} other {# accounts}}",
+    "byType": "By Type",
+    "noBalances": "No balances",
+    "accounts": "{count, plural, one {# account} other {# accounts}}",
+    "viewDetails": "View Details",
+    "track": "Track Liability",
+    "comingSoon": "Coming Soon",
+    "toolsTitle": "Loan Calculator & Tracker",
+    "toolsDescription": "Use the advanced loan calculator to plan repayments, compare scenarios, and track your debt payoff progress.",
+    "loanCalculator": "Loan Calculator",
+    "connectBank": "Connect Bank"
+  }
+}

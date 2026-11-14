@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
@@ -10,6 +11,8 @@ import { commoditiesCategoryCards } from "@/lib/config/categoryUI";
 
 export default function CommoditiesPage() {
   const { summary, isLoading } = useCommoditiesSummary();
+  const t = useTranslations("assets.commodities");
+  const tAction = useTranslations("assets.actions");
 
   // Check if there are any holdings
   const hasHoldings = summary && summary.totalValue > 0;
@@ -17,15 +20,15 @@ export default function CommoditiesPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-6 md:px-24 gap-6">
       <PageHeader
-        title="Commodities"
-        subtitle="Track real-time prices and manage your holdings across different commodity types"
+        title={t("title")}
+        subtitle={t("subtitle")}
         actions={[
           {
-            label: "Add Item",
+            label: tAction("addItem"),
             href: "/assets/commodities/metals",
             variant: "outline",
           },
-          { label: "Connect Broker", href: "/integrations/brokers" },
+          { label: tAction("connectBroker"), href: "/integrations/brokers" },
         ]}
       />
 
@@ -41,9 +44,9 @@ export default function CommoditiesPage() {
 
       {/* Category Grid */}
       <SubcategoryCardSection
-        title="Commodity Categories"
+        title={t("categories")}
         cards={commoditiesCategoryCards}
-        actionLabel="View Portfolio"
+        actionLabel={tAction("viewPortfolio")}
         className="w-full"
       />
     </main>

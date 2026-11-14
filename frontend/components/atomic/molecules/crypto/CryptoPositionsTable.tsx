@@ -9,6 +9,7 @@
 
 import { useState, useMemo } from "react";
 import { Search, ArrowUpDown, Coins } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Table,
   TableBody,
@@ -30,7 +31,6 @@ import { Button } from "@/components/ui/shadcn/button";
 import { positionPriceIssue, useCryptoPositions } from "@/hooks/convex/crypto";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
-import { formatDate } from "@/lib/utils/date";
 import {
   subcategoryLabel,
   useCategoryLabels,
@@ -50,7 +50,7 @@ function formatNumber(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
   if (value > 0 && value < 0.01) return value.toExponential(2);
-  return value.toLocaleString("en-US", {
+  return value.toLocaleString("de-CH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
   });
@@ -100,6 +100,8 @@ export function CryptoPositionsTable({
   // currency (converted there, never here)
   const loadedPositions = useCryptoPositions();
   const labels = useCategoryLabels();
+  const t = useTranslations("assets.crypto.positions");
+  const format = useFormatter();
   const isLoading = loadedPositions === undefined;
   const positions = useMemo(() => loadedPositions ?? [], [loadedPositions]);
   const [search, setSearch] = useState("");
@@ -155,9 +157,12 @@ export function CryptoPositionsTable({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-lg">All Positions</CardTitle>
+            <CardTitle className="text-lg">{t("title")}</CardTitle>
             <CardDescription>
-              {filteredPositions.length} of {positions.length} positions
+              {t("count", {
+                shown: filteredPositions.length,
+                total: positions.length,
+              })}
             </CardDescription>
           </div>
         </div>
@@ -167,7 +172,7 @@ export function CryptoPositionsTable({
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by token..."
+                placeholder={t("search")}
                 className="pl-8"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -180,13 +185,13 @@ export function CryptoPositionsTable({
         {isLoading ? (
           <div className="text-center py-8 space-y-2">
             <Coins className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Loading positions…</p>
+            <p className="text-sm text-muted-foreground">{t("loading")}</p>
           </div>
         ) : filteredPositions.length === 0 ? (
           <div className="text-center py-8 space-y-2">
             <Coins className="h-8 w-8 mx-auto text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              {search ? "No positions match your search" : "No positions found"}
+              {search ? t("noMatch") : t("empty")}
             </p>
           </div>
         ) : (
@@ -200,7 +205,7 @@ export function CryptoPositionsTable({
                       activeField={sortField}
                       onSort={handleSort}
                     >
-                      Token
+                      {t("token")}
                     </SortButton>
                   </TableHead>
                   <TableHead>
@@ -209,7 +214,7 @@ export function CryptoPositionsTable({
                       activeField={sortField}
                       onSort={handleSort}
                     >
-                      Quantity
+                      {t("quantity")}
                     </SortButton>
                   </TableHead>
                   <TableHead>
@@ -218,10 +223,10 @@ export function CryptoPositionsTable({
                       activeField={sortField}
                       onSort={handleSort}
                     >
-                      Value
+                      {t("value")}
                     </SortButton>
                   </TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>{t("category")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -260,18 +265,23 @@ export function CryptoPositionsTable({
                           </span>
                           {priceIssue?.status === "missing" && (
                             <Badge variant="outline" className="text-xs">
-                              Price unavailable
+                              {t("priceUnavailable")}
                             </Badge>
                           )}
                           {priceIssue?.status === "stale" && (
                             <Badge
                               variant="outline"
                               className="text-xs"
-                              title="Bitpanda had no current price; the last known price is shown"
+                              title={t("staleHint")}
                             >
                               {priceIssue.asOf !== undefined
-                                ? `Price as of ${formatDate(new Date(priceIssue.asOf))}`
-                                : "Last known price"}
+                                ? t("priceAsOf", {
+                                    date: format.dateTime(
+                                      priceIssue.asOf,
+                                      "full",
+                                    ),
+                                  })
+                                : t("lastKnownPrice")}
                             </Badge>
                           )}
                         </div>

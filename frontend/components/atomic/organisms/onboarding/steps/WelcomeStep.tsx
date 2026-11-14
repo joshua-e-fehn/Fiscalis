@@ -240,7 +240,7 @@ function MockupBar({ label, value, color, delay }: MockupBarProps) {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-white/50 text-xs w-28 text-left truncate">
+      <span className="text-white/50 text-xs w-36 text-left truncate">
         {label}
       </span>
       <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">

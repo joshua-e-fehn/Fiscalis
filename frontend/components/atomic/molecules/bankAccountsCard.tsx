@@ -23,6 +23,7 @@ import {
 import {
   IntegrationConnectionCard,
   IntegrationAccountItem,
+  DISCONNECT_FAILED_MESSAGE,
 } from "@/components/atomic/molecules/integrations";
 
 // Type for Convex account data, with the stored EUR value the totals read
@@ -87,8 +88,10 @@ export function BankAccountsCard({
     return null;
   }
 
+  // A failed revoke at Plaid keeps the bank (ENG-225); the hook keeps the
+  // error, shown on the card, so the user can retry
   const handleDisconnect = async () => {
-    await deleteItem.mutate(itemId);
+    await deleteItem.mutate(itemId).catch(() => undefined);
   };
 
   const handleSync = async () => {
@@ -132,6 +135,7 @@ export function BankAccountsCard({
       status="connected"
       totalValueEur={totalBalanceEur}
       lastSyncAt={lastSyncAt}
+      errorMessage={deleteItem.error ? DISCONNECT_FAILED_MESSAGE : undefined}
       secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
       onSync={handleSync}
       onDisconnect={handleDisconnect}

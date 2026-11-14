@@ -314,6 +314,17 @@ const GemRingIcon = ({ className }: { className?: string }) => (
   <Icon iconNode={gemRing} className={className} />
 );
 
+/**
+ * Where a card for a provider-fed subcategory leads (ENG-227). There are no
+ * per-subcategory pages yet, so each card opens the page that already lists
+ * that data: Plaid accounts, SnapTrade/Bitpanda broker accounts, or the
+ * Bitpanda crypto holdings table. Subcategories no provider fills stay
+ * `implemented: false` and are hidden unless the plannedCategories flag is on.
+ */
+const BANK_ACCOUNTS_ROUTE = "/integrations/banking";
+const BROKER_ACCOUNTS_ROUTE = "/integrations/brokers";
+const CRYPTO_HOLDINGS_ROUTE = "/assets/crypto/holdings";
+
 // ═══════════════════════════════════════════════════════════════
 // SUBCATEGORY UI DEFINITIONS (Exhaustive Records)
 // ═══════════════════════════════════════════════════════════════
@@ -325,26 +336,26 @@ export const cashSubcategoryUI = labelled("cash", {
   "checking-accounts": {
     icon: Wallet,
     color: cashColors["checking-accounts"],
-    href: "/cash/checking",
-    implemented: false,
+    href: BANK_ACCOUNTS_ROUTE,
+    implemented: true,
   },
   "savings-accounts": {
     icon: PiggyBank,
     color: cashColors["savings-accounts"],
-    href: "/cash/savings",
-    implemented: false,
+    href: BANK_ACCOUNTS_ROUTE,
+    implemented: true,
   },
   "money-market": {
     icon: Landmark,
     color: cashColors["money-market"],
-    href: "/cash/money-market",
-    implemented: false,
+    href: BANK_ACCOUNTS_ROUTE,
+    implemented: true,
   },
   cds: {
     icon: Clock,
     color: cashColors.cds,
-    href: "/cash/cds",
-    implemented: false,
+    href: BANK_ACCOUNTS_ROUTE,
+    implemented: true,
   },
   "treasury-bills": {
     icon: Banknote,
@@ -355,14 +366,14 @@ export const cashSubcategoryUI = labelled("cash", {
   forex: {
     icon: ArrowRightLeft,
     color: cashColors.forex,
-    href: "/cash/forex",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
   },
   "broker-cash": {
     icon: ChartCandlestick,
     color: cashColors["broker-cash"],
-    href: "/cash/broker-cash",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
   },
 });
 
@@ -373,29 +384,29 @@ export const equitiesSubcategoryUI = labelled("equities", {
   stocks: {
     icon: TrendingUp,
     color: equitiesColors.stocks,
-    href: "/equities/stocks",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
     section: "public",
   },
   etfs: {
     icon: BarChart3,
     color: equitiesColors.etfs,
-    href: "/equities/etfs",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
     section: "public",
   },
   funds: {
     icon: PieChart,
     color: equitiesColors.funds,
-    href: "/equities/funds",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
     section: "public",
   },
   options: {
     icon: Activity,
     color: equitiesColors.options,
-    href: "/equities/options",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
     section: "public",
   },
   private: {
@@ -420,8 +431,8 @@ export const bondsSubcategoryUI = labelled("bonds", {
   corporate: {
     icon: Building,
     color: bondsColors.corporate,
-    href: "/bonds/corporate",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
   },
   municipal: {
     icon: Building2,
@@ -450,28 +461,28 @@ export const cryptoSubcategoryUI = labelled("crypto", {
     bitcoin: {
       icon: Bitcoin,
       color: cryptoColors.bitcoin,
-      href: "/assets/crypto/btc-eth",
-      implemented: false,
+      href: CRYPTO_HOLDINGS_ROUTE,
+      implemented: true,
       displayGroup: "btc-eth",
     },
     ethereum: {
       icon: Bitcoin, // Overridden by display group
       color: cryptoColors.ethereum,
-      href: "/assets/crypto/btc-eth",
-      implemented: false,
+      href: CRYPTO_HOLDINGS_ROUTE,
+      implemented: true,
       displayGroup: "btc-eth",
     },
     altcoins: {
       icon: Coins,
       color: cryptoColors.altcoins,
-      href: "/assets/crypto/altcoins",
-      implemented: false,
+      href: CRYPTO_HOLDINGS_ROUTE,
+      implemented: true,
     },
     stablecoins: {
       icon: CircleDollarSign,
       color: cryptoColors.stablecoins,
-      href: "/assets/crypto/stablecoins",
-      implemented: false,
+      href: CRYPTO_HOLDINGS_ROUTE,
+      implemented: true,
     },
     defi: {
       icon: Layers,
@@ -487,7 +498,7 @@ export const cryptoDisplayGroups: DisplayGroupOverride[] = [
     key: "btc-eth",
     label: "crypto.groups.btc-eth",
     icon: Bitcoin,
-    href: "/assets/crypto/btc-eth",
+    href: CRYPTO_HOLDINGS_ROUTE,
     color: cryptoColors.bitcoin,
   },
 ];
@@ -577,55 +588,55 @@ export const collectiblesSubcategoryUI = labelled("collectibles", {
   art: {
     icon: Palette,
     color: collectiblesColors.art,
-    href: "/collectibles/art",
+    href: "/assets/collectibles/art",
     implemented: false,
   },
   watches: {
     icon: Watch,
     color: collectiblesColors.watches,
-    href: "/collectibles/watches",
+    href: "/assets/collectibles/watches",
     implemented: false,
   },
   wine: {
     icon: Wine,
     color: collectiblesColors.wine,
-    href: "/collectibles/wine",
+    href: "/assets/collectibles/wine",
     implemented: false,
   },
   cars: {
     icon: Car,
     color: collectiblesColors.cars,
-    href: "/collectibles/cars",
+    href: "/assets/collectibles/cars",
     implemented: false,
   },
   jewelry: {
     icon: GemRingIcon,
     color: collectiblesColors.jewelry,
-    href: "/collectibles/jewelry",
+    href: "/assets/collectibles/jewelry",
     implemented: false,
   },
   "trading-cards": {
     icon: IdCardLanyard,
     color: collectiblesColors["trading-cards"],
-    href: "/collectibles/cards",
+    href: "/assets/collectibles/cards",
     implemented: false,
   },
   memorabilia: {
     icon: Stamp,
     color: collectiblesColors.memorabilia,
-    href: "/collectibles/memorabilia",
+    href: "/assets/collectibles/memorabilia",
     implemented: false,
   },
   nfts: {
     icon: Image,
     color: collectiblesColors.nfts,
-    href: "/collectibles/nfts",
+    href: "/assets/collectibles/nfts",
     implemented: false,
   },
   other: {
     icon: Package,
     color: collectiblesColors.other,
-    href: "/collectibles/other",
+    href: "/assets/collectibles/other",
     implemented: false,
   },
 });

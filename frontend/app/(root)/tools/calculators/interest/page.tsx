@@ -43,6 +43,17 @@ import {
   calculateStartCapitalValueWithInterest,
   TimeInterval,
 } from "@/../services/finance/financeService";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
+import { formatCurrency } from "@/lib/utils/currency";
+
+/**
+ * The amounts are user input: labelled with the display currency, as the
+ * loan calculator does, and never converted.
+ */
+function useFormatAmount() {
+  const { currency } = useDisplayCurrency();
+  return (value: number) => formatCurrency(value, currency);
+}
 
 export default function FinancialCalculatorsPage() {
   return (
@@ -452,6 +463,7 @@ function TimeDurationCalculator() {
 }
 
 function FutureValueCalculator() {
+  const formatAmount = useFormatAmount();
   const [startingCapital, setStartingCapital] = useState<number>(1000);
   const [interestRate, setInterestRate] = useState<number>(5);
   const [timePeriod, setTimePeriod] = useState<number>(10);
@@ -589,10 +601,10 @@ function FutureValueCalculator() {
                       With Compound Interest
                     </div>
                     <div className="text-2xl font-bold">
-                      ${result.compound.toFixed(2)}
+                      {formatAmount(result.compound)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Gain: ${(result.compound - startingCapital).toFixed(2)}{" "}
+                      Gain: {formatAmount(result.compound - startingCapital)}{" "}
                       after {timePeriod} {timeInterval}
                       {timePeriod !== 1 ? "s" : ""}
                     </div>
@@ -603,10 +615,10 @@ function FutureValueCalculator() {
                       With Simple Interest
                     </div>
                     <div className="text-2xl font-bold">
-                      ${result.simple.toFixed(2)}
+                      {formatAmount(result.simple)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Gain: ${(result.simple - startingCapital).toFixed(2)}{" "}
+                      Gain: {formatAmount(result.simple - startingCapital)}{" "}
                       after {timePeriod} {timeInterval}
                       {timePeriod !== 1 ? "s" : ""}
                     </div>
@@ -630,6 +642,7 @@ function FutureValueCalculator() {
 }
 
 function StartingValueCalculator() {
+  const formatAmount = useFormatAmount();
   const [targetCapital, setTargetCapital] = useState<number>(2000);
   const [interestRate, setInterestRate] = useState<number>(5);
   const [timePeriod, setTimePeriod] = useState<number>(10);
@@ -767,10 +780,10 @@ function StartingValueCalculator() {
                       With Compound Interest
                     </div>
                     <div className="text-2xl font-bold">
-                      ${result.compound.toFixed(2)}
+                      {formatAmount(result.compound)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Growth: ${(targetCapital - result.compound).toFixed(2)}{" "}
+                      Growth: {formatAmount(targetCapital - result.compound)}{" "}
                       after {timePeriod} {timeInterval}
                       {timePeriod !== 1 ? "s" : ""}
                     </div>
@@ -781,10 +794,10 @@ function StartingValueCalculator() {
                       With Simple Interest
                     </div>
                     <div className="text-2xl font-bold">
-                      ${result.simple.toFixed(2)}
+                      {formatAmount(result.simple)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Growth: ${(targetCapital - result.simple).toFixed(2)}{" "}
+                      Growth: {formatAmount(targetCapital - result.simple)}{" "}
                       after {timePeriod} {timeInterval}
                       {timePeriod !== 1 ? "s" : ""}
                     </div>

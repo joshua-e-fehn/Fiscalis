@@ -110,6 +110,8 @@ function enrichItemWithValuation(
   const toDisplay = (amount: number | null, from: string) =>
     amount === null ? null : convertBetween(amount, from, currency, unitsPerEur);
   const unitCost = toDisplay(averageCost, costCurrency);
+  const toEur = (amount: number | null, from: string) =>
+    amount === null ? null : convertBetween(amount, from, "EUR", unitsPerEur);
 
   const valuation = valueMetalItem(
     { fineWeightGrams: item.fineWeightGrams, quantity, buyPremium, sellPremium },
@@ -149,7 +151,10 @@ function enrichItemWithValuation(
         }
       : undefined,
     ...valuation,
-    averageCost,
+    // EUR, as documented (sale previews convert it): an unreplayable
+    // item's cached cost is in its purchase currency, so it is converted
+    // too, and unknown without a rate
+    averageCost: toEur(averageCost, costCurrency),
     // An unreplayable ledger's sales have an unknown realized P/L
     realizedProfitLoss:
       ledger?.realizedComplete === true

@@ -223,6 +223,34 @@ export function seriesInCurrency<T extends { timestamp: number; value: number }>
   }));
 }
 
+/**
+ * EUR market quotes (chart closes) in the display currency, each at its
+ * own day's rate (`unitsPerEurOn`, e.g. useDisplayRateHistory's rateOn).
+ * A missing close (null or 0) stays a gap, and an undated one is taken at
+ * `latestUnitsPerEur`.
+ */
+export function quotesInCurrency<
+  T extends { date: Date | null; price: number | null },
+>(
+  points: readonly T[],
+  unitsPerEurOn: (timestamp: number) => number,
+  latestUnitsPerEur: number,
+): T[] {
+  return points.map((point) =>
+    point.price === null || point.price === 0
+      ? point
+      : {
+          ...point,
+          price: fromEur(
+            point.price,
+            point.date === null
+              ? latestUnitsPerEur
+              : unitsPerEurOn(point.date.getTime()),
+          ),
+        },
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Aggregates (point in time, latest rate)
 // ═══════════════════════════════════════════════════════════════

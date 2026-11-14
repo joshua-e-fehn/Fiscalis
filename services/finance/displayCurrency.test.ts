@@ -6,6 +6,7 @@ import {
   fromEur,
   isDisplayCurrency,
   portfolioSummaryInCurrency,
+  quotesInCurrency,
   rateOn,
   scaleMoney,
   seriesInCurrency,
@@ -170,6 +171,36 @@ describe("snapshotInCurrency", () => {
         0.5,
       ),
     ).toEqual({ totalAssets: 5, totalLiabilities: 0, netWorth: 5 });
+  });
+});
+
+describe("quotesInCurrency", () => {
+  const byDay = (timestamp: number) => rateOn(history, timestamp) ?? 1;
+
+  it("converts each close at its own day's rate, carrying the weekend", () => {
+    const out = quotesInCurrency(
+      [
+        { date: new Date(Date.UTC(2026, 10, 6, 12)), price: 100 },
+        { date: new Date(Date.UTC(2026, 10, 7, 12)), price: 200 },
+        { date: new Date(Date.UTC(2026, 10, 9, 12)), price: 100 },
+      ],
+      byDay,
+      2,
+    );
+    expect(out.map((p) => p.price)).toEqual([94, 188, 95]);
+  });
+
+  it("keeps gaps as gaps and takes undated closes at the latest rate", () => {
+    const gap = { date: new Date(Date.UTC(2026, 10, 6)), price: null };
+    const zero = { date: new Date(Date.UTC(2026, 10, 6)), price: 0 };
+    const out = quotesInCurrency(
+      [gap, zero, { date: null, price: 10 }],
+      byDay,
+      2,
+    );
+    expect(out[0]).toBe(gap);
+    expect(out[1]).toBe(zero);
+    expect(out[2].price).toBe(20);
   });
 });
 

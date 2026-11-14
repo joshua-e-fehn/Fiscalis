@@ -128,5 +128,13 @@
     "bankAccount": "Bank Account",
     "cashPosition": "Cash Position",
     "brokerCash": "{account} - Cash"
+  },
+  "emptyState": {
+    "title": "Connect your first account",
+    "description": "Your dashboard fills in once Fiscalis knows what you own. Connect a bank or broker, import Bitpanda, or add precious metals and loans by hand.",
+    "bank": "Connect a bank",
+    "broker": "Connect a broker",
+    "metals": "Add precious metals",
+    "loan": "Add a loan"
   }
 }

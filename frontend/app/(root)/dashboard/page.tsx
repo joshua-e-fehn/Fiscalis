@@ -11,6 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
+import { Button } from "@/components/ui/shadcn/button";
+import { useConnectionSummary } from "@/hooks/convex/onboarding";
+import { isPortfolioEmpty } from "@/../services/portfolio/emptyState";
 import {
   usePortfolioOverview,
   AssetCategoryData,
@@ -36,6 +39,10 @@ import {
   ArrowRight,
   Minus,
   Calendar,
+  ChartCandlestick,
+  GemIcon,
+  HandCoins,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -599,6 +606,42 @@ function LiabilitiesCard({
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Empty State (no connections, nothing entered by hand)
+// ═══════════════════════════════════════════════════════════════
+
+const EMPTY_STATE_ACTIONS = [
+  { key: "bank", href: "/integrations/banking", icon: Landmark },
+  { key: "broker", href: "/integrations/brokers", icon: ChartCandlestick },
+  { key: "metals", href: "/assets/commodities/metals", icon: GemIcon },
+  { key: "loan", href: "/liabilities/loans", icon: HandCoins },
+] as const;
+
+function DashboardEmptyState() {
+  const t = useTranslations("dashboard.emptyState");
+  return (
+    <Card className="border-dashed">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Wallet className="h-5 w-5" />
+          {t("title")}
+        </CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-3">
+        {EMPTY_STATE_ACTIONS.map(({ key, href, icon: Icon }, i) => (
+          <Button key={key} asChild variant={i === 0 ? "default" : "outline"}>
+            <Link href={href}>
+              <Icon className="mr-2 h-4 w-4" />
+              {t(key)}
+            </Link>
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Main Dashboard Page
 // ═══════════════════════════════════════════════════════════════
 
@@ -606,6 +649,8 @@ export default function DashboardPage() {
   const t = useTranslations("dashboard");
   // Figures in the display currency, tagged with it
   const { summary, currency, isLoading } = usePortfolioOverview();
+  const connections = useConnectionSummary();
+  const isEmpty = isPortfolioEmpty(summary, connections);
   // The live totals the headline cards show: the YTD card and the chart end
   // there (PF-05), at zero too once everything is sold or repaid. Without
   // any history a zero live figure plots nothing (withLiveEnd).
@@ -631,6 +676,8 @@ export default function DashboardPage() {
         title={t("page.title")}
         subtitle={t("page.subtitle")}
       />
+
+      {isEmpty && <DashboardEmptyState />}
 
       {/* Row 1: Net Worth + Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">

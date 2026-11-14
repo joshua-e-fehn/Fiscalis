@@ -128,5 +128,13 @@
     "bankAccount": "Bankkonto",
     "cashPosition": "Liquiditätsposition",
     "brokerCash": "{account} – Guthaben"
+  },
+  "emptyState": {
+    "title": "Verbinde dein erstes Konto",
+    "description": "Dein Dashboard füllt sich, sobald Fiscalis weiß, was du besitzt. Verbinde eine Bank oder einen Broker, importiere Bitpanda oder trag Edelmetalle und Kredite von Hand ein.",
+    "bank": "Bank verbinden",
+    "broker": "Broker verbinden",
+    "metals": "Edelmetalle hinzufügen",
+    "loan": "Kredit hinzufügen"
   }
 }

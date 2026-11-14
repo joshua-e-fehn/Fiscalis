@@ -13,8 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { useCryptoPositionAllocations } from "@/hooks/convex/crypto";
+import {
+  OTHER_ALLOCATION_SYMBOL,
+  useCryptoPositionAllocations,
+} from "@/hooks/convex/crypto";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 interface CryptoAllocationChartProps {
@@ -26,6 +30,7 @@ export function CryptoAllocationChart({
   maxPositions = 8,
   className,
 }: CryptoAllocationChartProps) {
+  const t = useTranslations("assets.crypto.allocation");
   const { allocations, totalValue, isLoading } =
     useCryptoPositionAllocations(maxPositions);
 
@@ -34,7 +39,7 @@ export function CryptoAllocationChart({
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Allocation by Position
+            {t("title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-48">
@@ -49,7 +54,7 @@ export function CryptoAllocationChart({
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Allocation by Position
+            {t("title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center h-48">
@@ -59,7 +64,7 @@ export function CryptoAllocationChart({
             <div className="absolute inset-4 rounded-full bg-background" />
           </div>
           <span className="text-sm text-muted-foreground mt-4">
-            No holdings yet
+            {t("empty")}
           </span>
         </CardContent>
       </Card>
@@ -67,9 +72,10 @@ export function CryptoAllocationChart({
   }
 
   // Prepare data for pie chart
+  // The grouped small slices carry a sentinel symbol and no name
   const chartData = allocations.map((a) => ({
-    name: a.symbol,
-    fullName: a.name,
+    name: a.symbol === OTHER_ALLOCATION_SYMBOL ? t("otherShort") : a.symbol,
+    fullName: a.symbol === OTHER_ALLOCATION_SYMBOL ? t("other") : a.name,
     value: a.percentage,
     absoluteValue: a.value,
     color: a.color,
@@ -79,7 +85,7 @@ export function CryptoAllocationChart({
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          Allocation by Position
+          {t("title")}
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -1,22 +1,29 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useCollectiblesSummary } from "@/hooks/convex/collectibles";
-import { collectiblesCategoryCards } from "@/lib/config/categoryUI";
+import {
+  collectiblesCategoryCards,
+  useCategoryLabels,
+} from "@/lib/config/categoryUI";
 
 export default function CollectiblesPage() {
   const { summary, isLoading } = useCollectiblesSummary();
+  const t = useTranslations("assets.collectibles");
+  const labels = useCategoryLabels();
+  const tAction = useTranslations("assets.actions");
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Collectibles"
-        subtitle="Track your collectible investments - art, wine, watches, classic cars, and more."
-        actions={[{ label: "Add Item", disabled: true }]}
+        title={labels.categoryName("collectibles")}
+        subtitle={t("subtitle")}
+        actions={[{ label: tAction("addItem"), disabled: true }]}
       />
 
       {/* Dashboard Section */}
@@ -28,9 +35,9 @@ export default function CollectiblesPage() {
 
       {/* Category Cards */}
       <SubcategoryCardSection
-        title="Collectible Categories"
+        title={t("categories")}
         cards={collectiblesCategoryCards}
-        actionLabel="View Collection"
+        actionLabel={tAction("viewCollection")}
       />
     </div>
   );

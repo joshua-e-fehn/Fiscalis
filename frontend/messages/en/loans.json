@@ -445,5 +445,17 @@
     "summaryTimeSaved": "Time Saved:",
     "summaryInterestSaved": "Interest Saved:",
     "save": "Save Scenario"
+  },
+  "liabilitiesOverview": {
+    "subtitle": "Track your debts, loans, mortgages, and credit card balances.",
+    "total": "Total Liabilities",
+    "acrossAccounts": "Across {count, plural, one {# account} other {# accounts}}",
+    "byType": "By Type",
+    "noBalances": "No balances",
+    "accounts": "{count, plural, one {# account} other {# accounts}}",
+    "viewDetails": "View Details",
+    "track": "Track Liability",
+    "toolsTitle": "Loan Calculator & Tracker",
+    "toolsDescription": "Use the advanced loan calculator to plan repayments, compare scenarios, and track your debt payoff progress."
   }
 }

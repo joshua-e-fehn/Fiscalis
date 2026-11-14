@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
@@ -9,10 +10,14 @@ import { useEquitiesSummary } from "@/hooks/convex/equities";
 import {
   equitiesPublicCards,
   equitiesPrivateCards,
+  useCategoryLabels,
 } from "@/lib/config/categoryUI";
 
 export default function EquitiesPage() {
   const { summary, isLoading } = useEquitiesSummary();
+  const t = useTranslations("assets.equities");
+  const labels = useCategoryLabels();
+  const tAction = useTranslations("assets.actions");
 
   // Check if there are any holdings
   const hasHoldings = summary && summary.totalValue > 0;
@@ -20,9 +25,11 @@ export default function EquitiesPage() {
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Equities"
-        subtitle="Track your stock portfolio, ETFs, mutual funds, and private equity investments."
-        actions={[{ label: "Connect Broker", href: "/integrations/brokers" }]}
+        title={labels.categoryName("equities")}
+        subtitle={t("subtitle")}
+        actions={[
+          { label: tAction("connectBroker"), href: "/integrations/brokers" },
+        ]}
       />
 
       {/* Portfolio Dashboard Section */}
@@ -35,17 +42,17 @@ export default function EquitiesPage() {
 
       {/* Public Equities Section */}
       <SubcategoryCardSection
-        title="Public Markets"
+        title={t("publicMarkets")}
         cards={equitiesPublicCards}
-        actionLabel="View Holdings"
+        actionLabel={tAction("viewHoldings")}
         columns={4}
       />
 
       {/* Private Equities Section */}
       <SubcategoryCardSection
-        title="Private Markets"
+        title={t("privateMarkets")}
         cards={equitiesPrivateCards}
-        actionLabel="View Holdings"
+        actionLabel={tAction("viewHoldings")}
       />
     </div>
   );

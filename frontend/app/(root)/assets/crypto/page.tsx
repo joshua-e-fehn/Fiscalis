@@ -11,6 +11,7 @@
  * - Crypto subcategory cards (BTC & ETH, Altcoins, Stablecoins, DeFi)
  */
 
+import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
@@ -21,6 +22,7 @@ import { cryptoCategoryCards } from "@/lib/config/categoryUI";
 
 export default function CryptoAssetsOverviewPage() {
   const { summary, isLoading } = useCryptoSummary();
+  const t = useTranslations("assets");
 
   // Check if there are any holdings
   const hasHoldings = summary && summary.totalValue > 0;
@@ -38,9 +40,9 @@ export default function CryptoAssetsOverviewPage() {
 
       {/* Crypto Subcategory Cards */}
       <SubcategoryCardSection
-        title="Crypto Categories"
+        title={t("crypto.categories")}
         cards={cryptoCategoryCards}
-        actionLabel="View Holdings"
+        actionLabel={t("actions.viewHoldings")}
         columns={4}
       />
     </div>

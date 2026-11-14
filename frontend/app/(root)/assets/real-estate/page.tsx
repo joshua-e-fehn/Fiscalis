@@ -1,22 +1,29 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useRealEstateSummary } from "@/hooks/convex/realEstate";
-import { realEstateCategoryCards } from "@/lib/config/categoryUI";
+import {
+  realEstateCategoryCards,
+  useCategoryLabels,
+} from "@/lib/config/categoryUI";
 
 export default function RealEstatePage() {
   const { summary, isLoading } = useRealEstateSummary();
+  const t = useTranslations("assets.realEstate");
+  const labels = useCategoryLabels();
+  const tAction = useTranslations("assets.actions");
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title="Real Estate"
-        subtitle="Track your real estate investments - residential properties, commercial holdings, REITs, and more."
-        actions={[{ label: "Add Property", disabled: true }]}
+        title={labels.categoryName("real-estate")}
+        subtitle={t("subtitle")}
+        actions={[{ label: tAction("addProperty"), disabled: true }]}
       />
 
       {/* Dashboard Section */}
@@ -28,9 +35,9 @@ export default function RealEstatePage() {
 
       {/* Category Cards */}
       <SubcategoryCardSection
-        title="Property Categories"
+        title={t("categories")}
         cards={realEstateCategoryCards}
-        actionLabel="View Properties"
+        actionLabel={tAction("viewProperties")}
       />
     </div>
   );

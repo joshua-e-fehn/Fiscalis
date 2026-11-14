@@ -274,6 +274,14 @@ export const getDisplayRates = query({
     if (!currency) {
       throw new ConvexError(`Unsupported display currency: ${args.currency}`);
     }
+    // Validated for every currency, EUR included; the bound is the range a
+    // JS Date (isoDay) accepts
+    if (
+      args.since !== undefined &&
+      !(Number.isFinite(args.since) && Math.abs(args.since) <= 8.64e15)
+    ) {
+      throw new ConvexError("`since` must be a timestamp in ms");
+    }
     if (currency === "EUR") {
       return {
         currency,
@@ -293,9 +301,6 @@ export const getDisplayRates = query({
       source: rate.source,
     };
     if (args.since === undefined) return { currency, latest };
-    if (!Number.isFinite(args.since)) {
-      throw new ConvexError("`since` must be a timestamp in ms");
-    }
 
     const sinceDay = isoDay(args.since);
     // Newest first, so a cap drops the oldest days rather than the recent

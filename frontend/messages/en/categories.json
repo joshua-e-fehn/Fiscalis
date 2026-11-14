@@ -283,5 +283,40 @@
     "comingSoon": "Coming soon",
     "comingSoonButton": "Coming Soon",
     "viewPortfolio": "View Portfolio"
+  },
+  "override": {
+    "action": "Change category",
+    "reset": "Reset to automatic",
+    "manual": "Manual",
+    "manualHint": "You chose this category. It is kept when the provider syncs.",
+    "actionsLabel": "Actions for {name}",
+    "dialog": {
+      "title": "Change category",
+      "description": "Choose where {name} counts in your totals. Your choice is kept when the provider syncs.",
+      "category": "Category",
+      "subcategory": "Subcategory",
+      "bankHint": "A bank account can count as cash or as a liability.",
+      "saveFailed": "The category could not be saved. Please try again.",
+      "resetFailed": "The category could not be reset. Please try again."
+    },
+    "list": {
+      "title": "Categories",
+      "subtitle": "Accounts and holdings you filed under a category yourself.",
+      "cardTitle": "Manual categories",
+      "count": "{count, plural, one {# item} other {# items}}",
+      "empty": "You haven't changed any categories yet. Use “Change category” on a position or a bank account.",
+      "columns": {
+        "name": "Name",
+        "source": "Source",
+        "category": "Category",
+        "automatic": "Automatic"
+      },
+      "sources": {
+        "plaid": "Bank account",
+        "broker": "Broker",
+        "bitpanda": "Bitpanda"
+      },
+      "edit": "Change"
+    }
   }
 }

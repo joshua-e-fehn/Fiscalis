@@ -229,6 +229,10 @@ const data: Record<
 					url: "/settings/api-keys",
 				},
 				{
+					titleKey: "categories",
+					url: "/settings/categories",
+				},
+				{
 					titleKey: "team",
 					url: "#",
 					feature: "teamSettings",

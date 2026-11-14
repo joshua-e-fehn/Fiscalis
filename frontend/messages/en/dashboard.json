@@ -119,7 +119,8 @@
       "category": "Category",
       "quantity": "Quantity",
       "value": "Value",
-      "profitLoss": "P&L"
+      "profitLoss": "P&L",
+      "actions": "Actions"
     },
     "shown": "{count, plural, one {# position shown} other {# positions shown}}",
     "total": "Total: {amount}"

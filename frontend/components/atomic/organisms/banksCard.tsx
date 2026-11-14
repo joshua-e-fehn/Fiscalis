@@ -6,13 +6,7 @@ import {
   usePlaidItems,
   useRefreshAccounts,
 } from "@/hooks/convex";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/shadcn/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { Building2, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
@@ -20,7 +14,6 @@ import { Button } from "@/components/ui/shadcn/button";
 import { BankAccountsCard } from "@/components/atomic/molecules/bankAccountsCard";
 import { BankReauthCard } from "@/components/atomic/molecules/bankReauthCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
-import { useSyncContextSafe } from "@/providers/syncProvider";
 import { IntegrationEmptyState } from "@/components/atomic/molecules/integrations";
 
 interface BanksCardProps {
@@ -28,19 +21,13 @@ interface BanksCardProps {
   isSyncing?: boolean;
 }
 
-export function BanksCard({ isSyncing: externalIsSyncing }: BanksCardProps) {
+// `isSyncing` is still accepted from callers but no longer read here; the
+// empty pattern keeps the prop contract without an unused binding.
+export function BanksCard({}: BanksCardProps) {
   const accounts = usePlaidAccounts();
   const itemsNeedingReauth = useItemsNeedingReauth();
   const items = usePlaidItems();
   const refreshAccounts = useRefreshAccounts();
-
-  // Get global sync state (may be undefined if outside SyncProvider)
-  const syncContext = useSyncContextSafe();
-  const isGlobalPlaidSyncing = syncContext?.isPlaidSyncing ?? false;
-
-  // Combine external syncing state with internal and global
-  const isSyncing =
-    externalIsSyncing || refreshAccounts.isLoading || isGlobalPlaidSyncing;
 
   // Loading state - Convex returns undefined while loading
   const isLoading = accounts === undefined || items === undefined;

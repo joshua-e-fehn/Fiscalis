@@ -29,21 +29,8 @@ import {
   CartesianGrid,
   Bar,
   BarChart,
-  ResponsiveContainer,
-  Legend,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  ReferenceLine,
 } from "recharts";
-import {
-  TrendingDown,
-  DollarSign,
-  Percent,
-  Target,
-  Calendar,
-} from "lucide-react";
+import { Target, Calendar } from "lucide-react";
 
 type Loan = Doc<"loans">;
 type LoanPayment = Doc<"loanPayments">;
@@ -113,12 +100,6 @@ const paymentChartConfig: ChartConfig = {
   },
 };
 
-const COLORS = [
-  "hsl(142, 76%, 36%)",
-  "hsl(221, 83%, 53%)",
-  "hsl(24, 95%, 53%)",
-];
-
 export function LoanOverviewTab({
   loan,
   payments,
@@ -177,15 +158,6 @@ export function LoanOverviewTab({
 
     return history;
   }, [loan, schedule]);
-
-  // Calculate payment breakdown for pie chart
-  const paymentBreakdown = useMemo(() => {
-    return [
-      { name: "Principal Paid", value: principalRepaid },
-      { name: "Remaining", value: loan.currentBalance },
-      { name: "Interest Paid", value: interestPaid },
-    ];
-  }, [loan, principalRepaid, interestPaid]);
 
   // Calculate monthly payment breakdown over time (including scheduled future payments)
   const paymentHistory = useMemo(() => {

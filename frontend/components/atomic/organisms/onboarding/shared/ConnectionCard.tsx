@@ -14,7 +14,6 @@ interface ConnectionCardProps {
 }
 
 export function ConnectionCard({
-  type,
   name,
   accountCount = 0,
   status,

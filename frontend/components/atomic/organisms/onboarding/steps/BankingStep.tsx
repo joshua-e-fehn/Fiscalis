@@ -8,8 +8,6 @@ import { api } from "@/convex/_generated/api";
 import {
   Building2,
   Shield,
-  RefreshCw,
-  Globe2,
   ArrowRight,
   ArrowLeft,
   Plus,

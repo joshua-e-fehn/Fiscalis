@@ -6,13 +6,7 @@ import {
   useConnectionsNeedingAttention,
   useSyncAll,
 } from "@/hooks/convex";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/shadcn/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { Button } from "@/components/ui/shadcn/button";
 import { TrendingUp, RefreshCw, Loader2 } from "lucide-react";

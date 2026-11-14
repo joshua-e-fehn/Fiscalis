@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { pageVariants, pageTransition } from "@/lib/types/onboarding";
+import { pageTransition } from "@/lib/types/onboarding";
 
 interface OnboardingStepProps {
   children: React.ReactNode;

@@ -35,21 +35,21 @@ export function OnboardingFlow() {
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize onboarding on first load only
+  // Existing user: restore the saved step on first load only. Adjusted during
+  // render (not in an effect); the loading skeleton shows until this runs.
+  if (!isInitialized && progress !== undefined && progress !== null) {
+    setCurrentStep(progress.currentStep as OnboardingStepEnum);
+    setIsInitialized(true);
+  }
+
+  // New user: initialize onboarding on first load only
   useEffect(() => {
     if (isInitialized) return; // Already initialized, don't reset
-    if (progress === undefined) return; // Still loading
+    if (progress !== null) return; // Still loading, or an existing user
 
-    if (progress === null) {
-      // New user, initialize
-      initializeOnboarding().then(() => {
-        setIsInitialized(true);
-      });
-    } else {
-      // Existing user, restore step only on first load
-      setCurrentStep(progress.currentStep as OnboardingStepEnum);
+    initializeOnboarding().then(() => {
       setIsInitialized(true);
-    }
+    });
   }, [progress, initializeOnboarding, isInitialized]);
 
   const goToStep = useCallback(

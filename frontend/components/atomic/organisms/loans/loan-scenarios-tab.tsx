@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { Doc } from "@/convex/_generated/dataModel";
+import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useSaveScenario, useDeleteScenario } from "@/hooks/convex/loans";
 import {
   getMonthsPerPeriod,
@@ -403,10 +403,10 @@ export function LoanScenariosTab({
     }
   };
 
-  const handleDeleteScenario = async (scenarioId: string) => {
+  const handleDeleteScenario = async (scenarioId: Id<"loanScenarios">) => {
     setDeletingId(scenarioId);
     try {
-      await deleteScenario(scenarioId as any);
+      await deleteScenario(scenarioId);
     } catch (error) {
       console.error("Failed to delete scenario:", error);
     } finally {

@@ -148,11 +148,9 @@ export const deleteUser = action({
     }
 
     const snaptrade = getSnaptradeClient();
-    const encryptionKey = getEncryptionKey();
-    const userSecret = decrypt(
-      snaptradeUser.snaptradeUserSecret,
-      encryptionKey,
-    );
+    // Decrypting the stored secret fails fast (before any deletion) when the
+    // encryption key or secret is invalid; the plaintext itself is not needed.
+    decrypt(snaptradeUser.snaptradeUserSecret, getEncryptionKey());
 
     try {
       // Delete user from SnapTrade
@@ -964,7 +962,7 @@ export const updateAllBrokerLogos = action({
 
     // Get all connections
     const connections: Array<{
-      _id: any;
+      _id: Id<"brokerConnections">;
       authorizationId: string;
       brokerName: string;
     }> = await ctx.runQuery(internal.brokers.getConnectionsByUserInternal, {

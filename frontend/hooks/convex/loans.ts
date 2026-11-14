@@ -88,11 +88,13 @@ export function useLoansSummary() {
 /**
  * Create a new loan
  */
+type CreateLoanArgs = FunctionArgs<typeof api.loans.createLoan>;
+
 export function useCreateLoan() {
   const mutation = useMutation(api.loans.createLoan);
 
   const createLoan = useCallback(
-    async (args: FunctionArgs<typeof api.loans.createLoan>) => {
+    async (args: CreateLoanArgs) => {
       return await mutation(args);
     },
     [mutation],
@@ -104,11 +106,13 @@ export function useCreateLoan() {
 /**
  * Update an existing loan
  */
+type UpdateLoanArgs = FunctionArgs<typeof api.loans.updateLoan>;
+
 export function useUpdateLoan() {
   const mutation = useMutation(api.loans.updateLoan);
 
   const updateLoan = useCallback(
-    async (args: FunctionArgs<typeof api.loans.updateLoan>) => {
+    async (args: UpdateLoanArgs) => {
       await mutation(args);
     },
     [mutation],
@@ -136,11 +140,13 @@ export function useDeleteLoan() {
 /**
  * Record a payment for a loan
  */
+type RecordPaymentArgs = FunctionArgs<typeof api.loans.recordPayment>;
+
 export function useRecordPayment() {
   const mutation = useMutation(api.loans.recordPayment);
 
   const recordPayment = useCallback(
-    async (args: FunctionArgs<typeof api.loans.recordPayment>) => {
+    async (args: RecordPaymentArgs) => {
       return await mutation(args);
     },
     [mutation],
@@ -152,11 +158,13 @@ export function useRecordPayment() {
 /**
  * Update an existing payment
  */
+type UpdatePaymentArgs = FunctionArgs<typeof api.loans.updatePayment>;
+
 export function useUpdatePayment() {
   const mutation = useMutation(api.loans.updatePayment);
 
   const updatePayment = useCallback(
-    async (args: FunctionArgs<typeof api.loans.updatePayment>) => {
+    async (args: UpdatePaymentArgs) => {
       await mutation(args);
     },
     [mutation],
@@ -184,11 +192,13 @@ export function useDeletePayment() {
 /**
  * Save a what-if scenario
  */
+type SaveScenarioArgs = FunctionArgs<typeof api.loans.saveScenario>;
+
 export function useSaveScenario() {
   const mutation = useMutation(api.loans.saveScenario);
 
   const saveScenario = useCallback(
-    async (args: FunctionArgs<typeof api.loans.saveScenario>) => {
+    async (args: SaveScenarioArgs) => {
       return await mutation(args);
     },
     [mutation],
@@ -200,11 +210,13 @@ export function useSaveScenario() {
 /**
  * Update an existing scenario
  */
+type UpdateScenarioArgs = FunctionArgs<typeof api.loans.updateScenario>;
+
 export function useUpdateScenario() {
   const mutation = useMutation(api.loans.updateScenario);
 
   const updateScenario = useCallback(
-    async (args: FunctionArgs<typeof api.loans.updateScenario>) => {
+    async (args: UpdateScenarioArgs) => {
       await mutation(args);
     },
     [mutation],

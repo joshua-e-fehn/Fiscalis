@@ -62,9 +62,6 @@ interface UseTimePlaybackReturn {
   speed: PlaybackSpeed;
 }
 
-// Default speed configuration
-const DEFAULT_SPEED: PlaybackSpeed = { interval: 500, step: 1 };
-
 export function useTimePlayback({
   initialYear = 2020,
   minYear = YEAR_RANGE.min,

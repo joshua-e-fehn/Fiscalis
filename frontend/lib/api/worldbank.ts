@@ -650,24 +650,31 @@ export async function fetchWorldBankIndicator(
     }));
 }
 
+/** An indicator's metadata without its formatFn (functions don't serialize) */
+function toIndicatorMetadata({
+  id,
+  name,
+  description,
+  unit,
+  category,
+}: IndicatorConfig): IndicatorMetadata {
+  return { id, name, description, unit, category };
+}
+
 /**
  * Get indicator metadata (without formatFn for serialization)
  */
 export function getIndicatorMetadata(
   indicator: IndicatorId,
 ): IndicatorMetadata {
-  const { formatFn, ...metadata } = INDICATOR_METADATA[indicator];
-  return metadata;
+  return toIndicatorMetadata(INDICATOR_METADATA[indicator]);
 }
 
 /**
  * Get all indicators metadata for UI dropdown
  */
 export function getAllIndicatorsMetadata(): IndicatorMetadata[] {
-  return Object.entries(INDICATOR_METADATA).map(([, config]) => {
-    const { formatFn, ...metadata } = config;
-    return metadata;
-  });
+  return Object.values(INDICATOR_METADATA).map(toIndicatorMetadata);
 }
 
 /**
@@ -687,8 +694,8 @@ export function getIndicatorsByCategory(): Record<
     commodities: [],
   };
 
-  for (const [, config] of Object.entries(INDICATOR_METADATA)) {
-    const { formatFn, ...metadata } = config;
+  for (const config of Object.values(INDICATOR_METADATA)) {
+    const metadata = toIndicatorMetadata(config);
     grouped[metadata.category].push(metadata);
   }
 

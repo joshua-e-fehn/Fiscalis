@@ -134,8 +134,6 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
 
   const status = axiosError.response?.status;
   const errorData = axiosError.response?.data;
-  const errorCode =
-    errorData?.error_code || errorData?.error || axiosError.code;
   const errorMessage =
     errorData?.detail || errorData?.message || axiosError.message || "";
 

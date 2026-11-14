@@ -82,9 +82,8 @@ const fx = new Hono()
     }
   });
 
-const app = new Hono().basePath("/api");
-
-const routes = app
+const app = new Hono()
+  .basePath("/api")
   .route("/fx", fx)
   .route("/metals", metals)
   .route("/world-data", worlddata)
@@ -94,4 +93,4 @@ export const GET = handle(app);
 export const POST = handle(app);
 export const DELETE = handle(app);
 
-export type AppType = typeof routes;
+export type AppType = typeof app;

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
   useActiveLoans,
@@ -39,7 +38,6 @@ import {
 import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dialog";
 import { LoanCard } from "@/components/atomic/molecules/loans/loan-card";
 import { PageHeader } from "@/components/atomic/molecules/investments";
-import { Id } from "@/convex/_generated/dataModel";
 import { todayLocalISO } from "@/lib/utils/date";
 import { formatCurrency as formatMoney } from "@/lib/utils/currency";
 
@@ -90,7 +88,6 @@ function getDaysUntil(dateString: string): number {
 // ═══════════════════════════════════════════════════════════════
 
 export default function LoansPage() {
-  const { user } = useUser();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showAddDialog, setShowAddDialog] = useState(false);

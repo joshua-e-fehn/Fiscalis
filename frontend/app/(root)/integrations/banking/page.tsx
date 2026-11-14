@@ -5,11 +5,7 @@ import { useMemo } from "react";
 import { BanksCard } from "@/components/atomic/organisms/banksCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
 import { PageHeader } from "@/components/atomic/molecules/investments";
-import {
-  usePlaidAccounts,
-  useRefreshAccounts,
-  usePlaidItems,
-} from "@/hooks/convex";
+import { usePlaidAccounts, useRefreshAccounts } from "@/hooks/convex";
 import { useSyncContext } from "@/providers/syncProvider";
 import {
   Card,
@@ -28,7 +24,6 @@ import { formatCurrency } from "@/lib/utils/currency";
 
 export default function BankingPage() {
   const accounts = usePlaidAccounts();
-  const items = usePlaidItems();
   const { mutate: refreshAll, isLoading: isLocalSyncing } =
     useRefreshAccounts();
   const { isPlaidSyncing: isGlobalSyncing } = useSyncContext();

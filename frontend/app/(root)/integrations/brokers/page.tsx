@@ -14,6 +14,7 @@ import {
   useBitpandaConnections,
   useBitpandaHoldings,
 } from "@/hooks/convex";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { useSyncContext } from "@/providers/syncProvider";
 import {
   Card,
@@ -42,6 +43,8 @@ export default function BrokersPage() {
   const bitpandaHoldings = useBitpandaHoldings();
   const { syncAll, isLoading: isLocalSyncing } = useSyncAll();
   const { isSnaptradeSyncing: isGlobalSyncing } = useSyncContext();
+  // The totals are summed in EUR and shown in the display currency
+  const { currency, fromEur } = useDisplayCurrency();
 
   // Show syncing state if either local or global sync is in progress
   const isSyncing = isLocalSyncing || isGlobalSyncing;
@@ -89,7 +92,7 @@ export default function BrokersPage() {
     return [
       {
         label: "Total Value",
-        value: formatCurrency(totalValue, "eur"),
+        value: formatCurrency(fromEur(totalValue), currency),
         icon: TrendingUp,
         description: `${positionsCount} positions`,
       },
@@ -107,7 +110,7 @@ export default function BrokersPage() {
       },
       {
         label: "Cash",
-        value: formatCurrency(totalCash, "eur"),
+        value: formatCurrency(fromEur(totalCash), currency),
         icon: Coins,
         description: "Available cash",
       },
@@ -119,6 +122,8 @@ export default function BrokersPage() {
     accounts,
     positions,
     bitpandaHoldings,
+    currency,
+    fromEur,
   ]);
 
   return (

@@ -15,7 +15,6 @@ import {
   brokerAccountTotals,
   brokerAccountValue,
 } from "@/../services/portfolio/categorySummary";
-import { BASE_CURRENCY } from "@/../services/finance/currency";
 import { useSyncContextSafe } from "@/providers/syncProvider";
 import {
   IntegrationConnectionCard,
@@ -121,9 +120,8 @@ export function BrokerAccountsCard({
       logo={connection.brokerLogo}
       fallbackIcon={fallbackIcon}
       status={mapStatus(connection.status)}
-      totalValue={totalValue}
-      totalCash={totalCash}
-      currency={BASE_CURRENCY}
+      totalValueEur={totalValue}
+      totalCashEur={totalCash}
       lastSyncAt={connection.lastSyncAt}
       errorMessage={connection.errorMessage}
       secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}

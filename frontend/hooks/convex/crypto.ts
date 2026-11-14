@@ -86,22 +86,34 @@ const BASE_FIELDS = [
   "unrealizedPLInBaseCurrency",
 ] as const;
 
+/** A crypto position with its value in the display currency. */
+export type DisplayCryptoPosition = CategoryPosition & {
+  /** The stored EUR value (positionValue) in `currency` */
+  displayValue: number;
+  currency: InvestmentCurrency;
+};
+
 /**
  * All crypto positions across providers, their base-currency fields
- * (valueInBaseCurrency, costBasisInBaseCurrency, …) in the display
- * currency; undefined while loading.
+ * (valueInBaseCurrency, costBasisInBaseCurrency, …) and displayValue in
+ * the display currency, each converted once from the stored EUR value;
+ * undefined while loading.
  */
-export function useCryptoPositions(): CategoryPosition[] | undefined {
+export function useCryptoPositions(): DisplayCryptoPosition[] | undefined {
   const positions = useCryptoData()?.positions;
   const display = useDisplayCurrency();
-  const { unitsPerEur } = display;
+  const { unitsPerEur, currency } = display;
   return useMemo(() => {
     if (positions === undefined || display.isLoading) return undefined;
-    if (unitsPerEur === 1) return positions;
     return positions.map(
-      (p): CategoryPosition => scaleMoney(p, BASE_FIELDS, unitsPerEur),
+      (p): DisplayCryptoPosition => ({
+        ...(unitsPerEur === 1 ? p : scaleMoney(p, BASE_FIELDS, unitsPerEur)),
+        // From the stored (EUR) position, not the scaled copy
+        displayValue: fromEur(positionValue(p), unitsPerEur),
+        currency,
+      }),
     );
-  }, [positions, display.isLoading, unitsPerEur]);
+  }, [positions, display.isLoading, unitsPerEur, currency]);
 }
 
 /**

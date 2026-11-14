@@ -44,13 +44,6 @@ function formatNumber(value: number): string {
   });
 }
 
-function posValue(p: {
-  valueInBaseCurrency?: number;
-  marketValue?: number;
-}): number {
-  return p.valueInBaseCurrency ?? p.marketValue ?? 0;
-}
-
 interface CryptoPositionsTableProps {
   className?: string;
   showFilters?: boolean;
@@ -91,6 +84,8 @@ export function CryptoPositionsTable({
   showFilters = true,
   maxRows,
 }: CryptoPositionsTableProps) {
+  // Position values come from the crypto data hook in the display
+  // currency (converted there, never here)
   const loadedPositions = useCryptoPositions();
   const isLoading = loadedPositions === undefined;
   const positions = useMemo(() => loadedPositions ?? [], [loadedPositions]);
@@ -122,8 +117,8 @@ export function CryptoPositionsTable({
             : b.quantity - a.quantity;
         case "value":
           return sortDirection === "asc"
-            ? posValue(a) - posValue(b)
-            : posValue(b) - posValue(a);
+            ? a.displayValue - b.displayValue
+            : b.displayValue - a.displayValue;
         default:
           return 0;
       }
@@ -248,7 +243,7 @@ export function CryptoPositionsTable({
                           <span className="font-medium">
                             {priceIssue?.status === "missing"
                               ? "—"
-                              : formatCurrency(posValue(position), "eur")}
+                              : formatCurrency(position.displayValue, position.currency)}
                           </span>
                           {priceIssue?.status === "missing" && (
                             <Badge variant="outline" className="text-xs">

@@ -39,7 +39,10 @@ const AccountIcon = ({ type }: { type: string }) => {
 
 export function BankAccountCard({ account }: { account: ConvexAccount }) {
   const hasBalance = account.currentBalance !== undefined;
-  const currency = account.currency || "USD";
+  // The provider's balances, in the account's own currency; without one
+  // they are not shown rather than labelled with a guessed currency
+  const formatBalance = (amount: number) =>
+    account.currency ? formatCurrency(amount, account.currency) : "—";
 
   return (
     <Card key={account._id}>
@@ -59,12 +62,12 @@ export function BankAccountCard({ account }: { account: ConvexAccount }) {
           {hasBalance && (
             <>
               <p className="font-semibold text-2xl">
-                {formatCurrency(account.currentBalance!, currency)}
+                {formatBalance(account.currentBalance!)}
               </p>
               {account.availableBalance !== undefined && (
                 <p className="text-sm text-muted-foreground">
                   Available:{" "}
-                  {formatCurrency(account.availableBalance, currency)}
+                  {formatBalance(account.availableBalance)}
                 </p>
               )}
             </>

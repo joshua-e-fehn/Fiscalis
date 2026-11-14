@@ -24,6 +24,7 @@
  */
 
 import type { HoldingData } from "../performance/types";
+import { convertBetween } from "./currency";
 import { convertAtSpotRates, type SpotExchangeRates } from "./metals";
 
 export type VaultTransactionType =
@@ -451,6 +452,26 @@ export function saleProfitLoss(
   };
 }
 
+/**
+ * saleProfitLoss for a sale priced in `saleCurrency`: the item's EUR
+ * average cost converted into it first (convertBetween with `unitsPerEur`,
+ * see ledgerUnitsPerEur), so price and cost compare in one currency. Cost
+ * and P/L are null when that currency has no rate, never mixed.
+ */
+export function saleProfitLossIn(
+  averageCostEur: number | null | undefined,
+  quantity: number,
+  pricePerUnit: number,
+  saleCurrency: string,
+  unitsPerEur: Readonly<Record<string, number>>,
+): SaleProfitLoss {
+  const averageCost =
+    averageCostEur == null
+      ? null
+      : convertBetween(averageCostEur, "EUR", saleCurrency, unitsPerEur);
+  return saleProfitLoss(averageCost, quantity, pricePerUnit);
+}
+
 /** Sum of several sale previews; P/L null when any one's cost is unknown. */
 export function sumSaleProfitLoss(sales: readonly SaleProfitLoss[]): SaleProfitLoss {
   const proceeds = sales.reduce((sum, s) => sum + s.proceeds, 0);
@@ -487,16 +508,35 @@ export interface TransactionTotals {
 }
 
 /**
+ * The rates the history totals and sale previews convert with, as units
+ * per 1 EUR by ISO code: USD and CHF from the rates the spot prices are served with, and the
+ * display currency's own latest rate (the fxRates mirror, as every other
+ * display-currency figure), which takes precedence, so a GBP view converts
+ * too. EUR is implicit.
+ */
+export function ledgerUnitsPerEur(
+  spot: SpotExchangeRates | null | undefined,
+  display?: { code: string; unitsPerEur: number },
+): Record<string, number> {
+  const unitsPerEur: Record<string, number> = {};
+  if (spot?.eurToUsd != null) unitsPerEur.USD = spot.eurToUsd;
+  if (spot?.eurToChf != null) unitsPerEur.CHF = spot.eurToChf;
+  const code = display?.code.toUpperCase();
+  if (display && code && code !== "EUR") unitsPerEur[code] = display.unitsPerEur;
+  return unitsPerEur;
+}
+
+/**
  * Bought / sold totals of listed transactions in one display currency. A
  * row in that currency counts at its own price; any other at its EUR price
- * (`pricePerUnitBase`, else its own price) converted at the spot rates
- * (convertAtSpotRates). Rows that cannot be converted are counted, never
- * added in their own currency.
+ * (`pricePerUnitBase`, else its own price) converted with `unitsPerEur`
+ * (ledgerUnitsPerEur, through convertBetween). Rows that cannot be
+ * converted are counted, never added in their own currency.
  */
 export function transactionTotals(
   txs: readonly ListedTransaction[],
   displayCurrency: string,
-  rates: SpotExchangeRates | null | undefined,
+  unitsPerEur: Readonly<Record<string, number>>,
 ): TransactionTotals {
   const totals: TransactionTotals = {
     totalBought: 0,
@@ -519,8 +559,8 @@ export function transactionTotals(
       tx.currency.toUpperCase() === display
         ? tx.pricePerUnit
         : tx.pricePerUnitBase != null
-          ? convertAtSpotRates(tx.pricePerUnitBase, "EUR", display, rates)
-          : convertAtSpotRates(tx.pricePerUnit, tx.currency, display, rates);
+          ? convertBetween(tx.pricePerUnitBase, "EUR", display, unitsPerEur)
+          : convertBetween(tx.pricePerUnit, tx.currency, display, unitsPerEur);
     if (unit === null) {
       totals.notConverted++;
       continue;

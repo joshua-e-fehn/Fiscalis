@@ -17,41 +17,42 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { Textarea } from "@/components/ui/shadcn/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/shadcn/select";
 import { Separator } from "@/components/ui/shadcn/separator";
-import {
-  MetalBadge,
-  PriceDisplay,
-} from "@/components/atomic/atoms/metals";
-import {
-  MetalItemWithValuation,
-  MetalsCurrency,
-} from "@/lib/types/metals-extended";
+import { MetalBadge } from "@/components/atomic/atoms/metals";
+import { CurrencySelect } from "@/components/atomic/atoms/currencySelect";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
-import { saleProfitLoss } from "@/../services/finance/metalsLedger";
+import {
+  ledgerUnitsPerEur,
+  saleProfitLossIn,
+} from "@/../services/finance/metalsLedger";
+import { convertBetween } from "@/../services/finance/currency";
 import { Loader2, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 
 interface SellItemDialogProps {
   item: MetalItemWithValuation | null;
   isOpen: boolean;
   onClose: () => void;
-  currency?: MetalsCurrency;
+  /** The currency of the item's valuation (currentSellPrice); defaults to the display currency */
+  currency?: InvestmentCurrency;
 }
 
 export function SellItemDialog({
   item,
   isOpen,
   onClose,
-  currency = "eur",
+  currency: valuationCurrency,
 }: SellItemDialogProps) {
+  const display = useDisplayCurrency();
+  const currency = valuationCurrency ?? display.currency;
+  // EUR and the display currency's latest rate: the item's EUR average
+  // cost converts into either
+  const unitsPerEur = ledgerUnitsPerEur(null, display);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,14 +88,24 @@ export function SellItemDialog({
   const parsedPrice = parseFloat(pricePerUnit) || 0;
   const totalSaleValue = parsedPrice * quantity;
 
-  // P/L of this sale against the item's average cost (EUR), as the ledger
-  // will realize it; not comparable with a price in another currency
-  const preview =
-    saleCurrency === "EUR"
-      ? saleProfitLoss(item.averageCost, quantity, parsedPrice)
-      : null;
-  const saleProfit = preview?.profitLoss ?? null;
-  const saleProfitPercent = preview?.profitLossPercent ?? null;
+  // P/L of this sale against the item's average cost, as the ledger will
+  // realize it: the EUR cost in the sale currency (EUR or the display
+  // currency); unknown in any other
+  const preview = saleProfitLossIn(
+    item.averageCost,
+    quantity,
+    parsedPrice,
+    saleCurrency,
+    unitsPerEur,
+  );
+  const saleProfit = preview.profitLoss;
+  const saleProfitPercent = preview.profitLossPercent;
+  // The average cost in the valuation's currency; in EUR, as stored, when
+  // that currency has no rate here
+  const averageCostConverted =
+    item.averageCost === null
+      ? null
+      : convertBetween(item.averageCost, "EUR", currency, unitsPerEur);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,18 +171,20 @@ export function SellItemDialog({
                 <span className="text-muted-foreground">
                   Current Sell Price (each)
                 </span>
-                <PriceDisplay
-                  value={item.currentSellPrice}
-                  currency={currency}
-                  size="sm"
-                />
+                <span className="text-sm">
+                  {formatCurrency(item.currentSellPrice, currency)}
+                </span>
               </div>
               {item.averageCost !== null && (
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
                     Average Cost (each)
                   </span>
-                  <PriceDisplay value={item.averageCost} currency="eur" size="sm" />
+                  <span className="text-sm">
+                    {averageCostConverted === null
+                      ? formatCurrency(item.averageCost, "eur")
+                      : formatCurrency(averageCostConverted, currency)}
+                  </span>
                 </div>
               )}
             </div>
@@ -230,16 +243,11 @@ export function SellItemDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Currency</Label>
-                <Select value={saleCurrency} onValueChange={setSaleCurrency}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="EUR">EUR (€)</SelectItem>
-                    <SelectItem value="USD">USD ($)</SelectItem>
-                    <SelectItem value="CHF">CHF (Fr.)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <CurrencySelect
+                  id="currency"
+                  value={saleCurrency}
+                  onValueChange={setSaleCurrency}
+                />
               </div>
             </div>
 

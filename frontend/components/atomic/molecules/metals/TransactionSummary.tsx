@@ -5,7 +5,12 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Transaction } from "./TransactionRow";
-import { transactionTotals } from "@/../services/finance/metalsLedger";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import {
+  transactionTotals,
+  ledgerUnitsPerEur,
+} from "@/../services/finance/metalsLedger";
 import type { SpotExchangeRates } from "@/../services/finance/metals";
 import {
   ArrowDownLeft,
@@ -18,12 +23,21 @@ import {
 interface TransactionSummaryProps {
   /** The listed transactions: the bought / sold / cash-flow totals */
   transactions: Transaction[];
-  displayCurrency?: "eur" | "usd" | "chf";
-  /** The rates the spot prices are served with: other currencies convert at them */
+  /**
+   * The currency of the totals and of the P/L props; defaults to the
+   * display currency (useDisplayCurrency)
+   */
+  displayCurrency?: InvestmentCurrency;
+  /**
+   * The rates the spot prices are served with: older rows without an EUR
+   * price convert from USD/CHF at them. The display currency converts at
+   * its own latest rate.
+   */
   exchangeRates?: SpotExchangeRates | null;
   /**
-   * P/L of the whole vault, independent of the list's filters: realized
-   * per item from its unfiltered ledger at average cost (MetalsSummary)
+   * P/L of the whole vault, independent of the list's filters, already in
+   * `displayCurrency`: realized per item from its unfiltered ledger at
+   * average cost (MetalsSummary)
    */
   realizedPL?: number | null;
   unrealizedPL?: number | null;
@@ -33,15 +47,24 @@ interface TransactionSummaryProps {
 
 export function TransactionSummary({
   transactions,
-  displayCurrency = "eur",
+  displayCurrency,
   exchangeRates,
   realizedPL = null,
   unrealizedPL = null,
   totalPL = null,
   className,
 }: TransactionSummaryProps) {
+  const display = useDisplayCurrency();
+  const currency = displayCurrency ?? display.currency;
+  const rateCode = display.code;
+  const rateUnitsPerEur = display.unitsPerEur;
+
   const summary = useMemo(() => {
-    const totals = transactionTotals(transactions, displayCurrency, exchangeRates);
+    const rates = ledgerUnitsPerEur(exchangeRates, {
+      code: rateCode,
+      unitsPerEur: rateUnitsPerEur,
+    });
+    const totals = transactionTotals(transactions, currency, rates);
     return {
       ...totals,
       cashFlow: totals.totalBought - totals.totalSold,
@@ -49,7 +72,7 @@ export function TransactionSummary({
       leftOut: totals.notConverted + totals.unknownCost,
       realizedPL,
     };
-  }, [transactions, displayCurrency, exchangeRates, realizedPL]);
+  }, [transactions, currency, exchangeRates, rateCode, rateUnitsPerEur, realizedPL]);
 
   const isNetOutflow = summary.cashFlow >= 0;
   const hasUnrealizedPL = unrealizedPL !== null;
@@ -65,7 +88,7 @@ export function TransactionSummary({
               Total Bought
             </div>
             <div className="text-lg font-semibold">
-              {formatCurrency(summary.totalBought, displayCurrency)}
+              {formatCurrency(summary.totalBought, currency)}
             </div>
             <div className="text-xs text-muted-foreground">
               {summary.buyCount} transaction{summary.buyCount !== 1 ? "s" : ""}
@@ -79,7 +102,7 @@ export function TransactionSummary({
               Total Sold
             </div>
             <div className="text-lg font-semibold">
-              {formatCurrency(summary.totalSold, displayCurrency)}
+              {formatCurrency(summary.totalSold, currency)}
             </div>
             <div className="text-xs text-muted-foreground">
               {summary.sellCount} transaction
@@ -100,7 +123,7 @@ export function TransactionSummary({
               )}
             >
               {isNetOutflow ? "-" : "+"}
-              {formatCurrency(Math.abs(summary.cashFlow), displayCurrency)}
+              {formatCurrency(Math.abs(summary.cashFlow), currency)}
             </div>
             <div className="text-xs text-muted-foreground">
               {isNetOutflow ? "Net spent" : "Net received"}
@@ -134,7 +157,7 @@ export function TransactionSummary({
                   )}
                 >
                   {summary.realizedPL >= 0 ? "+" : ""}
-                  {formatCurrency(summary.realizedPL, displayCurrency)}
+                  {formatCurrency(summary.realizedPL, currency)}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   From sales (avg. cost per item)
@@ -169,7 +192,7 @@ export function TransactionSummary({
                   )}
                 >
                   {unrealizedPL >= 0 ? "+" : ""}
-                  {formatCurrency(unrealizedPL, displayCurrency)}
+                  {formatCurrency(unrealizedPL, currency)}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   If sold at spot
@@ -204,7 +227,7 @@ export function TransactionSummary({
                   )}
                 >
                   {totalPL >= 0 ? "+" : ""}
-                  {formatCurrency(totalPL, displayCurrency)}
+                  {formatCurrency(totalPL, currency)}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   Realized + Unrealized

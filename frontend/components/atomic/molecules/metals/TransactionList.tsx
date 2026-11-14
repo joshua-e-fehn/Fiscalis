@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { Transaction, TransactionRow } from "./TransactionRow";
 import {
   TransactionRowSkeleton,
@@ -12,7 +13,12 @@ import {
 
 interface TransactionListProps {
   transactions: Transaction[];
-  displayCurrency?: "eur" | "usd" | "chf";
+  /**
+   * Accepted for callers but unused: each row shows its price as entered,
+   * in the transaction's own currency; the totals in the display currency
+   * are TransactionSummary's
+   */
+  displayCurrency?: InvestmentCurrency;
   isLoading?: boolean;
   className?: string;
 }
@@ -53,7 +59,6 @@ function groupTransactionsByMonth(
 
 export function TransactionList({
   transactions,
-  displayCurrency = "eur",
   isLoading = false,
   className,
 }: TransactionListProps) {
@@ -108,7 +113,6 @@ export function TransactionList({
                   <TransactionRow
                     key={tx._id}
                     transaction={tx}
-                    displayCurrency={displayCurrency}
                   />
                 ))}
               </div>

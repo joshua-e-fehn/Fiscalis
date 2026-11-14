@@ -29,9 +29,11 @@ interface BrokerAccountCardProps {
 }
 
 export function BrokerAccountCard({ account }: BrokerAccountCardProps) {
+  // The provider's amounts, in the account's own currency; without one
+  // the amount is not shown rather than labelled with a guessed currency
   const formatAmount = (amount: number | undefined) => {
-    if (amount === undefined || amount === null) return "—";
-    return formatCurrency(amount, account.currency || "USD");
+    if (amount === undefined || amount === null || !account.currency) return "—";
+    return formatCurrency(amount, account.currency);
   };
 
   // Get icon based on account type

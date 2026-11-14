@@ -17,23 +17,17 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { Separator } from "@/components/ui/shadcn/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/shadcn/select";
 import { MetalBadge } from "@/components/atomic/atoms/metals";
-import {
-  MetalItemWithValuation,
-  MetalsCurrency,
-} from "@/lib/types/metals-extended";
+import { CurrencySelect } from "@/components/atomic/atoms/currencySelect";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
 import {
-  saleProfitLoss,
+  ledgerUnitsPerEur,
+  saleProfitLossIn,
   sumSaleProfitLoss,
 } from "@/../services/finance/metalsLedger";
 import {
@@ -54,7 +48,8 @@ interface BulkSellDialogProps {
   items: MetalItemWithValuation[];
   isOpen: boolean;
   onClose: () => void;
-  currency?: MetalsCurrency;
+  /** The currency of the items' valuation (currentSellPrice); defaults to the display currency */
+  currency?: InvestmentCurrency;
   onSuccess?: () => void;
 }
 
@@ -62,9 +57,13 @@ export function BulkSellDialog({
   items,
   isOpen,
   onClose,
-  currency = "eur",
+  currency: valuationCurrency,
   onSuccess,
 }: BulkSellDialogProps) {
+  const display = useDisplayCurrency();
+  const currency = valuationCurrency ?? display.currency;
+  const displayCode = display.code;
+  const displayUnitsPerEur = display.unitsPerEur;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saleCurrency, setSaleCurrency] = useState<string>(
@@ -95,22 +94,24 @@ export function BulkSellDialog({
     }
   }, [isOpen, items, currency]);
 
-  // P/L of each sale against its item's average cost (EUR), as the ledger
-  // will realize it; not comparable with a price in another currency
-  const previews = useMemo(
-    () =>
-      sellEntries.map((entry) => {
-        const sale = saleProfitLoss(
-          entry.item.averageCost,
-          entry.quantity,
-          parseFloat(entry.pricePerUnit) || 0,
-        );
-        return saleCurrency === "EUR"
-          ? sale
-          : { ...sale, costBasis: null, profitLoss: null, profitLossPercent: null };
-      }),
-    [sellEntries, saleCurrency],
-  );
+  // P/L of each sale against its item's average cost, as the ledger will
+  // realize it: the EUR cost in the sale currency (EUR or the display
+  // currency); unknown in any other
+  const previews = useMemo(() => {
+    const unitsPerEur = ledgerUnitsPerEur(null, {
+      code: displayCode,
+      unitsPerEur: displayUnitsPerEur,
+    });
+    return sellEntries.map((entry) =>
+      saleProfitLossIn(
+        entry.item.averageCost,
+        entry.quantity,
+        parseFloat(entry.pricePerUnit) || 0,
+        saleCurrency,
+        unitsPerEur,
+      ),
+    );
+  }, [sellEntries, saleCurrency, displayCode, displayUnitsPerEur]);
 
   const totals = useMemo(() => {
     const sum = sumSaleProfitLoss(previews);
@@ -206,16 +207,11 @@ export function BulkSellDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
-              <Select value={saleCurrency} onValueChange={setSaleCurrency}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="CHF">CHF (Fr.)</SelectItem>
-                </SelectContent>
-              </Select>
+              <CurrencySelect
+                id="currency"
+                value={saleCurrency}
+                onValueChange={setSaleCurrency}
+              />
             </div>
           </div>
 
@@ -244,7 +240,7 @@ export function BulkSellDialog({
                           <div className="text-xs text-muted-foreground">
                             {entry.item.quantity} available • Sell price:{" "}
                             {Number.isFinite(entry.item.currentSellPrice)
-                              ? formatCurrency(entry.item.currentSellPrice, saleCurrency)
+                              ? formatCurrency(entry.item.currentSellPrice, currency)
                               : "—"}
                             /unit
                           </div>

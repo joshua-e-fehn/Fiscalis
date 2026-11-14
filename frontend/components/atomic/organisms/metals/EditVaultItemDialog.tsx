@@ -15,15 +15,9 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { Textarea } from "@/components/ui/shadcn/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/shadcn/select";
 import { Separator } from "@/components/ui/shadcn/separator";
 import { MetalBadge } from "@/components/atomic/atoms/metals";
+import { CurrencySelect } from "@/components/atomic/atoms/currencySelect";
 import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import { useMetalItem, useUpdateMetalItem } from "@/hooks/convex/metals";
 import { todayLocalISO } from "@/lib/utils/date";
@@ -274,16 +268,13 @@ export function EditVaultItemDialog({
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="edit-opening-currency">Currency</Label>
-                      <Select value={openingCurrency} onValueChange={setOpeningCurrency}>
-                        <SelectTrigger id="edit-opening-currency">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="EUR">EUR (€)</SelectItem>
-                          <SelectItem value="USD">USD ($)</SelectItem>
-                          <SelectItem value="CHF">CHF (Fr.)</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {/* The opening's stored currency, kept even when it
+                          is not a display currency */}
+                      <CurrencySelect
+                        id="edit-opening-currency"
+                        value={openingCurrency}
+                        onValueChange={setOpeningCurrency}
+                      />
                     </div>
                   </div>
                   <div className="space-y-2">

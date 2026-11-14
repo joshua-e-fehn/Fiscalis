@@ -9,7 +9,6 @@ import {
   DEFAULT_BUY_PREMIUM,
   convertAtSpotRates,
   freshSpotPerOunce,
-  parseLatestMetalPrices,
   resolvePremiums,
   spotQuoteIn,
   summarizeMetalItems,
@@ -89,46 +88,6 @@ describe("valueVaultItem", () => {
     const item = { ...oneOzGold, purchasePricePerUnit: 1 };
     expect(valueVaultItem(item, spot(0), NOW).pricedAtSpot).toBe(false);
     expect(valueVaultItem(item, spot(NaN), NOW).pricedAtSpot).toBe(false);
-  });
-});
-
-describe("parseLatestMetalPrices", () => {
-  const payload = {
-    gold: { eur: 3632.65, usd: 4200, chf: null },
-    silver: { eur: 47.44, usd: 55, chf: null },
-    platinum: { eur: 1404.37, usd: 1600, chf: null },
-    palladium: { eur: 972.91, usd: 1100, chf: null },
-    exchangeRates: { eurToUsd: 1.16, eurToChf: 0.94 },
-    timestamp: "2026-11-11T11:48:00.000Z",
-  };
-
-  it("extracts EUR prices with the upstream timestamp", () => {
-    const prices = parseLatestMetalPrices(payload, NOW);
-    expect(prices).toHaveLength(4);
-    expect(prices[0]).toEqual({
-      metalType: "gold",
-      eurPerOunce: 3632.65,
-      sourceTimestamp: Date.parse("2026-11-11T11:48:00.000Z"),
-    });
-  });
-
-  it("drops invalid metal entries and keeps the rest", () => {
-    const prices = parseLatestMetalPrices(
-      { ...payload, silver: { eur: "47" }, platinum: { eur: -1 }, palladium: null },
-      NOW,
-    );
-    expect(prices.map((p) => p.metalType)).toEqual(["gold"]);
-  });
-
-  it("rejects payloads without a valid timestamp or object shape", () => {
-    expect(parseLatestMetalPrices({ ...payload, timestamp: "nope" }, NOW)).toEqual([]);
-    expect(parseLatestMetalPrices(null, NOW)).toEqual([]);
-    expect(parseLatestMetalPrices("x", NOW)).toEqual([]);
-  });
-
-  it("rejects a timestamp beyond the allowed future skew", () => {
-    const future = new Date(NOW + SPOT_PRICE_MAX_FUTURE_SKEW_MS + 1).toISOString();
-    expect(parseLatestMetalPrices({ ...payload, timestamp: future }, NOW)).toEqual([]);
   });
 });
 

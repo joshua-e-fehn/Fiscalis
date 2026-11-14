@@ -3,6 +3,7 @@ import {
   type DisplayCurrency,
 } from "@/../services/finance/displayCurrency";
 import type { Language, Theme } from "@/../services/settings/userSettings";
+import { LANGUAGES as LANGUAGE_CODES, LANGUAGE_ENDONYMS } from "@/i18n/locales";
 
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING TYPES
@@ -73,10 +74,9 @@ const CURRENCY_LABELS: Record<Currency, { label: string; flag: string }> = {
 export const CURRENCIES: { value: Currency; label: string; flag: string }[] =
   DISPLAY_CURRENCIES.map((value) => ({ value, ...CURRENCY_LABELS[value] }));
 
-export const LANGUAGES: { value: Language; label: string }[] = [
-  { value: "en", label: "English" },
-  { value: "de", label: "Deutsch" },
-];
+/** The supported languages, each labelled in its own language. */
+export const LANGUAGES: { value: Language; label: string }[] =
+  LANGUAGE_CODES.map((value) => ({ value, label: LANGUAGE_ENDONYMS[value] }));
 
 export interface ConnectionStatus {
   type: "banking" | "broker" | "crypto";

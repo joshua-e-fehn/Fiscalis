@@ -152,6 +152,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
       });
       savedTheme.current = formData.theme;
       setSaved(true);
+      // LocaleSync re-renders in the saved language
     } catch (error) {
       console.error("Failed to save settings:", error);
       setSaveError("We couldn't save your settings. Please try again.");

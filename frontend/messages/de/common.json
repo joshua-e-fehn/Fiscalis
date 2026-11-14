@@ -1,0 +1,57 @@
+{
+  "metadata": {
+    "title": "Fiscalis",
+    "description": "Wirf einen Blick auf deine finanzielle Zukunft!"
+  },
+  "actions": {
+    "save": "Speichern",
+    "saveChanges": "Änderungen speichern",
+    "saved": "Gespeichert",
+    "cancel": "Abbrechen",
+    "continue": "Weiter",
+    "back": "Zurück",
+    "close": "Schließen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "retry": "Erneut versuchen",
+    "loading": "Wird geladen…"
+  },
+  "language": {
+    "label": "Sprache",
+    "en": "Englisch",
+    "de": "Deutsch"
+  },
+  "finance": {
+    "netWorth": "Nettovermögen",
+    "assets": "Vermögenswerte",
+    "liabilities": "Verbindlichkeiten",
+    "investments": "Anlagen",
+    "portfolio": "Portfolio",
+    "holdings": "Bestände",
+    "position": "Position",
+    "allocation": "Vermögensaufteilung",
+    "performance": "Wertentwicklung",
+    "ytd": "seit Jahresbeginn (YTD)",
+    "costBasis": "Einstandswert",
+    "unrealisedPnl": "Unrealisierter Gewinn/Verlust",
+    "realisedPnl": "Realisierter Gewinn/Verlust",
+    "dividend": "Dividende",
+    "equities": "Aktien",
+    "bonds": "Anleihen",
+    "commodities": "Rohstoffe",
+    "preciousMetals": "Edelmetalle",
+    "realEstate": "Immobilien",
+    "crypto": "Krypto",
+    "cash": "Liquidität & Geldmarkt",
+    "transaction": "Transaktion",
+    "loan": "Kredit",
+    "interestRate": "Zinssatz",
+    "baseCurrency": "Basiswährung",
+    "exchangeRate": "Wechselkurs",
+    "account": "Konto"
+  },
+  "errors": {
+    "generic": "Etwas ist schiefgelaufen. Bitte versuch es erneut.",
+    "saveFailed": "Deine Änderungen konnten nicht gespeichert werden. Bitte versuch es erneut."
+  }
+}

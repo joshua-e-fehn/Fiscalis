@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation, type QueryCtx } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { validateBirthDate } from "../lib/utils/date";
 
 /**
@@ -18,7 +18,7 @@ const PROFILE_STEP = 2;
 
 /**
  * User-owned tables (each has a by_user index). A row in any of them means the
- * user already used the app. Shared with migrations:markExistingUsersOnboarded.
+ * user already used the app (migrations:markExistingUsersOnboarded).
  */
 export const USER_DATA_TABLES = [
   "userSettings",
@@ -30,25 +30,8 @@ export const USER_DATA_TABLES = [
   "retirementPlans",
   "portfolioSnapshots",
   "apiKeys",
+  "worldBankFavorites",
 ] as const;
-
-/**
- * Whether the user owns a row in any user-owned table. One indexed .first()
- * per table, so it stays cheap however large a table is.
- */
-export async function hasUserData(
-  ctx: Pick<QueryCtx, "db">,
-  userId: string,
-): Promise<boolean> {
-  for (const table of USER_DATA_TABLES) {
-    const row = await ctx.db
-      .query(table)
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
-    if (row) return true;
-  }
-  return false;
-}
 
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING QUERIES
@@ -78,11 +61,8 @@ export const getOnboardingProgress = query({
  * Check if user has completed onboarding. Returns null when the request is
  * not authenticated (yet), so the onboarding gate can wait instead of
  * treating a signed-in user whose Convex token is still loading as new.
- * A user with no progress row but existing data predates the gate and counts
- * as onboarded: new users get a progress row from initializeOnboarding (the
- * gate sends them to /onboarding) before they can create any data. This keeps
- * existing users out of the funnel even before
- * migrations:markExistingUsersOnboarded has run.
+ * Users who predate the gate are marked onboarded by
+ * migrations:markExistingUsersOnboarded.
  */
 export const hasCompletedOnboarding = query({
   args: {},
@@ -97,8 +77,7 @@ export const hasCompletedOnboarding = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 
-    if (progress) return progress.onboardingCompleted;
-    return await hasUserData(ctx, userId);
+    return progress?.onboardingCompleted ?? false;
   },
 });
 

@@ -279,6 +279,7 @@ export function BankTransactions({ syncAction }: BankTransactionsProps) {
                           <span className="inline-flex items-center gap-1">
                             <DirectionIcon
                               className="h-3.5 w-3.5"
+                              role="img"
                               aria-label={credit ? t("moneyIn") : t("moneyOut")}
                             />
                             {formatCurrency(

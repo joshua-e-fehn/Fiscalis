@@ -595,17 +595,14 @@ export const syncAccountsForUserAdmin = internalAction({
         continue;
       }
       // New transactions arrive with the daily sync (ENG-190). Balances are
-      // what net worth needs, so a transaction failure does not fail the item
-      try {
-        await ctx.runAction(internal.actions.plaid.syncItemTransactions, {
-          itemId: item.itemId,
-        });
-      } catch (error) {
-        console.error(
-          `Error syncing transactions for item ${item.itemId}:`,
-          describeError(error),
-        );
-      }
+      // what net worth needs, so transactions run as their own scheduled
+      // action: a slow first (full-history) pull or a failure neither delays
+      // nor fails the item, the other providers or the snapshot
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.plaid.syncItemTransactions,
+        { itemId: item.itemId },
+      );
     }
 
     // A failed item makes the daily snapshot partial (syncAll.ts)

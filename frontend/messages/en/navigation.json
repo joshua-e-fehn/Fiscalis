@@ -1,3 +1,73 @@
 {
-  "liabilitiesOverview": "Overview"
+  "sidebar": {
+    "groups": {
+      "portfolio": "Portfolio",
+      "tools": "Tools",
+      "integrations": "Integrations",
+      "others": "Others"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "investments": "Investments",
+      "equities": "Equities",
+      "commodities": "Commodities",
+      "bonds": "Bonds",
+      "realEstate": "Real Estate",
+      "cash": "Cash & Money Market",
+      "crypto": "Crypto",
+      "collectibles": "Collectibles",
+      "liabilities": "Liabilities",
+      "liabilitiesOverview": "Overview",
+      "loans": "Loans",
+      "investmentStrategies": "Investment Strategies",
+      "pies": "Pies",
+      "banking": "Banking",
+      "brokers": "Brokers",
+      "retirementPlanner": "Retirement Planner",
+      "interestCalculators": "Interest Calculators",
+      "loanCalculators": "Loan Calculators",
+      "worldMap": "World Map",
+      "documentation": "Documentation",
+      "introduction": "Introduction",
+      "getStarted": "Get Started",
+      "tutorials": "Tutorials",
+      "changelog": "Changelog",
+      "settings": "Settings",
+      "general": "General",
+      "apiKeys": "API Keys",
+      "team": "Team",
+      "billing": "Billing",
+      "limits": "Limits"
+    }
+  },
+  "brand": {
+    "logoAlt": "Fiscalis logo"
+  },
+  "userMenu": {
+    "upgrade": "Upgrade to Pro",
+    "account": "Account",
+    "billing": "Billing",
+    "notifications": "Notifications",
+    "logOut": "Log out"
+  },
+  "header": {
+    "signIn": "Sign in",
+    "joinWaitlist": "Join the waitlist",
+    "dashboard": "Dashboard"
+  },
+  "sync": {
+    "syncAll": "Sync all accounts",
+    "syncing": "Syncing all accounts…",
+    "complete": "Sync complete",
+    "failed": "Sync failed",
+    "synced": "Synced: {providers}",
+    "failedProviders": "Failed: {providers}",
+    "partial": "Synced: {synced}. Failed: {failed}",
+    "providerCount": "{provider} ({count})",
+    "providers": {
+      "plaid": "Banking",
+      "snaptrade": "Brokers",
+      "bitpanda": "Bitpanda"
+    }
+  }
 }

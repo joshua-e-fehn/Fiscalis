@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useClerk } from "@clerk/nextjs";
+import { useTranslations } from "next-intl";
 
 import {
   Avatar,
@@ -41,6 +42,7 @@ export function NavigationUserMenu({
     avatar: string;
   };
 }) {
+  const t = useTranslations("navigation.userMenu");
   const { isMobile } = useSidebar();
   const { openUserProfile, signOut } = useClerk();
 
@@ -83,7 +85,9 @@ export function NavigationUserMenu({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user.name}</span>
@@ -98,7 +102,7 @@ export function NavigationUserMenu({
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
                     <Sparkles />
-                    Upgrade to Pro
+                    {t("upgrade")}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </>
@@ -107,25 +111,25 @@ export function NavigationUserMenu({
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={handleOpenUserProfile}>
                 <BadgeCheck />
-                Account
+                {t("account")}
               </DropdownMenuItem>
               {isFeatureEnabled("billing") && (
                 <DropdownMenuItem>
                   <CreditCard />
-                  Billing
+                  {t("billing")}
                 </DropdownMenuItem>
               )}
               {isFeatureEnabled("notifications") && (
                 <DropdownMenuItem>
                   <Bell />
-                  Notifications
+                  {t("notifications")}
                 </DropdownMenuItem>
               )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
               <LogOut />
-              Log out
+              {t("logOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

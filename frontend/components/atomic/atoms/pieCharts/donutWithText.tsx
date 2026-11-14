@@ -30,6 +30,8 @@ interface PieChartDonutWithTextProps {
   dataKey: string;
   nameKey: string;
   labelKey: string;
+  /** Shown under the total in the middle of the donut, e.g. "Value" */
+  totalLabel: string;
   title: string;
   description: string;
   subTitle?: string;
@@ -119,6 +121,7 @@ export function PieChartDonutWithText({
   dataKey,
   nameKey,
   labelKey,
+  totalLabel,
   title,
   description,
   subTitle,
@@ -136,9 +139,6 @@ export function PieChartDonutWithText({
       }, 0) || 0
     );
   }, [chartData, dataKey]);
-
-  const capitalizeString = (str: string) =>
-    str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
   const chartSize = customSize ?? CHART_SIZES[size];
 
@@ -196,7 +196,7 @@ export function PieChartDonutWithText({
                           y={(viewBox.cy || 0) + chartSize.totalQuantityPadding}
                           className={`fill-muted-foreground ${chartSize.fontSizeTotalDescription}`}
                         >
-                          {capitalizeString(dataKey)}
+                          {totalLabel}
                         </tspan>
                       </text>
                     );

@@ -1,3 +1,73 @@
 {
-  "liabilitiesOverview": "Übersicht"
+  "sidebar": {
+    "groups": {
+      "portfolio": "Portfolio",
+      "tools": "Werkzeuge",
+      "integrations": "Integrationen",
+      "others": "Sonstiges"
+    },
+    "items": {
+      "dashboard": "Übersicht",
+      "investments": "Anlagen",
+      "equities": "Aktien",
+      "commodities": "Rohstoffe",
+      "bonds": "Anleihen",
+      "realEstate": "Immobilien",
+      "cash": "Liquidität & Geldmarkt",
+      "crypto": "Krypto",
+      "collectibles": "Sammlerstücke",
+      "liabilities": "Verbindlichkeiten",
+      "liabilitiesOverview": "Übersicht",
+      "loans": "Kredite",
+      "investmentStrategies": "Anlagestrategien",
+      "pies": "Pies",
+      "banking": "Banking",
+      "brokers": "Broker",
+      "retirementPlanner": "Ruhestandsplaner",
+      "interestCalculators": "Zinsrechner",
+      "loanCalculators": "Kreditrechner",
+      "worldMap": "Weltkarte",
+      "documentation": "Dokumentation",
+      "introduction": "Einführung",
+      "getStarted": "Erste Schritte",
+      "tutorials": "Anleitungen",
+      "changelog": "Änderungsprotokoll",
+      "settings": "Einstellungen",
+      "general": "Allgemein",
+      "apiKeys": "API-Schlüssel",
+      "team": "Team",
+      "billing": "Abrechnung",
+      "limits": "Limits"
+    }
+  },
+  "brand": {
+    "logoAlt": "Fiscalis-Logo"
+  },
+  "userMenu": {
+    "upgrade": "Auf Pro upgraden",
+    "account": "Konto",
+    "billing": "Abrechnung",
+    "notifications": "Benachrichtigungen",
+    "logOut": "Abmelden"
+  },
+  "header": {
+    "signIn": "Anmelden",
+    "joinWaitlist": "Auf die Warteliste",
+    "dashboard": "Zur Übersicht"
+  },
+  "sync": {
+    "syncAll": "Alle Konten synchronisieren",
+    "syncing": "Alle Konten werden synchronisiert…",
+    "complete": "Synchronisierung abgeschlossen",
+    "failed": "Synchronisierung fehlgeschlagen",
+    "synced": "Synchronisiert: {providers}",
+    "failedProviders": "Fehlgeschlagen: {providers}",
+    "partial": "Synchronisiert: {synced}. Fehlgeschlagen: {failed}",
+    "providerCount": "{provider} ({count})",
+    "providers": {
+      "plaid": "Banking",
+      "snaptrade": "Broker",
+      "bitpanda": "Bitpanda"
+    }
+  }
 }

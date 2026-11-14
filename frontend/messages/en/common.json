@@ -52,6 +52,12 @@
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
-    "saveFailed": "We couldn't save your changes. Please try again."
+    "saveFailed": "We couldn't save your changes. Please try again.",
+    "rateLimited": "Too many requests. Please try again in {minutes, plural, one {# minute} other {# minutes}}."
+  },
+  "a11y": {
+    "toggleSidebar": "Toggle sidebar",
+    "sidebar": "Sidebar",
+    "sidebarDescription": "Displays the mobile sidebar."
   }
 }

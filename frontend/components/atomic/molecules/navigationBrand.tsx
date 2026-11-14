@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import {
   SidebarMenu,
@@ -14,6 +15,7 @@ import {
  * which showed template sample teams: Fiscalis has no teams yet.
  */
 export function NavigationBrand() {
+  const t = useTranslations("navigation.brand");
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -21,7 +23,7 @@ export function NavigationBrand() {
           <Link href="/dashboard">
             <Image
               src="/fiscalisIcon.svg"
-              alt="Fiscalis Logo"
+              alt={t("logoAlt")}
               width={35}
               height={35}
               priority

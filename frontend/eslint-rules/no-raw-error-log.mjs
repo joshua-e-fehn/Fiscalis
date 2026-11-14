@@ -29,12 +29,6 @@ function isConsoleCall(node) {
   );
 }
 
-const FUNCTION_TYPES = new Set([
-  "FunctionDeclaration",
-  "FunctionExpression",
-  "ArrowFunctionExpression",
-]);
-
 /** @type {import("eslint").Rule.RuleModule} */
 const noRawErrorLog = {
   meta: {
@@ -49,11 +43,14 @@ const noRawErrorLog = {
     schema: [],
   },
   create(context) {
-    function check(variable) {
+    // Walks up from each reference to the node that declares the error, so a
+    // reference inside a callback in the console arguments
+    // (`console.error(list.map(() => error))`) is still reported.
+    function check(variable, declaringNode) {
       for (const reference of variable.references) {
         let child = reference.identifier;
         let parent = child.parent;
-        while (parent && !FUNCTION_TYPES.has(parent.type)) {
+        while (parent && child !== declaringNode) {
           if (parent.type === "CallExpression" && child !== parent.callee) {
             if (SANITIZERS.has(calleeName(parent.callee))) break;
             if (isConsoleCall(parent)) {
@@ -74,16 +71,21 @@ const noRawErrorLog = {
     return {
       CatchClause(node) {
         if (!node.param) return;
-        context.sourceCode.getDeclaredVariables(node).forEach(check);
+        context.sourceCode
+          .getDeclaredVariables(node)
+          .forEach((variable) => check(variable, node));
       },
-      // promise.catch((error) => console.error(error))
-      "CallExpression[callee.property.name='catch'] > :function"(node) {
+      // promise.catch((error) => console.error(error)) and
+      // promise.then(onFulfilled, (error) => console.error(error))
+      "CallExpression[callee.property.name='catch'] > :function.arguments:first-child, CallExpression[callee.property.name='then'] > :function.arguments:nth-child(2)"(
+        node,
+      ) {
         const first = node.params[0];
         if (first?.type !== "Identifier") return;
         context.sourceCode
           .getDeclaredVariables(node)
           .filter((variable) => variable.name === first.name)
-          .forEach(check);
+          .forEach((variable) => check(variable, node));
       },
     };
   },

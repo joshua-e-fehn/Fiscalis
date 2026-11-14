@@ -2,6 +2,13 @@
 // Map Color Scale Utilities
 // ═══════════════════════════════════════════════════════════════
 
+import type { FillLayerSpecification } from "react-map-gl/maplibre";
+
+/** A MapLibre `fill-color` paint value, as produced by createMapColorExpression. */
+export type MapColorExpression = NonNullable<
+  FillLayerSpecification["paint"]
+>["fill-color"];
+
 export type ColorScaleType =
   | "sequential"
   | "diverging"
@@ -19,18 +26,6 @@ const BLUE_PALETTE = [
   "#2563eb", // blue-600
   "#1d4ed8", // blue-700
   "#1e40af", // blue-800
-] as const;
-
-const GREEN_PALETTE = [
-  "#f0fdf4", // green-50
-  "#dcfce7", // green-100
-  "#bbf7d0", // green-200
-  "#86efac", // green-300
-  "#4ade80", // green-400
-  "#22c55e", // green-500
-  "#16a34a", // green-600
-  "#15803d", // green-700
-  "#166534", // green-800
 ] as const;
 
 // Diverging palette: higher is GOOD (red = low/negative, green = high/positive)
@@ -80,14 +75,14 @@ const LOGARITHMIC_INDICATORS = [
  * Check if an indicator should use inverted colors (high = bad)
  */
 export function isInvertedIndicator(indicatorId: string): boolean {
-  return INVERTED_INDICATORS.includes(indicatorId as any);
+  return (INVERTED_INDICATORS as readonly string[]).includes(indicatorId);
 }
 
 /**
  * Check if an indicator should use logarithmic scale
  */
 export function isLogarithmicIndicator(indicatorId: string): boolean {
-  return LOGARITHMIC_INDICATORS.includes(indicatorId as any);
+  return (LOGARITHMIC_INDICATORS as readonly string[]).includes(indicatorId);
 }
 
 /**
@@ -343,7 +338,7 @@ export function createMapColorExpression(
   values: number[],
   type: ColorScaleType = "quantile",
   inverted: boolean = false,
-): any[] {
+): MapColorExpression {
   const validValues = values.filter((v): v is number => v != null && !isNaN(v));
 
   if (validValues.length === 0) {

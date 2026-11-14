@@ -9,6 +9,7 @@ import {
   Popup,
   NavigationControl,
 } from "react-map-gl/maplibre";
+import type { MapEvent, MapLayerMouseEvent } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 // UI Components
@@ -74,7 +75,7 @@ import {
 } from "@/hooks/convex";
 
 // Types
-import type { IndicatorId, IndicatorCategory } from "@/lib/types/worldbank";
+import type { IndicatorId } from "@/lib/types/worldbank";
 import { YEAR_RANGE, INDICATOR_IDS } from "@/lib/types/worldbank";
 
 // Auth
@@ -88,6 +89,7 @@ import {
   isInvertedIndicator,
   NO_DATA_COLOR,
 } from "@/lib/utils/mapColors";
+import type { MapColorExpression } from "@/lib/utils/mapColors";
 
 // ═══════════════════════════════════════════════════════════════
 // Constants
@@ -96,15 +98,19 @@ import {
 const MAP_STYLE =
   "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-const CATEGORY_LABELS: Record<IndicatorCategory, string> = {
-  economy: "Economy",
-  demographics: "Demographics",
-  finance: "Finance",
-  trade: "Trade",
-  energy: "Energy & Environment",
-  development: "Development",
-  commodities: "Commodities",
+// Properties read from /data/custom.geo.json country features
+type CountryProperties = {
+  iso_a2?: string;
+  iso_a2_eh?: string;
+  wb_a2?: string;
+  name?: string;
+  admin?: string;
+  [key: string]: unknown;
 };
+type CountryFeatureCollection = GeoJSON.FeatureCollection<
+  GeoJSON.Geometry,
+  CountryProperties
+>;
 
 // Default indicator state
 const DEFAULT_INDICATOR: SelectedIndicator = {
@@ -127,7 +133,8 @@ export default function WorldMapPage() {
   // State - using unified indicator selection
   const [selectedIndicator, setSelectedIndicator] =
     useState<SelectedIndicator>(DEFAULT_INDICATOR);
-  const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [geoJsonData, setGeoJsonData] =
+    useState<CountryFeatureCollection | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [firstLabelLayerId, setFirstLabelLayerId] = useState<
     string | undefined
@@ -276,12 +283,14 @@ export default function WorldMapPage() {
 
     const countryMap = new Map(worldData.countries.map((c) => [c.code, c]));
 
-    const processed = JSON.parse(JSON.stringify(geoJsonData));
+    const processed: CountryFeatureCollection = JSON.parse(
+      JSON.stringify(geoJsonData),
+    );
 
     // Use a marker value for "no data" since null doesn't serialize well in GeoJSON
     const NO_DATA_MARKER = -999999999;
 
-    processed.features = processed.features.map((feature: any) => {
+    processed.features = processed.features.map((feature) => {
       const props = feature.properties;
 
       // Get country code with fallbacks:
@@ -303,7 +312,8 @@ export default function WorldMapPage() {
         countryCode = "TW";
       }
 
-      const countryData = countryMap.get(countryCode);
+      const countryData =
+        countryCode === undefined ? undefined : countryMap.get(countryCode);
 
       // Use marker value for missing data, preserve actual null/0 values from API
       const hasData =
@@ -329,7 +339,7 @@ export default function WorldMapPage() {
   }, [geoJsonData, worldData]);
 
   // Color expression for map
-  const colorExpression = useMemo(() => {
+  const colorExpression = useMemo((): MapColorExpression => {
     if (!worldData) return ["literal", NO_DATA_COLOR];
 
     const values = worldData.countries
@@ -352,7 +362,7 @@ export default function WorldMapPage() {
       type: "fill" as const,
       ...(firstLabelLayerId && { beforeId: firstLabelLayerId }),
       paint: {
-        "fill-color": colorExpression as any,
+        "fill-color": colorExpression,
         "fill-opacity": 0.8,
       },
     }),
@@ -373,13 +383,13 @@ export default function WorldMapPage() {
   );
 
   // Map load handler - find first label layer
-  const onMapLoad = useCallback((event: any) => {
+  const onMapLoad = useCallback((event: MapEvent) => {
     const map = event.target;
     const layers = map.getStyle()?.layers || [];
 
     // Find first symbol layer (labels) to insert our layers before it
     const firstSymbolLayer = layers.find(
-      (layer: any) => layer.type === "symbol",
+      (layer) => layer.type === "symbol",
     );
 
     if (firstSymbolLayer) {
@@ -388,7 +398,7 @@ export default function WorldMapPage() {
   }, []);
 
   // Hover handler
-  const onHover = useCallback((event: any) => {
+  const onHover = useCallback((event: MapLayerMouseEvent) => {
     const feature = event.features?.[0];
 
     if (feature?.properties) {
@@ -574,7 +584,6 @@ export default function WorldMapPage() {
     indicatorsData,
     downloadCSV,
     isFeaturedIndicator,
-    worldData,
   ]);
 
   // Legend colors

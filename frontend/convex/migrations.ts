@@ -46,15 +46,14 @@ export const migratePremiums = internalMutation({
     const catalogItems = await ctx.db.query("metalCatalog").collect();
     for (const item of catalogItems) {
       // Check if item has old schema (defaultPremium instead of defaultBuyPremium)
-      const itemData = item as any;
       if (
-        itemData.defaultPremium !== undefined &&
-        itemData.defaultBuyPremium === undefined
+        item.defaultPremium !== undefined &&
+        item.defaultBuyPremium === undefined
       ) {
         await ctx.db.patch(item._id, {
-          defaultBuyPremium: itemData.defaultPremium,
+          defaultBuyPremium: item.defaultPremium,
           defaultSellPremium: 0.0, // Default sell at spot
-        } as any);
+        });
         // Note: We can't delete the old field in Convex, but schema validation will ignore it
         catalogUpdated++;
       }
@@ -64,12 +63,11 @@ export const migratePremiums = internalMutation({
     const vaultItems = await ctx.db.query("vaultItems").collect();
     for (const item of vaultItems) {
       // Check if item has old schema (premium instead of buyPremium)
-      const itemData = item as any;
-      if (itemData.premium !== undefined && itemData.buyPremium === undefined) {
+      if (item.premium !== undefined && item.buyPremium === undefined) {
         await ctx.db.patch(item._id, {
-          buyPremium: itemData.premium,
+          buyPremium: item.premium,
           sellPremium: 0.0, // Default sell at spot
-        } as any);
+        });
         itemsUpdated++;
       }
     }
@@ -95,11 +93,11 @@ export const cleanupOldPremiumFields = internalMutation({
     // Clean metalCatalog
     const catalogItems = await ctx.db.query("metalCatalog").collect();
     for (const item of catalogItems) {
-      const itemData = item as any;
-      if (itemData.defaultPremium !== undefined) {
+      if (item.defaultPremium !== undefined) {
         // Replace the entire document without the old field
-        const { defaultPremium, _id, _creationTime, ...rest } = itemData;
-        await ctx.db.replace(item._id, rest);
+        const { defaultPremium, _id, _creationTime, ...rest } = item;
+        void [defaultPremium, _creationTime]; // dropped from the replacement
+        await ctx.db.replace(_id, rest);
         catalogCleaned++;
       }
     }
@@ -107,11 +105,11 @@ export const cleanupOldPremiumFields = internalMutation({
     // Clean vaultItems
     const vaultItems = await ctx.db.query("vaultItems").collect();
     for (const item of vaultItems) {
-      const itemData = item as any;
-      if (itemData.premium !== undefined) {
+      if (item.premium !== undefined) {
         // Replace the entire document without the old field
-        const { premium, _id, _creationTime, ...rest } = itemData;
-        await ctx.db.replace(item._id, rest);
+        const { premium, _id, _creationTime, ...rest } = item;
+        void [premium, _creationTime]; // dropped from the replacement
+        await ctx.db.replace(_id, rest);
         itemsCleaned++;
       }
     }
@@ -412,7 +410,7 @@ export const reclassifyNftsToCollectibles = internalMutation({
         await ctx.db.patch(position._id, {
           investmentCategory: "collectibles",
           investmentSubcategory: "nfts",
-        } as any);
+        });
         positionsUpdated++;
       }
     }
@@ -431,7 +429,7 @@ export const reclassifyNftsToCollectibles = internalMutation({
         await ctx.db.patch(account._id, {
           investmentCategory: "collectibles",
           investmentSubcategory: "nfts",
-        } as any);
+        });
         accountsUpdated++;
       }
     }

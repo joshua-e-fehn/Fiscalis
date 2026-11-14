@@ -8,6 +8,7 @@ import type {
   WorldBankIndicatorSearchResult,
   DynamicIndicatorData,
 } from "@/lib/types/worldbank-search";
+import type { WorldBankDataPoint } from "@/lib/types/worldbank";
 import { ISO3_TO_ISO2 } from "./worldbank";
 
 const WORLDBANK_BASE_URL = "https://api.worldbank.org/v2";
@@ -254,8 +255,8 @@ export async function fetchDynamicIndicator(
   const formatFn = getFormatFunction(unit);
 
   const countries = (data[1] || [])
-    .filter((d: any) => d.value !== null && d.countryiso3code)
-    .map((d: any) => ({
+    .filter((d: WorldBankDataPoint) => d.value !== null && d.countryiso3code)
+    .map((d: WorldBankDataPoint) => ({
       code: ISO3_TO_ISO2[d.countryiso3code] || d.countryiso3code,
       code3: d.countryiso3code,
       name: d.country.value,

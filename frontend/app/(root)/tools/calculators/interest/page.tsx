@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Tabs,
   TabsContent,
@@ -25,13 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/shadcn/select";
 import {
-  Calculator,
   LineChart,
   Clock,
   TrendingUp,
   DollarSign,
   Calendar,
-  ArrowRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import {
@@ -100,10 +98,6 @@ function InterestRateCalculator() {
   const [startDate, setStartDate] = useState<string>(getTodayMinusOneYear());
   const [endDate, setEndDate] = useState<string>(getToday());
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("year");
-  const [result, setResult] = useState<{
-    compound: number;
-    simple: number;
-  } | null>(null);
   const [hasCalculatedOnce, setHasCalculatedOnce] = useState<boolean>(false);
 
   // Function to calculate results with useCallback
@@ -137,16 +131,14 @@ function InterestRateCalculator() {
 
   // Manual calculation button handler
   function calculate() {
-    setResult(calculateResults());
     setHasCalculatedOnce(true);
   }
 
-  // Auto-recalculate when inputs change
-  useEffect(() => {
-    if (hasCalculatedOnce) {
-      setResult(calculateResults());
-    }
-  }, [hasCalculatedOnce, calculateResults]);
+  // Derived from the current inputs once the user has calculated
+  const result = useMemo(
+    () => (hasCalculatedOnce ? calculateResults() : null),
+    [hasCalculatedOnce, calculateResults],
+  );
 
   return (
     <Card>
@@ -297,10 +289,6 @@ function TimeDurationCalculator() {
   const [targetCapital, setTargetCapital] = useState<number>(2000);
   const [interestRate, setInterestRate] = useState<number>(5);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("year");
-  const [result, setResult] = useState<{
-    compound: number;
-    simple: number;
-  } | null>(null);
   const [hasCalculatedOnce, setHasCalculatedOnce] = useState<boolean>(false);
 
   // Function to calculate results with useCallback
@@ -327,16 +315,14 @@ function TimeDurationCalculator() {
 
   // Manual calculation button handler
   function calculate() {
-    setResult(calculateResults());
     setHasCalculatedOnce(true);
   }
 
-  // Auto-recalculate when inputs change
-  useEffect(() => {
-    if (hasCalculatedOnce) {
-      setResult(calculateResults());
-    }
-  }, [hasCalculatedOnce, calculateResults]);
+  // Derived from the current inputs once the user has calculated
+  const result = useMemo(
+    () => (hasCalculatedOnce ? calculateResults() : null),
+    [hasCalculatedOnce, calculateResults],
+  );
 
   return (
     <Card>
@@ -470,10 +456,6 @@ function FutureValueCalculator() {
   const [interestRate, setInterestRate] = useState<number>(5);
   const [timePeriod, setTimePeriod] = useState<number>(10);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("year");
-  const [result, setResult] = useState<{
-    compound: number;
-    simple: number;
-  } | null>(null);
 
   const [hasCalculatedOnce, setHasCalculatedOnce] = useState<boolean>(false);
 
@@ -501,15 +483,14 @@ function FutureValueCalculator() {
 
   // Manual calculation button handler
   function calculate() {
-    setResult(calculateResults());
     setHasCalculatedOnce(true);
   }
 
-  useEffect(() => {
-    if (hasCalculatedOnce) {
-      setResult(calculateResults());
-    }
-  }, [hasCalculatedOnce, calculateResults]);
+  // Derived from the current inputs once the user has calculated
+  const result = useMemo(
+    () => (hasCalculatedOnce ? calculateResults() : null),
+    [hasCalculatedOnce, calculateResults],
+  );
 
   return (
     <Card>
@@ -653,10 +634,6 @@ function StartingValueCalculator() {
   const [interestRate, setInterestRate] = useState<number>(5);
   const [timePeriod, setTimePeriod] = useState<number>(10);
   const [timeInterval, setTimeInterval] = useState<TimeInterval>("year");
-  const [result, setResult] = useState<{
-    compound: number;
-    simple: number;
-  } | null>(null);
   const [hasCalculatedOnce, setHasCalculatedOnce] = useState<boolean>(false);
 
   // Function to calculate results with useCallback
@@ -684,16 +661,14 @@ function StartingValueCalculator() {
 
   // Manual calculation button handler
   function calculate() {
-    setResult(calculateResults());
     setHasCalculatedOnce(true);
   }
 
-  // Auto-recalculate when inputs change
-  useEffect(() => {
-    if (hasCalculatedOnce) {
-      setResult(calculateResults());
-    }
-  }, [hasCalculatedOnce, calculateResults]);
+  // Derived from the current inputs once the user has calculated
+  const result = useMemo(
+    () => (hasCalculatedOnce ? calculateResults() : null),
+    [hasCalculatedOnce, calculateResults],
+  );
 
   return (
     <Card>

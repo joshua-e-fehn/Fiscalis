@@ -37,7 +37,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/shadcn/collapsible";
-import { Badge } from "@/components/ui/shadcn/badge";
 import { Switch } from "@/components/ui/shadcn/switch";
 import {
   ChartConfig,
@@ -55,7 +54,6 @@ import {
   YAxis,
 } from "recharts";
 import {
-  HandCoins,
   TrendingDown,
   Calendar,
   Percent,
@@ -499,13 +497,11 @@ function ExtraPaymentsSection({
   config,
   setConfig,
   termYears,
-  principal,
   paymentInterval,
 }: {
   config: ExtraPaymentConfig;
   setConfig: (config: ExtraPaymentConfig) => void;
   termYears: number;
-  principal: number;
   paymentInterval: PaymentInterval;
 }) {
   const addOneTimePayment = () => {
@@ -1394,7 +1390,6 @@ function GenericLoanCalculator({
             config={extraPaymentConfig}
             setConfig={setExtraPaymentConfig}
             termYears={termYears}
-            principal={principal}
             paymentInterval={paymentInterval}
           />
 

@@ -9,7 +9,7 @@
  * grid. KPI presets only choose how the result is shown.
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -50,17 +50,29 @@ export interface UseSnapshotsResult {
   isLoading: boolean;
 }
 
+/** UTC-day-floored start of a range, or undefined for "ALL" */
+function rangeSince(timeRange: TimeRange, now: number): number | undefined {
+  if (timeRange === "ALL") return undefined;
+  const start = getTimeRangeStartTimestamp(timeRange, now);
+  return Math.floor(start / MS.DAY) * MS.DAY;
+}
+
 export function useSnapshots(
   timeRange: TimeRange,
   options?: { enabled?: boolean },
 ): UseSnapshotsResult {
   const enabled = options?.enabled ?? true;
 
-  const since = useMemo(() => {
-    if (timeRange === "ALL") return undefined;
-    const start = getTimeRangeStartTimestamp(timeRange, Date.now());
-    return Math.floor(start / MS.DAY) * MS.DAY;
-  }, [timeRange]);
+  // Read the clock only when the range is (re)selected, not on every render.
+  // A range change re-anchors during render; React discards that render and
+  // re-runs with the new anchor before committing.
+  const anchorFor = () => ({
+    timeRange,
+    since: rangeSince(timeRange, Date.now()),
+  });
+  const [anchor, setAnchor] = useState(anchorFor);
+  if (anchor.timeRange !== timeRange) setAnchor(anchorFor);
+  const since = anchor.since;
 
   const raw = useQuery(
     api.portfolioSnapshots.getSnapshots,

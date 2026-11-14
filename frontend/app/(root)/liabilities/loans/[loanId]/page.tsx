@@ -2,11 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
 import {
   useLoanWithPayments,
   useLoanScenarios,
-  useUpdateLoan,
   useDeleteLoan,
 } from "@/hooks/convex/loans";
 import { Id } from "@/convex/_generated/dataModel";
@@ -22,9 +20,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
 import { Badge } from "@/components/ui/shadcn/badge";
@@ -52,27 +47,11 @@ import {
   CreditCard,
   TrendingDown,
   DollarSign,
-  Target,
   Lightbulb,
   History,
   StickyNote,
   AlertTriangle,
 } from "lucide-react";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartConfig,
-} from "@/components/ui/shadcn/chart";
-import {
-  Area,
-  AreaChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Bar,
-  BarChart,
-} from "recharts";
 
 import { LoanOverviewTab } from "@/components/atomic/organisms/loans/loan-overview-tab";
 import { LoanPaymentsScheduleTab } from "@/components/atomic/organisms/loans/loan-payments-schedule-tab";
@@ -161,7 +140,6 @@ function getStatusColor(status: string): string {
 export default function LoanDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useUser();
   const loanId = params.loanId as Id<"loans">;
 
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -172,7 +150,10 @@ export default function LoanDetailPage() {
   const { deleteLoan } = useDeleteLoan();
 
   const loan = loanData?.loan;
-  const payments = loanData?.payments ?? [];
+  const payments = useMemo(
+    () => loanData?.payments ?? [],
+    [loanData?.payments],
+  );
 
   const isLoading = loanData === undefined;
 

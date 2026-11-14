@@ -567,36 +567,6 @@ export const saveRetirementPlan = mutation({
 	},
 });
 
-/**
- * Lightweight step persistence between wizard screens. With a `currency`
- * other than the plan's, the stored amounts are rebased into it (as on
- * saveRetirementPlan).
- */
-export const updateRetirementStep = mutation({
-	args: { step: v.number(), currency: currencyArg },
-	handler: async (ctx, args) => {
-		const identity = await ctx.auth.getUserIdentity();
-		if (!identity) throw new Error("Not authenticated");
-
-		const plan = await ctx.db
-			.query("retirementPlans")
-			.withIndex("by_user", (q) => q.eq("userId", identity.subject))
-			.first();
-
-		if (!plan) throw new Error("Retirement plan not initialized");
-		assertValidStep(args.step);
-
-		const currency = requestedCurrency(args.currency);
-		const rebased = await rebasedAmounts(ctx, plan, currency);
-		await ctx.db.patch(plan._id, {
-			...(rebased ? { ...rebased, currency } : {}),
-			currentStep: args.step,
-			updatedAt: Date.now(),
-		});
-		return plan._id;
-	},
-});
-
 /** Delete the user's plan (start over). */
 export const resetRetirementPlan = mutation({
 	args: {},

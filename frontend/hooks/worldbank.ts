@@ -524,8 +524,14 @@ export function useCountryData(
           },
     ),
     combine: (results) => {
+      // A failed year stays in as an empty snapshot so the chart shows a gap
+      // instead of drawing a line across it
       const snapshots = results.flatMap((r, i) =>
-        r.data ? [{ year: ALL_YEARS[i], countries: r.data.countries }] : [],
+        r.data
+          ? [{ year: ALL_YEARS[i], countries: r.data.countries }]
+          : r.isError
+            ? [{ year: ALL_YEARS[i], countries: [] }]
+            : [],
       );
       return {
         data: countryCode ? countryHistory(snapshots, countryCode) : [],

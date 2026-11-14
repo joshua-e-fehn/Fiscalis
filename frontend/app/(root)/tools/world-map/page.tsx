@@ -213,8 +213,10 @@ export default function WorldMapPage() {
     ? (selectedIndicator.id as IndicatorId)
     : "gdp";
   // Comparing needs a featured indicator and two different years
-  const isComparing =
-    compareMode && isFeaturedIndicator && compareStart !== compareEnd;
+  // Compare mode only applies to featured indicators; a searched indicator
+  // falls back to the single-year view (with its time slider).
+  const compareActive = compareMode && isFeaturedIndicator;
+  const isComparing = compareActive && compareStart !== compareEnd;
 
   // Cache check for playback (only works for featured indicators)
   const isYearCached = useIsYearCached(featuredId);
@@ -225,6 +227,7 @@ export default function WorldMapPage() {
     setYear,
     isPlaying,
     toggle: togglePlayback,
+    pause: pausePlayback,
     stepForward,
     stepBackward,
     jumpToStart,
@@ -959,7 +962,7 @@ export default function WorldMapPage() {
               <span className="text-sm font-medium text-muted-foreground">
                 {t("controls.timePeriod")}
               </span>
-              {!compareMode && (
+              {!compareActive && (
                 <SpeedControl speed={speed} onSpeedChange={setSpeed} />
               )}
             </div>
@@ -969,8 +972,12 @@ export default function WorldMapPage() {
               <div className="flex items-center gap-2">
                 <Switch
                   id="compare-years"
-                  checked={compareMode}
-                  onCheckedChange={setCompareMode}
+                  checked={compareActive}
+                  onCheckedChange={(on) => {
+                    // The slider is hidden while comparing; stop playback with it
+                    if (on) pausePlayback();
+                    setCompareMode(on);
+                  }}
                   disabled={!isFeaturedIndicator}
                 />
                 <Label htmlFor="compare-years">{t("compare.toggle")}</Label>
@@ -980,7 +987,7 @@ export default function WorldMapPage() {
                   {t("compare.featuredOnly")}
                 </span>
               )}
-              {compareMode && isFeaturedIndicator && (
+              {compareActive && (
                 <>
                   <CompareYearSelect
                     label={t("compare.from")}
@@ -1001,7 +1008,7 @@ export default function WorldMapPage() {
               )}
             </div>
 
-            {!compareMode && (
+            {!compareActive && (
               <TimeSlider
                 value={year}
                 onChange={setYear}

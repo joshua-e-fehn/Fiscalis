@@ -400,7 +400,9 @@ export function convertBetween(
   if (!source || !target) return null;
   const perEur = (code: string): number | null => {
     if (code === BASE_CURRENCY) return 1;
-    const rate = Object.hasOwn(unitsPerEur, code) ? unitsPerEur[code] : undefined;
+    const rate = Object.prototype.hasOwnProperty.call(unitsPerEur, code)
+      ? unitsPerEur[code]
+      : undefined;
     return rate !== undefined && Number.isFinite(rate) && rate > 0 ? rate : null;
   };
   const sourceRate = source.code === target.code ? 1 : perEur(source.code);

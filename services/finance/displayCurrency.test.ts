@@ -9,7 +9,6 @@ import {
   snapshotInCurrency,
   toDisplayCurrency,
   type DisplayRatePoint,
-  type SnapshotLike,
 } from "./displayCurrency";
 import { computePeriodReturn } from "../performance/strategies/base";
 
@@ -108,7 +107,7 @@ describe("snapshotInCurrency", () => {
       },
       { category: "cash", value: 500 },
     ],
-  } satisfies SnapshotLike & Record<string, unknown>;
+  };
 
   it("scales every money field", () => {
     const out = snapshotInCurrency(snapshot, 2);
@@ -125,13 +124,13 @@ describe("snapshotInCurrency", () => {
       coveredValue: 800,
       netFlow: 100,
     });
-    expect(out.categoryBreakdown[0].sources[0]).toMatchObject({
+    expect(out.categoryBreakdown[0].sources?.[0]).toMatchObject({
       value: 1_000,
       costBasis: 600,
       coveredValue: 800,
       netFlow: 100,
     });
-    expect(out.categoryBreakdown[0].sources[0].holdings[0]).toEqual({
+    expect(out.categoryBreakdown[0].sources?.[0].holdings[0]).toEqual({
       key: "coin",
       value: 1_000,
       cost: 600,
@@ -154,7 +153,7 @@ describe("snapshotInCurrency", () => {
   it("does not mutate its input", () => {
     snapshotInCurrency(snapshot, 2);
     expect(snapshot.netWorth).toBe(800);
-    expect(snapshot.categoryBreakdown[0].sources[0].holdings[0].value).toBe(500);
+    expect(snapshot.categoryBreakdown[0].sources?.[0].holdings[0].value).toBe(500);
   });
 
   it("is the identity at rate 1 (EUR)", () => {

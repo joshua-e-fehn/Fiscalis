@@ -94,6 +94,11 @@ export function useDisplayCurrency(): DisplayCurrencyState {
 export interface DisplayRateHistory {
   /** Units of the display currency per 1 EUR on a timestamp's day */
   rateOn: (timestamp: number) => number;
+  /**
+   * A non-EUR rate has not arrived yet; rateOn then returns the identity,
+   * so callers gate the converted series on it (as on
+   * useDisplayCurrency().isLoading)
+   */
   isLoading: boolean;
 }
 
@@ -101,23 +106,27 @@ export interface DisplayRateHistory {
  * Daily rates of the display currency from `sinceMs` (the first point of
  * a series) on, for converting a series per date: a day without a row
  * carries the previous rate, a day before the history takes the earliest,
- * and without any history the latest rate is used.
+ * and without any history (or without `sinceMs`) the latest rate is used.
  */
 export function useDisplayRateHistory(sinceMs: number | undefined): DisplayRateHistory {
-  const { code } = useEffectiveCode();
+  const { code, settingsLoading } = useEffectiveCode();
+  // Without `sinceMs` it still subscribes, for the latest rate
   const rates = useQuery(
     api.fxRates.getDisplayRates,
-    code === "EUR" || sinceMs === undefined
+    code === "EUR"
       ? "skip"
-      : { currency: code, since: sinceMs },
+      : sinceMs === undefined
+        ? { currency: code }
+        : { currency: code, since: sinceMs },
   );
 
   const history = rates?.history ?? [];
+  // The identity only for EUR or while loading (isLoading is set then)
   const latest = rates?.latest.unitsPerEur ?? 1;
 
   // Memoized by the React Compiler
   return {
     rateOn: (timestamp: number) => rateOnHistory(history, timestamp) ?? latest,
-    isLoading: code !== "EUR" && sinceMs !== undefined && rates === undefined,
+    isLoading: settingsLoading || (code !== "EUR" && rates === undefined),
   };
 }

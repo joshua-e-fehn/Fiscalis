@@ -251,7 +251,9 @@ const displayRateSource = v.union(
  * `latest` is the rate for point-in-time figures, from loadFxRates (flagged
  * "stale" or "fallback" when degraded). With `since` (ms), `history` holds
  * the daily rows from that day on, led by the row on or before it, so a
- * series can be converted per date (displayCurrency.ts rateOn). EUR is the
+ * series can be converted per date (displayCurrency.ts rateOn). Past
+ * MAX_HISTORY_ROWS the newest rows are kept and the oldest dropped (days
+ * before the first row then take its rate). EUR is the
  * identity and reads nothing. Codes outside DISPLAY_CURRENCIES are rejected.
  */
 export const getDisplayRates = query({
@@ -296,19 +298,29 @@ export const getDisplayRates = query({
     }
 
     const sinceDay = isoDay(args.since);
-    const baseline = await ctx.db
-      .query("fxRates")
-      .withIndex("by_currency_date", (q) =>
-        q.eq("currency", currency).lte("date", sinceDay),
-      )
-      .order("desc")
-      .first();
-    const rows = await ctx.db
+    // Newest first, so a cap drops the oldest days rather than the recent
+    // ones (portfolioSnapshots.getSnapshots does the same)
+    const newestFirst = await ctx.db
       .query("fxRates")
       .withIndex("by_currency_date", (q) =>
         q.eq("currency", currency).gt("date", sinceDay),
       )
+      .order("desc")
       .take(MAX_HISTORY_ROWS);
+    const rows = newestFirst.reverse();
+    // The baseline (the row on or before `since`) leads the history only
+    // when the rows still reach back to `since`; after a cut it would
+    // bridge the dropped gap with a years-old rate
+    const baseline =
+      newestFirst.length < MAX_HISTORY_ROWS
+        ? await ctx.db
+            .query("fxRates")
+            .withIndex("by_currency_date", (q) =>
+              q.eq("currency", currency).lte("date", sinceDay),
+            )
+            .order("desc")
+            .first()
+        : null;
     const history: DisplayRatePoint[] = (baseline ? [baseline, ...rows] : rows)
       .filter((row) => row.unitsPerEur > 0)
       .map((row) => ({ date: row.date, unitsPerEur: row.unitsPerEur }));

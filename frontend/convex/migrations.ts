@@ -28,6 +28,7 @@ import {
   brokerAccountBaseFields,
   positionBaseFields,
 } from "../../services/finance/currency";
+import { describeError } from "../../services/security/providerError";
 
 /**
  * Migration: Update metalCatalog and vaultItems to use buyPremium/sellPremium
@@ -167,7 +168,7 @@ export const classifyPlaidAccounts = internalMutation({
         await ctx.db.patch(account._id, fields);
         classified++;
       } catch (error) {
-        console.error(`Error classifying account ${account._id}:`, error);
+        console.error(`Error classifying account ${account._id}:`, describeError(error));
         errors++;
       }
     }
@@ -227,7 +228,7 @@ export const classifyBrokerPositions = internalMutation({
         });
         classified++;
       } catch (error) {
-        console.error(`Error classifying position ${position._id}:`, error);
+        console.error(`Error classifying position ${position._id}:`, describeError(error));
         errors++;
       }
     }

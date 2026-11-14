@@ -84,7 +84,7 @@ export function useCreateConnectUrl() {
   const [connectUrl, setConnectUrl] = useState<string | null>(null);
 
   const createUrl = useCallback(
-    async (params?: { broker?: string; reconnect?: string }) => {
+    async (params?: { broker?: string; connectionId?: Id<"brokerConnections"> }) => {
       setIsLoading(true);
       setError(null);
       try {
@@ -447,7 +447,7 @@ export function useSnaptradeConnect() {
    * 2. Create connect URL
    */
   const startConnect = useCallback(
-    async (params?: { broker?: string; reconnect?: string }) => {
+    async (params?: { broker?: string; connectionId?: Id<"brokerConnections"> }) => {
       // Register if not already registered
       if (!snaptradeUser) {
         await register();

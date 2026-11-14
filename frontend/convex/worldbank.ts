@@ -12,6 +12,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getUserId, requireUserId } from "./lib/auth";
+import { describeError } from "../../services/security/providerError";
 
 const WORLDBANK_BASE_URL = "https://api.worldbank.org/v2";
 const INDICATORS_PER_PAGE = 1000; // Max allowed by World Bank API
@@ -474,7 +475,7 @@ export const fetchIndicatorPage = internalAction({
         totalPages: meta.pages,
       };
     } catch (error) {
-      console.error(`Error fetching page ${args.page}:`, error);
+      console.error(`Error fetching page ${args.page}:`, describeError(error));
       return null;
     }
   },

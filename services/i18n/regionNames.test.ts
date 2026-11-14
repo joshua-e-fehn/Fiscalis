@@ -6,9 +6,21 @@ describe("createRegionNamer", () => {
   it("names countries in the given locale", () => {
     expect(createRegionNamer("de-DE")("DE", "Germany")).toBe("Deutschland");
     expect(createRegionNamer("de-DE")("ch", "Switzerland")).toBe("Schweiz");
-    expect(createRegionNamer("en-GB")("US", "United States of America")).toBe(
-      "United States",
-    );
+    expect(createRegionNamer("fr-FR")("DE", "Germany")).toBe("Allemagne");
+  });
+
+  it("keeps the English source names for English locales", () => {
+    for (const locale of ["en", "en-GB", "en-US"]) {
+      const name = createRegionNamer(locale);
+      expect(name("CD", "Congo, Dem. Rep.")).toBe("Congo, Dem. Rep.");
+      expect(name("CG", "Congo, Rep.")).toBe("Congo, Rep.");
+      expect(name("HK", "Hong Kong SAR, China")).toBe("Hong Kong SAR, China");
+      expect(name("MM", "Myanmar")).toBe("Myanmar");
+      expect(name("PS", "West Bank and Gaza")).toBe("West Bank and Gaza");
+      expect(name("US", "United States of America")).toBe(
+        "United States of America",
+      );
+    }
   });
 
   it("keeps the fallback for codes Intl does not know", () => {

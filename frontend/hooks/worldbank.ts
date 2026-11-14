@@ -620,8 +620,8 @@ export function useIndicatorText() {
 }
 
 /**
- * Country names in the UI language, by ISO alpha-2 code; aggregates and
- * unknown codes keep the World Bank's English name.
+ * Country names in the UI language, by ISO alpha-2 code; English, aggregates and
+ * unknown codes keep the World Bank / GeoJSON English name.
  */
 export function useCountryName() {
   const locale = useLocale();

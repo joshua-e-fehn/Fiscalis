@@ -1,4 +1,4 @@
-import { SignInButton, SignUpButton, SignedOut, SignedIn } from "@clerk/nextjs";
+import { SignInButton, SignedOut, SignedIn } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/shadcn/separator";
 import { Button } from "@/components/ui/shadcn/button";
 import { SidebarTrigger } from "@/components/ui/shadcn/sidebar";
@@ -46,9 +46,10 @@ export function Header({
             <SignInButton>
               <Button variant="outline">Sign in</Button>
             </SignInButton>
-            <SignUpButton>
-              <Button>Sign Up</Button>
-            </SignUpButton>
+            {/* Sign-up is waitlist-only (ENG-226) */}
+            <Link href="/waitlist">
+              <Button>Join the waitlist</Button>
+            </Link>
           </SignedOut>
           {hasDashboardButton && (
             <SignedIn>

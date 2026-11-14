@@ -11,7 +11,7 @@ import {
   ChangeIndicator,
   ValueCardSkeleton,
 } from "@/components/atomic/atoms/metals";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { TrendingUp } from "lucide-react";
@@ -21,7 +21,7 @@ interface TotalValueCardProps {
   totalValue: number;
   dailyChange?: number;
   dailyChangePercent?: number;
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   isLoading?: boolean;
   className?: string;
 }
@@ -30,7 +30,7 @@ export function TotalValueCard({
   totalValue,
   dailyChange,
   dailyChangePercent,
-  currency = "eur",
+  currency,
   isLoading = false,
   className,
 }: TotalValueCardProps) {

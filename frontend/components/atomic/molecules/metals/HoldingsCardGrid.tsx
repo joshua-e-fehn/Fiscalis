@@ -7,13 +7,13 @@ import {
 } from "@/components/atomic/atoms/metals";
 import {
   MetalItemWithValuation,
-  MetalsCurrency,
 } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 
 interface HoldingsCardGridProps {
   items: MetalItemWithValuation[];
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   onItemClick?: (item: MetalItemWithValuation) => void;
   onEdit?: (item: MetalItemWithValuation) => void;
   onDelete?: (item: MetalItemWithValuation) => void;
@@ -24,7 +24,7 @@ interface HoldingsCardGridProps {
 
 export function HoldingsCardGrid({
   items,
-  currency = "eur",
+  currency,
   onItemClick,
   onEdit,
   onDelete,

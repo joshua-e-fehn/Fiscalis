@@ -2,9 +2,9 @@
 
 import {
   MetalItemWithValuation,
-  MetalsCurrency,
   MetalsType,
 } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { HoldingsCardGrid } from "./HoldingsCardGrid";
 import { MetalIcon } from "@/components/atomic/atoms/metals";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/shadcn/button";
 
 interface HoldingsGroupedViewProps {
   items: MetalItemWithValuation[];
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   onItemClick?: (item: MetalItemWithValuation) => void;
   isLoading?: boolean;
   className?: string;
@@ -32,7 +32,7 @@ const metalOrder: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
 
 export function HoldingsGroupedView({
   items,
-  currency = "eur",
+  currency,
   onItemClick,
   isLoading = false,
   className,

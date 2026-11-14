@@ -2,13 +2,13 @@
 
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { currencySuffixes } from "@/lib/utils/currency";
 
 interface ChangeIndicatorProps {
   value: number;
   percentage?: number;
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   size?: "sm" | "md" | "lg";
   showIcon?: boolean;
   showValue?: boolean;
@@ -32,7 +32,7 @@ const iconSizes = {
 export function ChangeIndicator({
   value,
   percentage,
-  currency = "eur",
+  currency,
   size = "md",
   showIcon = true,
   showValue = true,

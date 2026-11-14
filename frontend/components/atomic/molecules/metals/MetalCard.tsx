@@ -13,21 +13,18 @@ import {
   PercentageChange,
   AnimatedNumber,
 } from "@/components/atomic/atoms/metals";
-import {
-  MetalsType,
-  MetalSummary,
-  MetalsCurrency,
-  MetalsPrices,
-} from "@/lib/types/metals-extended";
-import { getSpotPrice } from "@/hooks/metals";
+import { MetalsType, MetalSummary } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 
 interface MetalCardProps {
   metal: MetalsType;
   summary: MetalSummary;
-  prices: MetalsPrices | undefined;
-  currency?: MetalsCurrency;
+  /** Spot per troy ounce in `currency` (useMetals spotPrices); null without a quote */
+  spotPrice: number | null;
+  /** The currency of the summary and the spot price */
+  currency: MetalsDisplayCurrency;
   isLoading?: boolean;
   className?: string;
   onClick?: () => void;
@@ -66,16 +63,14 @@ const metalConfig: Record<
 export function MetalCard({
   metal,
   summary,
-  prices,
-  currency = "eur",
+  spotPrice,
+  currency,
   isLoading = false,
   className,
   onClick,
 }: MetalCardProps) {
   const config = metalConfig[metal];
   const hasHoldings = summary.itemCount > 0;
-  const spotPrice = prices ? getSpotPrice(prices, metal, currency) : null;
-
 
   if (isLoading) {
     return (

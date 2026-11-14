@@ -1,12 +1,12 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { currencySuffixes } from "@/lib/utils/currency";
 
 interface PriceDisplayProps {
   value: number;
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   showSign?: boolean;
@@ -22,7 +22,7 @@ const sizeClasses = {
 
 export function PriceDisplay({
   value,
-  currency = "eur",
+  currency,
   size = "md",
   className,
   showSign = false,
@@ -47,11 +47,11 @@ export function PriceDisplay({
 // Compact price display with currency code
 export function PriceWithCurrency({
   value,
-  currency = "eur",
+  currency,
   className,
 }: {
   value: number;
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   className?: string;
 }) {
   const formattedValue = new Intl.NumberFormat("de-DE", {

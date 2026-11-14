@@ -35,8 +35,8 @@ import {
 } from "@/components/atomic/atoms/metals";
 import {
   MetalItemWithValuation,
-  MetalsCurrency,
 } from "@/lib/types/metals-extended";
+import { toMetalCurrency, type MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import {
   Edit2,
@@ -54,14 +54,14 @@ interface MetalDetailSlideOverProps {
   item: MetalItemWithValuation | null;
   isOpen: boolean;
   onClose: () => void;
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
 }
 
 export function MetalDetailSlideOver({
   item,
   isOpen,
   onClose,
-  currency = "eur",
+  currency,
 }: MetalDetailSlideOverProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
@@ -277,10 +277,8 @@ export function MetalDetailSlideOver({
                         </div>
                         <PriceDisplay
                           value={item.purchasePricePerUnit}
-                          currency={
-                            (item.purchaseCurrency?.toLowerCase() as MetalsCurrency) ??
-                            currency
-                          }
+                          // useMetals converts the unit cost into the display currency
+                          currency={currency}
                           size="md"
                         />
                       </div>
@@ -409,7 +407,9 @@ export function MetalDetailSlideOver({
           item={item}
           isOpen={isSellOpen}
           onClose={() => setIsSellOpen(false)}
-          currency={currency}
+          // The sale form takes a quote currency (EUR/USD/CHF): another
+          // display currency opens it in EUR
+          currency={toMetalCurrency(currency) ?? "eur"}
         />
 
         {/* Edit Dialog: details and opening balance (vault.updateVaultItem) */}

@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
 	closeResolutionValidator,
+	metalPriceCoreFields,
 	metalPriceSnapshotFields,
 } from "./lib/metalPriceValidators";
 import {
@@ -956,9 +957,11 @@ export default defineSchema({
 	// ═══════════════════════════════════════════════════════════════
 	// METAL PRICE HISTORY
 	// ═══════════════════════════════════════════════════════════════
-	// Minutely gold.de snapshots (all four metals in EUR/USD/CHF plus the
-	// EUR/USD and EUR/CHF rates), recorded by convex/metalPrices.ts.
-	// Ticks are the raw minutes, pruned after TICK_RETENTION_MS
+	// Minutely gold.de snapshots (all four metals in EUR/USD/CHF, the extra
+	// gold gram/kilo/purity columns, the EUR/USD and EUR/CHF rates), recorded
+	// by convex/metalPrices.ts. Ticks are the raw minutes; each UTC day is
+	// archived to object storage (convex/actions/metalPriceArchive.ts, logged
+	// in metalPriceArchive) and only then pruned after TICK_RETENTION_MS
 	// (services/finance/metalPriceFeed.ts). Closes are the last snapshot of
 	// every UTC hour and day, kept forever; every chart reads them.
 
@@ -970,8 +973,18 @@ export default defineSchema({
 	metalPriceCloses: defineTable({
 		resolution: closeResolutionValidator,
 		bucketStart: v.number(), // UTC hour/day start (ms)
-		...metalPriceSnapshotFields, // timestamp = the last minute in the bucket
+		...metalPriceCoreFields, // timestamp = the last minute in the bucket
 	}).index("by_resolution_bucket", ["resolution", "bucketStart"]),
+
+	// One row per UTC day whose ticks are in the object-storage archive.
+	metalPriceArchive: defineTable({
+		day: v.string(), // UTC day, YYYY-MM-DD
+		key: v.string(), // Object key of the gzipped JSON-lines file
+		rows: v.number(),
+		bytes: v.number(), // Compressed size
+		sha256: v.string(), // Of the compressed file
+		archivedAt: v.number(),
+	}).index("by_day", ["day"]),
 
 	// ═══════════════════════════════════════════════════════════════
 	// FX RATES

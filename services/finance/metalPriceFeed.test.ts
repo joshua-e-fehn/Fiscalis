@@ -2,7 +2,11 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  GOLD_EXTENDED_COLUMNS,
   addUtcMonths,
+  archiveKey,
+  archiveLines,
+  archiveRow,
   bucketStart,
   chartSeries,
   chartWindow,
@@ -35,6 +39,10 @@ const goldDe = {
   au_palladium_chf_o: 843.03,
   au_wechselkurs_eur_usd: 1.1024,
   au_wechselkurs_eur_chf: 0.9246,
+  au_gold_eur_o_gramm: 113.13,
+  au_gold_usd_o_kilo: 124699.5,
+  au_gold_chf_o_585: 61.13,
+  au_gold_eur_o_999: "113,02",
   au_gold_usd: "3.878,56 USD",
   timestamp: 1763152320,
 };
@@ -52,6 +60,7 @@ describe("parseGoldDeSnapshot", () => {
         platinum: { eur: 1350.27, usd: 1489, chf: 1249.65 },
         palladium: { eur: 910.91, usd: 1004.5, chf: 843.03 },
       },
+      extended: { gold_eur_gram: 113.13, gold_usd_kilo: 124699.5, gold_chf_585: 61.13 },
       eurToUsd: 1.1024,
       eurToChf: 0.9246,
     });
@@ -275,5 +284,40 @@ describe("addUtcMonths", () => {
   it("crosses year boundaries", () => {
     expect(iso(addUtcMonths(Date.parse("2026-01-15T00:00:00Z"), -12))).toBe("2025-01-15");
     expect(iso(addUtcMonths(Date.parse("2026-11-14T00:00:00Z"), 3))).toBe("2027-02-14");
+  });
+});
+
+describe("archive rows", () => {
+  const snapshot = parseGoldDeSnapshot(goldDe, AT)!;
+
+  it("lists the 27 extended gold columns of the SQL table", () => {
+    expect(GOLD_EXTENDED_COLUMNS).toHaveLength(27);
+    expect(GOLD_EXTENDED_COLUMNS).toContain("gold_usd_916");
+  });
+
+  it("writes every SQL column, null where nothing was recorded", () => {
+    const row = archiveRow(snapshot);
+    expect(Object.keys(row)).toHaveLength(1 + 12 + 27 + 2);
+    expect(row).toMatchObject({
+      timestamp: "2026-11-14T20:32:00.000Z",
+      gold_eur: 3518.55,
+      palladium_chf: 843.03,
+      gold_eur_gram: 113.13,
+      gold_eur_999: null,
+      from_eur_to_usd: 1.1024,
+      from_eur_to_chf: 0.9246,
+    });
+  });
+
+  it("keys a day by year and month and writes sorted JSON lines", () => {
+    expect(archiveKey("metal-prices/", "2026-11-14")).toBe(
+      "metal-prices/minute/2026/11/2026-11-14.jsonl.gz",
+    );
+    const later = { ...snapshot, timestamp: snapshot.timestamp + 60_000 };
+    const lines = archiveLines([later, snapshot]).trim().split("\n");
+    expect(lines.map((l) => JSON.parse(l).timestamp)).toEqual([
+      "2026-11-14T20:32:00.000Z",
+      "2026-11-14T20:33:00.000Z",
+    ]);
   });
 });

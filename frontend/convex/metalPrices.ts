@@ -10,12 +10,14 @@ import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import {
   closeResolutionValidator,
+  metalPriceCoreValidator,
   metalPriceSnapshotValidator,
 } from "./lib/metalPriceValidators";
 import {
   GOLD_DE_URL,
   TICK_RETENTION_MS,
   bucketStart,
+  utcDay,
   fxRatesFromDayCloses,
   parseGoldDeSnapshot,
   spotPricesFromSnapshot,
@@ -29,7 +31,9 @@ import {
 
 /**
  * Precious-metal prices: a minutely gold.de snapshot, stored as raw ticks
- * (pruned after TICK_RETENTION_MS) and as hour/day closes (kept forever),
+ * (archived per UTC day to object storage by
+ * convex/actions/metalPriceArchive.ts, then pruned after TICK_RETENTION_MS)
+ * and as hour/day closes (kept forever),
  * plus the one-row-per-metal `metalSpotPrices` mirror that server-side net
  * worth (lib/netWorth.ts) values vault items with. The day closes also
  * feed the USD/CHF rates of convex/fxRates.ts.
@@ -124,16 +128,29 @@ async function insertTick(
     .first();
   if (existing) return false;
   await ctx.db.insert("metalPriceTicks", snapshot);
+  // A late minute (backfill) reopens an archived day: it is uploaded again
+  // before its ticks can be pruned.
+  const archived = await ctx.db
+    .query("metalPriceArchive")
+    .withIndex("by_day", (q) => q.eq("day", utcDay(snapshot.timestamp)))
+    .unique();
+  if (archived) await ctx.db.delete(archived._id);
   return true;
 }
 
-/** Newer-wins: a bucket's close is its latest snapshot. */
+/** Newer-wins: a bucket's close is its latest snapshot (core fields only). */
 async function upsertClose(
   ctx: MutationCtx,
   resolution: CloseResolution,
-  snapshot: MetalPriceSnapshot,
+  { timestamp, prices, eurToUsd, eurToChf }: MetalPriceSnapshot,
 ): Promise<void> {
-  const start = bucketStart(snapshot.timestamp, resolution);
+  const snapshot = {
+    timestamp,
+    prices,
+    eurToUsd,
+    ...(eurToChf === undefined ? {} : { eurToChf }),
+  };
+  const start = bucketStart(timestamp, resolution);
   const existing = await ctx.db
     .query("metalPriceCloses")
     .withIndex("by_resolution_bucket", (q) =>
@@ -185,9 +202,11 @@ async function writeSpotPrices(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Delete ticks older than TICK_RETENTION_MS; closes are kept. The newest
- * tick always stays, so `latest` survives a feed outage longer than the
- * retention window.
+ * Delete ticks older than TICK_RETENTION_MS whose UTC day is in the
+ * object-storage archive; closes are kept. Oldest first, stopping at the
+ * first day not archived yet, so a missing bucket or a failed upload keeps
+ * every tick. The newest tick always stays, so `latest` survives a feed
+ * outage longer than the retention window.
  */
 export const pruneTicks = internalMutation({
   args: {},
@@ -204,11 +223,25 @@ export const pruneTicks = internalMutation({
       .query("metalPriceTicks")
       .withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff))
       .take(PRUNE_BATCH);
-    for (const tick of old) await ctx.db.delete(tick._id);
-    if (old.length === PRUNE_BATCH) {
+    const archived = new Map<string, boolean>();
+    let deleted = 0;
+    for (const tick of old) {
+      const day = utcDay(tick.timestamp);
+      if (!archived.has(day)) {
+        const entry = await ctx.db
+          .query("metalPriceArchive")
+          .withIndex("by_day", (q) => q.eq("day", day))
+          .unique();
+        archived.set(day, entry !== null);
+      }
+      if (!archived.get(day)) break;
+      await ctx.db.delete(tick._id);
+      deleted++;
+    }
+    if (deleted === PRUNE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.metalPrices.pruneTicks, {});
     }
-    return old.length;
+    return deleted;
   },
 });
 
@@ -224,7 +257,7 @@ export const importHistory = internalMutation({
       v.array(
         v.object({
           resolution: closeResolutionValidator,
-          snapshot: metalPriceSnapshotValidator,
+          snapshot: metalPriceCoreValidator,
         }),
       ),
     ),
@@ -324,5 +357,83 @@ export const dailyFxRates = internalQuery({
       )
       .take(MAX_CLOSES);
     return fxRatesFromDayCloses(rows);
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Object-storage archive bookkeeping (convex/actions/metalPriceArchive.ts)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * The oldest UTC day before today that has ticks and no archive entry, or
+ * null. Days before the first tick are covered by the one-off Supabase
+ * export (logged with `markArchived`).
+ */
+export const nextDayToArchive = internalQuery({
+  args: {},
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx) => {
+    const oldest = await ctx.db
+      .query("metalPriceTicks")
+      .withIndex("by_timestamp")
+      .order("asc")
+      .first();
+    if (!oldest) return null;
+    const today = bucketStart(Date.now(), "day");
+    for (let day = bucketStart(oldest.timestamp, "day"); day < today; day += 86_400_000) {
+      const entry = await ctx.db
+        .query("metalPriceArchive")
+        .withIndex("by_day", (q) => q.eq("day", utcDay(day)))
+        .unique();
+      if (entry) continue;
+      const tick = await ctx.db
+        .query("metalPriceTicks")
+        .withIndex("by_timestamp", (q) => q.gte("timestamp", day).lt("timestamp", day + 86_400_000))
+        .first();
+      if (tick) return utcDay(day);
+    }
+    return null;
+  },
+});
+
+/** Every tick of a UTC day (at most 1440), oldest first. */
+export const ticksForDay = internalQuery({
+  args: { day: v.string() },
+  returns: v.array(metalPriceSnapshotValidator),
+  handler: async (ctx, { day }) => {
+    const start = Date.parse(`${day}T00:00:00Z`);
+    const ticks = await ctx.db
+      .query("metalPriceTicks")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", start).lt("timestamp", start + 86_400_000))
+      .collect();
+    return ticks.map(({ timestamp, prices, extended, eurToUsd, eurToChf }) => ({
+      timestamp,
+      prices,
+      eurToUsd,
+      ...(extended === undefined ? {} : { extended }),
+      ...(eurToChf === undefined ? {} : { eurToChf }),
+    }));
+  },
+});
+
+/** Log a day as archived (the cron after its upload, or the Supabase export). */
+export const markArchived = internalMutation({
+  args: {
+    day: v.string(),
+    key: v.string(),
+    rows: v.number(),
+    bytes: v.number(),
+    sha256: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("metalPriceArchive")
+      .withIndex("by_day", (q) => q.eq("day", args.day))
+      .unique();
+    const entry = { ...args, archivedAt: Date.now() };
+    if (existing) await ctx.db.replace(existing._id, entry);
+    else await ctx.db.insert("metalPriceArchive", entry);
+    return null;
   },
 });

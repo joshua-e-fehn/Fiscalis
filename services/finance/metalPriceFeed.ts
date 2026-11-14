@@ -4,7 +4,10 @@
  * and turning stored hour/day closes into chart series.
  *
  * Storage model (frontend/convex/schema.ts):
- * - `metalPriceTicks`: one snapshot per minute, kept for TICK_RETENTION_MS.
+ * - `metalPriceTicks`: one snapshot per minute with every column the old
+ *   SQL table had, kept in Convex for TICK_RETENTION_MS once its UTC day is
+ *   archived to object storage (one gzipped JSON-lines file per day, rows
+ *   as archiveRow makes them). The archive is the minutely history.
  * - `metalPriceCloses`: the last snapshot of every UTC hour and UTC day,
  *   kept forever. Every chart and performance range reads these.
  *
@@ -24,18 +27,47 @@ export interface MetalQuote {
   chf?: number;
 }
 
+const GOLD_CURRENCIES = ["eur", "usd", "chf"] as const;
+const GOLD_PURITIES = ["333", "585", "750", "833", "900", "916", "999"] as const;
+
+/**
+ * The extra gold columns of the old SQL table, under its column names:
+ * gram and kilo prices and the price per troy ounce at each purity (per
+ * mille, e.g. gold_eur_585 = 58.5 % gold),
+ * in EUR, USD and CHF. Nothing reads them yet; they are kept so the
+ * archive loses nothing the SQL store had.
+ */
+export const GOLD_EXTENDED_COLUMNS = GOLD_CURRENCIES.flatMap((c) => [
+  `gold_${c}_gram`,
+  `gold_${c}_kilo`,
+  ...GOLD_PURITIES.map((p) => `gold_${c}_${p}`),
+]);
+export type GoldExtended = Record<string, number>;
+
+/** gold.de key of each extended column (gold_eur_gram -> au_gold_eur_o_gramm). */
+function goldDeExtendedKey(column: string): string {
+  const [, currency, suffix] = column.split("_");
+  const tail = suffix === "gram" ? "gramm" : suffix;
+  return `au_gold_${currency}_o_${tail}`;
+}
+
 /** One observation of all four metals and the EUR rates. */
 export interface MetalPriceSnapshot {
   /** Observation minute (ms, floored to the minute) */
   timestamp: number;
   prices: Record<SpotMetal, MetalQuote>;
+  /** The extra gold columns that were present and valid */
+  extended?: GoldExtended;
   /** USD per 1 EUR */
   eurToUsd: number;
   /** CHF per 1 EUR */
   eurToChf?: number;
 }
 
-/** Raw minutely snapshots older than this are pruned; closes stay. */
+/**
+ * Ticks stay in Convex this long, and only after their UTC day is in the
+ * object-storage archive; closes stay forever.
+ */
 export const TICK_RETENTION_MS = 7 * MS_PER_DAY;
 
 export const GOLD_DE_URL = "https://www.gold.de/cache/api.json";
@@ -93,12 +125,65 @@ export function parseGoldDeSnapshot(
   if (eurToUsd === undefined) return null;
   const eurToChf = positive(body.au_wechselkurs_eur_chf);
 
+  const extended: GoldExtended = {};
+  for (const column of GOLD_EXTENDED_COLUMNS) {
+    const value = positive(body[goldDeExtendedKey(column)]);
+    if (value !== undefined) extended[column] = value;
+  }
+
   return {
     timestamp: floorTo(observedAt, MS_PER_MINUTE),
     prices,
+    ...(Object.keys(extended).length > 0 ? { extended } : {}),
     eurToUsd,
     ...(eurToChf === undefined ? {} : { eurToChf }),
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Object-storage archive (one gzipped JSON-lines file per UTC day)
+// ═══════════════════════════════════════════════════════════════
+
+/** One archive line: the old SQL row, column names and all, plus the rates. */
+export type ArchiveRow = Record<string, string | number | null>;
+
+/** UTC day of `ms` as YYYY-MM-DD. */
+export const utcDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * A snapshot as an archive line: `timestamp` (ISO, UTC), the 40 price
+ * columns of `precious_metal_prices` and the two of
+ * `currency_exchange_rates`, null where nothing was recorded. The one-off
+ * Supabase export writes the same shape, so a day file reads the same
+ * whichever side wrote it.
+ */
+export function archiveRow(snapshot: MetalPriceSnapshot): ArchiveRow {
+  const row: ArchiveRow = { timestamp: new Date(snapshot.timestamp).toISOString() };
+  for (const metal of SPOT_METALS) {
+    const q = snapshot.prices[metal];
+    row[`${metal}_eur`] = q.eur;
+    row[`${metal}_usd`] = q.usd;
+    row[`${metal}_chf`] = q.chf ?? null;
+  }
+  for (const column of GOLD_EXTENDED_COLUMNS) {
+    row[column] = snapshot.extended?.[column] ?? null;
+  }
+  row.from_eur_to_usd = snapshot.eurToUsd;
+  row.from_eur_to_chf = snapshot.eurToChf ?? null;
+  return row;
+}
+
+/** Object key of a day's file: `<prefix>/minute/YYYY/MM/YYYY-MM-DD.jsonl.gz`. */
+export function archiveKey(prefix: string, day: string): string {
+  return `${prefix.replace(/\/+$/, "")}/minute/${day.slice(0, 4)}/${day.slice(5, 7)}/${day}.jsonl.gz`;
+}
+
+/** The day's rows as JSON lines, oldest first. */
+export function archiveLines(snapshots: readonly MetalPriceSnapshot[]): string {
+  return [...snapshots]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((s) => JSON.stringify(archiveRow(s)))
+    .join("\n") + "\n";
 }
 
 /** The EUR spot prices of a snapshot, for the `metalSpotPrices` mirror. */

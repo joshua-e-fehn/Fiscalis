@@ -44,12 +44,20 @@ crons.interval(
 // Every minute: record a gold.de snapshot (all metals in EUR/USD/CHF plus
 // the EUR/USD and EUR/CHF rates) as a tick, the hour/day closes every
 // chart reads, and the spot mirror server-side net worth values vault
-// items with. Daily at 04:00 UTC: prune ticks past their retention window.
+// items with. Daily at 00:15 UTC: upload each finished day's ticks to the
+// object-storage archive. Daily at 04:00 UTC: prune archived ticks past
+// their retention window (unarchived ticks are never pruned).
 // ═══════════════════════════════════════════════════════════════
 crons.interval(
   "ingest-metal-prices",
   { minutes: 1 },
   internal.metalPrices.ingestGoldDe,
+);
+
+crons.daily(
+  "archive-metal-price-ticks",
+  { hourUTC: 0, minuteUTC: 15 },
+  internal.actions.metalPriceArchive.archiveTicks,
 );
 
 crons.daily(

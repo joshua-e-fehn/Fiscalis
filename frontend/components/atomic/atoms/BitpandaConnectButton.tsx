@@ -10,7 +10,6 @@
  */
 
 import { useState, useCallback } from "react";
-import { ConvexError } from "convex/values";
 import { useTranslations } from "next-intl";
 import { Loader2, Plus, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
@@ -40,19 +39,6 @@ interface BitpandaConnectButtonProps {
 }
 
 const BITPANDA_API_KEYS_URL = "https://web.bitpanda.com/apikey";
-
-/** Codes thrown by the connect action (convex/actions/bitpanda.ts) */
-const CONNECT_ERROR_CODES = [
-  "bitpandaKeyRejected",
-  "bitpandaUnavailable",
-] as const;
-type ConnectErrorCode = (typeof CONNECT_ERROR_CODES)[number];
-
-function connectErrorCode(error: unknown): ConnectErrorCode | null {
-  if (!(error instanceof ConvexError)) return null;
-  const code: unknown = (error.data as { code?: unknown } | null)?.code;
-  return CONNECT_ERROR_CODES.find((known) => known === code) ?? null;
-}
 
 export function BitpandaConnectButton({
   onSuccess,
@@ -93,8 +79,16 @@ export function BitpandaConnectButton({
         setOpen(false);
         onSuccess?.(result.connectionId);
       } catch (err) {
-        const code = connectErrorCode(err);
-        setError(code ? t(`errors.${code}`) : toErrorMessage(err));
+        // Codes thrown by convex/actions/bitpanda.ts connect.
+        // TODO(i18n batch 16-convex-user-error-codes): move bitpandaKeyRejected
+        // and bitpandaUnavailable into common.errors + convex/lib/userError.ts
+        // and drop these overrides.
+        setError(
+          toErrorMessage(err, "generic", {
+            bitpandaKeyRejected: t("errors.bitpandaKeyRejected"),
+            bitpandaUnavailable: t("errors.bitpandaUnavailable"),
+          }),
+        );
         onError?.(err instanceof Error ? err : new Error(String(err)));
       }
     },

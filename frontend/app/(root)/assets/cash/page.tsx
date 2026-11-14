@@ -2,8 +2,8 @@
 
 import {
   InvestmentDashboardSection,
+  SubcategoryCardSection,
   CASH_KPI_CARDS,
-  SubcategoryCategoryCard,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useCashSummary } from "@/hooks/convex/cash";
@@ -41,24 +41,11 @@ export default function CashPage() {
       />
 
       {/* Category Cards */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="h-px flex-1 bg-border" />
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Cash Categories
-          </h2>
-          <div className="h-px flex-1 bg-border" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {cashCategoryCards.map((category) => (
-            <SubcategoryCategoryCard
-              key={category.title}
-              category={category}
-              actionLabel="View Accounts"
-            />
-          ))}
-        </div>
-      </div>
+      <SubcategoryCardSection
+        title="Cash Categories"
+        cards={cashCategoryCards}
+        actionLabel="View Accounts"
+      />
     </div>
   );
 }

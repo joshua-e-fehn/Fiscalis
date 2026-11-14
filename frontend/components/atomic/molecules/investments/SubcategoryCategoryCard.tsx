@@ -15,6 +15,8 @@ import {
   useCategoryLabels,
   type CategoryCardData,
 } from "@/lib/config/categoryUI";
+import { isFeatureEnabled } from "@/lib/config/features";
+import { cn } from "@/lib/utils";
 
 /** A subcategory card: its catalogue label (title), route, icon and colour */
 export type SubcategoryCardData = Pick<
@@ -112,5 +114,63 @@ export function SubcategoryCategoryCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Cards a category page shows: the built ones, plus the planned ("Coming
+ * soon") ones only while the plannedCategories flag is on (ENG-227).
+ */
+export function visibleCategoryCards<T extends { implemented: boolean }>(
+  cards: readonly T[],
+): T[] {
+  return cards.filter(
+    (card) => card.implemented || isFeatureEnabled("plannedCategories"),
+  );
+}
+
+const GRID_COLUMNS = {
+  3: "lg:grid-cols-3",
+  4: "lg:grid-cols-4",
+} as const;
+
+/**
+ * A titled grid of subcategory cards. Planned cards are left out (see
+ * visibleCategoryCards) and the section disappears when nothing is left.
+ */
+export function SubcategoryCardSection({
+  title,
+  cards,
+  actionLabel,
+  columns = 3,
+  className,
+}: {
+  title: string;
+  cards: readonly SubcategoryCardData[];
+  actionLabel?: string;
+  columns?: keyof typeof GRID_COLUMNS;
+  className?: string;
+}) {
+  const visible = visibleCategoryCards(cards);
+  if (visible.length === 0) return null;
+  return (
+    <div className={cn("space-y-4", className)}>
+      <div className="flex items-center gap-2">
+        <div className="h-px flex-1 bg-border" />
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          {title}
+        </h2>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className={cn("grid gap-6 md:grid-cols-2", GRID_COLUMNS[columns])}>
+        {visible.map((category) => (
+          <SubcategoryCategoryCard
+            key={category.title}
+            category={category}
+            actionLabel={actionLabel}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

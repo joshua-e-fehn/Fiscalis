@@ -26,6 +26,10 @@ import legalEn from "@/messages/en/legal.json";
 import legalDe from "@/messages/de/legal.json";
 import onboardingEn from "@/messages/en/onboarding.json";
 import onboardingDe from "@/messages/de/onboarding.json";
+import landingEn from "@/messages/en/landing.json";
+import landingDe from "@/messages/de/landing.json";
+import navigationEn from "@/messages/en/navigation.json";
+import navigationDe from "@/messages/de/navigation.json";
 
 import type { Language } from "./locales";
 
@@ -39,6 +43,8 @@ const en = {
   dashboard: dashboardEn,
   legal: legalEn,
   onboarding: onboardingEn,
+  landing: landingEn,
+  navigation: navigationEn,
 };
 
 export type Messages = typeof en;
@@ -53,6 +59,8 @@ const de = {
   dashboard: dashboardDe,
   legal: legalDe,
   onboarding: onboardingDe,
+  landing: landingDe,
+  navigation: navigationDe,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = { en, de };

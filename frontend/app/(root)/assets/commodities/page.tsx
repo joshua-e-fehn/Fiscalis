@@ -2,7 +2,7 @@
 
 import {
   InvestmentDashboardSection,
-  SubcategoryCategoryCard,
+  SubcategoryCardSection,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useCommoditiesSummary } from "@/hooks/convex/commodities";
@@ -40,24 +40,12 @@ export default function CommoditiesPage() {
       </div>
 
       {/* Category Grid */}
-      <div className="w-full space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="h-px flex-1 bg-border" />
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Commodity Categories
-          </h2>
-          <div className="h-px flex-1 bg-border" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {commoditiesCategoryCards.map((category) => (
-            <SubcategoryCategoryCard
-              key={category.title}
-              category={category}
-              actionLabel="View Portfolio"
-            />
-          ))}
-        </div>
-      </div>
+      <SubcategoryCardSection
+        title="Commodity Categories"
+        cards={commoditiesCategoryCards}
+        actionLabel="View Portfolio"
+        className="w-full"
+      />
     </main>
   );
 }

@@ -1,0 +1,25 @@
+{
+  "hero": {
+    "subheadline": "Track all your investments, assets and liabilities. Know your true net worth with automatic updates across bank accounts, stocks, crypto, precious metals and more."
+  },
+  "trust": {
+    "readOnly": "Read-only connections",
+    "dailySync": "Daily automatic sync"
+  },
+  "features": {
+    "cryptoDescription": "Import your Bitpanda holdings automatically with a read-only API key.",
+    "metalsTitle": "Precious Metals",
+    "metalsDescription": "Track gold and silver bars and coins, valued at current dealer prices.",
+    "liabilitiesDescription": "Track your loans and repayment schedules. See your true net worth."
+  },
+  "steps": {
+    "createDescription": "Sign up with your email or a social login. Access opens gradually through a waitlist. No credit card required.",
+    "netWorthDescription": "Watch your complete wealth picture come together, refreshed automatically every day."
+  },
+  "security": {
+    "description": "We never see your bank credentials. Access tokens and API keys are stored encrypted, and every connection is read-only."
+  },
+  "cta": {
+    "description": "Bring your accounts, holdings and loans together and see your whole net worth in one place."
+  }
+}

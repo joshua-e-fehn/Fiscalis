@@ -380,7 +380,7 @@ export const getUserTransactions = query({
   handler: async (ctx, args) => {
     const userId = await getUserId(ctx);
     if (!userId) return [];
-    let query = ctx.db
+    const query = ctx.db
       .query("vaultTransactions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc");

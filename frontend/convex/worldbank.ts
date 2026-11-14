@@ -492,7 +492,7 @@ export const syncAllIndicatorsInternal = internalAction({
   ): Promise<{ success: boolean; indicatorCount: number; message: string }> => {
     const startTime = Date.now();
     let totalIndicators = 0;
-    let failedPages: number[] = [];
+    const failedPages: number[] = [];
 
     console.log("[WorldBank Sync] Starting full indicator sync...");
 

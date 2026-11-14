@@ -1123,6 +1123,50 @@ export function paymentSplitBasis(
   };
 }
 
+/** What an edit of a recorded payment is split on (see {@link editedPaymentSplitBasis}). */
+export interface EditedPaymentSplitBasis<
+  T extends SchedulePayment = SchedulePayment,
+> {
+  basis: LoanSplitBasis;
+  /** The recorded payments without the edited one. */
+  otherPayments: T[];
+  /** The loan's balance adjustment (see {@link loanBalanceAdjustment}). */
+  balanceAdjustment: number;
+  /** The balance the other payments leave: the edited principal's cap. */
+  balanceWithout: number;
+}
+
+/**
+ * What the recorded payment `paymentId`, edited to `paymentDate`, is split
+ * on: the loan as if that payment had never been made, so the edit is split
+ * like a new payment on the same date. Shared by the edit dialog and
+ * loans.updatePayment, so the preview and the stored split agree.
+ */
+export function editedPaymentSplitBasis<T extends SchedulePayment>(
+  loan: ScheduleLoan & LoanBalanceBasis,
+  payments: T[],
+  paymentId: string,
+  paymentDate: string,
+): EditedPaymentSplitBasis<T> {
+  const otherPayments = payments.filter((p) => p._id !== paymentId);
+  const balanceAdjustment = loanBalanceAdjustment(loan, payments);
+  const balanceWithout = deriveLoanBalance(
+    loan,
+    otherPayments,
+    balanceAdjustment,
+  );
+  return {
+    basis: paymentSplitBasis(
+      { ...loan, currentBalance: balanceWithout },
+      otherPayments,
+      paymentDate,
+    ),
+    otherPayments,
+    balanceAdjustment,
+    balanceWithout,
+  };
+}
+
 /**
  * The first due date not covered by a regular payment, i.e. the date of the
  * first projected schedule row (past the term, the date the residual balance

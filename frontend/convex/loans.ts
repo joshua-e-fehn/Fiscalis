@@ -12,6 +12,7 @@ import {
   adjustmentForBalance,
   computeNextPaymentDate,
   deriveLoanBalance,
+  editedPaymentSplitBasis,
   getPaymentsPerYear,
   initialScheduledPayment,
   isExtraPaymentType,
@@ -777,25 +778,17 @@ export const updatePayment = mutation({
     // portion wins; an untouched pair is kept unless the amount changed, in
     // which case it is split again. Principal is at most what is owed.
     const payments = await getLoanPaymentDocs(ctx, loan._id);
-    const otherPayments = payments.filter((p) => p._id !== paymentId);
-    const balanceAdjustment = loanBalanceAdjustment(loan, payments);
-    const balanceWithout = deriveLoanBalance(
-      loan,
-      otherPayments,
-      balanceAdjustment,
-    );
     const paymentDate = args.paymentDate ?? payment.paymentDate;
+    const paymentType = args.paymentType ?? payment.paymentType;
+    const { basis, otherPayments, balanceAdjustment, balanceWithout } =
+      editedPaymentSplitBasis(loan, payments, paymentId, paymentDate);
     const editsPortion =
       args.principalPortion !== undefined || args.interestPortion !== undefined;
     const keepsPortions = !editsPortion && args.amount === undefined;
     const split = splitLoanPayment(
-      paymentSplitBasis(
-        { ...loan, currentBalance: balanceWithout },
-        otherPayments,
-        paymentDate,
-      ),
+      basis,
       args.amount ?? payment.amount,
-      args.paymentType ?? payment.paymentType,
+      paymentType,
       {
         principal: keepsPortions ? payment.principalPortion : args.principalPortion,
         interest: keepsPortions ? payment.interestPortion : args.interestPortion,
@@ -803,17 +796,6 @@ export const updatePayment = mutation({
       },
     );
     const principalPortion = Math.min(split.principalPortion, balanceWithout);
-
-    await ctx.db.patch(paymentId, {
-      ...filteredUpdates,
-      amount: roundMoney(
-        split.amount - (split.principalPortion - principalPortion),
-      ),
-      principalPortion,
-      interestPortion: split.interestPortion,
-      // Fees are capped at the edited amount
-      feesPortion: split.feesPortion || undefined,
-    });
 
     // Apply the principal change to the loan balance. Only a change that
     // raises the balance reopens a paid-off loan (it may have been marked
@@ -832,6 +814,25 @@ export const updatePayment = mutation({
           : loan.status === "paid_off" && principalDelta < 0
             ? "active"
             : loan.status;
+
+    await ctx.db.patch(paymentId, {
+      ...filteredUpdates,
+      amount: roundMoney(
+        split.amount - (split.principalPortion - principalPortion),
+      ),
+      principalPortion,
+      interestPortion: split.interestPortion,
+      // Fees are capped at the edited amount
+      feesPortion: split.feesPortion || undefined,
+      // An edit that pays the loan off makes a regular payment the final
+      // one, as recordPayment does
+      paymentType:
+        status === "paid_off" &&
+        loan.status !== "paid_off" &&
+        !isExtraPaymentType(paymentType)
+          ? "final"
+          : paymentType,
+    });
 
     await ctx.db.patch(loan._id, {
       currentBalance: newBalance,

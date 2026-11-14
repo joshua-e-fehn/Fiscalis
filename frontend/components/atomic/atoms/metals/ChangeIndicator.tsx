@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
-import { currencySuffixes } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 
 interface ChangeIndicatorProps {
   value: number;
@@ -15,7 +15,6 @@ interface ChangeIndicatorProps {
   showPercentage?: boolean;
   className?: string;
 }
-
 
 const sizeClasses = {
   sm: "text-xs",
@@ -56,19 +55,6 @@ export function ChangeIndicator({
 
   const Icon = isPositive ? TrendingUp : isNegative ? TrendingDown : Minus;
 
-  const formattedValue = new Intl.NumberFormat("de-DE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(value));
-
-  const formattedPercent =
-    percentage !== undefined
-      ? new Intl.NumberFormat("de-DE", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(Math.abs(percentage))
-      : null;
-
   return (
     <span
       className={cn(
@@ -80,16 +66,11 @@ export function ChangeIndicator({
     >
       {showIcon && <Icon className={iconSizes[size]} />}
       {showValue && (
-        <span>
-          {isPositive ? "+" : isNegative ? "-" : ""}
-          {formattedValue}
-          {currencySuffixes[currency]}
-        </span>
+        <span>{formatCurrency(value, currency, { showSign: true })}</span>
       )}
-      {showPercentage && formattedPercent && (
+      {showPercentage && percentage !== undefined && (
         <span className={cn("rounded px-1", bgClass)}>
-          ({isPositive ? "+" : isNegative ? "-" : ""}
-          {formattedPercent}%)
+          ({formatPercent(percentage, true)})
         </span>
       )}
     </span>
@@ -115,15 +96,9 @@ export function PercentageChange({
       ? "text-loss"
       : "text-muted-foreground";
 
-  const formattedPercent = new Intl.NumberFormat("de-DE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(value));
-
   return (
     <span className={cn(colorClass, sizeClasses[size], className)}>
-      {isPositive ? "+" : isNegative ? "-" : ""}
-      {formattedPercent}%
+      {formatPercent(value, true)}
     </span>
   );
 }

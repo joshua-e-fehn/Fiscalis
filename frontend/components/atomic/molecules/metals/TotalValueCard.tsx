@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -34,6 +35,7 @@ export function TotalValueCard({
   isLoading = false,
   className,
 }: TotalValueCardProps) {
+  const t = useTranslations("metals.performance");
   if (isLoading) {
     return <ValueCardSkeleton className={className} />;
   }
@@ -49,7 +51,7 @@ export function TotalValueCard({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
-            Total Portfolio Value
+            {t("totalValueTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -72,7 +74,9 @@ export function TotalValueCard({
                 currency={currency}
                 size="sm"
               />
-              <span className="text-xs text-muted-foreground ml-1">today</span>
+              <span className="text-xs text-muted-foreground ml-1">
+                {t("today")}
+              </span>
             </motion.div>
           )}
         </CardContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -18,7 +19,7 @@ import {
   Area,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,13 +59,15 @@ interface PortfolioChartProps {
   className?: string;
 }
 
-function formatDate(timestamp: number, range: ChartTimeRange): string {
-  const date = new Date(timestamp);
-  if (range === "1W" || range === "1M") {
-    return date.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
-  }
-  return date.toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
-}
+/** Each chart range's label: the price chart's range keys (metals.prices.range) */
+const RANGE_LABEL_KEYS = {
+  "1W": "Week",
+  "1M": "Month",
+  "3M": "3Month",
+  "6M": "6Month",
+  "1Y": "Year",
+  ALL: "ALL",
+} as const satisfies Record<ChartTimeRange, string>;
 
 // Custom tooltip component
 function CustomTooltip({
@@ -78,6 +81,7 @@ function CustomTooltip({
   label?: string;
   currency: InvestmentCurrency;
 }) {
+  const t = useTranslations("metals.performance");
   if (!active || !payload || payload.length === 0) return null;
 
   const value = payload.find((p) => p.dataKey === "value")?.value ?? 0;
@@ -93,26 +97,37 @@ function CustomTooltip({
       <div className="font-medium mb-1">{label}</div>
       <div className="space-y-1">
         <div className="flex justify-between gap-4">
-          <span className="text-muted-foreground">Value:</span>
+          <span className="text-muted-foreground">
+            {t("tooltipRow", { label: t("value") })}
+          </span>
           <span className="font-medium">{formatCurrency(value, currency)}</span>
         </div>
         {cost !== null && profitLoss !== null && (
           <>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">Cost:</span>
+              <span className="text-muted-foreground">
+                {t("tooltipRow", { label: t("cost") })}
+              </span>
               <span>{formatCurrency(cost, currency)}</span>
             </div>
             <div className="flex justify-between gap-4">
-              <span className="text-muted-foreground">P/L:</span>
+              <span className="text-muted-foreground">
+                {t("tooltipRow", { label: t("profitLoss") })}
+              </span>
               <span
                 className={cn(
                   "font-medium",
                   profitLoss >= 0 ? "text-profit" : "text-loss",
                 )}
               >
-                {formatCurrency(profitLoss, currency, { showSign: true })}
-                {profitLossPercent !== null &&
-                  ` (${profitLossPercent.toFixed(1)}%)`}
+                {profitLossPercent !== null
+                  ? t("withPercent", {
+                      amount: formatCurrency(profitLoss, currency, {
+                        showSign: true,
+                      }),
+                      percent: formatPercent(profitLossPercent, true, 1),
+                    })
+                  : formatCurrency(profitLoss, currency, { showSign: true })}
               </span>
             </div>
           </>
@@ -130,13 +145,18 @@ export function PortfolioChart({
   isLoading = false,
   className,
 }: PortfolioChartProps) {
+  const t = useTranslations("metals");
+  const format = useFormatter();
   const chartData = useMemo(
     () =>
       dataPoints.map((p) => ({
         ...p,
-        date: formatDate(p.timestamp, timeRange),
+        date:
+          timeRange === "1W" || timeRange === "1M"
+            ? format.dateTime(p.timestamp, { day: "2-digit", month: "short" })
+            : format.dateTime(p.timestamp, "axisMonth"),
       })),
-    [dataPoints, timeRange],
+    [dataPoints, timeRange, format],
   );
 
   const last = dataPoints[dataPoints.length - 1];
@@ -145,7 +165,7 @@ export function PortfolioChart({
   const header = (
     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
       <TrendingUp className="h-4 w-4" />
-      Portfolio Performance
+      {t("performance.portfolioTitle")}
     </CardTitle>
   );
 
@@ -168,7 +188,7 @@ export function PortfolioChart({
         <CardHeader className="pb-2">{header}</CardHeader>
         <CardContent className="flex items-center justify-center h-48">
           <span className="text-sm text-muted-foreground">
-            Add items to your vault to see portfolio performance
+            {t("performance.portfolioEmpty")}
           </span>
         </CardContent>
       </Card>
@@ -194,7 +214,7 @@ export function PortfolioChart({
                     : "text-muted-foreground hover:bg-muted",
                 )}
               >
-                {range === "ALL" ? "All" : range}
+                {t(`prices.range.${RANGE_LABEL_KEYS[range]}`)}
               </button>
             ))}
           </div>
@@ -294,14 +314,14 @@ export function PortfolioChart({
             <div
               className={cn("w-3 h-0.5", isProfit ? "bg-profit" : "bg-loss")}
             />
-            <span>Value</span>
+            <span>{t("performance.value")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div
               className="w-3 h-0.5 bg-muted-foreground border-dashed"
               style={{ borderTopWidth: 1, borderTopStyle: "dashed" }}
             />
-            <span>Cost Basis</span>
+            <span>{t("performance.costBasis")}</span>
           </div>
         </div>
       </CardContent>

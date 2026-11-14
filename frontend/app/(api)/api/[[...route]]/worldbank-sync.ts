@@ -7,6 +7,7 @@
 import { Hono } from "hono";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { describeError } from "@/../services/security/providerError";
 
 const worldbankSync = new Hono();
 
@@ -30,7 +31,7 @@ worldbankSync.get("/sync/status", async (c) => {
 
     return c.json(status);
   } catch (error) {
-    console.error("[WorldBank Sync] Status error:", error);
+    console.error("[WorldBank Sync] Status error:", describeError(error));
     return c.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       500,

@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
+import { describeError } from "@/../services/security/providerError";
+
 import {
   fetchWorldBankIndicator,
   getIndicatorMetadata,
@@ -125,7 +127,7 @@ const app = new Hono()
         query: q,
       });
     } catch (error) {
-      console.error("Search error:", error);
+      console.error("Search error:", describeError(error));
       return c.json(
         { error: "Failed to search indicators", indicators: [] },
         500,
@@ -189,7 +191,10 @@ const app = new Hono()
 
         return c.json(result);
       } catch (error) {
-        console.error(`Dynamic indicator error for ${code}/${year}:`, error);
+        console.error(
+          `Dynamic indicator error for ${code}/${year}:`,
+          describeError(error),
+        );
 
         if (error instanceof Error) {
           return c.json(
@@ -223,7 +228,10 @@ const app = new Hono()
         }
         return c.json<{ indicator: SearchedIndicator }>({ indicator: info });
       } catch (error) {
-        console.error(`Indicator info error for ${code}:`, error);
+        console.error(
+          `Indicator info error for ${code}:`,
+          describeError(error),
+        );
         return c.json({ error: "Failed to fetch indicator info" }, 500);
       }
     },
@@ -274,7 +282,10 @@ const app = new Hono()
 
         return c.json<IndicatorData>(result);
       } catch (error) {
-        console.error(`World Bank API error for ${indicator}/${year}:`, error);
+        console.error(
+          `World Bank API error for ${indicator}/${year}:`,
+          describeError(error),
+        );
 
         // Return appropriate error response
         if (error instanceof Error) {

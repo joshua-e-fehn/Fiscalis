@@ -253,7 +253,7 @@ Retire in 5 years, want €4,000/mo (today's money), €2,000/mo from pensions (
 - [x] `useRetirementFundingBase()` — the dashboard's assets per category and `totalLiabilities` (`usePortfolioOverview("eur")`), plus the linked residence mortgage projected by its loan schedule
 - [x] `planToInputs(plan, profileBirthDate)` / `currentAgeForPlan(...)` — shared by the hooks and the wizard
 - [x] `useSaveRetirementPlan()` → `useMutation(api.retirement.saveRetirementPlan)`
-- [x] `useUpdateRetirementStep()`, `useResetRetirementPlan()`
+- [x] `useResetRetirementPlan()` (`useUpdateRetirementStep()` removed in ENG-205)
 - [x] Re-export from [`frontend/hooks/convex/index.ts`](../frontend/hooks/convex/index.ts)
 - [x] `useRetirementPreview(inputs)` client-only hook for instant in-wizard previews (no round-trip)
 

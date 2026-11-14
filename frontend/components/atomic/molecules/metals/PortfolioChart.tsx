@@ -15,7 +15,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
   Area,
 } from "recharts";
 import { cn } from "@/lib/utils";

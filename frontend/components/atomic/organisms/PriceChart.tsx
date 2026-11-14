@@ -5,17 +5,13 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  LineChart,
-  Line,
-  Legend,
   ResponsiveContainer,
-  ReferenceDot,
+  type TooltipProps,
 } from "recharts";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
 import { MetalChartData } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
@@ -45,10 +41,7 @@ const CustomTooltipContent = ({
   label,
   timeRange,
   currency,
-}: {
-  active?: boolean;
-  payload?: any[];
-  label?: any;
+}: Pick<TooltipProps<number, string>, "active" | "payload" | "label"> & {
   timeRange: TimeRange;
   currency: string;
 }) => {
@@ -205,7 +198,7 @@ export const CompareChart = memo(function CompareChart({
     }));
 
     return baseDataset.data.map((point, index) => {
-      const result: Record<string, any> = {
+      const result: Record<string, Date | null | number> = {
         date: point.date,
       };
 
@@ -218,17 +211,6 @@ export const CompareChart = memo(function CompareChart({
 
       return result;
     });
-  }, [datasets]);
-
-  const chartConfig = useMemo(() => {
-    const config: ChartConfig = {};
-    for (const dataset of datasets) {
-      config[dataset.metal] = {
-        label: dataset.metal.charAt(0).toUpperCase() + dataset.metal.slice(1),
-        color: dataset.color,
-      };
-    }
-    return config;
   }, [datasets]);
 
   if (normalizedData.length === 0) {
@@ -291,12 +273,12 @@ export const CompareChart = memo(function CompareChart({
             }
             domain={["auto", "auto"]}
           />
-          <ChartTooltip
+          <ChartTooltip<number, string>
             content={({ active, payload, label }) => {
               if (!active || !payload) return null;
               // Filter out entries that aren't metal data
               const metalEntries = payload.filter(
-                (entry: any) =>
+                (entry) =>
                   typeof entry.dataKey === "string" &&
                   datasets.some((d) => d.metal === entry.dataKey),
               );
@@ -308,7 +290,7 @@ export const CompareChart = memo(function CompareChart({
                       ? formatDate(new Date(label), "short")
                       : formatDate(new Date(label), "date")}
                   </p>
-                  {metalEntries.map((entry: any) => (
+                  {metalEntries.map((entry) => (
                     <div
                       key={entry.dataKey}
                       className="flex items-center gap-2 text-sm"
@@ -320,10 +302,14 @@ export const CompareChart = memo(function CompareChart({
                       <span className="capitalize">{entry.dataKey}:</span>
                       <span
                         className={
-                          entry.value >= 0 ? "text-profit" : "text-loss"
+                          entry.value !== undefined && entry.value >= 0
+                            ? "text-profit"
+                            : "text-loss"
                         }
                       >
-                        {entry.value >= 0 ? "+" : ""}
+                        {entry.value !== undefined && entry.value >= 0
+                          ? "+"
+                          : ""}
                         {entry.value?.toFixed(2)}%
                       </span>
                     </div>

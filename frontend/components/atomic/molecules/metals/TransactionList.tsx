@@ -31,7 +31,6 @@ function groupTransactionsByMonth(
       continue;
     }
     const date = new Date(tx.transactionDate);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const monthLabel = new Intl.DateTimeFormat("en-US", {
       month: "long",
       year: "numeric",

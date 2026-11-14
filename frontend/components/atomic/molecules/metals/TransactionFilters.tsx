@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/shadcn/select";
-import { Search, Download, Calendar } from "lucide-react";
+import { Search, Download } from "lucide-react";
 
 export type TransactionTypeFilter =
   | "all"

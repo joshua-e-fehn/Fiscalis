@@ -1,6 +1,11 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { validateBirthDate } from "../lib/utils/date";
+import {
+  validateSettings,
+  type SettingsInput,
+  type SettingsPatch,
+} from "../../services/settings/userSettings";
 
 /**
  * Validate a date of birth before storing it: a real YYYY-MM-DD date, not in
@@ -12,6 +17,23 @@ function assertValidBirthDate(birthDate: string): string {
   if (!result.ok) throw new Error(result.error);
   return result.value;
 }
+
+/**
+ * Validate general settings fields (services/settings/userSettings.ts):
+ * display name length, currency in DISPLAY_CURRENCIES, language en/de, theme.
+ */
+function assertValidSettings(input: SettingsInput): SettingsPatch {
+  const result = validateSettings(input);
+  if (!result.ok) throw new Error(result.error);
+  return result.value;
+}
+
+const languageValidator = v.union(v.literal("en"), v.literal("de"));
+const themeValidator = v.union(
+  v.literal("light"),
+  v.literal("dark"),
+  v.literal("system"),
+);
 
 /** The mandatory profile step (lib/types/onboarding.ts OnboardingStep.PROFILE). */
 const PROFILE_STEP = 2;
@@ -394,20 +416,27 @@ export const completeOnboarding = mutation({
 });
 
 /**
- * Save user settings (used in profile step)
+ * Save user settings (used in profile step). Writes every field: an omitted
+ * display name, date of birth or language is cleared.
  */
 export const saveUserSettings = mutation({
   args: {
     displayName: v.optional(v.string()),
     birthDate: v.optional(v.string()), // ISO date (YYYY-MM-DD)
     defaultCurrency: v.string(),
-    language: v.optional(v.string()),
-    theme: v.union(v.literal("light"), v.literal("dark"), v.literal("system")),
+    language: v.optional(languageValidator),
+    theme: themeValidator,
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    const settings = assertValidSettings({
+      displayName: args.displayName ?? "",
+      defaultCurrency: args.defaultCurrency,
+      language: args.language,
+      theme: args.theme,
+    });
     // An empty value clears the date of birth; anything else must be valid.
     const birthDate = args.birthDate?.trim()
       ? assertValidBirthDate(args.birthDate)
@@ -416,6 +445,14 @@ export const saveUserSettings = mutation({
     const userId = identity.subject;
     const now = Date.now();
 
+    const fields = {
+      displayName: settings.displayName,
+      birthDate,
+      defaultCurrency: settings.defaultCurrency ?? "EUR",
+      language: settings.language,
+      theme: settings.theme ?? args.theme,
+    };
+
     // Check if settings exist
     const existing = await ctx.db
       .query("userSettings")
@@ -423,28 +460,69 @@ export const saveUserSettings = mutation({
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        displayName: args.displayName,
-        birthDate,
-        defaultCurrency: args.defaultCurrency,
-        language: args.language,
-        theme: args.theme,
-        updatedAt: now,
-      });
+      await ctx.db.patch(existing._id, { ...fields, updatedAt: now });
       return existing._id;
-    } else {
-      const id = await ctx.db.insert("userSettings", {
-        userId,
+    }
+    return await ctx.db.insert("userSettings", {
+      userId,
+      ...fields,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+/**
+ * Partially update the user's general settings (Settings > General). Only the
+ * given fields change; an empty display name or date of birth clears it.
+ * Creates the settings row with defaults (EUR, system theme) if none exists.
+ */
+export const updateSettings = mutation({
+  args: {
+    displayName: v.optional(v.string()),
+    birthDate: v.optional(v.string()), // ISO date (YYYY-MM-DD), "" clears
+    defaultCurrency: v.optional(v.string()),
+    language: v.optional(languageValidator),
+    theme: v.optional(themeValidator),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const patch: SettingsPatch & { birthDate?: string | undefined } =
+      assertValidSettings({
         displayName: args.displayName,
-        birthDate,
         defaultCurrency: args.defaultCurrency,
         language: args.language,
         theme: args.theme,
-        createdAt: now,
-        updatedAt: now,
       });
-      return id;
+    if (args.birthDate !== undefined) {
+      patch.birthDate = args.birthDate.trim()
+        ? assertValidBirthDate(args.birthDate)
+        : undefined;
     }
+
+    const userId = identity.subject;
+    const now = Date.now();
+
+    const existing = await ctx.db
+      .query("userSettings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { ...patch, updatedAt: now });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("userSettings", {
+      userId,
+      ...patch,
+      defaultCurrency: patch.defaultCurrency ?? "EUR",
+      theme: patch.theme ?? "system",
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });
 

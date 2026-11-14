@@ -24,7 +24,7 @@ import { useUserSettings } from "./onboarding";
  * DISPLAY_CURRENCIES once every consumer converts, so a preference never
  * labels an EUR figure with another currency.
  */
-const SUPPORTED: readonly DisplayCurrency[] = ["EUR"];
+export const SUPPORTED_DISPLAY_CURRENCIES: readonly DisplayCurrency[] = ["EUR"];
 
 /** How the rate in use was obtained; "identity" for EUR */
 export type DisplayRateSource = "identity" | "market" | "stale" | "fallback";
@@ -51,7 +51,7 @@ function useEffectiveCode(): { code: DisplayCurrency; settingsLoading: boolean }
   const settings = useUserSettings();
   const preferred = toDisplayCurrency(settings?.defaultCurrency);
   const code =
-    preferred && SUPPORTED.includes(preferred) ? preferred : SUPPORTED[0];
+    preferred && SUPPORTED_DISPLAY_CURRENCIES.includes(preferred) ? preferred : SUPPORTED_DISPLAY_CURRENCIES[0];
   return { code, settingsLoading: settings === undefined };
 }
 

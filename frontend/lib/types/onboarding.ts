@@ -2,6 +2,7 @@ import {
   DISPLAY_CURRENCIES,
   type DisplayCurrency,
 } from "@/../services/finance/displayCurrency";
+import type { Language, Theme } from "@/../services/settings/userSettings";
 
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING TYPES
@@ -57,10 +58,9 @@ export interface ProfileFormData {
   theme: Theme;
 }
 
-/** A display currency (services/finance/displayCurrency.ts DISPLAY_CURRENCIES) */
+// One definition each, shared with server-side validation (convex/onboarding.ts)
 export type Currency = DisplayCurrency;
-export type Language = "en" | "de";
-export type Theme = "light" | "dark" | "system";
+export type { Language, Theme };
 
 const CURRENCY_LABELS: Record<Currency, { label: string; flag: string }> = {
   EUR: { label: "Euro (€)", flag: "🇪🇺" },

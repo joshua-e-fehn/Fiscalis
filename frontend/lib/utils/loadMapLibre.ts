@@ -16,14 +16,21 @@ import type * as MapLibre from "maplibre-gl";
 let mapLibPromise: Promise<typeof MapLibre> | undefined;
 
 export function loadMapLibre(): Promise<typeof MapLibre> {
-  mapLibPromise ??= import("maplibre-gl").then((maplibre) => {
-    maplibre.setWorkerUrl(
-      new URL(
-        "maplibre-gl/dist/maplibre-gl-worker.mjs",
-        import.meta.url,
-      ).toString(),
-    );
-    return maplibre;
-  });
+  mapLibPromise ??= import("maplibre-gl").then(
+    (maplibre) => {
+      maplibre.setWorkerUrl(
+        new URL(
+          "maplibre-gl/dist/maplibre-gl-worker.mjs",
+          import.meta.url,
+        ).toString(),
+      );
+      return maplibre;
+    },
+    (error: unknown) => {
+      // Don't cache a failed chunk load: the next mount retries the import.
+      mapLibPromise = undefined;
+      throw error;
+    },
+  );
   return mapLibPromise;
 }

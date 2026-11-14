@@ -8,6 +8,7 @@ import {
   capPrincipalPortion,
   computeNextPaymentDate,
   deriveLoanBalance,
+  editedPaymentSplitBasis,
   getDueDate,
   initialScheduledPayment,
   loanBalanceAdjustment,
@@ -888,5 +889,66 @@ describe("day-count convention", () => {
         "2026-03-01",
       ).periodRate,
     ).toBe(0.06 * (28 / 360));
+  });
+});
+
+describe("editedPaymentSplitBasis", () => {
+  it("splits an edit as if the payment had never been made", () => {
+    const edited = editedPaymentSplitBasis(
+      realLoan,
+      realPayments,
+      "p2",
+      "2026-10-06",
+    );
+    expect(edited.otherPayments.map((p) => p._id)).toEqual(["p1"]);
+    // 7975 owed + the 1025 the edited payment repaid
+    expect(edited.balanceWithout).toBe(9000);
+    expect(edited.balanceAdjustment).toBe(0);
+    expect(edited.basis).toEqual(
+      paymentSplitBasis(
+        { ...realLoan, currentBalance: 9000 },
+        [realPayments[1]],
+        "2026-10-06",
+      ),
+    );
+    expect(edited.basis.balance).toBe(9000);
+  });
+
+  it("re-splits an edited amount like the original payment", () => {
+    const { basis } = editedPaymentSplitBasis(
+      realLoan,
+      realPayments,
+      "p2",
+      "2026-10-06",
+    );
+    // One annual period of 2.5% on 9000
+    expect(splitLoanPayment(basis, 1300, "scheduled")).toMatchObject({
+      interestPortion: 225,
+      principalPortion: 1075,
+      amount: 1300,
+    });
+  });
+
+  it("moves the split basis with the edited date", () => {
+    // Back-dated before p1: split on the balance before any payment
+    const { basis } = editedPaymentSplitBasis(
+      realLoan,
+      realPayments,
+      "p2",
+      "2025-06-01",
+    );
+    expect(basis.balance).toBe(10000);
+  });
+
+  it("keeps a manual balance adjustment", () => {
+    const adjusted = { ...realLoan, currentBalance: 7900, balanceAdjustment: -75 };
+    const { balanceWithout, balanceAdjustment } = editedPaymentSplitBasis(
+      adjusted,
+      realPayments,
+      "p2",
+      "2026-10-06",
+    );
+    expect(balanceAdjustment).toBe(-75);
+    expect(balanceWithout).toBe(8925);
   });
 });

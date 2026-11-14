@@ -5,6 +5,8 @@ import {
   hashApiKey,
   parseBearerApiKey,
 } from "../../services/apiKeys/apiKeyService";
+import { netWorthApiCurrency } from "../../services/portfolio/aggregate";
+import { DISPLAY_CURRENCIES } from "../../services/finance/displayCurrency";
 
 // ═══════════════════════════════════════════════════════════════
 // Convex HTTP Router
@@ -75,6 +77,13 @@ const unauthorized = () =>
     "WWW-Authenticate": 'Bearer realm="fiscalis"',
   });
 
+const invalidCurrency = () =>
+  apiError(
+    400,
+    "invalid_currency",
+    `currency must be one of ${DISPLAY_CURRENCIES.join(", ")}.`,
+  );
+
 http.route({
   path: "/api/v1/net-worth",
   method: "GET",
@@ -82,10 +91,16 @@ http.route({
     const key = parseBearerApiKey(request.headers.get("Authorization"));
     if (!key) return unauthorized();
 
+    // Optional ?currency=USD|GBP|CHF (EUR when absent); the code is never
+    // echoed back, so a bad value cannot be reflected
+    const currencyParam = new URL(request.url).searchParams.get("currency");
+    const currency = netWorthApiCurrency(currencyParam);
+    if (!currency) return invalidCurrency();
+
     try {
       const result = await ctx.runMutation(
         internal.apiKeys.readNetWorthWithKey,
-        { keyHash: await hashApiKey(key) },
+        { keyHash: await hashApiKey(key), currency },
       );
 
       switch (result.status) {
@@ -94,6 +109,8 @@ http.route({
             status: 200,
             headers: API_HEADERS,
           });
+        case "invalid_currency":
+          return invalidCurrency();
         case "rate_limited":
           return apiError(429, "rate_limited", "Too many requests.", {
             "Retry-After": String(result.retryAfterSeconds),

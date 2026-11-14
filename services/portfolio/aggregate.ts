@@ -30,6 +30,11 @@ import {
   type UnrealizedProfitLoss,
 } from "./unrealizedProfitLoss";
 import { roundMoney } from "../finance/financeService";
+import {
+  fromEur,
+  toDisplayCurrency,
+  type DisplayCurrency,
+} from "../finance/displayCurrency";
 
 // ═══════════════════════════════════════════════════════════════
 // Holdings
@@ -549,21 +554,25 @@ function byValueThenName<T extends { value: number }>(
  */
 export function netWorthApiBreakdown(
   aggregate: Pick<NetWorthAggregate, "byCategory">,
+  unitsPerEur = 1,
 ): NetWorthApiCategory[] {
+  // Converted before rounding, so each part is rounded once, in cents of
+  // the response currency
+  const money = (amountEur: number) => roundMoney(fromEur(amountEur, unitsPerEur));
   return HOLDING_CATEGORIES.map((category) => {
     const { value, bySubcategory, bySource } = aggregate.byCategory[category];
     return {
       category,
-      value: roundMoney(value),
+      value: money(value),
       subcategories: Object.entries(bySubcategory)
         .map(([subcategory, s]) => ({
           subcategory,
-          value: roundMoney(s.value),
+          value: money(s.value),
         }))
         .filter((s) => s.value !== 0)
         .sort(byValueThenName((s) => s.subcategory)),
       sources: (Object.entries(bySource) as [HoldingSource, number][])
-        .map(([source, v]) => ({ source, value: roundMoney(v) }))
+        .map(([source, v]) => ({ source, value: money(v) }))
         .filter((s) => s.value !== 0)
         .sort(byValueThenName((s) => s.source)),
     };
@@ -576,7 +585,13 @@ export interface NetWorthApiBody {
   netWorth: number;
   totalAssets: number;
   totalLiabilities: number;
-  currency: "EUR";
+  /** The currency of every amount: EUR unless `?currency=` asked otherwise */
+  currency: DisplayCurrency;
+  /**
+   * Day of the EUR rate the amounts were converted at (YYYY-MM-DD); null
+   * for EUR (no conversion) and for the approximate fallback rate
+   */
+  fxRateDate: string | null;
   /** When the request was served, ISO 8601 */
   asOf: string;
   /** How fresh the data is, ISO 8601; null when no holding carries a time */
@@ -584,10 +599,39 @@ export interface NetWorthApiBody {
   categories: NetWorthApiCategory[];
 }
 
+/** The rate a net worth body is converted at: units of `currency` per 1 EUR. */
+export interface NetWorthApiRate {
+  currency: DisplayCurrency;
+  unitsPerEur: number;
+  /** Day of the rate (YYYY-MM-DD); null for EUR and fallback rates */
+  date: string | null;
+}
+
+/** EUR, the API's default: the stored amounts as they are. */
+export const NET_WORTH_API_EUR: NetWorthApiRate = {
+  currency: "EUR",
+  unitsPerEur: 1,
+  date: null,
+};
+
+/**
+ * The `?currency=` query parameter of GET /api/v1/net-worth: EUR when it is
+ * absent, a display currency (DISPLAY_CURRENCIES, case-insensitive) when it
+ * names one, null for anything else (an empty value included), which the
+ * route answers with 400 invalid_currency.
+ */
+export function netWorthApiCurrency(
+  param: string | null | undefined,
+): DisplayCurrency | null {
+  if (param === null || param === undefined) return "EUR";
+  return toDisplayCurrency(param);
+}
+
 /**
  * The public API's response body for a net worth served at `now` (epoch ms).
  * `asOf` is the serving time; the aggregate's own asOf (the oldest pricedAt)
- * goes out as `dataAsOf`. Amounts are rounded to cents.
+ * goes out as `dataAsOf`. Amounts are converted from EUR at `rate` (EUR by
+ * default), then rounded to cents.
  */
 export function netWorthApiBody(
   netWorth: Pick<
@@ -595,17 +639,21 @@ export function netWorthApiBody(
     "netWorth" | "totalAssets" | "totalLiabilities" | "asOf" | "byCategory"
   >,
   now: number,
+  rate: NetWorthApiRate = NET_WORTH_API_EUR,
 ): NetWorthApiBody {
+  const money = (amountEur: number) =>
+    roundMoney(fromEur(amountEur, rate.unitsPerEur));
   return {
     object: "net_worth",
-    netWorth: roundMoney(netWorth.netWorth),
-    totalAssets: roundMoney(netWorth.totalAssets),
-    totalLiabilities: roundMoney(netWorth.totalLiabilities),
-    currency: "EUR",
+    netWorth: money(netWorth.netWorth),
+    totalAssets: money(netWorth.totalAssets),
+    totalLiabilities: money(netWorth.totalLiabilities),
+    currency: rate.currency,
+    fxRateDate: rate.currency === "EUR" ? null : rate.date,
     asOf: new Date(now).toISOString(),
     dataAsOf:
       netWorth.asOf === null ? null : new Date(netWorth.asOf).toISOString(),
-    categories: netWorthApiBreakdown(netWorth),
+    categories: netWorthApiBreakdown(netWorth, rate.unitsPerEur),
   };
 }
 

@@ -18,7 +18,11 @@ import {
   isApiKeyUsable,
   normalizeApiKeyName,
 } from "../../services/apiKeys/apiKeyService";
-import { netWorthApiBody } from "../../services/portfolio/aggregate";
+import {
+  netWorthApiBody,
+  netWorthApiCurrency,
+} from "../../services/portfolio/aggregate";
+import { loadDisplayRate } from "./fxRates";
 
 /**
  * API keys for the public, user-scoped REST API (see convex/http.ts).
@@ -181,11 +185,17 @@ export const insert = internalMutation({
 /**
  * Authenticate a key hash, apply the per-key rate limit, record usage and
  * return the owner's net worth — all in one transaction, so a revoke that
- * commits first is always honoured.
+ * commits first is always honoured. Amounts are EUR, or `currency` (a
+ * display currency) at its latest mirrored rate.
  */
 export const readNetWorthWithKey = internalMutation({
-  args: { keyHash: v.string() },
-  handler: async (ctx, { keyHash }) => {
+  args: { keyHash: v.string(), currency: v.optional(v.string()) },
+  handler: async (ctx, { keyHash, currency: currencyParam }) => {
+    // The route validates first; checked again so no caller can pass an
+    // unsupported code through
+    const currency = netWorthApiCurrency(currencyParam);
+    if (!currency) return { status: "invalid_currency" as const };
+
     const now = Date.now();
     const key = await ctx.db
       .query("apiKeys")
@@ -212,9 +222,14 @@ export const readNetWorthWithKey = internalMutation({
       rateWindowCount: limit.windowCount,
     });
 
+    const rate = await loadDisplayRate(ctx, currency);
     return {
       status: "ok" as const,
-      body: netWorthApiBody(await computeNetWorth(ctx, key.userId), now),
+      body: netWorthApiBody(await computeNetWorth(ctx, key.userId), now, {
+        currency,
+        unitsPerEur: rate.unitsPerEur,
+        date: rate.date,
+      }),
     };
   },
 });

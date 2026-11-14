@@ -26,6 +26,25 @@ The settings page shows the exact URL for your deployment.
 
 ## `GET /api/v1/net-worth`
 
+### Query parameters
+
+| Parameter  | Values                       | Default | Meaning |
+| ---------- | ---------------------------- | ------- | ------- |
+| `currency` | `EUR`, `USD`, `GBP`, `CHF`   | `EUR`   | The currency of every amount in the response. Case-insensitive |
+
+Amounts are stored and aggregated in EUR. Without `currency` the response is
+in EUR, whatever display currency is set in the app, so existing clients see
+no change. With another currency every amount is converted from EUR at the
+latest mirrored daily exchange rate (ECB reference rates), then rounded to
+cents; `fxRateDate` says which day's rate was used.
+
+```bash
+curl -H "Authorization: Bearer $FISCALIS_API_KEY" \
+  "https://<deployment>.convex.site/api/v1/net-worth?currency=CHF"
+```
+
+### Response
+
 ```json
 {
   "object": "net_worth",
@@ -33,6 +52,7 @@ The settings page shows the exact URL for your deployment.
   "totalAssets": 150000.0,
   "totalLiabilities": 26543.22,
   "currency": "EUR",
+  "fxRateDate": null,
   "asOf": "2026-11-11T12:00:00.000Z",
   "dataAsOf": "2026-11-11T06:00:41.000Z",
   "categories": [
@@ -107,7 +127,8 @@ spot price from the last 7 days is available.
 | `netWorth`         | number           | `totalAssets` minus `totalLiabilities` |
 | `totalAssets`      | number           | Sum of everything owned, net of any negative asset balance |
 | `totalLiabilities` | number           | Sum of everything owed, as a positive number |
-| `currency`         | `"EUR"`          | Every amount is in EUR |
+| `currency`         | `"EUR"`, `"USD"`, `"GBP"` or `"CHF"` | The currency of every amount: the `currency` parameter, `"EUR"` without one |
+| `fxRateDate`       | `YYYY-MM-DD` string or `null` | The day of the EUR exchange rate the amounts were converted at. `null` for EUR (no conversion), and for another currency when no mirrored rate exists and an approximate built-in rate was used. A date more than a week old means the rate mirror has not refreshed since |
 | `asOf`             | ISO 8601 string  | When the request was served. It says nothing about the data's age |
 | `dataAsOf`         | ISO 8601 string or `null` | How fresh the data is: the oldest sync or price time among your holdings, so one stale provider makes it old. `null` when no holding carries a time (for example only loans, or vault items without a spot price) |
 | `categories`       | array            | The breakdown described below. Always all nine categories, in the order shown, including empty ones |
@@ -124,6 +145,9 @@ Each entry of `categories`:
 - **Sign convention.** `liabilities.value` is the amount owed and equals
   `totalLiabilities` exactly. The eight asset categories sum to `totalAssets`
   up to rounding.
+- **Conversion.** Every amount, the breakdown included, is converted at the
+  same rate before it is rounded. Point-in-time only: there is no history in
+  the response, so one rate applies to the whole body.
 - **Rounding.** Every amount is rounded to cents on its own, so a sum of parts
   can differ from its total by up to half a cent per part: a few cents in
   practice, not at most one. A part that rounds to zero is left out, so a
@@ -162,13 +186,14 @@ no stored subcategory appears as `unknown`.
 | `unclassified` | typically `unknown`; otherwise whatever subcategory is stored |
 | `liabilities`  | `mortgages`, `loans`, `credit-cards`, `margin-loans` |
 
-`dataAsOf`, `categories` and any later additions are additive: clients should
-ignore fields they do not know.
+`dataAsOf`, `fxRateDate`, `categories` and any later additions are additive:
+clients should ignore fields they do not know.
 
 ### Errors
 
 | Status | `error.code`     | Meaning                                                      |
 | ------ | ---------------- | ------------------------------------------------------------ |
+| 400    | `invalid_currency` | `currency` is not one of `EUR`, `USD`, `GBP`, `CHF` (an empty value included) |
 | 401    | `unauthorized`   | Missing, malformed, unknown, expired or revoked key          |
 | 429    | `rate_limited`   | More than 60 requests in a minute for this key; see `Retry-After` |
 | 500    | `internal_error` | Unexpected server error                                      |
@@ -179,7 +204,9 @@ All responses carry `Cache-Control: no-store`.
 ## Implementation
 
 - `services/apiKeys/apiKeyService.ts`: key format, hashing, header parsing, expiry, rate-limit math (unit-tested)
-- `services/portfolio/aggregate.ts`: `netWorthApiBreakdown`, the shape of `categories` (unit-tested)
+- `services/portfolio/aggregate.ts`: `netWorthApiBody` and `netWorthApiBreakdown`, the response shape and its currency conversion, and `netWorthApiCurrency`, the `currency` parameter (unit-tested)
+- `services/finance/displayCurrency.ts`: `DISPLAY_CURRENCIES`, the allowlist shared with the app's currency setting
+- `frontend/convex/fxRates.ts`: `loadDisplayRate`, the latest mirrored rate of a currency
 - `frontend/convex/apiKeys.ts`: create, list and revoke keys (Clerk-authenticated), plus the internal mutation that authenticates, rate-limits and reads in one transaction
 - `frontend/convex/http.ts`: the HTTP route
 - `frontend/app/(root)/settings/api-keys/page.tsx`: key management UI

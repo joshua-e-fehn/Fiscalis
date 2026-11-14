@@ -7,6 +7,7 @@ import {
   liabilityCountsLabel,
   netWorthApiBody,
   netWorthApiBreakdown,
+  netWorthApiCurrency,
   categoryFlowFromHoldings,
   collapseIntradaySnapshots,
   holdingNetFlow,
@@ -413,7 +414,7 @@ describe("netWorthApiBreakdown", () => {
 describe("netWorthApiBody", () => {
   const now = Date.UTC(2026, 0, 1, 12);
 
-  it("keeps the six original fields and adds dataAsOf and categories", () => {
+  it("keeps the six original fields and adds fxRateDate, dataAsOf and categories", () => {
     const a = aggregateNetWorth([
       ...holdings,
       holding({ source: "bank", category: "cash", valueBase: 0.005, pricedAt: 2_000 }),
@@ -425,6 +426,7 @@ describe("netWorthApiBody", () => {
       "totalAssets",
       "totalLiabilities",
       "currency",
+      "fxRateDate",
       "asOf",
       "dataAsOf",
       "categories",
@@ -435,6 +437,7 @@ describe("netWorthApiBody", () => {
       totalAssets: 19_712.01,
       totalLiabilities: 10_570,
       currency: "EUR",
+      fxRateDate: null,
       asOf: "2026-01-01T12:00:00.000Z",
     });
     expect(body.categories).toEqual(netWorthApiBreakdown(a));
@@ -457,6 +460,94 @@ describe("netWorthApiBody", () => {
     expect(body.dataAsOf).toBeNull();
     expect(body.asOf).toBe("2026-01-01T12:00:00.000Z");
     expect(body.netWorth).toBe(-100);
+  });
+});
+
+describe("netWorthApiBody in another currency", () => {
+  const now = Date.UTC(2026, 0, 1, 12);
+  const a = aggregateNetWorth(holdings);
+  const chf = { currency: "CHF" as const, unitsPerEur: 0.9, date: "2025-12-31" };
+
+  it("converts every amount at the rate and echoes currency and fxRateDate", () => {
+    const eur = netWorthApiBody(a, now);
+    const body = netWorthApiBody(a, now, chf);
+    expect(body).toMatchObject({
+      currency: "CHF",
+      fxRateDate: "2025-12-31",
+      netWorth: roundMoney(a.netWorth * 0.9),
+      totalAssets: roundMoney(a.totalAssets * 0.9),
+      totalLiabilities: roundMoney(a.totalLiabilities * 0.9),
+      asOf: eur.asOf,
+      dataAsOf: eur.dataAsOf,
+    });
+    expect(body.categories).toEqual(netWorthApiBreakdown(a, 0.9));
+  });
+
+  it("converts each category, subcategory and source value before rounding", () => {
+    const body = netWorthApiBody(a, now, chf);
+    const eur = netWorthApiBody(a, now);
+    body.categories.forEach((c, i) => {
+      const e = eur.categories[i];
+      expect(c.category).toBe(e.category);
+      expect(c.value).toBe(roundMoney(a.byCategory[c.category].value * 0.9));
+      for (const s of c.sources) {
+        const sourceEur = a.byCategory[c.category].bySource[s.source] ?? 0;
+        expect(s.value).toBe(roundMoney(sourceEur * 0.9));
+      }
+      for (const s of c.subcategories) {
+        expect(s.value).toBe(
+          roundMoney(a.byCategory[c.category].bySubcategory[s.subcategory].value * 0.9),
+        );
+      }
+    });
+    // Cash is 2'000 + 100 + the card's 40 credit = 2'140 EUR, so 1'926 CHF
+    expect(body.categories.find((c) => c.category === "cash")?.value).toBe(1_926);
+  });
+
+  it("drops a part that rounds to zero only after converting", () => {
+    // 0.008 EUR is 0.01 at 1.25 per EUR but rounds away in EUR
+    const tiny = aggregateNetWorth([
+      holding({ source: "bank", category: "cash", subcategory: "checking-accounts", valueBase: 0.008 }),
+    ]);
+    const cash = (rate?: Parameters<typeof netWorthApiBody>[2]) =>
+      netWorthApiBody(tiny, now, rate).categories.find((c) => c.category === "cash");
+    expect(cash()?.sources).toEqual([{ source: "bank", value: 0.01 }]);
+    expect(
+      cash({ currency: "USD", unitsPerEur: 0.5, date: "2025-12-31" })?.sources,
+    ).toEqual([]);
+  });
+
+  it("reports no rate date for EUR, even when one is given", () => {
+    const body = netWorthApiBody(a, now, { currency: "EUR", unitsPerEur: 1, date: "2025-12-31" });
+    expect(body.fxRateDate).toBeNull();
+    expect(body).toEqual(netWorthApiBody(a, now));
+  });
+
+  it("reports a null rate date for an approximate fallback rate", () => {
+    const body = netWorthApiBody(a, now, { currency: "GBP", unitsPerEur: 0.85, date: null });
+    expect(body.currency).toBe("GBP");
+    expect(body.fxRateDate).toBeNull();
+    expect(body.netWorth).toBe(roundMoney(a.netWorth * 0.85));
+  });
+});
+
+describe("netWorthApiCurrency", () => {
+  it("defaults to EUR when the parameter is absent", () => {
+    expect(netWorthApiCurrency(null)).toBe("EUR");
+    expect(netWorthApiCurrency(undefined)).toBe("EUR");
+  });
+
+  it("accepts the display currencies in any case", () => {
+    expect(netWorthApiCurrency("USD")).toBe("USD");
+    expect(netWorthApiCurrency("gbp")).toBe("GBP");
+    expect(netWorthApiCurrency("Chf")).toBe("CHF");
+    expect(netWorthApiCurrency("EUR")).toBe("EUR");
+  });
+
+  it("rejects anything else, an empty value included", () => {
+    for (const bad of ["", " ", "JPY", "SEK", "US", "USDX", "eur,usd"]) {
+      expect(netWorthApiCurrency(bad)).toBeNull();
+    }
   });
 });
 

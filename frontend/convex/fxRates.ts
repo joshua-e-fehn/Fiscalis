@@ -17,6 +17,7 @@ import {
 } from "../../services/finance/currency";
 import {
   toDisplayCurrency,
+  type DisplayCurrency,
   type DisplayRatePoint,
 } from "../../services/finance/displayCurrency";
 
@@ -221,6 +222,36 @@ const displayRateSource = v.union(
   v.literal("fallback"),
 );
 
+/** The latest rate of a display currency, as units per 1 EUR. */
+export interface DisplayRate {
+  unitsPerEur: number;
+  /** Day of the rate (YYYY-MM-DD); null for EUR and fallback rates */
+  date: string | null;
+  source: "identity" | "market" | "stale" | "fallback";
+}
+
+/**
+ * The rate point-in-time figures are converted at: the latest mirrored rate
+ * of `currency` from loadFxRates (flagged "stale" or "fallback" when
+ * degraded). EUR is the identity and reads nothing.
+ */
+export async function loadDisplayRate(
+  ctx: { db: QueryCtx["db"] },
+  currency: DisplayCurrency,
+): Promise<DisplayRate> {
+  if (currency === "EUR") return { unitsPerEur: 1, date: null, source: "identity" };
+  const rate = (await loadFxRates(ctx, { currencies: [currency] }))[currency];
+  if (!rate) {
+    // Unreachable for the allowlist: the fallback table covers it
+    throw new ConvexError(`No rate for display currency: ${currency}`);
+  }
+  return {
+    unitsPerEur: 1 / rate.eurPerUnit,
+    date: rate.date ?? null,
+    source: rate.source,
+  };
+}
+
 /**
  * Rates for showing EUR figures in a display currency
  * (services/finance/displayCurrency.ts). Public market data, no user data:
@@ -260,24 +291,14 @@ export const getDisplayRates = query({
     ) {
       throw new ConvexError("`since` must be a timestamp in ms");
     }
+    const latest = await loadDisplayRate(ctx, currency);
     if (currency === "EUR") {
       return {
         currency,
-        latest: { unitsPerEur: 1, date: null, source: "identity" as const },
+        latest,
         ...(args.since === undefined ? {} : { history: [] }),
       };
     }
-
-    const rate = (await loadFxRates(ctx, { currencies: [currency] }))[currency];
-    if (!rate) {
-      // Unreachable for the allowlist: the fallback table covers it
-      throw new ConvexError(`No rate for display currency: ${currency}`);
-    }
-    const latest = {
-      unitsPerEur: 1 / rate.eurPerUnit,
-      date: rate.date ?? null,
-      source: rate.source,
-    };
     if (args.since === undefined) return { currency, latest };
 
     const sinceDay = isoDay(args.since);

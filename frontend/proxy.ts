@@ -90,8 +90,10 @@ export default clerkMiddleware(
           "basemaps.cartocdn.com",
           "*.basemaps.cartocdn.com",
         ],
-        // MapLibre Web Workers use blob URLs for tile parsing
-        "worker-src": ["blob:"],
+        // MapLibre v6 runs its tile worker from a same-origin bundled file
+        // ('self', see lib/utils/loadMapLibre.ts). blob: stays for the
+        // fallback path MapLibre takes when the worker URL is cross-origin.
+        "worker-src": ["'self'", "blob:"],
       },
     },
   },

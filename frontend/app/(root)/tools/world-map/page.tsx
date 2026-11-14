@@ -11,6 +11,7 @@ import {
 } from "react-map-gl/maplibre";
 import type { MapEvent, MapLayerMouseEvent } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { loadMapLibre } from "@/lib/utils/loadMapLibre";
 import { useTranslations } from "next-intl";
 
 // UI Components
@@ -1177,6 +1178,13 @@ export default function WorldMapPage() {
                       </div>
                     )}
                     <MapGL
+                      // Never evaluated on the server: react-map-gl only
+                      // awaits mapLib inside an effect.
+                      mapLib={
+                        typeof window === "undefined"
+                          ? undefined
+                          : loadMapLibre()
+                      }
                       initialViewState={{
                         longitude: 0,
                         latitude: 20,

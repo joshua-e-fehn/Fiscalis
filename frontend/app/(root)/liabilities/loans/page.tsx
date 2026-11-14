@@ -49,7 +49,7 @@ function formatCurrency(value: number, currency: string = "USD"): string {
   return formatMoney(value, currency, { fractionDigits: 0 });
 }
 
-// Totals are per currency (loans aren't converted): "1'000€ + 2'000$"
+// The per-currency totals, each in its loan currency: "1'000€ + 2'000$"
 function formatTotals<T extends { currency: string }>(
   totals: T[],
   pick: (t: T) => number,
@@ -98,6 +98,12 @@ export default function LoansPage() {
 
   const isLoading = loans === undefined || summary === undefined;
   const totals = summary?.totals ?? [];
+  const combined = summary?.combined ?? null;
+  // The breakdown only adds something when a loan is in another currency
+  // than the combined figure
+  const showBreakdown =
+    combined !== null &&
+    totals.some((t) => t.currency.toLowerCase() !== combined.currency);
   // One currency: balance-weighted; mixed currencies: the average per loan
   const overallProgress =
     totals.length === 1
@@ -122,6 +128,13 @@ export default function LoansPage() {
           title="Total Debt"
           value={
             summary
+              ? combined
+                ? formatCurrency(combined.totalDebt, combined.currency)
+                : formatTotals(totals, (t) => t.totalDebt)
+              : undefined
+          }
+          detail={
+            showBreakdown
               ? formatTotals(totals, (t) => t.totalDebt)
               : undefined
           }
@@ -133,6 +146,13 @@ export default function LoansPage() {
           title="Monthly Payments"
           value={
             summary
+              ? combined
+                ? formatCurrency(combined.totalMonthlyPayments, combined.currency)
+                : formatTotals(totals, (t) => t.totalMonthlyPayments)
+              : undefined
+          }
+          detail={
+            showBreakdown
               ? formatTotals(totals, (t) => t.totalMonthlyPayments)
               : undefined
           }
@@ -310,6 +330,7 @@ export default function LoansPage() {
 function SummaryCard({
   title,
   value,
+  detail,
   icon,
   description,
   isLoading,
@@ -318,6 +339,8 @@ function SummaryCard({
 }: {
   title: string;
   value: string | undefined;
+  /** A secondary figure under the value, e.g. the per-currency breakdown */
+  detail?: string;
   icon: React.ReactNode;
   description: string;
   isLoading: boolean;
@@ -335,6 +358,9 @@ function SummaryCard({
           <Skeleton className="h-8 w-24 mb-1" />
         ) : (
           <p className="text-2xl font-bold">{value}</p>
+        )}
+        {detail && !isLoading && (
+          <p className="text-sm text-muted-foreground">{detail}</p>
         )}
         <p className="text-xs text-muted-foreground">{description}</p>
         {showProgress && !isLoading && (

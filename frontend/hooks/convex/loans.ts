@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useCallback } from "react";
 import { todayLocalISO } from "@/lib/utils/date";
+import { useDisplayCurrency } from "./displayCurrency";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -75,10 +76,28 @@ export function useLoanScenarios(loanId: Id<"loans"> | undefined) {
 }
 
 /**
- * Get summary statistics for all loans
+ * Summary statistics for all loans. `totals` stay per loan currency (a
+ * loan is a contract in its own currency); `combined` adds them up in the
+ * display currency, from the server's EUR totals at the latest rate, or is
+ * null when a loan's currency has no rate. Undefined while loading.
  */
 export function useLoansSummary() {
-  return useQuery(api.loans.getLoansSummary, { today: todayLocalISO() });
+  const summary = useQuery(api.loans.getLoansSummary, {
+    today: todayLocalISO(),
+  });
+  const display = useDisplayCurrency();
+  if (summary === undefined || display.isLoading) return undefined;
+  const { inBase, ...rest } = summary;
+  return {
+    ...rest,
+    combined: inBase
+      ? {
+          currency: display.currency,
+          totalDebt: display.fromEur(inBase.totalDebt),
+          totalMonthlyPayments: display.fromEur(inBase.totalMonthlyPayments),
+        }
+      : null,
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -311,6 +311,87 @@ export function bankAccountValue(account: {
   return account.valueInBaseCurrency ?? 0;
 }
 
+/** The stored fields of a bank (Plaid) account bankAccountTotals reads. */
+export interface BankAccountTotalsLike {
+  type: string;
+  subtype?: string;
+  currentBalance?: number;
+  valueInBaseCurrency?: number;
+  /** "unknown": the account's currency has no EUR rate */
+  exchangeRateSource?: string;
+  investmentCategory?: string;
+}
+
+/** EUR totals over bank accounts for the Bank Accounts page. */
+export interface BankAccountTotals {
+  /** Balances minus amounts owed: what the accounts add to net worth */
+  net: number;
+  /** Checking and savings balances of accounts that are not debts */
+  checking: number;
+  savings: number;
+  /** Owed on accounts classified as liabilities (credit cards, loans) */
+  owed: number;
+  counts: {
+    all: number;
+    checking: number;
+    savings: number;
+    /** Liability accounts with an amount owed, by Plaid type */
+    cards: number;
+    loans: number;
+  };
+  /** Accounts with a balance in a currency without an EUR rate; counted as 0 */
+  unconverted: number;
+}
+
+/**
+ * EUR totals over bank accounts, from each account's base value
+ * (bankAccountValue; rows stamped by bankAccountWithBaseFields), never
+ * adding balances in different currencies 1:1. An account is a debt by its
+ * classification (investmentCategory, override-aware), as in the net-worth
+ * aggregator: Plaid reports a liability's balance as the amount owed, and
+ * a negative amount owed (a card in credit) is money owed to the user, so
+ * it counts as a balance (aggregate.ts placeHolding).
+ */
+export function bankAccountTotals(
+  accounts: readonly BankAccountTotalsLike[],
+): BankAccountTotals {
+  const totals: BankAccountTotals = {
+    net: 0,
+    checking: 0,
+    savings: 0,
+    owed: 0,
+    counts: { all: accounts.length, checking: 0, savings: 0, cards: 0, loans: 0 },
+    unconverted: 0,
+  };
+  for (const account of accounts) {
+    const value = bankAccountValue(account);
+    if (
+      account.exchangeRateSource === "unknown" &&
+      account.currentBalance !== undefined
+    ) {
+      totals.unconverted += 1;
+    }
+    if (account.investmentCategory === "liabilities") {
+      if (value > 0) {
+        totals.owed += value;
+        if (account.type === "credit") totals.counts.cards += 1;
+        else totals.counts.loans += 1;
+      }
+      totals.net -= value;
+      continue;
+    }
+    totals.net += value;
+    if (account.subtype === "checking") {
+      totals.checking += value;
+      totals.counts.checking += 1;
+    } else if (account.subtype === "savings") {
+      totals.savings += value;
+      totals.counts.savings += 1;
+    }
+  }
+  return totals;
+}
+
 /** The stored cash fields of a broker account the readers use. */
 export interface BrokerAccountCashLike {
   cash?: number;

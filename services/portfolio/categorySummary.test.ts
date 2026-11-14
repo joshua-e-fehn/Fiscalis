@@ -8,6 +8,7 @@ import {
 import { holdingNetFlow } from "./aggregate";
 import {
   averageCostPerUnit,
+  bankAccountTotals,
   bankAccountValue,
   bitpandaCostBasis,
   brokerAccountCash,
@@ -547,5 +548,74 @@ describe("resolveCategoryProfitLoss", () => {
       source: null,
       ...none,
     });
+  });
+});
+
+describe("bankAccountTotals", () => {
+  const account = (
+    over: Partial<Parameters<typeof bankAccountTotals>[0][number]>,
+  ) => ({
+    type: "depository",
+    investmentCategory: "cash",
+    exchangeRateSource: "identity",
+    ...over,
+  });
+
+  it("sums EUR base values, not raw balances in mixed currencies", () => {
+    const t = bankAccountTotals([
+      account({ subtype: "checking", currentBalance: 1_000, valueInBaseCurrency: 1_000 }),
+      // 1'000 USD at 0.9
+      account({ subtype: "checking", currentBalance: 1_000, valueInBaseCurrency: 900, exchangeRateSource: "market" }),
+      // 10'000 SEK at 0.087
+      account({ subtype: "savings", currentBalance: 10_000, valueInBaseCurrency: 870, exchangeRateSource: "market" }),
+    ]);
+    expect(t.net).toBeCloseTo(2_770);
+    expect(t.checking).toBeCloseTo(1_900);
+    expect(t.savings).toBeCloseTo(870);
+    expect(t.counts).toEqual({ all: 3, checking: 2, savings: 1, cards: 0, loans: 0 });
+    expect(t.unconverted).toBe(0);
+  });
+
+  it("subtracts amounts owed on credit cards and loans from the net", () => {
+    const t = bankAccountTotals([
+      account({ subtype: "checking", currentBalance: 2_000, valueInBaseCurrency: 2_000 }),
+      account({ type: "credit", subtype: "credit card", investmentCategory: "liabilities", currentBalance: 300, valueInBaseCurrency: 300 }),
+      account({ type: "loan", subtype: "mortgage", investmentCategory: "liabilities", currentBalance: 500, valueInBaseCurrency: 500 }),
+    ]);
+    expect(t.net).toBeCloseTo(1_200);
+    expect(t.owed).toBeCloseTo(800);
+    expect(t.counts).toMatchObject({ cards: 1, loans: 1 });
+  });
+
+  it("counts a card in credit as a balance, not as negative debt", () => {
+    const t = bankAccountTotals([
+      account({ type: "credit", investmentCategory: "liabilities", currentBalance: -40, valueInBaseCurrency: -40 }),
+    ]);
+    expect(t.net).toBeCloseTo(40);
+    expect(t.owed).toBe(0);
+    expect(t.counts.cards).toBe(0);
+  });
+
+  it("follows the classification: an overridden account moves with it", () => {
+    const t = bankAccountTotals([
+      // A credit-type account the user reclassified as cash
+      account({ type: "credit", investmentCategory: "cash", currentBalance: 300, valueInBaseCurrency: 300 }),
+      // A checking account reclassified as a liability
+      account({ subtype: "checking", investmentCategory: "liabilities", currentBalance: 100, valueInBaseCurrency: 100 }),
+    ]);
+    expect(t.net).toBeCloseTo(200);
+    expect(t.owed).toBeCloseTo(100);
+    expect(t.checking).toBe(0);
+    expect(t.counts).toMatchObject({ checking: 0, cards: 0, loans: 1 });
+  });
+
+  it("counts a balance without an EUR rate as 0 and reports it", () => {
+    const t = bankAccountTotals([
+      account({ subtype: "checking", currentBalance: 5_000, exchangeRateSource: "unknown" }),
+      account({ subtype: "savings", exchangeRateSource: "unknown" }),
+    ]);
+    expect(t.net).toBe(0);
+    expect(t.checking).toBe(0);
+    expect(t.unconverted).toBe(1);
   });
 });

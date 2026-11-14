@@ -163,13 +163,6 @@ export function usePlaidAccountsByItem(itemId: string) {
 }
 
 /**
- * Hook to get balances summary
- */
-export function useBalancesSummary() {
-  return useQuery(api.banking.getBalancesSummary);
-}
-
-/**
  * Hook to refresh accounts from Plaid
  */
 export function useRefreshAccounts() {

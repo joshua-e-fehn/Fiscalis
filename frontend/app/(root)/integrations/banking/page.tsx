@@ -6,6 +6,7 @@ import { BanksCard } from "@/components/atomic/organisms/banksCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import { usePlaidAccounts, useRefreshAccounts } from "@/hooks/convex";
+import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import { useSyncContext } from "@/providers/syncProvider";
 import {
   Card,
@@ -21,9 +22,11 @@ import {
   Banknote,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { bankAccountTotals } from "@/../services/portfolio/categorySummary";
 
 export default function BankingPage() {
   const accounts = usePlaidAccounts();
+  const baseCurrency = useBaseCurrency();
   const { mutate: refreshAll, isLoading: isLocalSyncing } =
     useRefreshAccounts();
   const { isPlaidSyncing: isGlobalSyncing } = useSyncContext();
@@ -34,61 +37,50 @@ export default function BankingPage() {
   const isLoading = accounts === undefined;
   const hasAccounts = accounts && accounts.length > 0;
 
-  // Calculate stats
+  // Totals in the base currency from each account's stored EUR value, with
+  // amounts owed (credit cards, loans) subtracted from the net balance, as
+  // in net worth
   const stats = useMemo(() => {
     if (!accounts || accounts.length === 0) return null;
 
-    const totalBalance = accounts.reduce(
-      (sum, acc) => sum + (acc.currentBalance ?? 0),
-      0,
-    );
-
-    const checkingAccounts = accounts.filter(
-      (acc) => acc.subtype === "checking",
-    );
-    const savingsAccounts = accounts.filter((acc) => acc.subtype === "savings");
-    const creditAccounts = accounts.filter((acc) => acc.type === "credit");
-
-    const checkingBalance = checkingAccounts.reduce(
-      (sum, acc) => sum + (acc.currentBalance ?? 0),
-      0,
-    );
-    const savingsBalance = savingsAccounts.reduce(
-      (sum, acc) => sum + (acc.currentBalance ?? 0),
-      0,
-    );
-    const creditBalance = creditAccounts.reduce(
-      (sum, acc) => sum + (acc.currentBalance ?? 0),
-      0,
-    );
+    const totals = bankAccountTotals(accounts);
+    const plural = (n: number, word: string) =>
+      `${n} ${word}${n === 1 ? "" : "s"}`;
+    const unconvertedNote =
+      totals.unconverted > 0
+        ? ` · ${totals.unconverted} without an exchange rate`
+        : "";
 
     return [
       {
-        label: "Total Balance",
-        value: formatCurrency(totalBalance, "eur"),
+        label: "Net Balance",
+        value: formatCurrency(totals.net, baseCurrency),
         icon: Banknote,
-        description: `${accounts.length} accounts`,
+        description: `${plural(totals.counts.all, "account")}, after debts${unconvertedNote}`,
       },
       {
         label: "Checking",
-        value: formatCurrency(checkingBalance, "eur"),
+        value: formatCurrency(totals.checking, baseCurrency),
         icon: Wallet,
-        description: `${checkingAccounts.length} accounts`,
+        description: plural(totals.counts.checking, "account"),
       },
       {
         label: "Savings",
-        value: formatCurrency(savingsBalance, "eur"),
+        value: formatCurrency(totals.savings, baseCurrency),
         icon: Building2,
-        description: `${savingsAccounts.length} accounts`,
+        description: plural(totals.counts.savings, "account"),
       },
       {
-        label: "Credit",
-        value: formatCurrency(Math.abs(creditBalance), "eur"),
+        label: "Owed",
+        value: formatCurrency(totals.owed, baseCurrency),
         icon: CreditCard,
-        description: `${creditAccounts.length} cards`,
+        description:
+          totals.counts.loans > 0
+            ? `${plural(totals.counts.cards, "card")}, ${plural(totals.counts.loans, "loan")}`
+            : plural(totals.counts.cards, "card"),
       },
     ];
-  }, [accounts]);
+  }, [accounts, baseCurrency]);
 
   return (
     <div className="container mx-auto py-6 space-y-8">

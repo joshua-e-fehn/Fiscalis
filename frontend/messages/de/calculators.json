@@ -41,6 +41,15 @@
       "month": "{count, plural, one {# Monat} other {# Monate}}",
       "quarter": "{count, plural, one {# Quartal} other {# Quartale}}",
       "year": "{count, plural, one {# Jahr} other {# Jahre}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, one {# Minute} other {# Minuten}}",
+      "hour": "{count, plural, one {# Stunde} other {# Stunden}}",
+      "day": "{count, plural, one {# Tag} other {# Tagen}}",
+      "week": "{count, plural, one {# Woche} other {# Wochen}}",
+      "month": "{count, plural, one {# Monat} other {# Monaten}}",
+      "quarter": "{count, plural, one {# Quartal} other {# Quartalen}}",
+      "year": "{count, plural, one {# Jahr} other {# Jahren}}"
     }
   },
   "interest": {

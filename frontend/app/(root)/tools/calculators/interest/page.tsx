@@ -595,7 +595,7 @@ function FutureValueCalculator() {
                     <div className="text-sm text-muted-foreground mt-1">
                       {t("gainAfter", {
                         amount: formatAmount(result.compound - startingCapital),
-                        duration: tIntervals(`count.${timeInterval}`, {
+                        duration: tIntervals(`countAfter.${timeInterval}`, {
                           count: timePeriod,
                         }),
                       })}
@@ -612,7 +612,7 @@ function FutureValueCalculator() {
                     <div className="text-sm text-muted-foreground mt-1">
                       {t("gainAfter", {
                         amount: formatAmount(result.simple - startingCapital),
-                        duration: tIntervals(`count.${timeInterval}`, {
+                        duration: tIntervals(`countAfter.${timeInterval}`, {
                           count: timePeriod,
                         }),
                       })}
@@ -758,7 +758,7 @@ function StartingValueCalculator() {
                     <div className="text-sm text-muted-foreground mt-1">
                       {t("growthAfter", {
                         amount: formatAmount(targetCapital - result.compound),
-                        duration: tIntervals(`count.${timeInterval}`, {
+                        duration: tIntervals(`countAfter.${timeInterval}`, {
                           count: timePeriod,
                         }),
                       })}
@@ -775,7 +775,7 @@ function StartingValueCalculator() {
                     <div className="text-sm text-muted-foreground mt-1">
                       {t("growthAfter", {
                         amount: formatAmount(targetCapital - result.simple),
-                        duration: tIntervals(`count.${timeInterval}`, {
+                        duration: tIntervals(`countAfter.${timeInterval}`, {
                           count: timePeriod,
                         }),
                       })}

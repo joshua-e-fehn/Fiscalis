@@ -41,6 +41,15 @@
       "month": "{count, plural, one {# month} other {# months}}",
       "quarter": "{count, plural, one {# quarter} other {# quarters}}",
       "year": "{count, plural, one {# year} other {# years}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, one {# minute} other {# minutes}}",
+      "hour": "{count, plural, one {# hour} other {# hours}}",
+      "day": "{count, plural, one {# day} other {# days}}",
+      "week": "{count, plural, one {# week} other {# weeks}}",
+      "month": "{count, plural, one {# month} other {# months}}",
+      "quarter": "{count, plural, one {# quarter} other {# quarters}}",
+      "year": "{count, plural, one {# year} other {# years}}"
     }
   },
   "interest": {

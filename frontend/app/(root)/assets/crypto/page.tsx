@@ -13,8 +13,8 @@
 
 import {
   InvestmentDashboardSection,
+  SubcategoryCardSection,
 } from "@/components/atomic/molecules/investments";
-import { SubcategoryCardSection } from "@/components/atomic/molecules/investments/SubcategoryCategoryCard";
 import { CryptoAllocationChart } from "@/components/atomic/molecules/crypto";
 import { useCryptoSummary } from "@/hooks/convex/crypto";
 import { cryptoCategoryCards } from "@/lib/config/categoryUI";

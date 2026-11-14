@@ -2,10 +2,10 @@
 
 import {
   InvestmentDashboardSection,
+  SubcategoryCardSection,
   CASH_KPI_CARDS,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
-import { SubcategoryCardSection } from "@/components/atomic/molecules/investments/SubcategoryCategoryCard";
 import { useCashSummary } from "@/hooks/convex/cash";
 import { usePortfolioOverview } from "@/hooks/convex/portfolio";
 import { cashCategoryCards } from "@/lib/config/categoryUI";

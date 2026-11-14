@@ -121,9 +121,9 @@ export function SubcategoryCategoryCard({
  * Cards a category page shows: the built ones, plus the planned ("Coming
  * soon") ones only while the plannedCategories flag is on (ENG-227).
  */
-export function visibleCategoryCards(
-  cards: readonly SubcategoryCardData[],
-): SubcategoryCardData[] {
+export function visibleCategoryCards<T extends { implemented: boolean }>(
+  cards: readonly T[],
+): T[] {
   return cards.filter(
     (card) => card.implemented || isFeatureEnabled("plannedCategories"),
   );

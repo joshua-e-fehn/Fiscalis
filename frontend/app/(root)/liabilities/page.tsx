@@ -20,12 +20,14 @@ import {
   Plus,
   AlertTriangle,
 } from "lucide-react";
-import { InvestmentDashboardSection } from "@/components/atomic/molecules/investments";
+import {
+  InvestmentDashboardSection,
+  visibleCategoryCards,
+} from "@/components/atomic/molecules/investments";
 import { useLiabilitiesSummary } from "@/hooks/convex/liabilities";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dialog";
-import { isFeatureEnabled } from "@/lib/config/features";
 
 /**
  * Liabilities Overview Page
@@ -263,13 +265,8 @@ export default function LiabilitiesPage() {
           <div className="h-px flex-1 bg-border" />
         </div>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {liabilityCategories
-            // Planned types ("Coming Soon") stay hidden until built (ENG-227)
-            .filter(
-              (category) =>
-                category.implemented || isFeatureEnabled("plannedCategories"),
-            )
-            .map((category) => {
+          {/* Planned types ("Coming Soon") stay hidden until built (ENG-227) */}
+          {visibleCategoryCards(liabilityCategories).map((category) => {
             const data = getSubcategoryData(category.id);
             return (
               <LiabilityCategoryCard

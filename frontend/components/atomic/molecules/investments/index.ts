@@ -14,6 +14,8 @@ export {
 } from "./InvestmentDashboardSection";
 export {
   SubcategoryCategoryCard,
+  SubcategoryCardSection,
+  visibleCategoryCards,
   type SubcategoryCardData,
 } from "./SubcategoryCategoryCard";
 export { PageHeader, type PageHeaderAction } from "./PageHeader";

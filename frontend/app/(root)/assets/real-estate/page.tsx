@@ -2,9 +2,9 @@
 
 import {
   InvestmentDashboardSection,
+  SubcategoryCardSection,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
-import { SubcategoryCardSection } from "@/components/atomic/molecules/investments/SubcategoryCategoryCard";
 import { useRealEstateSummary } from "@/hooks/convex/realEstate";
 import { realEstateCategoryCards } from "@/lib/config/categoryUI";
 

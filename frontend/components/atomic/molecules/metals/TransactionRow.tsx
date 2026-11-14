@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { MetalBadge } from "@/components/atomic/atoms/metals";
@@ -44,25 +45,12 @@ const transactionColors = {
   gift_given: "text-purple-600 bg-purple-100",
 };
 
-const transactionLabels = {
-  buy: "Buy",
-  sell: "Sell",
-  gift_received: "Gift Received",
-  gift_given: "Gift Given",
-};
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}
-
 export function TransactionRow({
   transaction,
   className,
 }: TransactionRowProps) {
+  const t = useTranslations("metals.transactions");
+  const format = useFormatter();
   const Icon = transactionIcons[transaction.transactionType];
   // The purchase or sale currency as entered, an ISO code ("EUR", "GBP");
   // formatCurrency writes any code after the amount
@@ -85,8 +73,13 @@ export function TransactionRow({
       {/* Date */}
       <div className="w-16 text-sm text-muted-foreground">
         {transaction.transactionDate === null
-          ? "Unknown"
-          : formatDate(transaction.transactionDate)}
+          ? t("unknownDate")
+          : // A calendar date (UTC midnight): read in UTC, never shifted a day
+            format.dateTime(new Date(transaction.transactionDate), {
+              day: "numeric",
+              month: "short",
+              timeZone: "UTC",
+            })}
       </div>
 
       {/* Type badge */}
@@ -97,7 +90,7 @@ export function TransactionRow({
         )}
       >
         <Icon className="h-3.5 w-3.5" />
-        {transactionLabels[transaction.transactionType]}
+        {t(`type.${transaction.transactionType}`)}
       </div>
 
       {/* Item name + metal badge */}
@@ -108,12 +101,12 @@ export function TransactionRow({
         <span className="font-medium truncate">{transaction.itemName}</span>
         {transaction.isOpening && (
           <span className="text-xs text-muted-foreground border rounded px-1.5 py-0.5">
-            Opening balance
+            {t("openingBalance")}
           </span>
         )}
         {transaction.quantity > 1 && (
           <span className="text-muted-foreground text-sm">
-            (x{transaction.quantity})
+            {t("quantity", { count: transaction.quantity })}
           </span>
         )}
       </div>
@@ -121,8 +114,10 @@ export function TransactionRow({
       {/* Price per unit */}
       <div className="w-28 text-right text-sm text-muted-foreground">
         {transaction.pricePerUnit === null
-          ? "Cost unknown"
-          : `${formatCurrency(transaction.pricePerUnit, currency)}/unit`}
+          ? t("costUnknown")
+          : t("perUnit", {
+              price: formatCurrency(transaction.pricePerUnit, currency),
+            })}
       </div>
 
       {/* Total */}

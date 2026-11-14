@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -9,7 +10,7 @@ import {
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { currencySuffixes } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 
 interface TotalProfitLossCardProps {
   profitLoss: number | null;
@@ -23,7 +24,6 @@ interface TotalProfitLossCardProps {
   className?: string;
 }
 
-
 export function TotalProfitLossCard({
   profitLoss,
   profitLossPercent,
@@ -31,12 +31,13 @@ export function TotalProfitLossCard({
   isLoading = false,
   className,
 }: TotalProfitLossCardProps) {
+  const t = useTranslations("metals.performance");
   if (isLoading) {
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Total P/L
+            {t("totalProfitLossTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -47,22 +48,7 @@ export function TotalProfitLossCard({
     );
   }
 
-  const hasData = profitLoss !== null && profitLossPercent !== null;
   const isProfit = (profitLoss ?? 0) >= 0;
-
-  const formattedValue = hasData
-    ? new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Math.abs(profitLoss!))
-    : null;
-
-  const formattedPercent = hasData
-    ? new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Math.abs(profitLossPercent!))
-    : null;
 
   return (
     <Card className={cn("h-full", className)}>
@@ -73,11 +59,11 @@ export function TotalProfitLossCard({
           ) : (
             <TrendingDown className="h-4 w-4" />
           )}
-          Total Profit / Loss
+          {t("totalProfitLossTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {hasData ? (
+        {profitLoss !== null && profitLossPercent !== null ? (
           <div className="flex items-baseline gap-2 flex-wrap">
             <span
               className={cn(
@@ -85,9 +71,7 @@ export function TotalProfitLossCard({
                 isProfit ? "text-profit" : "text-loss",
               )}
             >
-              {isProfit ? "+" : "-"}
-              {formattedValue}
-              {currencySuffixes[currency]}
+              {formatCurrency(profitLoss, currency, { showSign: true })}
             </span>
             <span
               className={cn(
@@ -95,13 +79,12 @@ export function TotalProfitLossCard({
                 isProfit ? "text-profit" : "text-loss",
               )}
             >
-              ({isProfit ? "+" : "-"}
-              {formattedPercent}%)
+              ({formatPercent(profitLossPercent, true)})
             </span>
           </div>
         ) : (
           <div className="text-muted-foreground text-sm">
-            Add purchase prices to track P/L
+            {t("totalProfitLossEmpty")}
           </div>
         )}
       </CardContent>

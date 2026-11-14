@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { Transaction, TransactionRow } from "./TransactionRow";
@@ -23,38 +24,46 @@ interface TransactionListProps {
   className?: string;
 }
 
-const UNKNOWN_DATE = "Date unknown";
+interface TransactionGroup {
+  /** "2026-11" (UTC month of the stored date); null: date unknown */
+  month: string | null;
+  /** A date in the month, for its label */
+  date: Date | null;
+  transactions: Transaction[];
+}
 
+/**
+ * The transactions by month, in list order. Stored dates are calendar dates
+ * (YYYY-MM-DD, UTC midnight), so the month is read in UTC. Opening balances
+ * of unknown date (held since before any range) come last: before any dated
+ * transaction in the newest-first list.
+ */
 function groupTransactionsByMonth(
   transactions: Transaction[],
-): Record<string, Transaction[]> {
-  const groups: Record<string, Transaction[]> = {};
+): TransactionGroup[] {
+  const groups = new Map<string, TransactionGroup>();
+  const undated: Transaction[] = [];
 
   for (const tx of transactions) {
-    // Opening balances of unknown date: held since before any range
     if (tx.transactionDate === null) {
-      (groups[UNKNOWN_DATE] ??= []).push(tx);
+      undated.push(tx);
       continue;
     }
     const date = new Date(tx.transactionDate);
-    const monthLabel = new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      year: "numeric",
-    }).format(date);
-
-    if (!groups[monthLabel]) {
-      groups[monthLabel] = [];
+    const month = date.toISOString().slice(0, 7);
+    let group = groups.get(month);
+    if (!group) {
+      group = { month, date, transactions: [] };
+      groups.set(month, group);
     }
-    groups[monthLabel].push(tx);
+    group.transactions.push(tx);
   }
 
-  // Before any dated transaction: last in the newest-first list
-  if (groups[UNKNOWN_DATE]) {
-    const undated = groups[UNKNOWN_DATE];
-    delete groups[UNKNOWN_DATE];
-    groups[UNKNOWN_DATE] = undated;
+  const result = [...groups.values()];
+  if (undated.length > 0) {
+    result.push({ month: null, date: null, transactions: undated });
   }
-  return groups;
+  return result;
 }
 
 export function TransactionList({
@@ -62,6 +71,8 @@ export function TransactionList({
   isLoading = false,
   className,
 }: TransactionListProps) {
+  const t = useTranslations("metals.transactions");
+  const format = useFormatter();
   const groupedTransactions = useMemo(
     () => groupTransactionsByMonth(transactions),
     [transactions],
@@ -91,7 +102,7 @@ export function TransactionList({
           className,
         )}
       >
-        No transactions yet
+        {t("empty")}
       </div>
     );
   }
@@ -99,21 +110,24 @@ export function TransactionList({
   return (
     <div className={cn("max-h-[500px] overflow-y-auto", className)}>
       <StaggerContainer className="space-y-6">
-        {Object.entries(groupedTransactions).map(([month, txs], groupIndex) => (
-          <StaggerItem key={month}>
+        {groupedTransactions.map((group, groupIndex) => (
+          <StaggerItem key={group.month ?? "unknown"}>
             <FadeIn delay={groupIndex * 0.1}>
               {/* Month header */}
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide px-4 mb-2">
-                {month}
+                {group.date === null
+                  ? t("dateUnknown")
+                  : format.dateTime(group.date, {
+                      month: "long",
+                      year: "numeric",
+                      timeZone: "UTC",
+                    })}
               </h3>
 
               {/* Transactions for this month */}
               <div className="border rounded-lg divide-y">
-                {txs.map((tx) => (
-                  <TransactionRow
-                    key={tx._id}
-                    transaction={tx}
-                  />
+                {group.transactions.map((tx) => (
+                  <TransactionRow key={tx._id} transaction={tx} />
                 ))}
               </div>
             </FadeIn>

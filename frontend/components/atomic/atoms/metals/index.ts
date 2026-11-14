@@ -1,6 +1,6 @@
 // Metals Atom Components
 export { MetalBadge, MetalIcon } from "./MetalBadge";
-export { PriceDisplay, PriceWithCurrency } from "./PriceDisplay";
+export { PriceDisplay } from "./PriceDisplay";
 export { ChangeIndicator, PercentageChange } from "./ChangeIndicator";
 export { WeightDisplay, DualWeightDisplay } from "./WeightDisplay";
 export { PurityBadge, CategoryBadge } from "./PurityBadge";

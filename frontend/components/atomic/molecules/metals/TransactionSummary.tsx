@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
@@ -55,6 +56,7 @@ export function TransactionSummary({
   totalPL = null,
   className,
 }: TransactionSummaryProps) {
+  const t = useTranslations("metals.transactions.summary");
   const display = useDisplayCurrency();
   const currency = displayCurrency ?? display.currency;
   const rateCode = display.code;
@@ -73,9 +75,31 @@ export function TransactionSummary({
       leftOut: totals.notConverted + totals.unknownCost,
       realizedPL,
     };
-  }, [transactions, currency, exchangeRates, rateCode, rateUnitsPerEur, realizedPL]);
+  }, [
+    transactions,
+    currency,
+    exchangeRates,
+    rateCode,
+    rateUnitsPerEur,
+    realizedPL,
+  ]);
 
   const isNetOutflow = summary.cashFlow >= 0;
+  const cashFlowLabel = isNetOutflow ? t("netSpent") : t("netReceived");
+  // Left out of the totals, and why
+  const leftOutCounts = {
+    count: summary.leftOut,
+    notConverted: summary.notConverted,
+    unknownCost: summary.unknownCost,
+  };
+  const leftOutNote =
+    summary.leftOut === 0
+      ? null
+      : summary.notConverted > 0 && summary.unknownCost > 0
+        ? t("leftOutBoth", leftOutCounts)
+        : summary.notConverted > 0
+          ? t("leftOutNotConverted", leftOutCounts)
+          : t("leftOutUnknownCost", leftOutCounts);
   const hasUnrealizedPL = unrealizedPL !== null;
 
   // No figure before the display rate arrives
@@ -91,13 +115,13 @@ export function TransactionSummary({
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <ArrowDownLeft className="h-3.5 w-3.5 text-profit" />
-              Total Bought
+              {t("totalBought")}
             </div>
             <div className="text-lg font-semibold">
               {formatCurrency(summary.totalBought, currency)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {summary.buyCount} transaction{summary.buyCount !== 1 ? "s" : ""}
+              {t("count", { count: summary.buyCount })}
             </div>
           </div>
 
@@ -105,14 +129,13 @@ export function TransactionSummary({
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <ArrowUpRight className="h-3.5 w-3.5 text-loss" />
-              Total Sold
+              {t("totalSold")}
             </div>
             <div className="text-lg font-semibold">
               {formatCurrency(summary.totalSold, currency)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {summary.sellCount} transaction
-              {summary.sellCount !== 1 ? "s" : ""}
+              {t("count", { count: summary.sellCount })}
             </div>
           </div>
 
@@ -120,7 +143,7 @@ export function TransactionSummary({
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Wallet className="h-3.5 w-3.5 text-primary" />
-              Net Cash Flow
+              {t("netCashFlow")}
             </div>
             <div
               className={cn(
@@ -132,15 +155,9 @@ export function TransactionSummary({
               {formatCurrency(Math.abs(summary.cashFlow), currency)}
             </div>
             <div className="text-xs text-muted-foreground">
-              {isNetOutflow ? "Net spent" : "Net received"}
-              {summary.leftOut > 0 &&
-                ` · ${summary.leftOut} not included (${[
-                  summary.notConverted > 0 &&
-                    `${summary.notConverted} not converted`,
-                  summary.unknownCost > 0 && `${summary.unknownCost} cost unknown`,
-                ]
-                  .filter(Boolean)
-                  .join(", ")})`}
+              {leftOutNote === null
+                ? cashFlowLabel
+                : t("withNote", { label: cashFlowLabel, note: leftOutNote })}
             </div>
           </div>
 
@@ -152,7 +169,7 @@ export function TransactionSummary({
               ) : (
                 <TrendingDown className="h-3.5 w-3.5 text-loss" />
               )}
-              Realized P/L
+              {t("realizedPL")}
             </div>
             {summary.realizedPL !== null ? (
               <>
@@ -166,7 +183,7 @@ export function TransactionSummary({
                   {formatCurrency(summary.realizedPL, currency)}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  From sales (avg. cost per item)
+                  {t("realizedNote")}
                 </div>
               </>
             ) : (
@@ -174,7 +191,9 @@ export function TransactionSummary({
                 <div className="text-lg font-semibold text-muted-foreground">
                   --
                 </div>
-                <div className="text-xs text-muted-foreground">No data</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("noData")}
+                </div>
               </>
             )}
           </div>
@@ -187,7 +206,7 @@ export function TransactionSummary({
               ) : (
                 <TrendingDown className="h-3.5 w-3.5 text-loss" />
               )}
-              Unrealized P/L
+              {t("unrealizedPL")}
             </div>
             {hasUnrealizedPL ? (
               <>
@@ -201,7 +220,7 @@ export function TransactionSummary({
                   {formatCurrency(unrealizedPL, currency)}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  If sold at spot
+                  {t("unrealizedNote")}
                 </div>
               </>
             ) : (
@@ -209,7 +228,9 @@ export function TransactionSummary({
                 <div className="text-lg font-semibold text-muted-foreground">
                   --
                 </div>
-                <div className="text-xs text-muted-foreground">No holdings</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("noHoldings")}
+                </div>
               </>
             )}
           </div>
@@ -222,7 +243,7 @@ export function TransactionSummary({
               ) : (
                 <TrendingDown className="h-3.5 w-3.5 text-loss" />
               )}
-              Total P/L
+              {t("totalPL")}
             </div>
             {totalPL !== null ? (
               <>
@@ -236,7 +257,7 @@ export function TransactionSummary({
                   {formatCurrency(totalPL, currency)}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  Realized + Unrealized
+                  {t("totalNote")}
                 </div>
               </>
             ) : (
@@ -244,7 +265,9 @@ export function TransactionSummary({
                 <div className="text-lg font-semibold text-muted-foreground">
                   --
                 </div>
-                <div className="text-xs text-muted-foreground">No data</div>
+                <div className="text-xs text-muted-foreground">
+                  {t("noData")}
+                </div>
               </>
             )}
           </div>

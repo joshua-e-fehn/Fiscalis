@@ -5,7 +5,11 @@ import { cn } from "@/lib/utils";
 
 interface AnimatedNumberProps {
   value: number;
-  formatFn?: (value: number) => string;
+  /**
+   * Formats each frame's value: pass a lib/utils/currency.ts helper
+   * (formatCurrency, formatPercent) so amounts keep the house style
+   */
+  formatFn: (value: number) => string;
   duration?: number;
   className?: string;
 }
@@ -15,12 +19,13 @@ interface AnimatedNumberProps {
  */
 export function AnimatedNumber({
   value,
-  formatFn = (v) => v.toLocaleString(),
+  formatFn,
   duration = 500,
   className,
 }: AnimatedNumberProps) {
   const [displayValue, setDisplayValue] = useState(value);
-  const [isAnimating, setIsAnimating] = useState(false);
+  // Set while animating: the colour of the change
+  const [direction, setDirection] = useState<"up" | "down" | null>(null);
   const previousValue = useRef(value);
   const animationRef = useRef<number | null>(null);
 
@@ -31,7 +36,7 @@ export function AnimatedNumber({
     const endValue = value;
     const startTime = performance.now();
 
-    setIsAnimating(true);
+    const change = endValue > startValue ? "up" : "down";
 
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
@@ -42,12 +47,14 @@ export function AnimatedNumber({
 
       const currentValue = startValue + (endValue - startValue) * eased;
       setDisplayValue(currentValue);
+      // Set in the frame callback, not the effect body: same value each frame
+      setDirection(change);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       } else {
         setDisplayValue(endValue);
-        setIsAnimating(false);
+        setDirection(null);
         previousValue.current = endValue;
       }
     };
@@ -61,15 +68,12 @@ export function AnimatedNumber({
     };
   }, [value, duration]);
 
-  const isPositiveChange = value > previousValue.current;
-  const isNegativeChange = value < previousValue.current;
-
   return (
     <span
       className={cn(
         "transition-colors duration-300",
-        isAnimating && isPositiveChange && "text-profit",
-        isAnimating && isNegativeChange && "text-loss",
+        direction === "up" && "text-profit",
+        direction === "down" && "text-loss",
         className,
       )}
     >

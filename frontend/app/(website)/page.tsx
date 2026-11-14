@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { SignInButton, SignedOut, SignedIn } from "@clerk/nextjs";
 import { Button } from "@/components/ui/shadcn/button";
+import { SiteFooter } from "@/components/atomic/organisms/siteFooter";
 
 // Animation variants
 const containerVariants = {
@@ -475,44 +476,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative py-12 px-4 border-t border-white/[0.05]">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37]/20 to-[#D4AF37]/5 border border-[#D4AF37]/30 flex items-center justify-center p-1.5">
-                <Image
-                  src="/fiscalisIcon.svg"
-                  alt="Fiscalis"
-                  width={28}
-                  height={28}
-                  className="object-contain"
-                />
-              </div>
-              <span className="text-lg font-bold text-white">Fiscalis</span>
-            </div>
-
-            {/* Links */}
-            <div className="flex items-center gap-8 text-sm text-white/40">
-              <a href="#" className="hover:text-white transition-colors">
-                Privacy
-              </a>
-              <a href="#" className="hover:text-white transition-colors">
-                Terms
-              </a>
-              <a href="#" className="hover:text-white transition-colors">
-                Contact
-              </a>
-            </div>
-
-            {/* Copyright */}
-            <p className="text-sm text-white/30">
-              © {new Date().getFullYear()} Fiscalis. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

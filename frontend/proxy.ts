@@ -38,6 +38,10 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/waitlist(.*)", // Sign-up is waitlist-only (ENG-226)
+  // Legal pages (ENG-208): must be readable without an account
+  "/privacy",
+  "/terms",
+  "/impressum",
   "/api/world-data(.*)", // Public World Bank data API
   "/api/worldbank/sync(.*)", // Public World Bank sync API (for cron jobs)
 ]);

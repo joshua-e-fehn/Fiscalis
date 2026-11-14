@@ -14,8 +14,6 @@ export {
   useTransactions,
   useTransactionsByDate,
   useSyncTransactions,
-  useAuth,
-  useIdentity,
 } from "./banking";
 
 // Re-export all Convex Bitpanda hooks

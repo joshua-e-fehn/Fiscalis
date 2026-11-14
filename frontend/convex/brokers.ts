@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import {
   query,
-  mutation,
   internalMutation,
   internalQuery,
 } from "./_generated/server";
@@ -37,10 +36,18 @@ export const getSnaptradeUser = query({
 
     const userId = identity.subject;
 
-    return await ctx.db
+    const snaptradeUser = await ctx.db
       .query("snaptradeUsers")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
+    if (!snaptradeUser) return null;
+
+    // Never the (encrypted) user secret: only actions read it, server side
+    return {
+      _id: snaptradeUser._id,
+      snaptradeUserId: snaptradeUser.snaptradeUserId,
+      createdAt: snaptradeUser.createdAt,
+    };
   },
 });
 
@@ -259,62 +266,6 @@ export const getTransactions = query({
 });
 
 // ═══════════════════════════════════════════════════════════════
-// PUBLIC MUTATIONS
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Delete a broker connection and all its data (accounts, positions, transactions)
- */
-export const deleteConnection = mutation({
-  args: { connectionId: v.id("brokerConnections") },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const connection = await ctx.db.get(args.connectionId);
-    if (!connection || connection.userId !== identity.subject) {
-      throw new Error("Connection not found or unauthorized");
-    }
-
-    // Get all accounts for this connection
-    const accounts = await ctx.db
-      .query("brokerAccounts")
-      .withIndex("by_connection", (q) =>
-        q.eq("connectionId", args.connectionId),
-      )
-      .collect();
-
-    // Delete positions and transactions for each account
-    for (const account of accounts) {
-      const positions = await ctx.db
-        .query("brokerPositions")
-        .withIndex("by_account", (q) => q.eq("accountId", account._id))
-        .collect();
-
-      for (const position of positions) {
-        await ctx.db.delete(position._id);
-      }
-
-      const transactions = await ctx.db
-        .query("brokerTransactions")
-        .withIndex("by_account", (q) => q.eq("accountId", account._id))
-        .collect();
-
-      for (const transaction of transactions) {
-        await ctx.db.delete(transaction._id);
-      }
-
-      await ctx.db.delete(account._id);
-    }
-
-    // Delete the connection
-    await ctx.db.delete(args.connectionId);
-
-    return { success: true };
-  },
-});
-
-// ═══════════════════════════════════════════════════════════════
 // INTERNAL MUTATIONS (for use by SnapTrade actions)
 // ═══════════════════════════════════════════════════════════════
 
@@ -445,7 +396,9 @@ export const updateConnectionLogo = internalMutation({
 });
 
 /**
- * Delete connection data (called by action after SnapTrade API call)
+ * Delete connection data. Internal: the public entry point is
+ * `actions/snaptrade.deleteConnection`, which first removes the brokerage
+ * authorization at SnapTrade.
  */
 export const deleteConnectionData = internalMutation({
   args: { connectionId: v.id("brokerConnections") },

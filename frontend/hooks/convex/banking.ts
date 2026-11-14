@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useCallback } from "react";
 
@@ -117,10 +117,10 @@ export function useItemsNeedingReauth() {
 }
 
 /**
- * Hook to delete a Plaid item
+ * Hook to disconnect a Plaid item: revoked at Plaid, then deleted
  */
 export function useDeletePlaidItem() {
-  const deleteItem = useMutation(api.banking.deleteItem);
+  const deleteItem = useAction(api.actions.plaid.disconnectItem);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -303,74 +303,4 @@ export function useSyncTransactions() {
   );
 
   return { mutate, isLoading, error };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// PLAID AUTH & IDENTITY HOOKS
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Hook to get auth data (account/routing numbers)
- */
-export function useAuth() {
-  const getAuth = useAction(api.actions.plaid.getAuth);
-  const [data, setData] = useState<Awaited<ReturnType<typeof getAuth>> | null>(
-    null,
-  );
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetch = useCallback(
-    async (itemId?: string) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await getAuth({ itemId });
-        setData(result);
-        return result;
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
-        throw error;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [getAuth],
-  );
-
-  return { data, fetch, isLoading, error };
-}
-
-/**
- * Hook to get identity data
- */
-export function useIdentity() {
-  const getIdentity = useAction(api.actions.plaid.getIdentity);
-  const [data, setData] = useState<Awaited<
-    ReturnType<typeof getIdentity>
-  > | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  const fetch = useCallback(
-    async (itemId?: string) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const result = await getIdentity({ itemId });
-        setData(result);
-        return result;
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
-        throw error;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [getIdentity],
-  );
-
-  return { data, fetch, isLoading, error };
 }

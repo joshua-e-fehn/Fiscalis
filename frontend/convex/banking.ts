@@ -1,7 +1,6 @@
 import { v } from "convex/values";
 import {
   query,
-  mutation,
   internalMutation,
   internalQuery,
 } from "./_generated/server";
@@ -203,30 +202,19 @@ export const getItemsNeedingReauth = query({
   },
 });
 
-// ═══════════════════════════════════════════════════════════════
-// MUTATIONS (Public - called from frontend)
-// ═══════════════════════════════════════════════════════════════
-
 /**
- * Delete a Plaid item and all associated data
+ * Delete a Plaid item and all associated data. Internal: the public entry
+ * point is `actions/plaid.disconnectItem`, which first revokes the item at
+ * Plaid (`itemRemove`) so consent ends and Plaid stops billing for it.
  */
-export const deleteItem = mutation({
-  args: { itemId: v.string() },
+export const deleteItemData = internalMutation({
+  args: { itemId: v.string(), userId: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const userId = identity.subject;
-
-    // Find and verify ownership
     const item = await ctx.db
       .query("plaidItems")
       .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
       .first();
-
-    if (!item || item.userId !== userId) {
-      throw new Error("Item not found or unauthorized");
-    }
+    if (!item || item.userId !== args.userId) return;
 
     // Delete associated accounts
     const accounts = await ctx.db
@@ -253,11 +241,9 @@ export const deleteItem = mutation({
 
     // Schedule a snapshot after disconnection to capture the portfolio change
     await ctx.scheduler.runAfter(0, internal.portfolioSnapshots.takeSnapshot, {
-      userId,
+      userId: args.userId,
       source: "plaid-disconnect",
     });
-
-    return { success: true };
   },
 });
 

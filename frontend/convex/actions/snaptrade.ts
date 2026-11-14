@@ -502,8 +502,20 @@ export const deleteConnection = action({
           authorizationId: connection.authorizationId,
         });
       } catch (error) {
-        console.error("SnapTrade delete connection error:", describeError(error));
-        // Continue to delete from our database even if SnapTrade call fails
+        // Already gone at SnapTrade: nothing left to revoke. Anything else
+        // keeps the local data so the user can retry, rather than leaving a
+        // live authorization behind
+        const parsedError = parseSnapTradeError(error);
+        if (
+          parsedError.code !== "CONNECTION_NOT_FOUND" &&
+          parsedError.code !== "USER_NOT_FOUND"
+        ) {
+          console.error(
+            "SnapTrade delete connection error:",
+            describeError(error),
+          );
+          throw new Error(formatErrorForUser(error));
+        }
       }
     }
 

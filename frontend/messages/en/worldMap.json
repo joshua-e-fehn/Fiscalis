@@ -1,0 +1,233 @@
+{
+  "page": {
+    "title": "World Data Explorer",
+    "subtitle": "Visualise economic, demographic and development indicators from the World Bank on an interactive map."
+  },
+  "controls": {
+    "title": "Select indicator",
+    "description": "Choose a data metric to visualise on the world map",
+    "addFavorite": "Add to favourites",
+    "removeFavorite": "Remove from favourites",
+    "timePeriod": "Time period"
+  },
+  "export": {
+    "button": "Export CSV",
+    "exporting": "Exporting…",
+    "currentYear": "Current year ({year})",
+    "allYears": "All years ({min}–{max})"
+  },
+  "csv": {
+    "countryCode": "Country code",
+    "countryCodeIso3": "Country code (ISO3)",
+    "countryName": "Country name",
+    "year": "Year",
+    "value": "{indicator} ({unit})"
+  },
+  "prefetch": {
+    "loading": "Preloading data: {loaded}/{total} years",
+    "complete": "All years cached – playback ready",
+    "partial": "{loaded}/{total} years cached",
+    "loadAll": "Preload all"
+  },
+  "dynamic": {
+    "viewing": "Viewing searched indicator: <strong>{indicator}</strong>",
+    "fetching": "Fetching…"
+  },
+  "errors": {
+    "loadTitle": "Error loading data",
+    "loadDescription": "We couldn't fetch the World Bank data. Please try again.",
+    "retry": "Retry",
+    "mapTitle": "Map error",
+    "mapDescription": "The map data could not be loaded."
+  },
+  "map": {
+    "fallbackTitle": "World map",
+    "fallbackDescription": "Select an indicator to view data",
+    "loading": "Loading…",
+    "loadingIndicator": "Loading {indicator}…",
+    "fetchingUpstream": "Fetching from the World Bank API",
+    "loadingYear": "Loading data for {year}…",
+    "legendValue": "Value",
+    "low": "Low",
+    "high": "High",
+    "noData": "No data"
+  },
+  "top": {
+    "title": "Top 5 countries",
+    "description": "Highest values in {year}",
+    "empty": "No data available"
+  },
+  "dataset": {
+    "title": "Dataset information",
+    "source": "Source",
+    "year": "Year",
+    "countries": "Countries",
+    "countriesWithData": "{count, plural, one {# with data} other {# with data}}",
+    "unit": "Unit"
+  },
+  "units": {
+    "years": "years",
+    "yearsValue": "{value} years"
+  },
+  "timeSlider": {
+    "jumpToStart": "Jump to start",
+    "stepBackward": "Step backward",
+    "play": "Play",
+    "pause": "Pause",
+    "stepForward": "Step forward",
+    "jumpToEnd": "Jump to end",
+    "speed": "Speed:"
+  },
+  "search": {
+    "custom": "Custom",
+    "featured": "Featured",
+    "title": "Select indicator",
+    "description": "Choose from featured indicators or search {count, plural, =0 {all World Bank indicators} one {# World Bank indicator} other {# World Bank indicators}}",
+    "needsSync": "The indicator database needs to be synced. Run the sync to enable full search.",
+    "placeholder": "Search all World Bank indicators…",
+    "clear": "Clear search",
+    "searching": "Searching…",
+    "results": "Search results ({count})",
+    "fromTotal": "{count, plural, one {from # indicator} other {from # indicators}}",
+    "slow": "Slow",
+    "slowTooltip": "{count, plural, one {This indicator has timed out once.} other {This indicator has timed out # times.}}",
+    "slowHint": "It may be slow or unreliable.",
+    "unreliable": "Unreliable",
+    "unreliableTooltip": "{count, plural, one {This indicator often fails to load (# timeout).} other {This indicator often fails to load (# timeouts).}}",
+    "unreliableHint": "Data may not be available.",
+    "addFavorite": "Add to favourites",
+    "removeFavorite": "Remove from favourites",
+    "emptyDatabase": "The indicator database is empty",
+    "emptyDatabaseHint": "Run the sync to populate indicators",
+    "noResults": "No indicators found for “{query}”",
+    "noResultsHint": "Try different keywords",
+    "favorites": "Your favourites",
+    "featuredIndicators": "Featured indicators",
+    "selected": "Selected",
+    "dataSource": "Data source: <link>World Bank Open Data</link>",
+    "synced": "Synced: {date}"
+  },
+  "categories": {
+    "economy": "Economy",
+    "demographics": "Demographics",
+    "finance": "Finance",
+    "trade": "Trade",
+    "energy": "Energy & environment",
+    "development": "Development",
+    "commodities": "Commodities"
+  },
+  "indicators": {
+    "gdp": {
+      "name": "GDP (current US$)",
+      "description": "Gross domestic product at current prices"
+    },
+    "gdpPerCapita": {
+      "name": "GDP per capita",
+      "description": "GDP divided by midyear population"
+    },
+    "gdpGrowth": {
+      "name": "GDP growth rate",
+      "description": "Annual percentage growth rate of GDP"
+    },
+    "gni": {
+      "name": "GNI (current US$)",
+      "description": "Gross national income at current prices"
+    },
+    "population": {
+      "name": "Population",
+      "description": "Total population count"
+    },
+    "populationGrowth": {
+      "name": "Population growth",
+      "description": "Annual population growth rate"
+    },
+    "urbanPopulation": {
+      "name": "Urban population",
+      "description": "Percentage of population living in urban areas"
+    },
+    "lifeExpectancy": {
+      "name": "Life expectancy",
+      "description": "Life expectancy at birth, total years"
+    },
+    "inflation": {
+      "name": "Inflation rate",
+      "description": "Annual consumer price inflation"
+    },
+    "interestRate": {
+      "name": "Real interest rate",
+      "description": "Real interest rate adjusted for inflation"
+    },
+    "debtToGdp": {
+      "name": "Central government debt (% of GDP)",
+      "description": "Central government debt as percentage of GDP"
+    },
+    "exports": {
+      "name": "Exports (current US$)",
+      "description": "Exports of goods and services"
+    },
+    "imports": {
+      "name": "Imports (current US$)",
+      "description": "Imports of goods and services"
+    },
+    "tradeBalance": {
+      "name": "Trade balance",
+      "description": "External balance on goods and services"
+    },
+    "fdi": {
+      "name": "Foreign direct investment",
+      "description": "Net inflows of foreign direct investment"
+    },
+    "co2PerCapita": {
+      "name": "CO₂ emissions per capita",
+      "description": "Carbon dioxide emissions per capita in metric tons"
+    },
+    "renewableEnergy": {
+      "name": "Renewable energy consumption",
+      "description": "Percentage of total final energy consumption"
+    },
+    "electricityAccess": {
+      "name": "Access to electricity",
+      "description": "Percentage of population with access to electricity"
+    },
+    "povertyRate": {
+      "name": "Poverty rate",
+      "description": "Population living below $2.15/day (2017 PPP)"
+    },
+    "unemployment": {
+      "name": "Unemployment rate",
+      "description": "Unemployment as percentage of total labour force"
+    },
+    "literacy": {
+      "name": "Literacy rate",
+      "description": "Adult literacy rate (ages 15+)"
+    },
+    "mineralRents": {
+      "name": "Mineral rents (% of GDP)",
+      "description": "Mineral rents including tin, gold, lead, zinc, iron, copper, nickel, silver, bauxite and phosphate"
+    },
+    "oresMetalsExports": {
+      "name": "Ores & metals exports",
+      "description": "Ores and metals as percentage of merchandise exports"
+    },
+    "oresMetalsImports": {
+      "name": "Ores & metals imports",
+      "description": "Ores and metals as percentage of merchandise imports"
+    },
+    "mineralDepletion": {
+      "name": "Mineral depletion (% of GNI)",
+      "description": "Ratio of mineral stock value to remaining reserve lifetime (tin, gold, lead, zinc, iron, copper, nickel, silver, bauxite, phosphate)"
+    },
+    "oilRents": {
+      "name": "Oil rents (% of GDP)",
+      "description": "Difference between crude oil production value at regional prices and total production costs"
+    },
+    "naturalGasRents": {
+      "name": "Natural gas rents (% of GDP)",
+      "description": "Difference between natural gas production value at regional prices and total production costs"
+    },
+    "totalResourceRents": {
+      "name": "Total natural resources rents (% of GDP)",
+      "description": "Sum of oil, natural gas, coal, mineral and forest rents"
+    }
+  }
+}

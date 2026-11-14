@@ -11,6 +11,7 @@ import {
 } from "react-map-gl/maplibre";
 import type { MapEvent, MapLayerMouseEvent } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { useTranslations } from "next-intl";
 
 // UI Components
 import {
@@ -67,6 +68,8 @@ import {
   useIsYearCached,
   useIndicatorsGrouped,
   useTopCountries,
+  useIndicatorText,
+  useCountryName,
 } from "@/hooks/worldbank";
 import { useTimePlayback } from "@/hooks/useTimePlayback";
 import {
@@ -76,7 +79,7 @@ import {
 
 // Types
 import type { IndicatorId } from "@/lib/types/worldbank";
-import { YEAR_RANGE, INDICATOR_IDS } from "@/lib/types/worldbank";
+import { YEAR_RANGE, isIndicatorId } from "@/lib/types/worldbank";
 
 // Auth
 import { useUser } from "@clerk/nextjs";
@@ -112,7 +115,11 @@ type CountryFeatureCollection = GeoJSON.FeatureCollection<
   CountryProperties
 >;
 
-// Default indicator state
+// Use a marker value for "no data" since null doesn't serialize well in GeoJSON
+const NO_DATA_MARKER = -999999999;
+
+// Default indicator state (the name is the stored English one; the UI shows
+// worldMap.indicators.gdp)
 const DEFAULT_INDICATOR: SelectedIndicator = {
   id: "gdp",
   name: "GDP (Current US$)",
@@ -126,6 +133,10 @@ const DEFAULT_INDICATOR: SelectedIndicator = {
 // ═══════════════════════════════════════════════════════════════
 
 export default function WorldMapPage() {
+  const t = useTranslations("worldMap");
+  const indicatorText = useIndicatorText();
+  const countryName = useCountryName();
+
   // Auth - for favorites
   const { user } = useUser();
   const userId = user?.id;
@@ -135,7 +146,7 @@ export default function WorldMapPage() {
     useState<SelectedIndicator>(DEFAULT_INDICATOR);
   const [geoJsonData, setGeoJsonData] =
     useState<CountryFeatureCollection | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [firstLabelLayerId, setFirstLabelLayerId] = useState<
     string | undefined
   >(undefined);
@@ -151,8 +162,7 @@ export default function WorldMapPage() {
 
   // Determine if we're using a dynamic (searched) or featured indicator
   const isFeaturedIndicator =
-    !selectedIndicator.isDynamic &&
-    INDICATOR_IDS.includes(selectedIndicator.id as IndicatorId);
+    !selectedIndicator.isDynamic && isIndicatorId(selectedIndicator.id);
 
   // Cache check for playback (only works for featured indicators)
   const isYearCached = useIsYearCached(
@@ -271,7 +281,7 @@ export default function WorldMapPage() {
         setGeoJsonData(data);
       } catch (err) {
         console.error("Error loading GeoJSON:", err);
-        setMapError("Failed to load map data");
+        setMapLoadFailed(true);
       }
     }
     fetchGeoJson();
@@ -286,9 +296,6 @@ export default function WorldMapPage() {
     const processed: CountryFeatureCollection = JSON.parse(
       JSON.stringify(geoJsonData),
     );
-
-    // Use a marker value for "no data" since null doesn't serialize well in GeoJSON
-    const NO_DATA_MARKER = -999999999;
 
     processed.features = processed.features.map((feature) => {
       const props = feature.properties;
@@ -329,7 +336,7 @@ export default function WorldMapPage() {
           resolvedCode: countryCode,
           dataValue: hasData ? countryData.value : NO_DATA_MARKER,
           hasData: hasData,
-          formattedValue: countryData?.formattedValue ?? "No data",
+          formattedValue: countryData?.formattedValue ?? "",
           countryName: countryData?.name ?? props.name ?? props.admin,
         },
       };
@@ -397,26 +404,64 @@ export default function WorldMapPage() {
     }
   }, []);
 
+  // Value as shown in the UI: the API formats values in English, so a
+  // missing value and the "years" unit are rendered here.
+  const indicatorUnit = worldData?.indicator?.unit;
+  const displayValue = useCallback(
+    (value: number | null | undefined, formattedValue: string | undefined) => {
+      if (
+        value === null ||
+        value === undefined ||
+        value === NO_DATA_MARKER ||
+        !formattedValue
+      ) {
+        return t("map.noData");
+      }
+      if (indicatorUnit === "years") {
+        return t("units.yearsValue", { value: value.toFixed(1) });
+      }
+      return formattedValue;
+    },
+    [t, indicatorUnit],
+  );
+
   // Hover handler
-  const onHover = useCallback((event: MapLayerMouseEvent) => {
-    const feature = event.features?.[0];
+  const onHover = useCallback(
+    (event: MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
 
-    if (feature?.properties) {
-      const props = feature.properties;
-      const { lng: longitude, lat: latitude } = event.lngLat;
+      if (feature?.properties) {
+        const props = feature.properties;
+        const { lng: longitude, lat: latitude } = event.lngLat;
+        const code: string = props.resolvedCode || props.iso_a2;
+        const englishName: string =
+          props.countryName || props.name || props.admin || code;
 
-      setHoveredCountry({
-        name: props.countryName || props.name || props.admin || "Unknown",
-        code: props.resolvedCode || props.iso_a2,
-        value: props.dataValue,
-        formattedValue: props.formattedValue || "No data",
-        longitude,
-        latitude,
-      });
-    } else {
-      setHoveredCountry(null);
-    }
-  }, []);
+        setHoveredCountry({
+          name: countryName(code, englishName),
+          code,
+          value: props.dataValue,
+          formattedValue: displayValue(props.dataValue, props.formattedValue),
+          longitude,
+          latitude,
+        });
+      } else {
+        setHoveredCountry(null);
+      }
+    },
+    [countryName, displayValue],
+  );
+
+  // The selected indicator's name and description in the UI language
+  const selectedText = indicatorText(selectedIndicator);
+  const mapTitle = isFeaturedIndicator
+    ? selectedText.name
+    : worldData?.indicator?.name;
+  const mapDescription = isFeaturedIndicator
+    ? selectedText.description
+    : worldData?.indicator?.description;
+  const unitLabel =
+    indicatorUnit === "years" ? t("units.years") : indicatorUnit;
 
   // Handle indicator change
   const handleIndicatorChange = useCallback(
@@ -443,16 +488,21 @@ export default function WorldMapPage() {
   const exportCurrentYear = useCallback(() => {
     if (!worldData) return;
 
-    const indicatorName = worldData.indicator.name;
-    const indicatorUnit = worldData.indicator.unit;
+    const indicatorName = isFeaturedIndicator
+      ? indicatorText(selectedIndicator).name
+      : worldData.indicator.name;
+    const unit =
+      worldData.indicator.unit === "years"
+        ? t("units.years")
+        : worldData.indicator.unit;
 
-    // Build CSV content
+    // Build CSV content (headers translated, values machine-readable)
     const headers = [
-      "Country Code",
-      "Country Code (ISO3)",
-      "Country Name",
-      `${indicatorName} (${indicatorUnit})`,
-      "Year",
+      t("csv.countryCode"),
+      t("csv.countryCodeIso3"),
+      t("csv.countryName"),
+      t("csv.value", { indicator: indicatorName, unit }),
+      t("csv.year"),
     ];
     const rows = worldData.countries
       .filter((c) => c.value !== null)
@@ -471,7 +521,15 @@ export default function WorldMapPage() {
     ].join("\n");
 
     downloadCSV(csvContent, `world-data-${selectedIndicator.id}-${year}.csv`);
-  }, [worldData, selectedIndicator.id, year, downloadCSV]);
+  }, [
+    worldData,
+    selectedIndicator,
+    year,
+    downloadCSV,
+    isFeaturedIndicator,
+    indicatorText,
+    t,
+  ]);
 
   // Export all years to CSV
   const exportAllYears = useCallback(async () => {
@@ -479,7 +537,7 @@ export default function WorldMapPage() {
 
     try {
       // Get indicator name and unit from either featured or dynamic data
-      let indicatorName = selectedIndicator.name;
+      const indicatorName = indicatorText(selectedIndicator).name;
       let indicatorUnit = selectedIndicator.unit || "";
 
       if (isFeaturedIndicator && indicatorsData?.grouped) {
@@ -488,10 +546,10 @@ export default function WorldMapPage() {
           (i) => i.id === selectedIndicator.id,
         );
         if (indicator) {
-          indicatorName = indicator.name;
           indicatorUnit = indicator.unit;
         }
       }
+      if (indicatorUnit === "years") indicatorUnit = t("units.years");
 
       // Fetch all years in parallel (in batches to avoid overwhelming the server)
       const years = Array.from(
@@ -534,11 +592,11 @@ export default function WorldMapPage() {
 
       // Build CSV with all years
       const headers = [
-        "Country Code",
-        "Country Code (ISO3)",
-        "Country Name",
-        "Year",
-        `${indicatorName} (${indicatorUnit})`,
+        t("csv.countryCode"),
+        t("csv.countryCodeIso3"),
+        t("csv.countryName"),
+        t("csv.year"),
+        t("csv.value", { indicator: indicatorName, unit: indicatorUnit }),
       ];
 
       // Collect all unique countries and create rows for each year
@@ -584,6 +642,8 @@ export default function WorldMapPage() {
     indicatorsData,
     downloadCSV,
     isFeaturedIndicator,
+    indicatorText,
+    t,
   ]);
 
   // Legend colors
@@ -601,8 +661,8 @@ export default function WorldMapPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <PageHeader
-        title="World Data Explorer"
-        subtitle="Visualize economic, demographic, and development indicators from the World Bank on an interactive map."
+        title={t("page.title")}
+        subtitle={t("page.subtitle")}
       />
 
       {/* Controls Card */}
@@ -610,10 +670,8 @@ export default function WorldMapPage() {
         <CardHeader className="pb-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <CardTitle>Select Indicator</CardTitle>
-              <CardDescription>
-                Choose a data metric to visualize on the world map
-              </CardDescription>
+              <CardTitle>{t("controls.title")}</CardTitle>
+              <CardDescription>{t("controls.description")}</CardDescription>
             </div>
             <div className="flex items-center gap-4">
               {/* Favorite Button */}
@@ -631,8 +689,13 @@ export default function WorldMapPage() {
                   className="h-10 w-10"
                   title={
                     isCurrentFavorited
-                      ? "Remove from favorites"
-                      : "Add to favorites"
+                      ? t("controls.removeFavorite")
+                      : t("controls.addFavorite")
+                  }
+                  aria-label={
+                    isCurrentFavorited
+                      ? t("controls.removeFavorite")
+                      : t("controls.addFavorite")
                   }
                 >
                   <Heart
@@ -671,7 +734,7 @@ export default function WorldMapPage() {
                     ) : (
                       <Download className="h-4 w-4 mr-2" />
                     )}
-                    {isExporting ? "Exporting..." : "Export CSV"}
+                    {isExporting ? t("export.exporting") : t("export.button")}
                     <ChevronDown className="h-4 w-4 ml-2" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -681,14 +744,17 @@ export default function WorldMapPage() {
                     disabled={!worldData || isLoading}
                   >
                     <Calendar className="h-4 w-4 mr-2" />
-                    Current Year ({year})
+                    {t("export.currentYear", { year })}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={exportAllYears}
                     disabled={isExporting}
                   >
                     <FileSpreadsheet className="h-4 w-4 mr-2" />
-                    All Years ({YEAR_RANGE.min}-{YEAR_RANGE.max})
+                    {t("export.allYears", {
+                      min: YEAR_RANGE.min,
+                      max: YEAR_RANGE.max,
+                    })}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -701,7 +767,7 @@ export default function WorldMapPage() {
           <div className="border rounded-lg p-4 bg-muted/30">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-muted-foreground">
-                Time Period
+                {t("controls.timePeriod")}
               </span>
               <SpeedControl speed={speed} onSpeedChange={setSpeed} />
             </div>
@@ -731,21 +797,25 @@ export default function WorldMapPage() {
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
                       <span>
-                        Preloading data: {prefetchProgress.loaded}/
-                        {prefetchProgress.total} years
+                        {t("prefetch.loading", {
+                          loaded: prefetchProgress.loaded,
+                          total: prefetchProgress.total,
+                        })}
                       </span>
                     </>
                   ) : prefetchProgress.isComplete ? (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span>All years cached - playback ready</span>
+                      <span>{t("prefetch.complete")}</span>
                     </>
                   ) : (
                     <>
                       <Download className="h-4 w-4" />
                       <span>
-                        {prefetchProgress.loaded}/{prefetchProgress.total} years
-                        cached
+                        {t("prefetch.partial", {
+                          loaded: prefetchProgress.loaded,
+                          total: prefetchProgress.total,
+                        })}
                       </span>
                     </>
                   )}
@@ -758,7 +828,7 @@ export default function WorldMapPage() {
                     className="text-xs"
                   >
                     <Download className="h-3 w-3 mr-1" />
-                    Preload All
+                    {t("prefetch.loadAll")}
                   </Button>
                 )}
                 {/* Progress bar */}
@@ -778,13 +848,15 @@ export default function WorldMapPage() {
               <div className="flex items-center gap-2 mt-3 pt-3 border-t text-sm text-muted-foreground">
                 <Search className="h-4 w-4" />
                 <span>
-                  Viewing searched indicator:{" "}
-                  <strong>{selectedIndicator.name}</strong>
+                  {t.rich("dynamic.viewing", {
+                    indicator: selectedText.name,
+                    strong: (chunks) => <strong>{chunks}</strong>,
+                  })}
                 </span>
                 {isLoading && (
                   <Badge variant="outline" className="ml-auto animate-pulse">
                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Fetching...
+                    {t("dynamic.fetching")}
                   </Badge>
                 )}
               </div>
@@ -795,13 +867,9 @@ export default function WorldMapPage() {
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error loading data</AlertTitle>
+              <AlertTitle>{t("errors.loadTitle")}</AlertTitle>
               <AlertDescription className="flex items-center justify-between">
-                <span>
-                  {error instanceof Error
-                    ? error.message
-                    : "Failed to fetch world data"}
-                </span>
+                <span>{t("errors.loadDescription")}</span>
                 <Button
                   variant="outline"
                   size="sm"
@@ -809,7 +877,7 @@ export default function WorldMapPage() {
                   className="ml-4"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Retry
+                  {t("errors.retry")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -824,25 +892,26 @@ export default function WorldMapPage() {
                   <div className="flex items-center space-x-2">
                     <Globe2 className="h-5 w-5" />
                     <CardTitle className="text-lg">
-                      {worldData?.indicator?.name || "World Map"}
+                      {mapTitle || t("map.fallbackTitle")}
                     </CardTitle>
                   </div>
                   {isLoading && (
                     <Badge variant="outline" className="animate-pulse">
-                      Loading...
+                      {t("map.loading")}
                     </Badge>
                   )}
                 </div>
                 <CardDescription>
-                  {worldData?.indicator?.description ||
-                    "Select an indicator to view data"}
+                  {mapDescription || t("map.fallbackDescription")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="h-[500px] relative p-0">
-                {mapError ? (
+                {mapLoadFailed ? (
                   <Alert variant="destructive" className="m-4">
-                    <AlertTitle>Map Error</AlertTitle>
-                    <AlertDescription>{mapError}</AlertDescription>
+                    <AlertTitle>{t("errors.mapTitle")}</AlertTitle>
+                    <AlertDescription>
+                      {t("errors.mapDescription")}
+                    </AlertDescription>
                   </Alert>
                 ) : (
                   <div className="h-full w-full relative">
@@ -852,11 +921,12 @@ export default function WorldMapPage() {
                         <div className="flex flex-col items-center gap-3">
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                           <div className="text-sm font-medium">
-                            Loading {selectedIndicator.name}...
+                            {t("map.loadingIndicator", {
+                              indicator: selectedText.name,
+                            })}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {!isFeaturedIndicator &&
-                              "Fetching from World Bank API"}
+                            {!isFeaturedIndicator && t("map.fetchingUpstream")}
                           </div>
                         </div>
                       </div>
@@ -894,7 +964,7 @@ export default function WorldMapPage() {
                       {/* Legend */}
                       <div className="absolute bottom-4 right-4 bg-background/95 backdrop-blur p-3 rounded-lg shadow-lg border">
                         <div className="text-xs font-medium mb-2">
-                          {worldData?.indicator?.name || "Value"}
+                          {mapTitle || t("map.legendValue")}
                         </div>
                         <div className="flex items-center gap-1">
                           {legendColors.map((color, i) => (
@@ -906,8 +976,8 @@ export default function WorldMapPage() {
                           ))}
                         </div>
                         <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                          <span>Low</span>
-                          <span>High</span>
+                          <span>{t("map.low")}</span>
+                          <span>{t("map.high")}</span>
                         </div>
                         <div className="flex items-center gap-1 mt-2 pt-2 border-t">
                           <div
@@ -915,7 +985,7 @@ export default function WorldMapPage() {
                             style={{ backgroundColor: NO_DATA_COLOR }}
                           />
                           <span className="text-xs text-muted-foreground">
-                            No data
+                            {t("map.noData")}
                           </span>
                         </div>
                       </div>
@@ -935,7 +1005,7 @@ export default function WorldMapPage() {
                               {hoveredCountry.name}
                             </h3>
                             <p className="text-xs text-muted-foreground">
-                              {worldData?.indicator?.name}
+                              {mapTitle}
                             </p>
                             <p className="text-sm font-medium mt-1">
                               {hoveredCountry.formattedValue}
@@ -951,7 +1021,7 @@ export default function WorldMapPage() {
                         <div className="flex flex-col items-center gap-2">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                           <span className="text-sm text-muted-foreground">
-                            Loading {year} data...
+                            {t("map.loadingYear", { year })}
                           </span>
                         </div>
                       </div>
@@ -966,9 +1036,11 @@ export default function WorldMapPage() {
               <CardHeader className="pb-2">
                 <div className="flex items-center space-x-2">
                   <TrendingUp className="h-5 w-5" />
-                  <CardTitle className="text-lg">Top 5 Countries</CardTitle>
+                  <CardTitle className="text-lg">{t("top.title")}</CardTitle>
                 </div>
-                <CardDescription>Highest values in {year}</CardDescription>
+                <CardDescription>
+                  {t("top.description", { year })}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {isLoadingTop ? (
@@ -995,10 +1067,10 @@ export default function WorldMapPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
-                            {country.name}
+                            {countryName(country.code, country.name)}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {country.formattedValue}
+                            {displayValue(country.value, country.formattedValue)}
                           </p>
                         </div>
                       </div>
@@ -1006,7 +1078,7 @@ export default function WorldMapPage() {
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No data available
+                    {t("top.empty")}
                   </p>
                 )}
               </CardContent>
@@ -1018,36 +1090,38 @@ export default function WorldMapPage() {
             <CardHeader className="pb-2">
               <div className="flex items-center space-x-2">
                 <Database className="h-5 w-5" />
-                <CardTitle className="text-lg">Dataset Information</CardTitle>
+                <CardTitle className="text-lg">{t("dataset.title")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Source
+                    {t("dataset.source")}
                   </p>
                   <p className="text-sm">{worldData?.source || "World Bank"}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Year
+                    {t("dataset.year")}
                   </p>
                   <p className="text-sm">{year}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Countries
+                    {t("dataset.countries")}
                   </p>
                   <p className="text-sm">
-                    {worldData?.countries?.length || 0} with data
+                    {t("dataset.countriesWithData", {
+                      count: worldData?.countries?.length ?? 0,
+                    })}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
-                    Unit
+                    {t("dataset.unit")}
                   </p>
-                  <p className="text-sm">{worldData?.indicator?.unit || "-"}</p>
+                  <p className="text-sm">{unitLabel || "-"}</p>
                 </div>
               </div>
             </CardContent>

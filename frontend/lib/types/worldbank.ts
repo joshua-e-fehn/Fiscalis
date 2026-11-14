@@ -121,3 +121,8 @@ export const YEAR_RANGE = {
 
 // List of all indicator IDs for validation
 export const INDICATOR_IDS = Object.keys(WORLDBANK_INDICATORS) as IndicatorId[];
+
+/** Whether an id names one of the curated (featured) indicators. */
+export function isIndicatorId(id: string): id is IndicatorId {
+  return Object.hasOwn(WORLDBANK_INDICATORS, id);
+}

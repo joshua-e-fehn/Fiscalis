@@ -1,0 +1,233 @@
+{
+  "page": {
+    "title": "Weltdaten-Explorer",
+    "subtitle": "Stelle Wirtschafts-, Bevölkerungs- und Entwicklungsindikatoren der Weltbank auf einer interaktiven Karte dar."
+  },
+  "controls": {
+    "title": "Indikator wählen",
+    "description": "Wähle eine Kennzahl, die auf der Weltkarte dargestellt wird",
+    "addFavorite": "Zu Favoriten hinzufügen",
+    "removeFavorite": "Aus Favoriten entfernen",
+    "timePeriod": "Zeitraum"
+  },
+  "export": {
+    "button": "CSV exportieren",
+    "exporting": "Wird exportiert…",
+    "currentYear": "Aktuelles Jahr ({year})",
+    "allYears": "Alle Jahre ({min}–{max})"
+  },
+  "csv": {
+    "countryCode": "Ländercode",
+    "countryCodeIso3": "Ländercode (ISO3)",
+    "countryName": "Land",
+    "year": "Jahr",
+    "value": "{indicator} ({unit})"
+  },
+  "prefetch": {
+    "loading": "Daten werden vorgeladen: {loaded}/{total} Jahre",
+    "complete": "Alle Jahre zwischengespeichert – Wiedergabe bereit",
+    "partial": "{loaded}/{total} Jahre zwischengespeichert",
+    "loadAll": "Alle vorladen"
+  },
+  "dynamic": {
+    "viewing": "Gesuchter Indikator: <strong>{indicator}</strong>",
+    "fetching": "Wird abgerufen…"
+  },
+  "errors": {
+    "loadTitle": "Fehler beim Laden der Daten",
+    "loadDescription": "Die Daten der Weltbank konnten nicht abgerufen werden. Bitte versuche es erneut.",
+    "retry": "Erneut versuchen",
+    "mapTitle": "Kartenfehler",
+    "mapDescription": "Die Kartendaten konnten nicht geladen werden."
+  },
+  "map": {
+    "fallbackTitle": "Weltkarte",
+    "fallbackDescription": "Wähle einen Indikator, um Daten anzuzeigen",
+    "loading": "Wird geladen…",
+    "loadingIndicator": "{indicator} wird geladen…",
+    "fetchingUpstream": "Wird von der Weltbank-API abgerufen",
+    "loadingYear": "Daten für {year} werden geladen…",
+    "legendValue": "Wert",
+    "low": "Niedrig",
+    "high": "Hoch",
+    "noData": "Keine Daten"
+  },
+  "top": {
+    "title": "Top 5 Länder",
+    "description": "Höchste Werte {year}",
+    "empty": "Keine Daten verfügbar"
+  },
+  "dataset": {
+    "title": "Informationen zum Datensatz",
+    "source": "Quelle",
+    "year": "Jahr",
+    "countries": "Länder",
+    "countriesWithData": "{count, plural, one {# mit Daten} other {# mit Daten}}",
+    "unit": "Einheit"
+  },
+  "units": {
+    "years": "Jahre",
+    "yearsValue": "{value} Jahre"
+  },
+  "timeSlider": {
+    "jumpToStart": "Zum Anfang",
+    "stepBackward": "Ein Jahr zurück",
+    "play": "Abspielen",
+    "pause": "Pausieren",
+    "stepForward": "Ein Jahr vor",
+    "jumpToEnd": "Zum Ende",
+    "speed": "Tempo:"
+  },
+  "search": {
+    "custom": "Eigener",
+    "featured": "Empfohlen",
+    "title": "Indikator wählen",
+    "description": "Wähle einen empfohlenen Indikator oder durchsuche {count, plural, =0 {alle Indikatoren der Weltbank} one {# Indikator der Weltbank} other {# Indikatoren der Weltbank}}",
+    "needsSync": "Die Indikator-Datenbank muss synchronisiert werden. Starte die Synchronisierung, um die volle Suche zu aktivieren.",
+    "placeholder": "Alle Indikatoren der Weltbank durchsuchen…",
+    "clear": "Suche löschen",
+    "searching": "Suche läuft…",
+    "results": "Suchergebnisse ({count})",
+    "fromTotal": "{count, plural, one {aus # Indikator} other {aus # Indikatoren}}",
+    "slow": "Langsam",
+    "slowTooltip": "{count, plural, one {Bei diesem Indikator gab es eine Zeitüberschreitung.} other {Bei diesem Indikator gab es # Zeitüberschreitungen.}}",
+    "slowHint": "Er kann langsam oder unzuverlässig sein.",
+    "unreliable": "Unzuverlässig",
+    "unreliableTooltip": "{count, plural, one {Dieser Indikator lässt sich oft nicht laden (# Zeitüberschreitung).} other {Dieser Indikator lässt sich oft nicht laden (# Zeitüberschreitungen).}}",
+    "unreliableHint": "Möglicherweise sind keine Daten verfügbar.",
+    "addFavorite": "Zu Favoriten hinzufügen",
+    "removeFavorite": "Aus Favoriten entfernen",
+    "emptyDatabase": "Die Indikator-Datenbank ist leer",
+    "emptyDatabaseHint": "Starte die Synchronisierung, um Indikatoren zu laden",
+    "noResults": "Keine Indikatoren für „{query}“ gefunden",
+    "noResultsHint": "Versuche es mit anderen Suchbegriffen",
+    "favorites": "Deine Favoriten",
+    "featuredIndicators": "Empfohlene Indikatoren",
+    "selected": "Ausgewählt",
+    "dataSource": "Datenquelle: <link>World Bank Open Data</link>",
+    "synced": "Synchronisiert: {date}"
+  },
+  "categories": {
+    "economy": "Wirtschaft",
+    "demographics": "Bevölkerung",
+    "finance": "Finanzen",
+    "trade": "Handel",
+    "energy": "Energie & Umwelt",
+    "development": "Entwicklung",
+    "commodities": "Rohstoffe"
+  },
+  "indicators": {
+    "gdp": {
+      "name": "BIP (aktuelle US$)",
+      "description": "Bruttoinlandsprodukt zu laufenden Preisen"
+    },
+    "gdpPerCapita": {
+      "name": "BIP pro Kopf",
+      "description": "BIP geteilt durch die Bevölkerung zur Jahresmitte"
+    },
+    "gdpGrowth": {
+      "name": "BIP-Wachstumsrate",
+      "description": "Jährliche Wachstumsrate des BIP in Prozent"
+    },
+    "gni": {
+      "name": "BNE (aktuelle US$)",
+      "description": "Bruttonationaleinkommen zu laufenden Preisen"
+    },
+    "population": {
+      "name": "Bevölkerung",
+      "description": "Gesamtbevölkerung"
+    },
+    "populationGrowth": {
+      "name": "Bevölkerungswachstum",
+      "description": "Jährliche Wachstumsrate der Bevölkerung"
+    },
+    "urbanPopulation": {
+      "name": "Stadtbevölkerung",
+      "description": "Anteil der Bevölkerung, der in Städten lebt"
+    },
+    "lifeExpectancy": {
+      "name": "Lebenserwartung",
+      "description": "Lebenserwartung bei Geburt, in Jahren"
+    },
+    "inflation": {
+      "name": "Inflationsrate",
+      "description": "Jährliche Verbraucherpreisinflation"
+    },
+    "interestRate": {
+      "name": "Realzins",
+      "description": "Um die Inflation bereinigter Zinssatz"
+    },
+    "debtToGdp": {
+      "name": "Staatsverschuldung des Zentralstaats (% des BIP)",
+      "description": "Schulden des Zentralstaats in Prozent des BIP"
+    },
+    "exports": {
+      "name": "Exporte (aktuelle US$)",
+      "description": "Exporte von Waren und Dienstleistungen"
+    },
+    "imports": {
+      "name": "Importe (aktuelle US$)",
+      "description": "Importe von Waren und Dienstleistungen"
+    },
+    "tradeBalance": {
+      "name": "Handelsbilanz",
+      "description": "Außenbeitrag aus Waren und Dienstleistungen"
+    },
+    "fdi": {
+      "name": "Ausländische Direktinvestitionen",
+      "description": "Nettozuflüsse ausländischer Direktinvestitionen"
+    },
+    "co2PerCapita": {
+      "name": "CO₂-Emissionen pro Kopf",
+      "description": "Kohlendioxidemissionen pro Kopf in Tonnen"
+    },
+    "renewableEnergy": {
+      "name": "Verbrauch erneuerbarer Energien",
+      "description": "Anteil am gesamten Endenergieverbrauch in Prozent"
+    },
+    "electricityAccess": {
+      "name": "Zugang zu Elektrizität",
+      "description": "Anteil der Bevölkerung mit Zugang zu Elektrizität"
+    },
+    "povertyRate": {
+      "name": "Armutsquote",
+      "description": "Bevölkerung mit weniger als 2,15 $ pro Tag (KKP 2017)"
+    },
+    "unemployment": {
+      "name": "Arbeitslosenquote",
+      "description": "Arbeitslose in Prozent der Erwerbspersonen"
+    },
+    "literacy": {
+      "name": "Alphabetisierungsrate",
+      "description": "Alphabetisierungsrate Erwachsener (ab 15 Jahren)"
+    },
+    "mineralRents": {
+      "name": "Mineralienrenten (% des BIP)",
+      "description": "Renten aus Mineralien, darunter Zinn, Gold, Blei, Zink, Eisen, Kupfer, Nickel, Silber, Bauxit und Phosphat"
+    },
+    "oresMetalsExports": {
+      "name": "Exporte von Erzen & Metallen",
+      "description": "Erze und Metalle in Prozent der Warenexporte"
+    },
+    "oresMetalsImports": {
+      "name": "Importe von Erzen & Metallen",
+      "description": "Erze und Metalle in Prozent der Warenimporte"
+    },
+    "mineralDepletion": {
+      "name": "Abbau von Mineralien (% des BNE)",
+      "description": "Wert des Mineralienbestands im Verhältnis zur verbleibenden Reichweite der Reserven (Zinn, Gold, Blei, Zink, Eisen, Kupfer, Nickel, Silber, Bauxit, Phosphat)"
+    },
+    "oilRents": {
+      "name": "Ölrenten (% des BIP)",
+      "description": "Differenz zwischen dem Wert der Rohölförderung zu regionalen Preisen und den gesamten Förderkosten"
+    },
+    "naturalGasRents": {
+      "name": "Erdgasrenten (% des BIP)",
+      "description": "Differenz zwischen dem Wert der Erdgasförderung zu regionalen Preisen und den gesamten Förderkosten"
+    },
+    "totalResourceRents": {
+      "name": "Renten aus natürlichen Ressourcen gesamt (% des BIP)",
+      "description": "Summe der Renten aus Öl, Erdgas, Kohle, Mineralien und Wald"
+    }
+  }
+}

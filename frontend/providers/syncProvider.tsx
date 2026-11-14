@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toActionError } from "@/lib/actionError";
 
 // ═══════════════════════════════════════════════════════════════
 // SYNC CONTEXT TYPES
@@ -166,12 +167,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       }, 3000);
 
       return result;
-    } catch (error) {
+    } catch (err) {
+      // A rate-limited sync becomes "try again in N min" (lib/actionError.ts)
+      const error = toActionError(err);
       console.error("Sync all error:", error);
       setGlobalSyncStatus("error");
-      setGlobalSyncMessage(
-        error instanceof Error ? error.message : "Sync failed",
-      );
+      setGlobalSyncMessage(error.message || "Sync failed");
 
       const errorResult: SyncResult = {
         success: false,

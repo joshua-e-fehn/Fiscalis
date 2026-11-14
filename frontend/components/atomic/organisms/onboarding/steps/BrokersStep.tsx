@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toActionError } from "@/lib/actionError";
 import {
   LineChart,
   Shield,
@@ -66,7 +67,10 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
         window.open(result.connectUrl, "_blank", "noopener,noreferrer");
       }
     } catch (error) {
-      console.error("Failed to initiate broker connection:", error);
+      console.error(
+        "Failed to initiate broker connection:",
+        toActionError(error),
+      );
     } finally {
       setIsConnecting(false);
     }

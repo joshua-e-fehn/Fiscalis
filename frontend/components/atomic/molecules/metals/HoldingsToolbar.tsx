@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/shadcn/select";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { MetalsType } from "@/lib/types/metals-extended";
 import {
@@ -32,6 +33,21 @@ export type SortField =
   | "profitLoss"
   | "dateAdded";
 export type SortDirection = "asc" | "desc";
+
+const SORT_FIELDS: SortField[] = [
+  "name",
+  "value",
+  "weight",
+  "profitLoss",
+  "dateAdded",
+];
+
+const METAL_FILTERS: { metal: MetalsType; emoji: string }[] = [
+  { metal: "gold", emoji: "🥇" },
+  { metal: "silver", emoji: "🥈" },
+  { metal: "platinum", emoji: "⚪" },
+  { metal: "palladium", emoji: "⬜" },
+];
 
 interface HoldingsToolbarProps {
   // Search
@@ -81,6 +97,8 @@ export function HoldingsToolbar({
   onExport,
   className,
 }: HoldingsToolbarProps) {
+  const t = useTranslations("metals");
+
   return (
     <div
       className={cn(
@@ -95,12 +113,13 @@ export function HoldingsToolbar({
             variant="ghost"
             size="icon"
             onClick={onToggleSelectionMode}
-            title="Cancel selection"
+            title={t("holdings.toolbar.cancelSelection")}
+            aria-label={t("holdings.toolbar.cancelSelection")}
           >
             <X className="h-4 w-4" />
           </Button>
           <span className="text-sm font-medium">
-            {selectedCount} item{selectedCount !== 1 ? "s" : ""} selected
+            {t("holdings.toolbar.selectedCount", { count: selectedCount })}
           </span>
         </div>
       ) : (
@@ -109,7 +128,7 @@ export function HoldingsToolbar({
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search items..."
+              placeholder={t("holdings.toolbar.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               className="pl-8"
@@ -123,14 +142,17 @@ export function HoldingsToolbar({
           >
             <SelectTrigger className="w-full sm:w-36">
               <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="All metals" />
+              <SelectValue placeholder={t("holdings.toolbar.allMetals")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Metals</SelectItem>
-              <SelectItem value="gold">🥇 Gold</SelectItem>
-              <SelectItem value="silver">🥈 Silver</SelectItem>
-              <SelectItem value="platinum">⚪ Platinum</SelectItem>
-              <SelectItem value="palladium">⬜ Palladium</SelectItem>
+              <SelectItem value="all">
+                {t("holdings.toolbar.allMetals")}
+              </SelectItem>
+              {METAL_FILTERS.map(({ metal, emoji }) => (
+                <SelectItem key={metal} value={metal}>
+                  {emoji} {t(`metal.${metal}`)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -141,14 +163,14 @@ export function HoldingsToolbar({
           >
             <SelectTrigger className="w-full sm:w-40">
               <ArrowUpDown className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Sort by" />
+              <SelectValue placeholder={t("holdings.toolbar.sortBy")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="value">Value</SelectItem>
-              <SelectItem value="weight">Weight</SelectItem>
-              <SelectItem value="profitLoss">Profit/Loss</SelectItem>
-              <SelectItem value="dateAdded">Date Added</SelectItem>
+              {SORT_FIELDS.map((field) => (
+                <SelectItem key={field} value={field}>
+                  {t(`holdings.toolbar.sort.${field}`)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -160,7 +182,7 @@ export function HoldingsToolbar({
           /* Selection mode actions */
           <Button onClick={onSellSelected} disabled={selectedCount === 0}>
             <BadgeDollarSign className="h-4 w-4 mr-2" />
-            Sell Selected
+            {t("holdings.toolbar.sellSelected")}
           </Button>
         ) : (
           <>
@@ -171,7 +193,8 @@ export function HoldingsToolbar({
                 size="icon"
                 className="h-8 w-8 rounded-r-none"
                 onClick={() => onViewModeChange("table")}
-                title="Table view"
+                title={t("holdings.toolbar.tableView")}
+                aria-label={t("holdings.toolbar.tableView")}
               >
                 <List className="h-4 w-4" />
               </Button>
@@ -180,7 +203,8 @@ export function HoldingsToolbar({
                 size="icon"
                 className="h-8 w-8 rounded-none border-x"
                 onClick={() => onViewModeChange("cards")}
-                title="Card view"
+                title={t("holdings.toolbar.cardView")}
+                aria-label={t("holdings.toolbar.cardView")}
               >
                 <Grid3X3 className="h-4 w-4" />
               </Button>
@@ -189,7 +213,8 @@ export function HoldingsToolbar({
                 size="icon"
                 className="h-8 w-8 rounded-l-none"
                 onClick={() => onViewModeChange("grouped")}
-                title="Grouped view"
+                title={t("holdings.toolbar.groupedView")}
+                aria-label={t("holdings.toolbar.groupedView")}
               >
                 <Layers className="h-4 w-4" />
               </Button>
@@ -201,7 +226,8 @@ export function HoldingsToolbar({
                 variant="outline"
                 size="icon"
                 onClick={onExport}
-                title="Export CSV"
+                title={t("holdings.toolbar.exportCsv")}
+                aria-label={t("holdings.toolbar.exportCsv")}
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -211,14 +237,14 @@ export function HoldingsToolbar({
             {onToggleSelectionMode && (
               <Button onClick={onToggleSelectionMode}>
                 <BadgeDollarSign className="h-4 w-4 mr-2" />
-                Sell Items
+                {t("holdings.toolbar.sellItems")}
               </Button>
             )}
 
             {/* Add Item */}
             <Button onClick={onAddItem}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Item
+              {t("holdings.toolbar.addItem")}
             </Button>
           </>
         )}

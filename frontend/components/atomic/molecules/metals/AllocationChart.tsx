@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { MetalsSummary } from "@/lib/types/metals-extended";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -23,24 +24,19 @@ const metalColors = {
   palladium: "#CED0CE",
 };
 
-const metalLabels = {
-  gold: "Gold",
-  silver: "Silver",
-  platinum: "Platinum",
-  palladium: "Palladium",
-};
-
 export function AllocationChart({
   summary,
   isLoading = false,
   className,
 }: AllocationChartProps) {
+  const t = useTranslations("metals");
+
   if (isLoading) {
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Allocation
+            {t("holdings.allocation")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-48">
@@ -55,11 +51,13 @@ export function AllocationChart({
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Allocation
+            {t("holdings.allocation")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-48">
-          <span className="text-sm text-muted-foreground">No holdings</span>
+          <span className="text-sm text-muted-foreground">
+            {t("holdings.noHoldings")}
+          </span>
         </CardContent>
       </Card>
     );
@@ -84,7 +82,7 @@ export function AllocationChart({
 
   // Prepare data for pie chart
   const data = significantMetals.map((metal) => ({
-    name: metalLabels[metal],
+    name: t(`metal.${metal}`),
     value: summary.allocation[metal],
     color: metalColors[metal],
   }));
@@ -92,7 +90,7 @@ export function AllocationChart({
   // Add "Other" category if there are small items
   if (otherValue > 0) {
     data.push({
-      name: "Other (<2%)",
+      name: t("holdings.other", { threshold: THRESHOLD_PERCENT }),
       value: otherValue,
       color: "#6B7280",
     });
@@ -102,7 +100,7 @@ export function AllocationChart({
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          Allocation
+          {t("holdings.allocation")}
         </CardTitle>
       </CardHeader>
       <CardContent>

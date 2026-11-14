@@ -196,5 +196,69 @@
     "spotPrice": "Spot price",
     "openingBalance": "Opening balance",
     "notes": "Notes"
+  },
+  "holdings": {
+    "noItems": "No items found",
+    "noHoldings": "No holdings",
+    "noHoldingsYet": "No holdings yet",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "itemCountParen": "{count, plural, one {(# item)} other {(# items)}}",
+    "quantity": "×{count}",
+    "quantityPrefix": "{count}×",
+    "fineWeight": "Fine weight",
+    "profitLoss": "P/L",
+    "moreActions": "More actions",
+    "allocation": "Allocation",
+    "other": "Other (<{threshold}%)",
+    "largestHoldings": "Largest holdings",
+    "columns": {
+      "item": "Item",
+      "metal": "Metal",
+      "weight": "Weight",
+      "value": "Value",
+      "profitLoss": "P/L"
+    },
+    "selectAll": "Select all",
+    "selectItem": "Select {name}",
+    "toolbar": {
+      "cancelSelection": "Cancel selection",
+      "selectedCount": "{count, plural, one {# item selected} other {# items selected}}",
+      "searchPlaceholder": "Search items…",
+      "allMetals": "All metals",
+      "sortBy": "Sort by",
+      "sort": {
+        "name": "Name",
+        "value": "Value",
+        "weight": "Weight",
+        "profitLoss": "Profit/loss",
+        "dateAdded": "Date added"
+      },
+      "sellSelected": "Sell selected",
+      "tableView": "Table view",
+      "cardView": "Card view",
+      "groupedView": "Grouped view",
+      "exportCsv": "Export CSV",
+      "sellItems": "Sell items",
+      "addItem": "Add item"
+    },
+    "priceUpdate": {
+      "updating": "Updating…",
+      "updated": "Updated {when}"
+    }
+  },
+  "badges": {
+    "karat": "({karat}k)",
+    "weightUnit": {
+      "g": "g",
+      "kg": "kg",
+      "oz": "oz"
+    }
+  },
+  "emptyState": {
+    "title": "Your vault is empty",
+    "description": "Start building your precious metals portfolio by adding your first item.",
+    "addFromCatalog": "Add from catalogue",
+    "addCustom": "Add custom item",
+    "popular": "Popular items to get started:"
   }
 }

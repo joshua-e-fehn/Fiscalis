@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Coins, Plus, ArrowRight } from "lucide-react";
 
@@ -24,6 +25,8 @@ export function EmptyVaultState({
   onQuickAdd,
   className,
 }: EmptyVaultStateProps) {
+  const t = useTranslations("metals.emptyState");
+
   return (
     <div
       className={cn(
@@ -38,30 +41,25 @@ export function EmptyVaultState({
         </div>
 
         {/* Title & Description */}
-        <h2 className="text-xl font-semibold mb-2">Your vault is empty</h2>
-        <p className="text-muted-foreground mb-6">
-          Start building your precious metals portfolio by adding your first
-          item.
-        </p>
+        <h2 className="text-xl font-semibold mb-2">{t("title")}</h2>
+        <p className="text-muted-foreground mb-6">{t("description")}</p>
 
         {/* CTA Buttons */}
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <Button onClick={onAddFromCatalog} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
-            Add from Catalog
+            {t("addFromCatalog")}
           </Button>
           <Button onClick={onAddCustom} variant="outline" className="w-full">
             <Plus className="h-4 w-4 mr-2" />
-            Add Custom Item
+            {t("addCustom")}
           </Button>
         </div>
 
         {/* Popular Items */}
         {popularItems && popularItems.length > 0 && onQuickAdd && (
           <div className="mt-8 w-full">
-            <p className="text-sm text-muted-foreground mb-3">
-              Popular items to get started:
-            </p>
+            <p className="text-sm text-muted-foreground mb-3">{t("popular")}</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {popularItems.slice(0, 4).map((item) => (
                 <Card

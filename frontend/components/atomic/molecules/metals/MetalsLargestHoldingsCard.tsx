@@ -13,11 +13,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
-import {
-  MetalItemWithValuation,
-} from "@/lib/types/metals-extended";
+import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
@@ -36,13 +35,6 @@ const metalColors: Record<string, string> = {
   palladium: "#CED0DD",
 };
 
-const metalNames: Record<string, string> = {
-  gold: "Gold",
-  silver: "Silver",
-  platinum: "Platinum",
-  palladium: "Palladium",
-};
-
 export function MetalsLargestHoldingsCard({
   items,
   currency,
@@ -50,12 +42,13 @@ export function MetalsLargestHoldingsCard({
   isLoading = false,
   className,
 }: MetalsLargestHoldingsCardProps) {
+  const t = useTranslations("metals");
   if (isLoading) {
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Largest Holdings
+            {t("holdings.largestHoldings")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -78,11 +71,13 @@ export function MetalsLargestHoldingsCard({
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Largest Holdings
+            {t("holdings.largestHoldings")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-32">
-          <span className="text-sm text-muted-foreground">No holdings yet</span>
+          <span className="text-sm text-muted-foreground">
+            {t("holdings.noHoldingsYet")}
+          </span>
         </CardContent>
       </Card>
     );
@@ -106,22 +101,23 @@ export function MetalsLargestHoldingsCard({
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Largest Holdings
+            {t("holdings.largestHoldings")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-32">
-          <span className="text-sm text-muted-foreground">No holdings yet</span>
+          <span className="text-sm text-muted-foreground">
+            {t("holdings.noHoldingsYet")}
+          </span>
         </CardContent>
       </Card>
     );
   }
 
-
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          Largest Holdings
+          {t("holdings.largestHoldings")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -139,9 +135,11 @@ export function MetalsLargestHoldingsCard({
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: metalColors[metal] }}
                 />
-                <span className="text-sm font-medium">{metalNames[metal]}</span>
+                <span className="text-sm font-medium">
+                  {t(`metal.${metal}`)}
+                </span>
                 <span className="text-xs text-muted-foreground">
-                  ({totalItems} item{totalItems !== 1 ? "s" : ""})
+                  {t("holdings.itemCountParen", { count: totalItems })}
                 </span>
               </div>
 
@@ -160,7 +158,7 @@ export function MetalsLargestHoldingsCard({
                         {item.displayName}
                         {item.quantity > 1 && (
                           <span className="text-muted-foreground ml-1">
-                            ×{item.quantity}
+                            {t("holdings.quantity", { count: item.quantity })}
                           </span>
                         )}
                       </span>

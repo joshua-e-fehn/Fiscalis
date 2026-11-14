@@ -13,11 +13,9 @@ import {
   PercentageChange,
   SummaryCardSkeleton,
 } from "@/components/atomic/atoms/metals";
-import {
-  MetalsType,
-  MetalSummary,
-} from "@/lib/types/metals-extended";
+import { MetalsType, MetalSummary } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -33,32 +31,27 @@ interface MetalSummaryCardProps {
 const metalConfig: Record<
   MetalsType,
   {
-    label: string;
     borderClass: string;
     bgClass: string;
     hoverShadow: string;
   }
 > = {
   gold: {
-    label: "Gold",
     borderClass: "border-l-metal-gold",
     bgClass: "hover:bg-metal-gold/5",
     hoverShadow: "hover:shadow-metal-gold",
   },
   silver: {
-    label: "Silver",
     borderClass: "border-l-metal-silver",
     bgClass: "hover:bg-metal-silver/5",
     hoverShadow: "hover:shadow-metal-silver",
   },
   platinum: {
-    label: "Platinum",
     borderClass: "border-l-metal-platinum",
     bgClass: "hover:bg-metal-platinum/5",
     hoverShadow: "hover:shadow-metal-platinum",
   },
   palladium: {
-    label: "Palladium",
     borderClass: "border-l-metal-palladium",
     bgClass: "hover:bg-metal-palladium/5",
     hoverShadow: "hover:shadow-metal-palladium",
@@ -73,6 +66,7 @@ export function MetalSummaryCard({
   className,
   onClick,
 }: MetalSummaryCardProps) {
+  const t = useTranslations("metals");
   const config = metalConfig[metal];
   const hasHoldings = summary.itemCount > 0;
 
@@ -99,7 +93,7 @@ export function MetalSummaryCard({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <MetalIcon metal={metal} />
-            {config.label}
+            {t(`metal.${metal}`)}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -118,8 +112,7 @@ export function MetalSummaryCard({
                 />
                 <span>·</span>
                 <span>
-                  {summary.totalItems}{" "}
-                  {summary.totalItems === 1 ? "item" : "items"}
+                  {t("holdings.itemCount", { count: summary.totalItems })}
                 </span>
               </div>
               {summary.profitLossPercent !== null && (
@@ -129,13 +122,15 @@ export function MetalSummaryCard({
                     size="sm"
                   />
                   <span className="text-xs text-muted-foreground ml-1">
-                    P/L
+                    {t("holdings.profitLoss")}
                   </span>
                 </div>
               )}
             </>
           ) : (
-            <div className="text-muted-foreground text-sm">No holdings</div>
+            <div className="text-muted-foreground text-sm">
+              {t("holdings.noHoldings")}
+            </div>
           )}
         </CardContent>
       </Card>

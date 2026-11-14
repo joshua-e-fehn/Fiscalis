@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { MetalsType, MetalsSummary } from "@/lib/types/metals-extended";
 
@@ -15,17 +16,11 @@ const metalColors: Record<MetalsType, string> = {
   palladium: "bg-metal-palladium",
 };
 
-const metalLabels: Record<MetalsType, string> = {
-  gold: "Gold",
-  silver: "Silver",
-  platinum: "Platinum",
-  palladium: "Palladium",
-};
-
 export function MetalAllocationBar({
   summary,
   className,
 }: MetalAllocationBarProps) {
+  const t = useTranslations("metals");
   const metals: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
 
   // Filter out metals with 0 allocation
@@ -36,7 +31,7 @@ export function MetalAllocationBar({
       <div className={cn("w-full", className)}>
         <div className="h-3 bg-muted rounded-full" />
         <div className="flex justify-center mt-2 text-xs text-muted-foreground">
-          No holdings yet
+          {t("holdings.noHoldingsYet")}
         </div>
       </div>
     );
@@ -62,7 +57,7 @@ export function MetalAllocationBar({
             <div
               className={cn("w-2.5 h-2.5 rounded-full", metalColors[metal])}
             />
-            <span className="text-muted-foreground">{metalLabels[metal]}</span>
+            <span className="text-muted-foreground">{t(`metal.${metal}`)}</span>
             <span className="font-medium">
               {summary.allocation[metal].toFixed(0)}%
             </span>

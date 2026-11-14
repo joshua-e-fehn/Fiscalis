@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   useActiveLoans,
   useLoansSummary,
@@ -59,24 +60,6 @@ function formatTotals<T extends { currency: string }>(
   return totals.map((t) => formatCurrency(pick(t), t.currency)).join(" + ");
 }
 
-// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-function formatShortDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 function getDaysUntil(dateString: string): number {
   return Math.round(
     (Date.parse(dateString) - Date.parse(todayLocalISO())) / 86_400_000,
@@ -89,6 +72,11 @@ function getDaysUntil(dateString: string): number {
 
 export default function LoansPage() {
   const router = useRouter();
+  const t = useTranslations("loans.list");
+  const format = useFormatter();
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "dateOnly");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showAddDialog, setShowAddDialog] = useState(false);
 
@@ -116,16 +104,18 @@ export default function LoansPage() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <PageHeader
-        title="My Loans"
-        subtitle="Track and manage all your loans, mortgages, and credit obligations in one place. Monitor payments, interest rates, and payoff progress."
+        title={t("title")}
+        subtitle={t("subtitle")}
         actionsLoading={isLoading}
-        actions={[{ label: "Add Loan", onClick: () => setShowAddDialog(true) }]}
+        actions={[
+          { label: t("addLoan"), onClick: () => setShowAddDialog(true) },
+        ]}
       />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SummaryCard
-          title="Total Debt"
+          title={t("totalDebt")}
           value={
             summary
               ? combined
@@ -139,11 +129,13 @@ export default function LoansPage() {
               : undefined
           }
           icon={<Wallet className="h-5 w-5" />}
-          description={`${summary?.loansCount ?? 0} active loans`}
+          description={t("activeLoansCount", {
+            count: summary?.loansCount ?? 0,
+          })}
           isLoading={isLoading}
         />
         <SummaryCard
-          title="Monthly Payments"
+          title={t("monthlyPayments")}
           value={
             summary
               ? combined
@@ -157,35 +149,38 @@ export default function LoansPage() {
               : undefined
           }
           icon={<Calendar className="h-5 w-5" />}
-          description="Combined monthly total"
+          description={t("monthlyCombined")}
           isLoading={isLoading}
         />
         <SummaryCard
-          title="Next Payment"
+          title={t("nextPayment")}
           value={
             summary?.nextPayment
               ? formatCurrency(
                   summary.nextPayment.amount,
                   summary.nextPayment.currency,
                 )
-              : "No payments"
+              : t("noPayments")
           }
           icon={<Clock className="h-5 w-5" />}
           description={
             summary?.nextPayment
-              ? `${summary.nextPayment.loanName} • ${formatShortDate(summary.nextPayment.date)}`
-              : "No active loans"
+              ? t("nextPaymentDetail", {
+                  loan: summary.nextPayment.loanName,
+                  date: formatDate(summary.nextPayment.date),
+                })
+              : t("noActiveLoans")
           }
           isLoading={isLoading}
         />
         <SummaryCard
-          title="Payoff Progress"
+          title={t("payoffProgress")}
           value={summary ? `${overallProgress.toFixed(1)}%` : undefined}
           icon={<TrendingDown className="h-5 w-5" />}
           description={
             totals.length > 1
-              ? "Average paid off per loan"
-              : "Overall debt paid off"
+              ? t("averagePaidOff")
+              : t("overallPaidOff")
           }
           isLoading={isLoading}
           showProgress
@@ -200,12 +195,14 @@ export default function LoansPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-5 w-5 text-orange-500" />
-                <CardTitle className="text-lg">Upcoming Payments</CardTitle>
+                <CardTitle className="text-lg">{t("upcomingTitle")}</CardTitle>
               </div>
-              <Badge variant="secondary">{upcomingPayments.length} due</Badge>
+              <Badge variant="secondary">
+                {t("upcomingCount", { count: upcomingPayments.length })}
+              </Badge>
             </div>
             <CardDescription>
-              Payments due in the next 30 days, and overdue ones
+              {t("upcomingDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -236,14 +233,16 @@ export default function LoansPage() {
                       <div>
                         <p className="font-medium">{payment.loanName}</p>
                         <p className="text-sm text-muted-foreground">
-                          {formatDate(payment.paymentDate)}
-                          {payment.overdue
-                            ? ` (overdue by ${-daysUntil} day${daysUntil === -1 ? "" : "s"})`
-                            : daysUntil === 0
-                            ? " (Today)"
-                            : daysUntil === 1
-                              ? " (Tomorrow)"
-                              : ` (in ${daysUntil} days)`}
+                          {t("upcomingDate", {
+                            date: formatDate(payment.paymentDate),
+                            when: payment.overdue
+                              ? t("overdueBy", { days: -daysUntil })
+                              : daysUntil === 0
+                                ? t("dueToday")
+                                : daysUntil === 1
+                                  ? t("dueTomorrow")
+                                  : t("dueInDays", { days: daysUntil }),
+                          })}
                         </p>
                       </div>
                     </div>
@@ -264,11 +263,12 @@ export default function LoansPage() {
       {/* Loans List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Active Loans</h2>
+          <h2 className="text-xl font-semibold">{t("activeLoans")}</h2>
           <div className="flex items-center gap-2">
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="sm"
+              aria-label={t("gridView")}
               onClick={() => setViewMode("grid")}
             >
               <LayoutGrid className="h-4 w-4" />
@@ -276,6 +276,7 @@ export default function LoansPage() {
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="sm"
+              aria-label={t("listView")}
               onClick={() => setViewMode("list")}
             >
               <List className="h-4 w-4" />
@@ -378,7 +379,17 @@ function SummaryCard({
   );
 }
 
+const LOAN_EXAMPLES = [
+  { key: "mortgage", icon: Home, color: "text-blue-500" },
+  { key: "auto", icon: Car, color: "text-green-500" },
+  { key: "student", icon: GraduationCap, color: "text-purple-500" },
+  { key: "personal", icon: Banknote, color: "text-orange-500" },
+  { key: "creditCard", icon: CreditCard, color: "text-red-500" },
+  { key: "business", icon: Building2, color: "text-cyan-500" },
+] as const;
+
 function EmptyState({ onAddLoan }: { onAddLoan: () => void }) {
+  const t = useTranslations("loans.list");
   return (
     <Card className="p-12">
       <div className="text-center">
@@ -387,59 +398,32 @@ function EmptyState({ onAddLoan }: { onAddLoan: () => void }) {
             <HandCoins className="h-12 w-12 text-muted-foreground" />
           </div>
         </div>
-        <h3 className="text-lg font-semibold mb-2">No loans yet</h3>
+        <h3 className="text-lg font-semibold mb-2">{t("emptyTitle")}</h3>
         <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-          Start tracking your loans to get insights on your debt, payment
-          schedules, and see how extra payments can help you save.
+          {t("emptyDescription")}
         </p>
         <Button onClick={onAddLoan}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Your First Loan
+          {t("addFirst")}
         </Button>
 
         <div className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-4 text-left max-w-2xl mx-auto">
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-            <Home className="h-5 w-5 text-blue-500 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Mortgage</p>
-              <p className="text-xs text-muted-foreground">Home loans</p>
+          {LOAN_EXAMPLES.map(({ key, icon: Icon, color }) => (
+            <div
+              key={key}
+              className="flex items-start gap-2 p-3 rounded-lg bg-muted/50"
+            >
+              <Icon className={`h-5 w-5 ${color} mt-0.5`} />
+              <div>
+                <p className="font-medium text-sm">
+                  {t(`examples.${key}.title`)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t(`examples.${key}.description`)}
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-            <Car className="h-5 w-5 text-green-500 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Auto Loan</p>
-              <p className="text-xs text-muted-foreground">Vehicle financing</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-            <GraduationCap className="h-5 w-5 text-purple-500 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Student Loan</p>
-              <p className="text-xs text-muted-foreground">Education debt</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-            <Banknote className="h-5 w-5 text-orange-500 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Personal Loan</p>
-              <p className="text-xs text-muted-foreground">Unsecured loans</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-            <CreditCard className="h-5 w-5 text-red-500 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Credit Card</p>
-              <p className="text-xs text-muted-foreground">Revolving credit</p>
-            </div>
-          </div>
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50">
-            <Building2 className="h-5 w-5 text-cyan-500 mt-0.5" />
-            <div>
-              <p className="font-medium text-sm">Business Loan</p>
-              <p className="text-xs text-muted-foreground">Commercial loans</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </Card>

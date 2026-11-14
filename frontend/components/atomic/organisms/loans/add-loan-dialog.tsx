@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useEffectEvent } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   useCreateLoan,
   LoanType,
@@ -79,50 +80,42 @@ interface AddLoanDialogProps {
 // Constants
 // ═══════════════════════════════════════════════════════════════
 
+// Names are under loans.currencies.<value>
 const CURRENCIES = [
-  { value: "USD", label: "US Dollar", symbol: "$", icon: DollarSign },
-  { value: "EUR", label: "Euro", symbol: "€", icon: Euro },
-  { value: "GBP", label: "British Pound", symbol: "£", icon: PoundSterling },
-  { value: "CHF", label: "Swiss Franc", symbol: "Fr", icon: SwissFranc },
-  { value: "CAD", label: "Canadian Dollar", symbol: "C$", icon: DollarSign },
-  { value: "AUD", label: "Australian Dollar", symbol: "A$", icon: DollarSign },
-  { value: "JPY", label: "Japanese Yen", symbol: "¥", icon: JapaneseYen },
-];
+  { value: "USD", symbol: "$", icon: DollarSign },
+  { value: "EUR", symbol: "€", icon: Euro },
+  { value: "GBP", symbol: "£", icon: PoundSterling },
+  { value: "CHF", symbol: "Fr", icon: SwissFranc },
+  { value: "CAD", symbol: "C$", icon: DollarSign },
+  { value: "AUD", symbol: "A$", icon: DollarSign },
+  { value: "JPY", symbol: "¥", icon: JapaneseYen },
+] as const;
 
 interface LoanTypeOption {
   value: LoanType;
-  label: string;
-  description: string;
   icon: React.ReactNode;
   color: string;
 }
 
+// Labels and descriptions are under loans.loanTypes.<value>
 const LOAN_TYPES: LoanTypeOption[] = [
   {
     value: "ANNUITY",
-    label: "Fixed Payment",
-    description: "Same payment every period (most common)",
     icon: <TrendingDown className="h-5 w-5" />,
     color: "text-blue-500",
   },
   {
     value: "CONSTANT_PRINCIPAL",
-    label: "Declining Payment",
-    description: "Payments decrease over time",
     icon: <Target className="h-5 w-5" />,
     color: "text-green-500",
   },
   {
     value: "BULLET",
-    label: "Balloon/Bullet",
-    description: "Interest only, principal at end",
     icon: <AlertTriangle className="h-5 w-5" />,
     color: "text-red-500",
   },
   {
     value: "INTEREST_ONLY_THEN",
-    label: "Interest-Only Period",
-    description: "Interest only, then regular payments",
     icon: <Clock className="h-5 w-5" />,
     color: "text-amber-500",
   },
@@ -130,40 +123,25 @@ const LOAN_TYPES: LoanTypeOption[] = [
 
 interface PaymentFrequencyOption {
   value: PaymentFrequency;
-  label: string;
   periodsPerYear: number;
-  termLabel: string;
 }
 
+// Labels are under loans.frequency.<value>
 const PAYMENT_FREQUENCIES: PaymentFrequencyOption[] = [
-  {
-    value: "MONTHLY",
-    label: "Monthly",
-    periodsPerYear: 12,
-    termLabel: "months",
-  },
-  {
-    value: "QUARTERLY",
-    label: "Quarterly",
-    periodsPerYear: 4,
-    termLabel: "quarters",
-  },
-  {
-    value: "SEMI_ANNUAL",
-    label: "Semi-Annual",
-    periodsPerYear: 2,
-    termLabel: "half-years",
-  },
-  { value: "ANNUAL", label: "Annual", periodsPerYear: 1, termLabel: "years" },
+  { value: "MONTHLY", periodsPerYear: 12 },
+  { value: "QUARTERLY", periodsPerYear: 4 },
+  { value: "SEMI_ANNUAL", periodsPerYear: 2 },
+  { value: "ANNUAL", periodsPerYear: 1 },
 ];
 
+// Descriptions are under loans.add.steps.<key>
 const STEPS = [
-  { id: 1, name: "Basics", description: "Name & type" },
-  { id: 2, name: "Terms", description: "Amount & rate" },
-  { id: 3, name: "Schedule", description: "Dates & payments" },
-  { id: 4, name: "Extras", description: "Extra payments" },
-  { id: 5, name: "Review", description: "Confirm details" },
-];
+  { id: 1, key: "basics" },
+  { id: 2, key: "terms" },
+  { id: 3, key: "schedule" },
+  { id: 4, key: "extras" },
+  { id: 5, key: "review" },
+] as const;
 
 // ═══════════════════════════════════════════════════════════════
 // Helper Functions
@@ -197,16 +175,6 @@ function calculateMissedPayments(
   }
 
   return { count: missed, nextDueDate: getDueDate(loan, missed + 1) };
-}
-
-// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -277,6 +245,14 @@ interface PastPayment {
 // ═══════════════════════════════════════════════════════════════
 
 export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
+  const t = useTranslations("loans.add");
+  const tLoans = useTranslations("loans");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "dateOnly");
+  const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
   const { user } = useUser();
   const { createLoan } = useCreateLoan();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -328,6 +304,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     () => getFrequencyInfo(paymentFrequency),
     [paymentFrequency],
   );
+
+  const periodUnit = tLoans(`periodUnit.${paymentFrequency}`);
 
   const loanTypeInfo = useMemo(
     () => LOAN_TYPES.find((t) => t.value === loanType),
@@ -674,9 +652,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Loan</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
-            {STEPS.find((s) => s.id === currentStep)?.description}
+            {t(`steps.${STEPS[currentStep - 1].key}`)}
           </DialogDescription>
         </DialogHeader>
 
@@ -687,21 +665,21 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
-                <Label htmlFor="name">Loan Name *</Label>
+                <Label htmlFor="name">{t("name")}</Label>
                 <Input
                   id="name"
-                  placeholder="e.g., Home Mortgage, Car Loan"
+                  placeholder={t("namePlaceholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="mt-1.5"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Give your loan a memorable name
+                  {t("nameHint")}
                 </p>
               </div>
 
               <div>
-                <Label>Loan Type *</Label>
+                <Label>{t("loanType")}</Label>
                 <div className="grid grid-cols-2 gap-3 mt-1.5">
                   {LOAN_TYPES.map((type) => (
                     <button
@@ -718,11 +696,11 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       <div className="flex items-center gap-2 mb-1">
                         <span className={type.color}>{type.icon}</span>
                         <span className="font-medium text-sm">
-                          {type.label}
+                          {tLoans(`loanTypes.${type.value}.label`)}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {type.description}
+                        {tLoans(`loanTypes.${type.value}.description`)}
                       </p>
                     </button>
                   ))}
@@ -731,12 +709,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="lender">Lender</Label>
+                  <Label htmlFor="lender">{t("lender")}</Label>
                   <div className="relative mt-1.5">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="lender"
-                      placeholder="e.g., Wells Fargo"
+                      placeholder={t("lenderPlaceholder")}
                       value={lender}
                       onChange={(e) => setLender(e.target.value)}
                       className="pl-9"
@@ -745,7 +723,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                 </div>
 
                 <div>
-                  <Label htmlFor="contractNumber">Contract #</Label>
+                  <Label htmlFor="contractNumber">{t("contractNumber")}</Label>
                   <div className="relative mt-1.5">
                     <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -766,33 +744,33 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="originalPrincipal">Original Amount *</Label>
+                  <Label htmlFor="originalPrincipal">
+                    {t("originalAmount")}
+                  </Label>
                   <CurrencyInput
                     id="originalPrincipal"
                     value={originalPrincipal}
                     onChange={setOriginalPrincipal}
                     currency={currency}
-                    placeholder="300,000"
+                    placeholder={t("originalAmountPlaceholder")}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="currentBalance">Current Balance</Label>
+                  <Label htmlFor="currentBalance">{t("currentBalance")}</Label>
                   <CurrencyInput
                     id="currentBalance"
                     value={currentBalance}
                     onChange={setCurrentBalance}
                     currency={currency}
-                    placeholder="Same as original if new"
+                    placeholder={t("currentBalancePlaceholder")}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="annualInterestRate">
-                    Annual Interest Rate *
-                  </Label>
+                  <Label htmlFor="annualInterestRate">{t("annualRate")}</Label>
                   <div className="relative mt-1.5">
                     <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -810,7 +788,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                 </div>
 
                 <div>
-                  <Label htmlFor="currency">Currency</Label>
+                  <Label htmlFor="currency">{t("currency")}</Label>
                   <Select value={currency} onValueChange={setCurrency}>
                     <SelectTrigger className="mt-1.5">
                       <SelectValue />
@@ -824,7 +802,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                               <Icon className="h-4 w-4" />
                               <span>{c.value}</span>
                               <span className="text-muted-foreground">
-                                - {c.label}
+                                - {tLoans(`currencies.${c.value}`)}
                               </span>
                             </div>
                           </SelectItem>
@@ -839,7 +817,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="paymentFrequency">Payment Frequency *</Label>
+                  <Label htmlFor="paymentFrequency">
+                    {t("paymentFrequency")}
+                  </Label>
                   <Select
                     value={paymentFrequency}
                     onValueChange={(v) =>
@@ -852,7 +832,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                     <SelectContent>
                       {PAYMENT_FREQUENCIES.map((freq) => (
                         <SelectItem key={freq.value} value={freq.value}>
-                          {freq.label}
+                          {tLoans(`frequency.${freq.value}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -861,7 +841,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
                 <div>
                   <Label htmlFor="termPeriods">
-                    Term ({frequencyInfo.termLabel}) *
+                    {t("term", { unit: periodUnit })}
                   </Label>
                   <div className="relative mt-1.5">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -870,7 +850,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       type="number"
                       min="1"
                       placeholder={
-                        paymentFrequency === "MONTHLY" ? "360 (30 years)" : "30"
+                        paymentFrequency === "MONTHLY"
+                          ? t("termPlaceholderMonthly")
+                          : "30"
                       }
                       className="pl-9"
                       value={termPeriods}
@@ -879,7 +861,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                   </div>
                   {termPeriods && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      = {termMonths} months total
+                      {t("termMonthsTotal", { months: termMonths })}
                     </p>
                   )}
                 </div>
@@ -893,12 +875,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
               {loanType === "INTEREST_ONLY_THEN" && (
                 <div>
-                  <Label htmlFor="gracePeriods">Interest-Only Periods *</Label>
+                  <Label htmlFor="gracePeriods">{t("gracePeriods")}</Label>
                   <Input
                     id="gracePeriods"
                     type="number"
                     min="0"
-                    placeholder={`Number of ${frequencyInfo.termLabel}`}
+                    placeholder={t("gracePeriodsPlaceholder", { unit: periodUnit })}
                     className="mt-1.5"
                     value={gracePeriods}
                     onChange={(e) => setGracePeriods(e.target.value)}
@@ -912,7 +894,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
           {currentStep === 3 && (
             <div className="space-y-6">
               <div>
-                <Label htmlFor="startDate">Loan Start Date *</Label>
+                <Label htmlFor="startDate">{t("startDate")}</Label>
                 <Input
                   id="startDate"
                   type="date"
@@ -927,7 +909,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Info className="h-4 w-4 text-blue-500" />
-                      Calculated Payment
+                      {t("calculatedPayment")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -937,14 +919,20 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           {formatCurrency(calculatedPayment, currency)}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          per{" "}
-                          {frequencyInfo.label.toLowerCase().replace("ly", "")}
+                          {tLoans("perPeriod", { frequency: paymentFrequency })}
                         </p>
                         {loanType === "INTEREST_ONLY_THEN" && (
                           <p className="text-xs text-muted-foreground">
-                            after {formatCurrency(interestOnlyPayment, currency)}{" "}
-                            interest-only for the first {gracePeriods || 0}{" "}
-                            {frequencyInfo.termLabel}
+                            {t("afterInterestOnly", {
+                              amount: formatCurrency(
+                                interestOnlyPayment,
+                                currency,
+                              ),
+                              periods: tLoans("periodCount", {
+                                frequency: paymentFrequency,
+                                count: parseInt(gracePeriods) || 0,
+                              }),
+                            })}
                           </p>
                         )}
                       </div>
@@ -953,7 +941,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           checked={useCalculatedPayment}
                           onCheckedChange={setUseCalculatedPayment}
                         />
-                        <Label className="text-sm">Use this amount</Label>
+                        <Label className="text-sm">{t("useThisAmount")}</Label>
                       </div>
                     </div>
 
@@ -961,14 +949,14 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       <div className="mt-4 space-y-3">
                         <div>
                           <Label htmlFor="customPayment">
-                            Custom Payment Amount
+                            {t("customPayment")}
                           </Label>
                           <CurrencyInput
                             id="customPayment"
                             value={scheduledPayment}
                             onChange={setScheduledPayment}
                             currency={currency}
-                            placeholder="Enter your actual payment"
+                            placeholder={t("customPaymentPlaceholder")}
                           />
                         </div>
 
@@ -979,22 +967,16 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                               {parseFloat(scheduledPayment) >
                               calculatedPayment ? (
                                 <p className="text-green-600">
-                                  <strong>Higher payment:</strong> Your loan
-                                  will be paid off faster than the original
-                                  term.
+                                  {t.rich("higherPayment", { strong })}
                                 </p>
                               ) : parseFloat(scheduledPayment) <
                                 calculatedPayment * 0.5 ? (
                                 <p className="text-red-600">
-                                  <strong>Warning:</strong> This payment may not
-                                  cover the interest. Your balance could
-                                  increase over time (negative amortization).
+                                  {t.rich("paymentTooLow", { strong })}
                                 </p>
                               ) : (
                                 <p className="text-amber-600">
-                                  <strong>Lower payment:</strong> Your loan will
-                                  take longer to pay off, or you&apos;ll have a
-                                  balloon payment at the end.
+                                  {t.rich("lowerPayment", { strong })}
                                 </p>
                               )}
                             </div>
@@ -1010,15 +992,16 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base flex items-center gap-2 text-amber-600">
                       <AlertTriangle className="h-4 w-4" />
-                      Past Payments ({missedPaymentsInfo.count})
+                      {t("pastPaymentsTitle", {
+                        count: missedPaymentsInfo.count,
+                      })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Based on your start date, {missedPaymentsInfo.count}{" "}
-                      payment
-                      {missedPaymentsInfo.count > 1 ? "s have" : " has"} already
-                      come due. Record the payments you&apos;ve made:
+                      {t("pastPaymentsDescription", {
+                        count: missedPaymentsInfo.count,
+                      })}
                     </p>
 
                     <div className="space-y-3">
@@ -1043,8 +1026,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           </div>
                           <div className="flex-1">
                             <p className="text-sm font-medium">
-                              Payment {index + 1} - Due{" "}
-                              {formatDate(payment.dueDate)}
+                              {t("pastPayment", {
+                                number: index + 1,
+                                date: formatDate(payment.dueDate),
+                              })}
                             </p>
                           </div>
                           <div className="w-32">
@@ -1070,8 +1055,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                     </div>
 
                     <p className="text-xs text-muted-foreground mt-3">
-                      <strong>Next payment due:</strong>{" "}
-                      {formatDate(nextPaymentDate)}
+                      {t.rich("nextPaymentDue", {
+                        strong,
+                        date: formatDate(nextPaymentDate),
+                      })}
                     </p>
                   </CardContent>
                 </Card>
@@ -1080,8 +1067,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               {startDate && missedPaymentsInfo.count === 0 && (
                 <div className="p-4 rounded-lg bg-muted/50">
                   <p className="text-sm">
-                    <strong>First payment due:</strong>{" "}
-                    {formatDate(nextPaymentDate)}
+                    {t.rich("firstPaymentDue", {
+                      strong,
+                      date: formatDate(nextPaymentDate),
+                    })}
                   </p>
                 </div>
               )}
@@ -1093,9 +1082,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base">Allow Extra Payments</Label>
+                  <Label className="text-base">{t("allowExtra")}</Label>
                   <p className="text-sm text-muted-foreground">
-                    Can you make prepayments on this loan?
+                    {t("allowExtraHint")}
                   </p>
                 </div>
                 <Switch
@@ -1109,7 +1098,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="maxPrepayment">
-                        Max Annual Prepayment
+                        {t("maxPrepayment")}
                       </Label>
                       <div className="relative mt-1.5">
                         <Input
@@ -1118,7 +1107,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           step="0.1"
                           min="0"
                           max="100"
-                          placeholder="No limit"
+                          placeholder={t("noLimit")}
                           className="pr-7"
                           value={maxPrepayment}
                           onChange={(e) => setMaxPrepayment(e.target.value)}
@@ -1128,13 +1117,13 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        % of original principal per year
+                        {t("maxPrepaymentHint")}
                       </p>
                     </div>
 
                     <div>
                       <Label htmlFor="prepaymentPenalty">
-                        Prepayment Penalty
+                        {t("penalty")}
                       </Label>
                       <div className="relative mt-1.5">
                         <Input
@@ -1143,7 +1132,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           step="0.1"
                           min="0"
                           max="100"
-                          placeholder="None"
+                          placeholder={t("none")}
                           className="pr-7"
                           value={prepaymentPenalty}
                           onChange={(e) => setPrepaymentPenalty(e.target.value)}
@@ -1153,7 +1142,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Penalty fee on extra payments
+                        {t("penaltyHint")}
                       </p>
                     </div>
                   </div>
@@ -1162,9 +1151,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <Label className="text-base">
-                        Planned Extra Payments
-                      </Label>
+                      <Label className="text-base">{t("plannedExtras")}</Label>
                       <div className="flex gap-2">
                         <Button
                           type="button"
@@ -1173,7 +1160,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           onClick={() => addExtraPayment("one_time")}
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          One-time
+                          {t("oneTime")}
                         </Button>
                         <Button
                           type="button"
@@ -1182,14 +1169,14 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           onClick={() => addExtraPayment("recurring")}
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          Recurring
+                          {t("recurring")}
                         </Button>
                       </div>
                     </div>
 
                     {extraPayments.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
-                        No extra payments planned. You can add them later too.
+                        {t("noExtras")}
                       </p>
                     ) : (
                       <div className="space-y-3">
@@ -1205,8 +1192,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                   }
                                 >
                                   {ep.type === "one_time"
-                                    ? "One-time"
-                                    : "Recurring"}
+                                    ? t("oneTime")
+                                    : t("recurring")}
                                 </Badge>
                                 <div className="flex-1 grid grid-cols-2 gap-2">
                                   <CurrencyInput
@@ -1216,7 +1203,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                       updateExtraPayment(ep.id, { amount: v })
                                     }
                                     currency={currency}
-                                    placeholder="Amount"
+                                    placeholder={t("amount")}
                                   />
                                   <Input
                                     type="date"
@@ -1250,7 +1237,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                     htmlFor={`extra-${ep.id}-until`}
                                     className="text-xs text-muted-foreground"
                                   >
-                                    Until
+                                    {t("until")}
                                   </Label>
                                   <Input
                                     id={`extra-${ep.id}-until`}
@@ -1264,11 +1251,11 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                     }
                                   />
                                   <p className="text-xs text-muted-foreground">
-                                    Added to each{" "}
-                                    {frequencyInfo.label
-                                      .toLowerCase()
-                                      .replace("ly", "")}{" "}
-                                    payment in this range (blank: no limit)
+                                    {t("recurringHint", {
+                                      eachPayment: tLoans("eachPayment", {
+                                        frequency: paymentFrequency,
+                                      }),
+                                    })}
                                   </p>
                                 </div>
                               )}
@@ -1288,32 +1275,40 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
             <div className="space-y-4">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Loan Summary</CardTitle>
+                  <CardTitle className="text-base">{t("summary")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Name</span>
+                    <span className="text-muted-foreground">
+                      {t("reviewName")}
+                    </span>
                     <span className="font-medium">{name}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Type</span>
+                    <span className="text-muted-foreground">
+                      {t("reviewType")}
+                    </span>
                     <div className="flex items-center gap-2">
                       <span className={loanTypeInfo?.color}>
                         {loanTypeInfo?.icon}
                       </span>
-                      <span className="font-medium">{loanTypeInfo?.label}</span>
+                      <span className="font-medium">
+                        {tLoans(`loanTypes.${loanType}.label`)}
+                      </span>
                     </div>
                   </div>
                   {lender && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Lender</span>
+                      <span className="text-muted-foreground">
+                        {t("lender")}
+                      </span>
                       <span className="font-medium">{lender}</span>
                     </div>
                   )}
                   <Separator />
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      Original Amount
+                      {t("originalAmountReview")}
                     </span>
                     <span className="font-medium">
                       {formatCurrency(
@@ -1325,7 +1320,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                   {currentBalance && currentBalance !== originalPrincipal && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Current Balance
+                        {t("currentBalance")}
                       </span>
                       <span className="font-medium">
                         {formatCurrency(parseFloat(currentBalance), currency)}
@@ -1333,47 +1328,66 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Interest Rate</span>
+                    <span className="text-muted-foreground">
+                      {t("interestRate")}
+                    </span>
                     <span className="font-medium">
-                      {annualInterestRate}% p.a.
+                      {t("ratePerYear", { rate: annualInterestRate })}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Term</span>
+                    <span className="text-muted-foreground">
+                      {t("termReview")}
+                    </span>
                     <span className="font-medium">
-                      {termPeriods} {frequencyInfo.termLabel} ({termMonths}{" "}
-                      months)
+                      {t("termValue", {
+                        periods: tLoans("periodCount", {
+                          frequency: paymentFrequency,
+                          count: parseInt(termPeriods) || 0,
+                        }),
+                        months: tLoans("months", { count: termMonths }),
+                      })}
                     </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Payment</span>
+                    <span className="text-muted-foreground">
+                      {t("payment")}
+                    </span>
                     <span className="font-medium">
-                      {formatCurrency(effectivePayment, currency)} /{" "}
-                      {frequencyInfo.label.toLowerCase().replace("ly", "")}
+                      {tLoans("amountPerPeriod", {
+                        amount: formatCurrency(effectivePayment, currency),
+                        frequency: paymentFrequency,
+                      })}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Start Date</span>
+                    <span className="text-muted-foreground">
+                      {t("startDateReview")}
+                    </span>
                     <span className="font-medium">{formatDate(startDate)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Next Payment</span>
+                    <span className="text-muted-foreground">
+                      {t("nextPayment")}
+                    </span>
                     <span className="font-medium">
                       {formatDate(nextPaymentDate)}
                     </span>
                   </div>
                   <Separator />
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Prepayment</span>
+                    <span className="text-muted-foreground">
+                      {t("prepayment")}
+                    </span>
                     <Badge variant={allowPrepayment ? "default" : "secondary"}>
-                      {allowPrepayment ? "Allowed" : "Not Allowed"}
+                      {allowPrepayment ? t("allowed") : t("notAllowed")}
                     </Badge>
                   </div>
                   {extraPayments.length > 0 && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Planned Extra Payments
+                        {t("plannedExtras")}
                       </span>
                       <span className="font-medium">
                         {extraPayments.length}
@@ -1384,10 +1398,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               </Card>
 
               <div>
-                <Label htmlFor="notes">Additional Notes</Label>
+                <Label htmlFor="notes">{t("notes")}</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Contract details, special terms, contact info..."
+                  placeholder={t("notesPlaceholder")}
                   rows={3}
                   className="mt-1.5"
                   value={notes}
@@ -1398,10 +1412,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               </div>
 
               <div>
-                <Label htmlFor="collateral">Collateral</Label>
+                <Label htmlFor="collateral">{t("collateral")}</Label>
                 <Input
                   id="collateral"
-                  placeholder="e.g., Primary Residence"
+                  placeholder={t("collateralPlaceholder")}
                   className="mt-1.5"
                   value={collateral}
                   onChange={(e) => setCollateral(e.target.value)}
@@ -1424,7 +1438,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
             }}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            {currentStep === 1 ? "Cancel" : "Back"}
+            {currentStep === 1 ? tActions("cancel") : tActions("back")}
           </Button>
 
           {currentStep < 5 ? (
@@ -1433,7 +1447,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               onClick={() => setCurrentStep(getNextStep())}
               disabled={!canProceed()}
             >
-              Next
+              {t("next")}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
@@ -1441,7 +1455,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               {isSubmitting && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Add Loan
+              {t("submit")}
             </Button>
           )}
         </div>

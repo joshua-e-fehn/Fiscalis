@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useUpdateLoan, LoanStatus } from "@/hooks/convex/loans";
 import {
@@ -38,12 +39,7 @@ interface EditLoanDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const STATUSES: { value: LoanStatus; label: string }[] = [
-  { value: "active", label: "Active" },
-  { value: "paid_off", label: "Paid Off" },
-  { value: "defaulted", label: "Defaulted" },
-  { value: "refinanced", label: "Refinanced" },
-];
+const STATUSES: LoanStatus[] = ["active", "paid_off", "defaulted", "refinanced"];
 
 export function EditLoanDialog({
   loan,
@@ -51,6 +47,9 @@ export function EditLoanDialog({
   open,
   onOpenChange,
 }: EditLoanDialogProps) {
+  const t = useTranslations("loans.edit");
+  const tLoans = useTranslations("loans");
+  const tActions = useTranslations("common.actions");
   const { updateLoan } = useUpdateLoan();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -139,16 +138,13 @@ export function EditLoanDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Loan</DialogTitle>
-          <DialogDescription>
-            Update your loan details. Some fields cannot be changed after
-            creation.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="edit-name">Loan Name</Label>
+            <Label htmlFor="edit-name">{t("name")}</Label>
             <Input
               id="edit-name"
               value={name}
@@ -158,7 +154,7 @@ export function EditLoanDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="edit-balance">Current Balance</Label>
+              <Label htmlFor="edit-balance">{t("currentBalance")}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                   {loan.currency}
@@ -176,7 +172,7 @@ export function EditLoanDialog({
             </div>
 
             <div>
-              <Label htmlFor="edit-rate">Interest Rate</Label>
+              <Label htmlFor="edit-rate">{t("interestRate")}</Label>
               <div className="relative">
                 <Input
                   id="edit-rate"
@@ -195,7 +191,7 @@ export function EditLoanDialog({
             </div>
 
             <div>
-              <Label htmlFor="edit-payment">Scheduled Payment</Label>
+              <Label htmlFor="edit-payment">{t("scheduledPayment")}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                   {loan.currency}
@@ -215,14 +211,13 @@ export function EditLoanDialog({
               </div>
               {paymentRederived && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Recalculated over the remaining periods for the new rate or
-                  balance
+                  {t("rederived")}
                 </p>
               )}
             </div>
 
             <div>
-              <Label htmlFor="edit-status">Status</Label>
+              <Label htmlFor="edit-status">{t("status")}</Label>
               <Select
                 value={status}
                 onValueChange={(v) => setStatus(v as LoanStatus)}
@@ -232,8 +227,8 @@ export function EditLoanDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {STATUSES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
+                    <SelectItem key={s} value={s}>
+                      {tLoans(`status.${s}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -249,7 +244,7 @@ export function EditLoanDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="edit-lender">Lender</Label>
+              <Label htmlFor="edit-lender">{t("lender")}</Label>
               <Input
                 id="edit-lender"
                 value={lender}
@@ -258,7 +253,7 @@ export function EditLoanDialog({
             </div>
 
             <div>
-              <Label htmlFor="edit-contract">Contract Number</Label>
+              <Label htmlFor="edit-contract">{t("contractNumber")}</Label>
               <Input
                 id="edit-contract"
                 value={contractNumber}
@@ -268,7 +263,7 @@ export function EditLoanDialog({
           </div>
 
           <div>
-            <Label htmlFor="edit-collateral">Collateral</Label>
+            <Label htmlFor="edit-collateral">{t("collateral")}</Label>
             <Input
               id="edit-collateral"
               value={collateral}
@@ -277,7 +272,7 @@ export function EditLoanDialog({
           </div>
 
           <div>
-            <Label htmlFor="edit-notes">Notes</Label>
+            <Label htmlFor="edit-notes">{t("notes")}</Label>
             <Textarea
               id="edit-notes"
               rows={3}
@@ -292,13 +287,13 @@ export function EditLoanDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Save Changes
+              {tActions("saveChanges")}
             </Button>
           </DialogFooter>
         </form>

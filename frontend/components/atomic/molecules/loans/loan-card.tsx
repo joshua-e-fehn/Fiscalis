@@ -1,5 +1,6 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import { Doc } from "@/convex/_generated/dataModel";
 import type { LoanKpis } from "@/../services/finance/loanScheduleService";
 import {
@@ -43,22 +44,6 @@ interface LoanCardProps {
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
-
-// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-const PERIOD_SUFFIX: Record<Loan["paymentFrequency"], string> = {
-  MONTHLY: "/mo",
-  QUARTERLY: "/qtr",
-  SEMI_ANNUAL: "/half-yr",
-  ANNUAL: "/yr",
-};
 
 function getLoanIcon(name: string) {
   const lowerName = name.toLowerCase();
@@ -130,21 +115,23 @@ function getLoanColor(name: string): string {
   return "bg-muted text-muted-foreground";
 }
 
+type CardT = ReturnType<typeof useTranslations<"loans.card">>;
+
 // Time to the projected payoff (from the schedule, not the original end date)
-function getRemainingTime(loan: Loan): string {
+function getRemainingTime(loan: Loan, t: CardT): string {
   const { nextPayment } = loan.kpis;
-  if (loan.status === "paid_off" || !nextPayment) return "Paid off";
-  if (nextPayment.overdue) return "Overdue";
+  if (loan.status === "paid_off" || !nextPayment) return t("paidOff");
+  if (nextPayment.overdue) return t("overdue");
 
   const months = loan.kpis.remainingMonths;
-  if (months <= 0) return "< 1m left";
-  if (months < 12) return `${months}m left`;
+  if (months <= 0) return t("lessThanMonthLeft");
+  if (months < 12) return t("monthsLeft", { months });
 
   const years = Math.floor(months / 12);
   const remainingMonths = months % 12;
 
-  if (remainingMonths === 0) return `${years}y left`;
-  return `${years}y ${remainingMonths}m left`;
+  if (remainingMonths === 0) return t("yearsLeft", { years });
+  return t("yearsMonthsLeft", { years, months: remainingMonths });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -152,6 +139,12 @@ function getRemainingTime(loan: Loan): string {
 // ═══════════════════════════════════════════════════════════════
 
 export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
+  const t = useTranslations("loans.card");
+  const tLoans = useTranslations("loans");
+  const format = useFormatter();
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "dateOnly");
   const { progress, nextPayment } = loan.kpis;
   const nextAmount = nextPayment?.amount ?? 0;
   const nextDate = nextPayment?.dueDate ?? loan.nextPaymentDate;
@@ -182,19 +175,19 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
 
             <div className="flex items-center gap-8">
               <div className="text-right hidden md:block">
-                <p className="text-sm text-muted-foreground">Balance</p>
+                <p className="text-sm text-muted-foreground">{t("balance")}</p>
                 <p className="font-semibold">
                   {formatCurrency(loan.currentBalance, loan.currency)}
                 </p>
               </div>
               <div className="text-right hidden lg:block">
-                <p className="text-sm text-muted-foreground">Payment</p>
+                <p className="text-sm text-muted-foreground">{t("payment")}</p>
                 <p className="font-semibold">
                   {formatCurrency(nextAmount, loan.currency)}
                 </p>
               </div>
               <div className="text-right hidden sm:block">
-                <p className="text-sm text-muted-foreground">Next Due</p>
+                <p className="text-sm text-muted-foreground">{t("nextDue")}</p>
                 <p className="font-semibold">
                   {formatDate(nextDate)}
                 </p>
@@ -203,7 +196,7 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span>{progress.toFixed(0)}%</span>
                   <span className="text-muted-foreground">
-                    {getRemainingTime(loan)}
+                    {getRemainingTime(loan, t)}
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -249,7 +242,9 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
             {formatCurrency(loan.currentBalance, loan.currency)}
           </p>
           <p className="text-sm text-muted-foreground">
-            of {formatCurrency(loan.originalPrincipal, loan.currency)} original
+            {t("ofOriginal", {
+              amount: formatCurrency(loan.originalPrincipal, loan.currency),
+            })}
           </p>
         </div>
 
@@ -263,7 +258,7 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
             <Calendar className="h-4 w-4" />
             <span>
               {formatCurrency(nextAmount, loan.currency)}
-              {PERIOD_SUFFIX[loan.paymentFrequency]}
+              {tLoans("periodSuffix", { frequency: loan.paymentFrequency })}
             </span>
           </div>
         </div>
@@ -271,9 +266,11 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
         {/* Progress Bar */}
         <div>
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="font-medium">{progress.toFixed(1)}% paid</span>
+            <span className="font-medium">
+              {t("percentPaid", { percent: progress.toFixed(1) })}
+            </span>
             <span className="text-muted-foreground">
-              {getRemainingTime(loan)}
+              {getRemainingTime(loan, t)}
             </span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -286,7 +283,9 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
 
         {/* Next Payment */}
         <div className="flex items-center justify-between pt-2 border-t">
-          <span className="text-sm text-muted-foreground">Next payment</span>
+          <span className="text-sm text-muted-foreground">
+            {t("nextPayment")}
+          </span>
           <Badge variant={nextPayment?.overdue ? "destructive" : "secondary"}>
             {formatDate(nextDate)}
           </Badge>

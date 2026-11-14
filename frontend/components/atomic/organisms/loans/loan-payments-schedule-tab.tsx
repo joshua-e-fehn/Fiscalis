@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { useUser } from "@clerk/nextjs";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import {
@@ -100,22 +101,12 @@ function formatCurrency(value: number, currency: string = "USD"): string {
   return formatMoney(value, currency);
 }
 
-// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-const PAYMENT_TYPES: { value: PaymentType; label: string }[] = [
-  { value: "scheduled", label: "Scheduled Payment" },
-  { value: "additional_principal", label: "Additional Principal" },
-  { value: "prepayment", label: "Prepayment" },
-  { value: "partial", label: "Partial Payment" },
-  { value: "late", label: "Late Payment" },
+const PAYMENT_TYPES: PaymentType[] = [
+  "scheduled",
+  "additional_principal",
+  "prepayment",
+  "partial",
+  "late",
 ];
 
 function groupByYear(
@@ -137,6 +128,12 @@ export function LoanPaymentsScheduleTab({
   payments,
   kpis,
 }: LoanPaymentsScheduleTabProps) {
+  const t = useTranslations("loans.schedule");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "dateOnly");
   const { user } = useUser();
   const { recordPayment } = useRecordPayment();
   const { deletePayment } = useDeletePayment();
@@ -250,33 +247,37 @@ export function LoanPaymentsScheduleTab({
   };
 
   const exportToCSV = () => {
-    const headers = [
-      "Period",
-      "Date",
-      "Due Date",
-      "Status",
-      "Type",
-      "Opening Balance",
-      "Payment",
-      "Principal",
-      "Interest",
-      "Closing Balance",
-      "Cumulative Interest",
-      "Cumulative Principal",
-    ];
+    const headers = (
+      [
+        "period",
+        "date",
+        "dueDate",
+        "status",
+        "type",
+        "openingBalance",
+        "payment",
+        "principal",
+        "interest",
+        "closingBalance",
+        "cumulativeInterest",
+        "cumulativePrincipal",
+      ] as const
+    ).map((column) => t(`csv.${column}`));
 
     const rows = fullSchedule.map((row) => [
       row.period,
       row.date,
       row.dueDate ?? "",
-      row.status === "paid"
-        ? "Paid"
-        : row.status === "extra"
-          ? "Extra Payment"
-          : row.overdue
-            ? "Overdue"
-            : "Scheduled",
-      row.paymentType || "scheduled",
+      t(
+        row.status === "paid"
+          ? "csv.paid"
+          : row.status === "extra"
+            ? "csv.extra"
+            : row.overdue
+              ? "csv.overdue"
+              : "csv.scheduled",
+      ),
+      t(`paymentTypes.${row.paymentType || "scheduled"}`),
       row.openingBalance.toFixed(2),
       row.payment.toFixed(2),
       row.principal.toFixed(2),
@@ -295,7 +296,7 @@ export function LoanPaymentsScheduleTab({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${loan.name.replace(/\s+/g, "_")}_amortization_schedule.csv`;
+    a.download = `${t("csv.fileName", { name: loan.name.replace(/\s+/g, "_") })}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -317,13 +318,15 @@ export function LoanPaymentsScheduleTab({
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-2">
               <Check className="h-4 w-4 text-green-500" />
-              <span className="text-sm text-muted-foreground">Total Paid</span>
+              <span className="text-sm text-muted-foreground">
+                {t("totalPaid")}
+              </span>
             </div>
             <p className="text-2xl font-bold">
               {formatCurrency(totalAmountPaid, loan.currency)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {payments.length} payments
+              {t("paymentsCount", { count: payments.length })}
             </p>
           </CardContent>
         </Card>
@@ -332,7 +335,7 @@ export function LoanPaymentsScheduleTab({
             <div className="flex items-center gap-2 mb-2">
               <TrendingDown className="h-4 w-4 text-green-500" />
               <span className="text-sm text-muted-foreground">
-                Principal Repaid
+                {t("principalRepaid")}
               </span>
             </div>
             <p className="text-2xl font-bold text-green-600">
@@ -345,7 +348,7 @@ export function LoanPaymentsScheduleTab({
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-4 w-4 text-orange-500" />
               <span className="text-sm text-muted-foreground">
-                Interest Paid
+                {t("interestPaid")}
               </span>
             </div>
             <p className="text-2xl font-bold text-orange-600">
@@ -357,13 +360,15 @@ export function LoanPaymentsScheduleTab({
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Remaining</span>
+              <span className="text-sm text-muted-foreground">
+                {t("remaining")}
+              </span>
             </div>
             <p className="text-2xl font-bold">
               {formatCurrency(totalScheduledPayments, loan.currency)}
             </p>
             <p className="text-xs text-muted-foreground">
-              {remainingPeriods} payments left
+              {t("paymentsLeft", { count: remainingPeriods })}
             </p>
           </CardContent>
         </Card>
@@ -376,17 +381,14 @@ export function LoanPaymentsScheduleTab({
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                Payment Schedule
+                {t("title")}
               </CardTitle>
-              <CardDescription>
-                Complete loan amortization with recorded payments and future
-                projections
-              </CardDescription>
+              <CardDescription>{t("description")}</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportToCSV}>
                 <Download className="h-4 w-4 mr-2" />
-                Export CSV
+                {t("exportCsv")}
               </Button>
               <Button
                 onClick={() => {
@@ -395,7 +397,7 @@ export function LoanPaymentsScheduleTab({
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Record Payment
+                {t("recordPayment")}
               </Button>
             </div>
           </div>
@@ -405,7 +407,7 @@ export function LoanPaymentsScheduleTab({
             <div className="text-center py-8">
               <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">
-                No schedule data available
+                {t("noData")}
               </p>
             </div>
           ) : (
@@ -477,27 +479,35 @@ export function LoanPaymentsScheduleTab({
                             {paidInYear.length > 0 && (
                               <Badge className="bg-green-100 text-green-700">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />
-                                {paidInYear.length} paid
+                                {t("yearPaidCount", {
+                                  count: paidInYear.length,
+                                })}
                               </Badge>
                             )}
                             {extraInYear.length > 0 && (
                               <Badge className="bg-blue-100 text-blue-700">
                                 <Plus className="h-3 w-3 mr-1" />
-                                {extraInYear.length} prepayment
+                                {t("yearPrepaymentCount", {
+                                  count: extraInYear.length,
+                                })}
                               </Badge>
                             )}
                             {overdueInYear.length > 0 && (
                               <Badge className="bg-red-100 text-red-700">
                                 <AlertCircle className="h-3 w-3 mr-1" />
-                                {overdueInYear.length} overdue
+                                {t("yearOverdueCount", {
+                                  count: overdueInYear.length,
+                                })}
                               </Badge>
                             )}
                             {scheduledInYear.length > overdueInYear.length && (
                               <Badge variant="secondary">
                                 <CircleDashed className="h-3 w-3 mr-1" />
-                                {scheduledInYear.length -
-                                  overdueInYear.length}{" "}
-                                scheduled
+                                {t("yearScheduledCount", {
+                                  count:
+                                    scheduledInYear.length -
+                                    overdueInYear.length,
+                                })}
                               </Badge>
                             )}
                           </div>
@@ -506,42 +516,57 @@ export function LoanPaymentsScheduleTab({
                           {(paidTotal > 0 || extraTotal > 0) && (
                             <div className="flex flex-col items-end text-green-600">
                               <span className="font-medium">
-                                Paid:{" "}
-                                {formatCurrency(
-                                  paidTotal + extraTotal,
-                                  loan.currency,
-                                )}
+                                {t("yearPaid", {
+                                  amount: formatCurrency(
+                                    paidTotal + extraTotal,
+                                    loan.currency,
+                                  ),
+                                })}
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                Principal:{" "}
-                                {formatCurrency(
-                                  paidPrincipal + extraPrincipal,
-                                  loan.currency,
-                                )}{" "}
-                                · Interest:{" "}
-                                {formatCurrency(paidInterest, loan.currency)}
-                                {extraTotal > 0 &&
-                                  ` · Extra: ${formatCurrency(extraTotal, loan.currency)}`}
+                                {t(
+                                  extraTotal > 0
+                                    ? "yearSplitWithExtra"
+                                    : "yearSplit",
+                                  {
+                                    principal: formatCurrency(
+                                      paidPrincipal + extraPrincipal,
+                                      loan.currency,
+                                    ),
+                                    interest: formatCurrency(
+                                      paidInterest,
+                                      loan.currency,
+                                    ),
+                                    extra: formatCurrency(
+                                      extraTotal,
+                                      loan.currency,
+                                    ),
+                                  },
+                                )}
                               </span>
                             </div>
                           )}
                           {scheduledTotal > 0 && (
                             <div className="flex flex-col items-end text-muted-foreground">
                               <span className="font-medium">
-                                Scheduled:{" "}
-                                {formatCurrency(scheduledTotal, loan.currency)}
+                                {t("yearScheduled", {
+                                  amount: formatCurrency(
+                                    scheduledTotal,
+                                    loan.currency,
+                                  ),
+                                })}
                               </span>
                               <span className="text-xs">
-                                Principal:{" "}
-                                {formatCurrency(
-                                  scheduledPrincipal,
-                                  loan.currency,
-                                )}{" "}
-                                · Interest:{" "}
-                                {formatCurrency(
-                                  scheduledInterest,
-                                  loan.currency,
-                                )}
+                                {t("yearSplit", {
+                                  principal: formatCurrency(
+                                    scheduledPrincipal,
+                                    loan.currency,
+                                  ),
+                                  interest: formatCurrency(
+                                    scheduledInterest,
+                                    loan.currency,
+                                  ),
+                                })}
                               </span>
                             </div>
                           )}
@@ -554,22 +579,22 @@ export function LoanPaymentsScheduleTab({
                           <TableHeader>
                             <TableRow>
                               <TableHead className="w-16">#</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Status</TableHead>
+                              <TableHead>{t("columns.date")}</TableHead>
+                              <TableHead>{t("columns.status")}</TableHead>
                               <TableHead className="text-right">
-                                Opening Balance
+                                {t("columns.openingBalance")}
                               </TableHead>
                               <TableHead className="text-right">
-                                Payment
+                                {t("columns.payment")}
                               </TableHead>
                               <TableHead className="text-right">
-                                Principal
+                                {t("columns.principal")}
                               </TableHead>
                               <TableHead className="text-right">
-                                Interest
+                                {t("columns.interest")}
                               </TableHead>
                               <TableHead className="text-right">
-                                Closing Balance
+                                {t("columns.closingBalance")}
                               </TableHead>
                               <TableHead className="w-12"></TableHead>
                             </TableRow>
@@ -591,7 +616,9 @@ export function LoanPaymentsScheduleTab({
                                   {formatDate(row.date)}
                                   {row.dueDate && row.dueDate !== row.date && (
                                     <span className="block text-xs text-muted-foreground">
-                                      Due {formatDate(row.dueDate)}
+                                      {t("dueOn", {
+                                        date: formatDate(row.dueDate),
+                                      })}
                                     </span>
                                   )}
                                 </TableCell>
@@ -599,22 +626,22 @@ export function LoanPaymentsScheduleTab({
                                   {row.overdue ? (
                                     <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
                                       <AlertCircle className="h-3 w-3 mr-1" />
-                                      Overdue
+                                      {t("rowStatus.overdue")}
                                     </Badge>
                                   ) : row.status === "paid" ? (
                                     <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
                                       <CheckCircle2 className="h-3 w-3 mr-1" />
-                                      Paid
+                                      {t("rowStatus.paid")}
                                     </Badge>
                                   ) : row.status === "extra" ? (
                                     <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
                                       <Plus className="h-3 w-3 mr-1" />
-                                      Prepayment
+                                      {t("rowStatus.prepayment")}
                                     </Badge>
                                   ) : (
                                     <Badge variant="secondary">
                                       <CircleDashed className="h-3 w-3 mr-1" />
-                                      Scheduled
+                                      {t("rowStatus.scheduled")}
                                     </Badge>
                                   )}
                                 </TableCell>
@@ -662,18 +689,15 @@ export function LoanPaymentsScheduleTab({
                                         <AlertDialogContent>
                                           <AlertDialogHeader>
                                             <AlertDialogTitle>
-                                              Delete Payment
+                                              {t("deleteTitle")}
                                             </AlertDialogTitle>
                                             <AlertDialogDescription>
-                                              Are you sure you want to delete
-                                              this payment? This will restore
-                                              the loan balance and cannot be
-                                              undone.
+                                              {t("deleteDescription")}
                                             </AlertDialogDescription>
                                           </AlertDialogHeader>
                                           <AlertDialogFooter>
                                             <AlertDialogCancel>
-                                              Cancel
+                                              {tActions("cancel")}
                                             </AlertDialogCancel>
                                             <AlertDialogAction
                                               onClick={() =>
@@ -681,7 +705,7 @@ export function LoanPaymentsScheduleTab({
                                               }
                                               className="bg-red-600 hover:bg-red-700"
                                             >
-                                              Delete
+                                              {tActions("delete")}
                                             </AlertDialogAction>
                                           </AlertDialogFooter>
                                         </AlertDialogContent>
@@ -706,16 +730,16 @@ export function LoanPaymentsScheduleTab({
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Record Payment</DialogTitle>
+            <DialogTitle>{t("recordPayment")}</DialogTitle>
             <DialogDescription>
-              Record a payment for {loan.name}
+              {t("recordDescription", { loan: loan.name })}
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="payment-date">Payment Date</Label>
+                <Label htmlFor="payment-date">{t("paymentDate")}</Label>
                 <Input
                   id="payment-date"
                   type="date"
@@ -726,7 +750,7 @@ export function LoanPaymentsScheduleTab({
               </div>
 
               <div>
-                <Label htmlFor="payment-type">Payment Type</Label>
+                <Label htmlFor="payment-type">{t("paymentType")}</Label>
                 <Select
                   value={paymentType}
                   onValueChange={(v) => setPaymentType(v as PaymentType)}
@@ -736,8 +760,8 @@ export function LoanPaymentsScheduleTab({
                   </SelectTrigger>
                   <SelectContent>
                     {PAYMENT_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
+                      <SelectItem key={type} value={type}>
+                        {t(`paymentTypes.${type}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -747,12 +771,12 @@ export function LoanPaymentsScheduleTab({
 
             {nextDueDate && !isExtraPaymentType(paymentType) && (
               <p className="text-sm text-muted-foreground">
-                Covers the payment due {formatDate(nextDueDate)}.
+                {t("covers", { date: formatDate(nextDueDate) })}
               </p>
             )}
 
             <div>
-              <Label htmlFor="payment-amount">Total Amount</Label>
+              <Label htmlFor="payment-amount">{t("totalAmount")}</Label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -773,14 +797,16 @@ export function LoanPaymentsScheduleTab({
                   variant="outline"
                   onClick={calculateSplit}
                 >
-                  Calculate Split
+                  {t("calculateSplit")}
                 </Button>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="principal-portion">Principal Portion</Label>
+                <Label htmlFor="principal-portion">
+                  {t("principalPortion")}
+                </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     $
@@ -791,7 +817,7 @@ export function LoanPaymentsScheduleTab({
                     step="0.01"
                     min="0"
                     className="pl-7"
-                    placeholder="Auto"
+                    placeholder={t("auto")}
                     value={principalPortion}
                     onChange={(e) => setPrincipalPortion(e.target.value)}
                   />
@@ -799,7 +825,9 @@ export function LoanPaymentsScheduleTab({
               </div>
 
               <div>
-                <Label htmlFor="interest-portion">Interest Portion</Label>
+                <Label htmlFor="interest-portion">
+                  {t("interestPortion")}
+                </Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                     $
@@ -810,7 +838,7 @@ export function LoanPaymentsScheduleTab({
                     step="0.01"
                     min="0"
                     className="pl-7"
-                    placeholder="Auto"
+                    placeholder={t("auto")}
                     value={interestPortion}
                     onChange={(e) => setInterestPortion(e.target.value)}
                   />
@@ -819,10 +847,10 @@ export function LoanPaymentsScheduleTab({
             </div>
 
             <div>
-              <Label htmlFor="payment-notes">Notes (optional)</Label>
+              <Label htmlFor="payment-notes">{t("notes")}</Label>
               <Textarea
                 id="payment-notes"
-                placeholder="Any notes about this payment..."
+                placeholder={t("notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -834,7 +862,7 @@ export function LoanPaymentsScheduleTab({
                 variant="outline"
                 onClick={() => setShowAddDialog(false)}
               >
-                Cancel
+                {tActions("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -843,7 +871,7 @@ export function LoanPaymentsScheduleTab({
                 {isSubmitting && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
-                Record Payment
+                {t("recordPayment")}
               </Button>
             </DialogFooter>
           </form>

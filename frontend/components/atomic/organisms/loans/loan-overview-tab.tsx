@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Doc } from "@/convex/_generated/dataModel";
 import {
   buildLoanSchedule,
@@ -47,64 +48,46 @@ function formatCurrency(value: number, currency: string = "USD"): string {
   return formatMoney(value, currency, { fractionDigits: 0 });
 }
 
-// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
 }
 
-// Chart config
-const balanceChartConfig: ChartConfig = {
-  balance: {
-    label: "Actual Balance",
-    color: "hsl(221, 83%, 53%)",
-  },
-  scheduledBalance: {
-    label: "Projected Balance",
-    color: "hsl(221, 83%, 53%)",
-  },
-  principal: {
-    label: "Principal Paid",
-    color: "hsl(142, 76%, 36%)",
-  },
-  interest: {
-    label: "Interest Paid",
-    color: "hsl(24, 95%, 53%)",
-  },
-};
-
-const paymentChartConfig: ChartConfig = {
-  principal: {
-    label: "Principal",
-    color: "hsl(142, 76%, 36%)",
-  },
-  interest: {
-    label: "Interest",
-    color: "hsl(24, 95%, 53%)",
-  },
-  scheduledPrincipal: {
-    label: "Scheduled Principal",
-    color: "hsl(142, 76%, 36%)",
-  },
-  scheduledInterest: {
-    label: "Scheduled Interest",
-    color: "hsl(24, 95%, 53%)",
-  },
-};
+type Series = "balance" | "scheduledBalance" | "principal" | "interest" | "scheduledPrincipal" | "scheduledInterest";
 
 export function LoanOverviewTab({
   loan,
   payments,
   kpis,
 }: LoanOverviewTabProps) {
+  const t = useTranslations("loans.overview");
+  const format = useFormatter();
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "dateOnly");
+  const formatAxisMonth = (date: string) =>
+    format.dateTime(new Date(date), "axisMonth", { timeZone: "UTC" });
+  const seriesLabel = (name: unknown) => t(`series.${name as Series}`);
+
+  const balanceChartConfig: ChartConfig = {
+    balance: { label: t("series.balance"), color: "hsl(221, 83%, 53%)" },
+    scheduledBalance: {
+      label: t("series.scheduledBalance"),
+      color: "hsl(221, 83%, 53%)",
+    },
+  };
+  const paymentChartConfig: ChartConfig = {
+    principal: { label: t("series.principal"), color: "hsl(142, 76%, 36%)" },
+    interest: { label: t("series.interest"), color: "hsl(24, 95%, 53%)" },
+    scheduledPrincipal: {
+      label: t("series.scheduledPrincipal"),
+      color: "hsl(142, 76%, 36%)",
+    },
+    scheduledInterest: {
+      label: t("series.scheduledInterest"),
+      color: "hsl(24, 95%, 53%)",
+    },
+  };
+
   const { progress, principalRepaid, interestPaid } = kpis;
   // Same schedule as the Payments & Schedule tab, so both views agree
   const schedule = useMemo(
@@ -217,9 +200,7 @@ export function LoanOverviewTab({
       const isPast = month <= today;
 
       return {
-        month: new Date(month + "-01").toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
+        month: format.dateTime(new Date(month + "-01"), "axisMonth", {
           timeZone: "UTC",
         }),
         // Past payments (solid colors)
@@ -231,7 +212,7 @@ export function LoanOverviewTab({
         isScheduled: !isPast,
       };
     });
-  }, [payments, schedule]);
+  }, [payments, schedule, format]);
 
   // Estimated total interest: interest paid so far plus projected interest
   const estimatedTotalInterest = kpis.totalInterest;
@@ -243,10 +224,12 @@ export function LoanOverviewTab({
         {/* Progress Circle */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle className="text-lg">Payoff Progress</CardTitle>
+            <CardTitle className="text-lg">{t("payoffProgress")}</CardTitle>
             <CardDescription>
-              {formatCurrency(principalRepaid, loan.currency)} repaid of{" "}
-              {formatCurrency(loan.originalPrincipal, loan.currency)}
+              {t("repaidOf", {
+                repaid: formatCurrency(principalRepaid, loan.currency),
+                original: formatCurrency(loan.originalPrincipal, loan.currency),
+              })}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center">
@@ -279,14 +262,18 @@ export function LoanOverviewTab({
                 <span className="text-4xl font-bold">
                   {progress.toFixed(1)}%
                 </span>
-                <span className="text-sm text-muted-foreground">Complete</span>
+                <span className="text-sm text-muted-foreground">
+                  {t("complete")}
+                </span>
               </div>
             </div>
             <div className="mt-4 text-center">
               <p className="text-2xl font-bold text-green-600">
                 {formatCurrency(loan.currentBalance, loan.currency)}
               </p>
-              <p className="text-sm text-muted-foreground">Remaining balance</p>
+              <p className="text-sm text-muted-foreground">
+                {t("remainingBalance")}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -294,37 +281,37 @@ export function LoanOverviewTab({
         {/* Key Metrics */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-lg">Loan Summary</CardTitle>
+            <CardTitle className="text-lg">{t("summary")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Original Amount</p>
+                <p className="text-sm text-muted-foreground">{t("originalAmount")}</p>
                 <p className="text-xl font-semibold">
                   {formatCurrency(loan.originalPrincipal, loan.currency)}
                 </p>
               </div>
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Interest Rate</p>
+                <p className="text-sm text-muted-foreground">{t("interestRate")}</p>
                 <p className="text-xl font-semibold">
                   {formatPercent(loan.annualInterestRate)}
                 </p>
               </div>
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Principal Paid</p>
+                <p className="text-sm text-muted-foreground">{t("principalPaid")}</p>
                 <p className="text-xl font-semibold text-green-600">
                   {formatCurrency(principalRepaid, loan.currency)}
                 </p>
               </div>
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Interest Paid</p>
+                <p className="text-sm text-muted-foreground">{t("interestPaid")}</p>
                 <p className="text-xl font-semibold text-orange-600">
                   {formatCurrency(interestPaid, loan.currency)}
                 </p>
               </div>
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground">
-                  Est. Total Interest
+                  {t("estimatedTotalInterest")}
                 </p>
                 <p className="text-xl font-semibold">
                   {formatCurrency(estimatedTotalInterest, loan.currency)}
@@ -332,7 +319,7 @@ export function LoanOverviewTab({
               </div>
               <div className="space-y-1 p-3 rounded-lg bg-muted/50">
                 <p className="text-sm text-muted-foreground">
-                  Total Payments Made
+                  {t("paymentsMade")}
                 </p>
                 <p className="text-xl font-semibold">{payments.length}</p>
               </div>
@@ -346,10 +333,8 @@ export function LoanOverviewTab({
         {/* Payment Breakdown Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Payment Breakdown</CardTitle>
-            <CardDescription>
-              Principal vs interest (scheduled payments shown lighter)
-            </CardDescription>
+            <CardTitle className="text-lg">{t("breakdownTitle")}</CardTitle>
+            <CardDescription>{t("breakdownDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             {paymentHistory.length > 0 ? (
@@ -370,20 +355,10 @@ export function LoanOverviewTab({
                   <ChartTooltip
                     content={
                       <ChartTooltipContent
-                        formatter={(value, name) => {
-                          const label =
-                            name === "principal"
-                              ? "Principal"
-                              : name === "interest"
-                                ? "Interest"
-                                : name === "scheduledPrincipal"
-                                  ? "Scheduled Principal"
-                                  : "Scheduled Interest";
-                          return [
-                            formatCurrency(value as number, loan.currency),
-                            label,
-                          ];
-                        }}
+                        formatter={(value, name) => [
+                          formatCurrency(value as number, loan.currency),
+                          seriesLabel(name),
+                        ]}
                       />
                     }
                   />
@@ -423,7 +398,7 @@ export function LoanOverviewTab({
               </ChartContainer>
             ) : (
               <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                No payment data available
+                {t("noPaymentData")}
               </div>
             )}
           </CardContent>
@@ -432,10 +407,8 @@ export function LoanOverviewTab({
         {/* Balance Over Time Chart */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Balance Over Time</CardTitle>
-            <CardDescription>
-              Actual balance and projected payoff schedule
-            </CardDescription>
+            <CardTitle className="text-lg">{t("balanceTitle")}</CardTitle>
+            <CardDescription>{t("balanceDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -484,13 +457,7 @@ export function LoanOverviewTab({
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tickFormatter={(value) =>
-                    new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      year: "2-digit",
-                      timeZone: "UTC",
-                    })
-                  }
+                  tickFormatter={(value) => formatAxisMonth(value)}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -506,13 +473,9 @@ export function LoanOverviewTab({
                     <ChartTooltipContent
                       formatter={(value, name) => {
                         if (value === null) return null;
-                        const label =
-                          name === "balance"
-                            ? "Actual Balance"
-                            : "Projected Balance";
                         return [
                           formatCurrency(value as number, loan.currency),
-                          label,
+                          seriesLabel(name),
                         ];
                       }}
                     />
@@ -547,21 +510,21 @@ export function LoanOverviewTab({
       {/* Important Dates */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Important Dates</CardTitle>
+          <CardTitle className="text-lg">{t("importantDates")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Loan Start Date</p>
+                <p className="text-sm text-muted-foreground">{t("startDate")}</p>
                 <p className="font-semibold">{formatDate(loan.startDate)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Next Payment</p>
+                <p className="text-sm text-muted-foreground">{t("nextPayment")}</p>
                 <p className="font-semibold">
                   {nextPaymentDate ? formatDate(nextPaymentDate) : "—"}
                 </p>
@@ -570,7 +533,9 @@ export function LoanOverviewTab({
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
               <Target className="h-5 w-5 text-muted-foreground" />
               <div>
-                <p className="text-sm text-muted-foreground">Expected Payoff</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("expectedPayoff")}
+                </p>
                 <p className="font-semibold">
                   {formatDate(loan.expectedEndDate)}
                 </p>

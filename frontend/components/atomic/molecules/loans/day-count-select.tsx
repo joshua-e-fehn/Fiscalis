@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   DAY_COUNT_CONVENTIONS,
   type DayCountConvention,
@@ -17,12 +18,13 @@ import { Label } from "@/components/ui/shadcn/label";
 // convention (rate / payments per year, the engine's default)
 const FLAT = "flat";
 
-const LABELS: Record<DayCountConvention, string> = {
-  "30/360": "30/360 (30-day months)",
-  "ACT/360": "ACT/360 (actual days / 360)",
-  "ACT/365": "ACT/365 (actual days / 365)",
-  "ACT/ACT": "ACT/ACT (actual days / actual year)",
-};
+// The message key of each convention's label (loans.dayCount.*)
+const LABEL_KEYS = {
+  "30/360": "thirty360",
+  "ACT/360": "act360",
+  "ACT/365": "act365",
+  "ACT/ACT": "actAct",
+} as const satisfies Record<DayCountConvention, string>;
 
 interface DayCountSelectProps {
   id: string;
@@ -32,9 +34,10 @@ interface DayCountSelectProps {
 
 /** The loan's interest day-count convention; unset is flat periods. */
 export function DayCountSelect({ id, value, onChange }: DayCountSelectProps) {
+  const t = useTranslations("loans.dayCount");
   return (
     <div>
-      <Label htmlFor={id}>Interest day count</Label>
+      <Label htmlFor={id}>{t("label")}</Label>
       <Select
         value={value ?? FLAT}
         onValueChange={(v) =>
@@ -45,10 +48,10 @@ export function DayCountSelect({ id, value, onChange }: DayCountSelectProps) {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={FLAT}>Equal periods (default)</SelectItem>
+          <SelectItem value={FLAT}>{t("flat")}</SelectItem>
           {DAY_COUNT_CONVENTIONS.map((convention) => (
             <SelectItem key={convention} value={convention}>
-              {LABELS[convention]}
+              {t(LABEL_KEYS[convention])}
             </SelectItem>
           ))}
         </SelectContent>

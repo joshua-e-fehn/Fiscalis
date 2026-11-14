@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   useLoanWithPayments,
   useLoanScenarios,
@@ -74,48 +75,8 @@ function formatCurrencyPrecise(
   return formatMoney(value, currency);
 }
 
-// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
 function formatPercent(value: number): string {
   return `${(value * 100).toFixed(2)}%`;
-}
-
-function getLoanTypeLabel(type: string): string {
-  switch (type) {
-    case "ANNUITY":
-      return "Fixed Payment";
-    case "CONSTANT_PRINCIPAL":
-      return "Declining Payment";
-    case "BULLET":
-      return "Balloon/Bullet";
-    case "INTEREST_ONLY_THEN":
-      return "Interest-Only";
-    default:
-      return type;
-  }
-}
-
-function getPaymentFrequencyLabel(frequency: string): string {
-  switch (frequency) {
-    case "MONTHLY":
-      return "Monthly";
-    case "QUARTERLY":
-      return "Quarterly";
-    case "SEMI_ANNUAL":
-      return "Semi-Annual";
-    case "ANNUAL":
-      return "Annual";
-    default:
-      return frequency;
-  }
 }
 
 function getStatusColor(status: string): string {
@@ -140,6 +101,13 @@ function getStatusColor(status: string): string {
 export default function LoanDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const t = useTranslations("loans.detail");
+  const tLoans = useTranslations("loans");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "dateOnly");
   const loanId = params.loanId as Id<"loans">;
 
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -176,14 +144,13 @@ export default function LoanDetailPage() {
     return (
       <div className="container mx-auto py-8 px-4 max-w-7xl">
         <Card className="p-12 text-center">
-          <h2 className="text-xl font-semibold mb-2">Loan not found</h2>
+          <h2 className="text-xl font-semibold mb-2">{t("notFoundTitle")}</h2>
           <p className="text-muted-foreground mb-4">
-            The loan you&apos;re looking for doesn&apos;t exist or has been
-            deleted.
+            {t("notFoundDescription")}
           </p>
           <Button onClick={() => router.push("/liabilities/loans")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Loans
+            {t("back")}
           </Button>
         </Card>
       </div>
@@ -201,7 +168,7 @@ export default function LoanDetailPage() {
           className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Loans
+          {t("back")}
         </Button>
 
         <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
@@ -209,7 +176,7 @@ export default function LoanDetailPage() {
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold">{loan.name}</h1>
               <Badge className={getStatusColor(loan.status)}>
-                {loan.status.replace("_", " ")}
+                {tLoans(`status.${loan.status}`)}
               </Badge>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -227,7 +194,7 @@ export default function LoanDetailPage() {
               )}
               <span className="flex items-center gap-1">
                 <CreditCard className="h-4 w-4" />
-                {getLoanTypeLabel(loan.loanType)}
+                {tLoans(`loanTypes.${loan.loanType}.label`)}
               </span>
             </div>
           </div>
@@ -235,7 +202,7 @@ export default function LoanDetailPage() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowEditDialog(true)}>
               <Edit className="h-4 w-4 mr-2" />
-              Edit
+              {tActions("edit")}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -244,25 +211,23 @@ export default function LoanDetailPage() {
                   className="text-red-600 hover:text-red-700"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
+                  {tActions("delete")}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Loan</AlertDialogTitle>
+                  <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to delete this loan? This will also
-                    delete all payment history and scenarios. This action cannot
-                    be undone.
+                    {t("deleteDescription")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{tActions("cancel")}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
                     className="bg-red-600 hover:bg-red-700"
                   >
-                    Delete
+                    {tActions("delete")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -278,7 +243,7 @@ export default function LoanDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">
-                  Current Balance
+                  {t("currentBalance")}
                 </p>
                 <p className="text-xl font-bold">
                   {formatCurrency(loan.currentBalance, loan.currency)}
@@ -293,7 +258,7 @@ export default function LoanDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">
-                  Interest Rate
+                  {t("interestRate")}
                 </p>
                 <p className="text-xl font-bold">
                   {formatPercent(loan.annualInterestRate)}
@@ -308,7 +273,7 @@ export default function LoanDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">
-                  Next {getPaymentFrequencyLabel(loan.paymentFrequency)} Payment
+                  {t("nextPayment", { frequency: loan.paymentFrequency })}
                 </p>
                 <p className="text-xl font-bold">
                   {kpis.nextPayment
@@ -322,8 +287,9 @@ export default function LoanDetailPage() {
                   <p
                     className={`text-xs ${kpis.nextPayment.overdue ? "text-red-600" : "text-muted-foreground"}`}
                   >
-                    {kpis.nextPayment.overdue ? "Overdue since " : "Due "}
-                    {formatDate(kpis.nextPayment.dueDate)}
+                    {t(kpis.nextPayment.overdue ? "overdueSince" : "due", {
+                      date: formatDate(kpis.nextPayment.dueDate),
+                    })}
                   </p>
                 )}
               </div>
@@ -336,16 +302,19 @@ export default function LoanDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">
-                  Time Remaining
+                  {t("timeRemaining")}
                 </p>
                 <p className="text-xl font-bold">
                   {kpis.nextPayment
-                    ? `${Math.floor(kpis.remainingMonths / 12)}y ${kpis.remainingMonths % 12}m`
-                    : "Paid off"}
+                    ? tLoans("duration", {
+                        years: Math.floor(kpis.remainingMonths / 12),
+                        months: kpis.remainingMonths % 12,
+                      })
+                    : t("paidOff")}
                 </p>
                 {kpis.projectedPayoffDate && kpis.nextPayment && (
                   <p className="text-xs text-muted-foreground">
-                    Payoff {formatDate(kpis.projectedPayoffDate)}
+                    {t("payoff", { date: formatDate(kpis.projectedPayoffDate) })}
                   </p>
                 )}
               </div>
@@ -363,33 +332,28 @@ export default function LoanDetailPage() {
             {kpis.paymentBelowInterest && (
               <p className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                The payment does not cover the interest: the balance stops
-                falling and is due in full at the end of the term. Edit the
-                loan to update the payment.
+                {t("paymentBelowInterest")}
               </p>
             )}
             {!kpis.paymentBelowInterest && kpis.finalBalloon > 0 && (
               <p className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                The payment is too small to repay the loan within its term:
-                a final payment of{" "}
-                {formatCurrencyPrecise(kpis.finalBalloon, loan.currency)} is
-                left at the end. Edit the loan to update the payment.
+                {t("finalBalloon", {
+                  amount: formatCurrencyPrecise(kpis.finalBalloon, loan.currency),
+                })}
               </p>
             )}
             {kpis.paymentBelowInterest && kpis.finalBalloon > 0 && (
               <p className="pl-6">
-                Final payment due:{" "}
-                {formatCurrencyPrecise(kpis.finalBalloon, loan.currency)}.
+                {t("finalPaymentDue", {
+                  amount: formatCurrencyPrecise(kpis.finalBalloon, loan.currency),
+                })}
               </p>
             )}
             {kpis.historyInconsistent && (
               <p className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                The current balance plus the principal recorded as repaid is
-                more than the original principal, so the payment history
-                doesn&apos;t add up. Check the balance and the recorded
-                payments.
+                {t("historyInconsistent")}
               </p>
             )}
           </CardContent>
@@ -405,19 +369,19 @@ export default function LoanDetailPage() {
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview" className="gap-2">
             <TrendingDown className="h-4 w-4 hidden sm:block" />
-            Overview
+            {t("tabs.overview")}
           </TabsTrigger>
           <TabsTrigger value="payments" className="gap-2">
             <History className="h-4 w-4 hidden sm:block" />
-            Payments & Schedule
+            {t("tabs.payments")}
           </TabsTrigger>
           <TabsTrigger value="scenarios" className="gap-2">
             <Lightbulb className="h-4 w-4 hidden sm:block" />
-            What-If
+            {t("tabs.scenarios")}
           </TabsTrigger>
           <TabsTrigger value="notes" className="gap-2">
             <StickyNote className="h-4 w-4 hidden sm:block" />
-            Notes
+            {t("tabs.notes")}
           </TabsTrigger>
         </TabsList>
 

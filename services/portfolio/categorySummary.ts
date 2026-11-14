@@ -311,6 +311,70 @@ export function bankAccountValue(account: {
   return account.valueInBaseCurrency ?? 0;
 }
 
+/** The stored fields of a bank (Plaid) account bankAccountTotals reads. */
+export interface BankAccountTotalsLike {
+  type: string;
+  subtype?: string;
+  currentBalance?: number;
+  valueInBaseCurrency?: number;
+  investmentCategory?: string;
+}
+
+/** EUR totals over bank accounts for the Bank Accounts page. */
+export interface BankAccountTotals {
+  /** What the accounts are worth together: balances minus amounts owed */
+  net: number;
+  checking: number;
+  savings: number;
+  /** Owed on credit cards (Plaid: positive = owed, negative = a credit balance) */
+  creditOwed: number;
+  counts: { all: number; checking: number; savings: number; credit: number };
+  /** Accounts with a balance that has no EUR rate; they count as 0 */
+  unconverted: number;
+}
+
+/**
+ * EUR totals over bank accounts, from each account's stored base value
+ * (bankAccountValue), never adding balances in different currencies 1:1.
+ * An account classified as a liability (a credit card, a loan) reports the
+ * amount owed, so it is subtracted from the net, as in the net-worth
+ * aggregator (aggregate.ts placeHolding).
+ */
+export function bankAccountTotals(
+  accounts: readonly BankAccountTotalsLike[],
+): BankAccountTotals {
+  const totals: BankAccountTotals = {
+    net: 0,
+    checking: 0,
+    savings: 0,
+    creditOwed: 0,
+    counts: { all: accounts.length, checking: 0, savings: 0, credit: 0 },
+    unconverted: 0,
+  };
+  for (const account of accounts) {
+    const value = bankAccountValue(account);
+    if (
+      account.valueInBaseCurrency === undefined &&
+      account.currentBalance !== undefined
+    ) {
+      totals.unconverted += 1;
+    }
+    const owed = account.investmentCategory === "liabilities";
+    totals.net += owed ? -value : value;
+    if (account.type === "credit") {
+      totals.creditOwed += value;
+      totals.counts.credit += 1;
+    } else if (account.subtype === "checking") {
+      totals.checking += value;
+      totals.counts.checking += 1;
+    } else if (account.subtype === "savings") {
+      totals.savings += value;
+      totals.counts.savings += 1;
+    }
+  }
+  return totals;
+}
+
 /** The stored cash fields of a broker account the readers use. */
 export interface BrokerAccountCashLike {
   cash?: number;

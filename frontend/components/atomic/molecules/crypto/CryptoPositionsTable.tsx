@@ -28,7 +28,6 @@ import { Input } from "@/components/ui/shadcn/input";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Button } from "@/components/ui/shadcn/button";
 import { positionPriceIssue, useCryptoPositions } from "@/hooks/convex/crypto";
-import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/date";
@@ -43,13 +42,6 @@ function formatNumber(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
   });
-}
-
-function posValue(p: {
-  valueInBaseCurrency?: number;
-  marketValue?: number;
-}): number {
-  return p.valueInBaseCurrency ?? p.marketValue ?? 0;
 }
 
 interface CryptoPositionsTableProps {
@@ -95,7 +87,6 @@ export function CryptoPositionsTable({
   // Position values come from the crypto data hook in the display
   // currency (converted there, never here)
   const loadedPositions = useCryptoPositions();
-  const { currency } = useDisplayCurrency();
   const isLoading = loadedPositions === undefined;
   const positions = useMemo(() => loadedPositions ?? [], [loadedPositions]);
   const [search, setSearch] = useState("");
@@ -126,8 +117,8 @@ export function CryptoPositionsTable({
             : b.quantity - a.quantity;
         case "value":
           return sortDirection === "asc"
-            ? posValue(a) - posValue(b)
-            : posValue(b) - posValue(a);
+            ? a.displayValue - b.displayValue
+            : b.displayValue - a.displayValue;
         default:
           return 0;
       }
@@ -252,7 +243,7 @@ export function CryptoPositionsTable({
                           <span className="font-medium">
                             {priceIssue?.status === "missing"
                               ? "—"
-                              : formatCurrency(posValue(position), currency)}
+                              : formatCurrency(position.displayValue, position.currency)}
                           </span>
                           {priceIssue?.status === "missing" && (
                             <Badge variant="outline" className="text-xs">

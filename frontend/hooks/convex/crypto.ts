@@ -155,7 +155,7 @@ const BUCKETS: { id: CryptoBucket; base: SubcategoryData }[] = [
     id: "btc-eth",
     base: {
       ...makeSubcategoryBase("btc-eth", cryptoSubcategoryUI.bitcoin),
-      name: btcEthGroup.title,
+      label: btcEthGroup.label,
       href: btcEthGroup.href,
       icon: createElement(btcEthGroup.icon, { className: "h-4 w-4" }),
       color: btcEthGroup.color,

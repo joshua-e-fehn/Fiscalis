@@ -52,6 +52,12 @@ import { cn } from "@/lib/utils";
 import { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency } from "@/lib/utils/currency";
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
+import {
+  isInvestmentCategory,
+  subcategoryLabel,
+  useCategoryLabels,
+} from "@/lib/config/categoryUI";
 import type { FinancialProvider } from "@/lib/types/portfolio";
 
 interface UnifiedPositionsTableProps {
@@ -119,12 +125,13 @@ const providerColors: Record<FinancialProvider, string> = {
   manual: "bg-purple-500/10 text-purple-600 border-purple-500/20",
 };
 
-const providerLabels: Record<FinancialProvider, string> = {
-  plaid: "Banking",
-  snaptrade: "Broker",
-  bitpanda: "Bitpanda",
-  manual: "Manual",
-};
+/** The providers, in filter order */
+const PROVIDERS = Object.keys(providerIcons) as FinancialProvider[];
+
+/** Whether a stored provider is still known (legacy data may not be) */
+function isProvider(value: string): value is FinancialProvider {
+  return Object.hasOwn(providerIcons, value);
+}
 
 const providerRoutes: Record<FinancialProvider, string> = {
   plaid: "/integrations/banking",
@@ -177,6 +184,16 @@ export function UnifiedPositionsTable({
   const [providerFilter, setProviderFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAll, setShowAll] = useState(false);
+  const t = useTranslations("dashboard.positions");
+  const labels = useCategoryLabels();
+
+  /** A stored subcategory slug's name; an unknown slug as stored */
+  const subcategoryName = (category: string, slug: string) => {
+    const label = isInvestmentCategory(category)
+      ? subcategoryLabel(category, slug)
+      : null;
+    return label ? labels.name(label) : slug;
+  };
 
   // Valued on the server (vault metals at spot included), with the
   // classified category and P/L (convex/portfolio.ts)
@@ -266,12 +283,10 @@ export function UnifiedPositionsTable({
       <Card className={className}>
         <CardHeader className={cn(compact && "pb-2")}>
           <CardTitle className={cn("text-lg", compact && "text-base")}>
-            All Positions
+            {t("title")}
           </CardTitle>
           {!compact && (
-            <CardDescription>
-              Unified view across all financial providers
-            </CardDescription>
+            <CardDescription>{t("description")}</CardDescription>
           )}
         </CardHeader>
         <CardContent>
@@ -290,21 +305,17 @@ export function UnifiedPositionsTable({
       <Card className={className}>
         <CardHeader className={cn(compact && "pb-2")}>
           <CardTitle className={cn("text-lg", compact && "text-base")}>
-            All Positions
+            {t("title")}
           </CardTitle>
           {!compact && (
-            <CardDescription>
-              Unified view across all financial providers
-            </CardDescription>
+            <CardDescription>{t("description")}</CardDescription>
           )}
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <Filter className="h-12 w-12 mb-2 opacity-50" />
-            <p>No positions found</p>
-            <p className="text-sm">
-              Connect your accounts to see your holdings
-            </p>
+            <p>{t("empty")}</p>
+            <p className="text-sm">{t("emptyHint")}</p>
           </div>
         </CardContent>
       </Card>
@@ -317,11 +328,14 @@ export function UnifiedPositionsTable({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className={cn("text-lg", compact && "text-base")}>
-              All Positions
+              {t("title")}
             </CardTitle>
             {!compact && (
               <CardDescription>
-                {filteredPositions.length} of {positions.length} positions
+                {t("shownOfTotal", {
+                  shown: filteredPositions.length,
+                  total: positions.length,
+                })}
               </CardDescription>
             )}
           </div>
@@ -331,7 +345,7 @@ export function UnifiedPositionsTable({
               variant="outline"
               onClick={() => setShowAll((prev) => !prev)}
             >
-              {showAll ? "Show Less" : "View All"}
+              {showAll ? t("showLess") : t("viewAll")}
               {showAll ? (
                 <ChevronUp className="ml-2 h-3 w-3" />
               ) : (
@@ -353,7 +367,7 @@ export function UnifiedPositionsTable({
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search positions..."
+                placeholder={t("searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className={cn("pl-9", compact && "h-8 text-sm")}
@@ -361,25 +375,26 @@ export function UnifiedPositionsTable({
             </div>
             <Select value={providerFilter} onValueChange={setProviderFilter}>
               <SelectTrigger className={cn("w-[130px]", compact && "h-8")}>
-                <SelectValue placeholder="Provider" />
+                <SelectValue placeholder={t("provider")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Providers</SelectItem>
-                <SelectItem value="plaid">Banking</SelectItem>
-                <SelectItem value="snaptrade">Brokers</SelectItem>
-                <SelectItem value="bitpanda">Bitpanda</SelectItem>
-                <SelectItem value="manual">Manual</SelectItem>
+                <SelectItem value="all">{t("allProviders")}</SelectItem>
+                {PROVIDERS.map((provider) => (
+                  <SelectItem key={provider} value={provider}>
+                    {t(`providerFilter.${provider}`)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className={cn("w-[130px]", compact && "h-8")}>
-                <SelectValue placeholder="Category" />
+                <SelectValue placeholder={t("category")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="all">{t("allCategories")}</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    {labels.categoryNameOf(cat)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -392,7 +407,9 @@ export function UnifiedPositionsTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[40px]">Source</TableHead>
+                <TableHead className="w-[40px]">
+                  {t("columns.source")}
+                </TableHead>
                 <TableHead>
                   <Button
                     variant="ghost"
@@ -400,11 +417,11 @@ export function UnifiedPositionsTable({
                     className="h-8 font-medium -ml-3"
                     onClick={() => toggleSort("name")}
                   >
-                    Position
+                    {t("columns.position")}
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
-                {!compact && <TableHead>Category</TableHead>}
+                {!compact && <TableHead>{t("columns.category")}</TableHead>}
                 <TableHead className="text-right">
                   <Button
                     variant="ghost"
@@ -412,7 +429,7 @@ export function UnifiedPositionsTable({
                     className="h-8 font-medium -mr-3 float-right"
                     onClick={() => toggleSort("quantity")}
                   >
-                    Quantity
+                    {t("columns.quantity")}
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
@@ -423,7 +440,7 @@ export function UnifiedPositionsTable({
                     className="h-8 font-medium -mr-3 float-right"
                     onClick={() => toggleSort("value")}
                   >
-                    Value
+                    {t("columns.value")}
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
@@ -435,7 +452,7 @@ export function UnifiedPositionsTable({
                       className="h-8 font-medium -mr-3 float-right"
                       onClick={() => toggleSort("profitLoss")}
                     >
-                      P&L
+                      {t("columns.profitLoss")}
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
@@ -454,8 +471,9 @@ export function UnifiedPositionsTable({
                     ? `/liabilities/loans/${position.id}`
                     : (providerRoutes[position.provider] ?? "/dashboard");
                 const providerColor = providerColors[position.provider] ?? "";
-                const providerLabel =
-                  providerLabels[position.provider] ?? position.provider;
+                const providerLabel = isProvider(position.provider)
+                  ? t(`providers.${position.provider}`)
+                  : position.provider;
                 const hasPL =
                   position.unrealizedPL !== undefined &&
                   position.unrealizedPL !== 0;
@@ -510,12 +528,15 @@ export function UnifiedPositionsTable({
                     {!compact && (
                       <TableCell>
                         <Badge variant="secondary" className="text-xs">
-                          {position.category}
+                          {labels.categoryNameOf(position.category)}
                         </Badge>
                         {position.subcategory &&
                           position.subcategory !== position.category && (
                             <span className="ml-1 text-xs text-muted-foreground">
-                              {position.subcategory}
+                              {subcategoryName(
+                                position.category,
+                                position.subcategory,
+                              )}
                             </span>
                           )}
                       </TableCell>
@@ -590,18 +611,18 @@ export function UnifiedPositionsTable({
         {!compact && filteredPositions.length > 0 && (
           <div className="flex justify-between items-center mt-4 pt-4 border-t text-sm">
             <span className="text-muted-foreground">
-              {filteredPositions.length} position
-              {filteredPositions.length !== 1 ? "s" : ""} shown
+              {t("shown", { count: filteredPositions.length })}
             </span>
             <span className="font-medium">
-              Total:{" "}
-              {formatCurrency(
-                filteredPositions.reduce(
-                  (sum, p) => sum + p.valueInBaseCurrency,
-                  0,
+              {t("total", {
+                amount: formatCurrency(
+                  filteredPositions.reduce(
+                    (sum, p) => sum + p.valueInBaseCurrency,
+                    0,
+                  ),
+                  currency,
                 ),
-                currency,
-              )}
+              })}
             </span>
           </div>
         )}

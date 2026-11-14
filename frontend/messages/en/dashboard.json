@@ -1,0 +1,132 @@
+{
+  "page": {
+    "title": "Dashboard",
+    "subtitle": "Your complete financial overview",
+    "performanceTitle": "Portfolio Development",
+    "investmentCategories": "Investment Categories"
+  },
+  "netWorth": {
+    "title": "Total Net Worth",
+    "unrealized": "({percent}) unrealized",
+    "unrealizedCoverage": "({percent}) unrealized on {covered}% of assets"
+  },
+  "kpi": {
+    "totalAssets": "Total Assets",
+    "totalLiabilities": "Total Liabilities"
+  },
+  "ytdNetWorth": {
+    "title": "YTD Net Worth",
+    "changeSinceJan1": "{percent} change since Jan 1",
+    "fxEffectHint": "Measured in {currency}: includes the change in the euro exchange rate since 1 January.",
+    "partial": "Partial: a provider sync failed or a price is missing",
+    "trackingSince": "Not enough history (tracking since {date})",
+    "noData": "No data for this year"
+  },
+  "allocation": {
+    "title": "Asset Allocation",
+    "description": "Distribution across investment categories",
+    "empty": "No assets to display",
+    "emptyHint": "Add investments to see your allocation"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, one {# holding} other {# holdings}}",
+    "noHoldings": "No holdings",
+    "comingSoon": "Coming soon"
+  },
+  "liabilitiesCard": {
+    "title": "Liabilities",
+    "accounts": "{accounts, plural, one {# account} other {# accounts}}",
+    "loans": "{loans, plural, one {# loan} other {# loans}}",
+    "accountsAndLoans": "{accounts, plural, one {# account} other {# accounts}} · {loans, plural, one {# loan} other {# loans}}",
+    "monthlyPayments": "{amount}/month in loan payments"
+  },
+  "section": {
+    "totalValue": "Total Portfolio Value",
+    "totalCash": "Total Cash Holdings",
+    "profitLoss": "Total Profit / Loss",
+    "profitLossSinceTracking": "Profit / Loss since tracking started",
+    "changeSinceTracking": "Change since tracking started",
+    "since": "Since {date}",
+    "sinceNetOfFlows": "Since {date}, net of purchases and deposits",
+    "coverage": "On {percent}% of the value: holdings without a cost basis are left out",
+    "addCostData": "Add cost data to track performance",
+    "noHoldings": "No holdings yet",
+    "ytdChange": "YTD Change",
+    "ytdReturn": "YTD Return",
+    "ytdReturnEstimated": "YTD Return (est.)",
+    "sincePartial": "Since {date} · partial: a sync failed or a price is missing",
+    "trackedSince": "Not enough history (tracked since {date})",
+    "noDataThisYear": "No data for this year yet",
+    "portfolioAllocation": "Portfolio Allocation",
+    "highCash": "High cash position (conservative)",
+    "lowCash": "Low cash reserve",
+    "ofTotalPortfolio": "of total portfolio",
+    "addAssets": "Add assets to see allocation",
+    "activeAccounts": "Active Accounts",
+    "accountsLinked": "{count, plural, one {account linked} other {accounts linked}}",
+    "historyHint": "History appears after the next daily snapshot"
+  },
+  "allocationChart": {
+    "title": "Allocation",
+    "empty": "No holdings yet",
+    "other": "Other (<2%)"
+  },
+  "performanceChart": {
+    "portfolioTitle": "Portfolio Performance",
+    "netWorthTitle": "Net Worth Performance",
+    "portfolio": "Portfolio",
+    "netWorth": "Net Worth",
+    "value": "Value",
+    "costBasis": "Cost Basis",
+    "empty": "No performance data yet",
+    "emptyHint": "Add holdings to track portfolio performance",
+    "tooltipRow": "{series}: {amount}",
+    "partial": "Partial: a provider sync failed or a price is missing"
+  },
+  "topHoldings": {
+    "title": "Largest Holdings",
+    "empty": "No holdings yet",
+    "count": "({count, plural, one {# holding} other {# holdings}})"
+  },
+  "positions": {
+    "title": "All Positions",
+    "description": "Unified view across all financial providers",
+    "empty": "No positions found",
+    "emptyHint": "Connect your accounts to see your holdings",
+    "shownOfTotal": "{shown} of {total, plural, one {# position} other {# positions}}",
+    "showLess": "Show Less",
+    "viewAll": "View All",
+    "searchPlaceholder": "Search positions...",
+    "provider": "Provider",
+    "allProviders": "All Providers",
+    "category": "Category",
+    "allCategories": "All Categories",
+    "providers": {
+      "plaid": "Banking",
+      "snaptrade": "Broker",
+      "bitpanda": "Bitpanda",
+      "manual": "Manual"
+    },
+    "providerFilter": {
+      "plaid": "Banking",
+      "snaptrade": "Brokers",
+      "bitpanda": "Bitpanda",
+      "manual": "Manual"
+    },
+    "columns": {
+      "source": "Source",
+      "position": "Position",
+      "category": "Category",
+      "quantity": "Quantity",
+      "value": "Value",
+      "profitLoss": "P&L"
+    },
+    "shown": "{count, plural, one {# position shown} other {# positions shown}}",
+    "total": "Total: {amount}"
+  },
+  "cashHoldings": {
+    "bankAccount": "Bank Account",
+    "cashPosition": "Cash Position",
+    "brokerCash": "{account} - Cash"
+  }
+}

@@ -6,6 +6,7 @@
  */
 
 import { ReactNode } from "react";
+import type { SubcategoryLabel } from "@/lib/config/categoryUI";
 
 // Re-export from the single source of truth
 export type { InvestmentCategory } from "./classification";
@@ -35,7 +36,8 @@ export interface Holding {
  */
 export interface SubcategoryData {
   id: string;
-  name: string;
+  /** Its name in the message catalogue (render with useCategoryLabels) */
+  label: SubcategoryLabel;
   href: string;
   icon: ReactNode;
   color: string; // Hex color for chart segments

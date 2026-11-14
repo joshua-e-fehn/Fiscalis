@@ -41,8 +41,8 @@ export type AssetCategoryId = Exclude<InvestmentCategory, "liabilities">
  * Asset category data for portfolio overview
  */
 export interface AssetCategoryData {
+  /** Also its name's key (useCategoryLabels().categoryName) */
   id: AssetCategoryId;
-  name: string;
   href: string;
   icon: React.ReactNode;
   color: string;
@@ -106,22 +106,21 @@ const ICON = { className: "h-4 w-4" };
 /** Display metadata per dashboard category, in card order. */
 const CATEGORY_CARDS: Array<{
   id: AssetCategoryId;
-  name: string;
   href: string;
   icon: React.ReactNode;
   color: string;
   implemented: boolean;
 }> = [
-  { id: "equities", name: "Equities", href: "/assets/equities", icon: React.createElement(Briefcase, ICON), color: categoryPrimaryColors.equities, implemented: true },
-  { id: "commodities", name: "Commodities", href: "/assets/commodities", icon: React.createElement(Coins, ICON), color: categoryPrimaryColors.commodities, implemented: true },
-  { id: "bonds", name: "Bonds", href: "/assets/bonds", icon: React.createElement(Receipt, ICON), color: categoryPrimaryColors.bonds, implemented: true },
-  { id: "real-estate", name: "Real Estate", href: "/assets/real-estate", icon: React.createElement(Building2, ICON), color: categoryPrimaryColors["real-estate"], implemented: true },
-  { id: "cash", name: "Cash & Savings", href: "/assets/cash", icon: React.createElement(Banknote, ICON), color: categoryPrimaryColors.cash, implemented: true },
-  { id: "crypto", name: "Cryptocurrency", href: "/assets/crypto", icon: React.createElement(Bitcoin, ICON), color: categoryPrimaryColors.crypto, implemented: true },
-  { id: "collectibles", name: "Collectibles", href: "/assets/collectibles", icon: React.createElement(Gem, ICON), color: categoryPrimaryColors.collectibles, implemented: false },
+  { id: "equities", href: "/assets/equities", icon: React.createElement(Briefcase, ICON), color: categoryPrimaryColors.equities, implemented: true },
+  { id: "commodities", href: "/assets/commodities", icon: React.createElement(Coins, ICON), color: categoryPrimaryColors.commodities, implemented: true },
+  { id: "bonds", href: "/assets/bonds", icon: React.createElement(Receipt, ICON), color: categoryPrimaryColors.bonds, implemented: true },
+  { id: "real-estate", href: "/assets/real-estate", icon: React.createElement(Building2, ICON), color: categoryPrimaryColors["real-estate"], implemented: true },
+  { id: "cash", href: "/assets/cash", icon: React.createElement(Banknote, ICON), color: categoryPrimaryColors.cash, implemented: true },
+  { id: "crypto", href: "/assets/crypto", icon: React.createElement(Bitcoin, ICON), color: categoryPrimaryColors.crypto, implemented: true },
+  { id: "collectibles", href: "/assets/collectibles", icon: React.createElement(Gem, ICON), color: categoryPrimaryColors.collectibles, implemented: false },
   // Holdings without a known category: counted in the totals, shown only
   // when there are any
-  { id: "unclassified", name: "Unclassified", href: "/integrations", icon: React.createElement(HelpCircle, ICON), color: "#94a3b8", implemented: true },
+  { id: "unclassified", href: "/integrations", icon: React.createElement(HelpCircle, ICON), color: "#94a3b8", implemented: true },
 ];
 
 /**

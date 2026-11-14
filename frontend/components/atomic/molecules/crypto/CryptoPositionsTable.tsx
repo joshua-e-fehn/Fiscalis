@@ -31,8 +31,20 @@ import { positionPriceIssue, useCryptoPositions } from "@/hooks/convex/crypto";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/date";
-import { subcategoryDisplayNames } from "@/lib/types/classification";
-import type { InvestmentSubcategory } from "@/lib/types/classification";
+import {
+  subcategoryLabel,
+  useCategoryLabels,
+} from "@/lib/config/categoryUI";
+
+/** A position's crypto subcategory name; an unknown slug as stored */
+function subcategoryName(
+  labels: ReturnType<typeof useCategoryLabels>,
+  slug: string | undefined,
+): string {
+  if (!slug) return labels.categoryName("crypto");
+  const label = subcategoryLabel("crypto", slug);
+  return label ? labels.name(label) : slug;
+}
 
 function formatNumber(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
@@ -87,6 +99,7 @@ export function CryptoPositionsTable({
   // Position values come from the crypto data hook in the display
   // currency (converted there, never here)
   const loadedPositions = useCryptoPositions();
+  const labels = useCategoryLabels();
   const isLoading = loadedPositions === undefined;
   const positions = useMemo(() => loadedPositions ?? [], [loadedPositions]);
   const [search, setSearch] = useState("");
@@ -265,11 +278,10 @@ export function CryptoPositionsTable({
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="capitalize">
-                          {position.investmentSubcategory
-                            ? (subcategoryDisplayNames[
-                                position.investmentSubcategory as InvestmentSubcategory
-                              ] ?? position.investmentSubcategory)
-                            : "Crypto"}
+                          {subcategoryName(
+                            labels,
+                            position.investmentSubcategory,
+                          )}
                         </Badge>
                       </TableCell>
                     </TableRow>

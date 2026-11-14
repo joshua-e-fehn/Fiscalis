@@ -1,0 +1,287 @@
+{
+  "equities": {
+    "name": "Aktien",
+    "subcategories": {
+      "stocks": {
+        "name": "Börsennotierte Einzelaktien",
+        "description": "Anteile an einzelnen Unternehmen, die an öffentlichen Börsen gehandelt werden",
+        "examples": "Apple, Microsoft, Tesla, Amazon"
+      },
+      "etfs": {
+        "name": "ETFs & Indexfonds",
+        "description": "Passive Fonds, die Marktindizes abbilden und breit streuen",
+        "examples": "S&P 500, MSCI World, NASDAQ-100, DAX"
+      },
+      "funds": {
+        "name": "Investmentfonds",
+        "description": "Aktiv verwaltete Fonds mit professionellem Portfoliomanagement",
+        "examples": "Wachstumsfonds, Value-Fonds, Branchenfonds, Mischfonds"
+      },
+      "options": {
+        "name": "Optionen",
+        "description": "Derivative Kontrakte zur Absicherung oder für gehebelte Positionen",
+        "examples": "Call-Optionen, Put-Optionen, Spreads, Covered Calls"
+      },
+      "private": {
+        "name": "Private Equity",
+        "description": "Beteiligungen an nicht börsennotierten Unternehmen, Start-ups und Business Angels",
+        "examples": "Start-ups, Venture Capital, Angel-Investments, PE-Fonds"
+      }
+    }
+  },
+  "commodities": {
+    "name": "Rohstoffe",
+    "subcategories": {
+      "metals": {
+        "name": "Edelmetalle",
+        "description": "Verfolge die Preise von Gold, Silber, Platin und Palladium mit Echtzeit-Charts",
+        "examples": "Gold, Silber, Platin, Palladium"
+      },
+      "energy": {
+        "name": "Energie",
+        "description": "Preise für Öl, Erdgas und andere Energierohstoffe",
+        "examples": "Rohöl, Erdgas, Heizöl, Benzin"
+      },
+      "industrial": {
+        "name": "Industriemetalle",
+        "description": "Basismetalle für Industrie und Bau",
+        "examples": "Kupfer, Aluminium, Zink, Nickel"
+      },
+      "agricultural": {
+        "name": "Agrarrohstoffe",
+        "description": "Getreide, Softs und andere landwirtschaftliche Rohstoffe",
+        "examples": "Weizen, Mais, Sojabohnen, Kaffee"
+      },
+      "rare-earth": {
+        "name": "Seltene Erden",
+        "description": "Strategische Seltene Erden für Technologie und Verteidigung",
+        "examples": "Neodym, Dysprosium, Lithium, Kobalt"
+      },
+      "gemstones": {
+        "name": "Edelsteine",
+        "description": "Diamanten, Rubine, Saphire und andere Edelsteine",
+        "examples": "Diamanten, Rubine, Saphire, Smaragde"
+      }
+    }
+  },
+  "bonds": {
+    "name": "Anleihen",
+    "subcategories": {
+      "government": {
+        "name": "Staatsanleihen",
+        "description": "Geldmarktpapiere, Notes und Anleihen von Staaten, einschließlich inflationsgeschützter Wertpapiere",
+        "examples": "US Treasuries, Bundesanleihen, UK Gilts, TIPS/I-Bonds"
+      },
+      "corporate": {
+        "name": "Unternehmensanleihen",
+        "description": "Anleihen von Unternehmen mit Investment-Grade- oder High-Yield-Rating",
+        "examples": "Investment Grade, High Yield, Wandelanleihen, Green Bonds"
+      },
+      "municipal": {
+        "name": "Kommunalanleihen",
+        "description": "Steuerbegünstigte Anleihen von Bundesstaaten, Städten und Gemeinden",
+        "examples": "General Obligation, Revenue Bonds, steuerfreie Munis, Build America"
+      },
+      "savings": {
+        "name": "Sparbriefe",
+        "description": "Staatlich garantierte Sparbriefe und Anleihen für Privatanleger",
+        "examples": "Series I Bonds, Series EE Bonds, Premium Bonds, Sparzertifikate"
+      },
+      "funds": {
+        "name": "Rentenfonds & ETFs",
+        "description": "Breit gestreute festverzinsliche Anlagen über Fonds und ETFs",
+        "examples": "Aggregate Bond, Kurzläufer, Langläufer, International"
+      }
+    }
+  },
+  "real-estate": {
+    "name": "Immobilien",
+    "subcategories": {
+      "residential": {
+        "name": "Wohnimmobilien",
+        "description": "Einfamilienhäuser, Wohnungen, Eigentumswohnungen und Ferienimmobilien",
+        "examples": "Eigenheim, Mietobjekte, Ferienhäuser, Eigentumswohnungen"
+      },
+      "commercial": {
+        "name": "Gewerbeimmobilien",
+        "description": "Bürogebäude, Einzelhandelsflächen, Lagerhallen und Industrieimmobilien",
+        "examples": "Büroflächen, Einzelhandel, Lagerhallen, Mischnutzung"
+      },
+      "reits": {
+        "name": "REITs",
+        "description": "Real Estate Investment Trusts: börsengehandelte Immobilienwertpapiere",
+        "examples": "Equity REITs, Mortgage REITs, Hybrid-REITs, REIT-ETFs"
+      },
+      "crowdfunding": {
+        "name": "Crowdfunding",
+        "description": "Immobilieninvestments über Crowdfunding-Plattformen",
+        "examples": "Fundrise, CrowdStreet, RealtyMogul, Groundfloor"
+      },
+      "land": {
+        "name": "Grundstücke",
+        "description": "Bauland, Agrarland und unerschlossene Grundstücke",
+        "examples": "Rohbauland, Ackerland, Wald, Bauerwartungsland"
+      }
+    }
+  },
+  "cash": {
+    "name": "Liquidität & Geldmarkt",
+    "subcategories": {
+      "checking-accounts": {
+        "name": "Girokonten",
+        "description": "Konten für den Zahlungsverkehr, verknüpft über Bankverbindungen",
+        "examples": "Privates Girokonto, Geschäftskonto, Gemeinschaftskonto"
+      },
+      "savings-accounts": {
+        "name": "Sparkonten",
+        "description": "Tagesgeldkonten und klassische Sparkonten",
+        "examples": "Tagesgeld, Sparbuch, Online-Sparkonto, Geschäftssparkonto"
+      },
+      "money-market": {
+        "name": "Geldmarktfonds",
+        "description": "Kurzfristige, risikoarme Fonds mit hoher Liquidität",
+        "examples": "Staatliche Geldmarktfonds, Prime-Geldmarktfonds, steuerfreie Geldmarktfonds, Publikums-Geldmarktfonds"
+      },
+      "cds": {
+        "name": "Festgeld",
+        "description": "Einlagen mit fester Laufzeit und garantiertem Zinssatz",
+        "examples": "3 Monate Festgeld, 6 Monate Festgeld, 1 Jahr Festgeld, Festgeld-Leiter"
+      },
+      "treasury-bills": {
+        "name": "Schatzwechsel",
+        "description": "Kurzfristige Staatspapiere mit Laufzeiten unter einem Jahr",
+        "examples": "4 Wochen, 8 Wochen, 13 Wochen, 26 Wochen"
+      },
+      "forex": {
+        "name": "Fremdwährungen (Devisen)",
+        "description": "Bestände in Fremdwährungen und Devisenpositionen",
+        "examples": "EUR, GBP, JPY, CHF"
+      },
+      "broker-cash": {
+        "name": "Verrechnungskonto",
+        "description": "Nicht investiertes Guthaben im Depot, automatisch aus Broker-Verbindungen erkannt",
+        "examples": "Abwicklungsguthaben, Sweep-Konten, Margin-Guthaben"
+      }
+    }
+  },
+  "crypto": {
+    "name": "Krypto",
+    "subcategories": {
+      "bitcoin": {
+        "name": "Bitcoin",
+        "description": "Bitcoin und Wrapped-Bitcoin-Token",
+        "examples": "BTC, WBTC"
+      },
+      "ethereum": {
+        "name": "Ethereum",
+        "description": "Ethereum und Liquid-Staking-Token",
+        "examples": "ETH, stETH, rETH, WETH"
+      },
+      "altcoins": {
+        "name": "Altcoins",
+        "description": "Alternative Kryptowährungen neben BTC und ETH",
+        "examples": "SOL, ADA, AVAX, DOT, MATIC"
+      },
+      "stablecoins": {
+        "name": "Stablecoins",
+        "description": "Preisstabile Kryptowährungen, die an Fiatwährungen gekoppelt sind",
+        "examples": "USDT, USDC, DAI, FRAX"
+      },
+      "defi": {
+        "name": "DeFi",
+        "description": "Positionen in dezentralen Finanzanwendungen, einschließlich Staking und Liquidität",
+        "examples": "Staking, LP-Positionen, Yield Farming, Lending"
+      }
+    },
+    "groups": {
+      "btc-eth": {
+        "name": "Bitcoin & Ethereum",
+        "description": "Die beiden größten Kryptowährungen und die Token ihrer Ökosysteme",
+        "examples": "BTC, WBTC, ETH, stETH, rETH, WETH"
+      }
+    }
+  },
+  "collectibles": {
+    "name": "Sammlerstücke",
+    "subcategories": {
+      "art": {
+        "name": "Kunst",
+        "description": "Bildende Kunst, Gemälde, Skulpturen und künstlerische Sammlerstücke",
+        "examples": "Gemälde, Skulpturen, Drucke, Fotografie"
+      },
+      "watches": {
+        "name": "Uhren",
+        "description": "Luxusuhren und Sammlungen von Vintage-Uhren",
+        "examples": "Rolex, Patek Philippe, Audemars Piguet, Omega"
+      },
+      "wine": {
+        "name": "Wein",
+        "description": "Edle Weine und Jahrgangsflaschen als Anlage",
+        "examples": "Bordeaux, Burgund, Champagner, Napa Valley"
+      },
+      "cars": {
+        "name": "Oldtimer",
+        "description": "Klassische Automobile und Sammlerfahrzeuge",
+        "examples": "Porsche, Ferrari, Mercedes-Benz, Muscle Cars"
+      },
+      "jewelry": {
+        "name": "Schmuck",
+        "description": "Edler Schmuck, Edelsteine und Designerstücke",
+        "examples": "Diamanten, Farbedelsteine, Vintage-Schmuck, Designerstücke"
+      },
+      "trading-cards": {
+        "name": "Sammelkarten",
+        "description": "Sportkarten, Pokémon, Magic: The Gathering und andere Sammelkarten",
+        "examples": "Sportkarten, Pokémon, Magic: The Gathering, Yu-Gi-Oh!"
+      },
+      "memorabilia": {
+        "name": "Memorabilien & Ephemera",
+        "description": "Sammlermünzen, Briefmarken, Postkarten und historische Sammlerstücke (keine Anlagemünzen)",
+        "examples": "Sammlermünzen, Briefmarken, Postkarten, historische Objekte"
+      },
+      "nfts": {
+        "name": "NFTs",
+        "description": "Non-Fungible Tokens und digitale Sammlerstücke",
+        "examples": "Kunst-NFTs, PFP-Kollektionen, Gaming-NFTs, Musik-NFTs"
+      },
+      "other": {
+        "name": "Sonstige Sammlerstücke",
+        "description": "Alle Sammlerstücke, die keiner anderen Kategorie zugeordnet sind",
+        "examples": "Spielzeug, Memorabilien, Antiquitäten, seltene Bücher"
+      }
+    }
+  },
+  "liabilities": {
+    "name": "Verbindlichkeiten",
+    "subcategories": {
+      "mortgages": {
+        "name": "Hypotheken",
+        "description": "Baufinanzierungen und Immobilienkredite",
+        "examples": "Selbstgenutzte Immobilie, Renditeobjekt, Zweitwohnsitz"
+      },
+      "loans": {
+        "name": "Kredite",
+        "description": "Privat-, Auto-, Studien- und sonstige Kredite",
+        "examples": "Autokredite, Studienkredite, Privatkredite"
+      },
+      "credit-cards": {
+        "name": "Kreditkarten",
+        "description": "Kreditkartensalden und revolvierende Kredite",
+        "examples": "Visa, Mastercard, Amex, Kundenkarten"
+      },
+      "margin-loans": {
+        "name": "Wertpapierkredite",
+        "description": "Im Depot geliehene Mittel",
+        "examples": "Broker-Margin, Wertpapierleihe"
+      }
+    }
+  },
+  "unclassified": {
+    "name": "Nicht zugeordnet"
+  },
+  "card": {
+    "comingSoon": "Demnächst",
+    "comingSoonButton": "Demnächst verfügbar",
+    "viewPortfolio": "Portfolio ansehen"
+  }
+}

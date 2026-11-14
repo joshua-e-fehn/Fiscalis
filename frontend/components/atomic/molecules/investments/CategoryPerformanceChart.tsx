@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -41,7 +42,7 @@ interface CategoryPerformanceChartProps {
   currency: InvestmentCurrency;
   isLoading?: boolean;
   className?: string;
-  /** Title override - defaults to "Portfolio Performance" */
+  /** Title override - defaults to "Portfolio Performance" (or net worth) */
   title?: string;
   /**
    * Selected range (shared range labels). The caller owns it and fetches the
@@ -66,13 +67,8 @@ function formatWhole(value: number, currency: InvestmentCurrency): string {
   return formatCurrency(value, currency, { fractionDigits: 0 });
 }
 
-function formatDate(timestamp: number, range: ChartTimeRange): string {
-  const date = new Date(timestamp);
-  if (range === "1W" || range === "1M") {
-    return date.toLocaleDateString("de-DE", { day: "2-digit", month: "short" });
-  }
-  return date.toLocaleDateString("de-DE", { month: "short", year: "2-digit" });
-}
+/** Day and month for the axis of short ranges ("14 Nov" · "14. Nov.") */
+const AXIS_DAY = { day: "2-digit", month: "short" } as const;
 
 export function CategoryPerformanceChart({
   dataPoints,
@@ -85,17 +81,22 @@ export function CategoryPerformanceChart({
   viewMode = "portfolio",
   onViewModeChange,
   partial = false,
-  emptyHint = "Add holdings to track portfolio performance",
+  emptyHint,
 }: CategoryPerformanceChartProps) {
+  const t = useTranslations("dashboard.performanceChart");
+  const format = useFormatter();
   // The caller's series for the range, unchanged: filtering it again with a
   // later Date.now() would cut the range-start point it is measured from
   const chartData = useMemo(
     () =>
       dataPoints.map((dp) => ({
         ...dp,
-        date: formatDate(dp.timestamp, timeRange),
+        date:
+          timeRange === "1W" || timeRange === "1M"
+            ? format.dateTime(dp.timestamp, AXIS_DAY)
+            : format.dateTime(dp.timestamp, "axisMonth"),
       })),
-    [dataPoints, timeRange],
+    [dataPoints, timeRange, format],
   );
 
   const hasCost = chartData.some((d) => d.cost !== null);
@@ -118,9 +119,9 @@ export function CategoryPerformanceChart({
 
   const isNetWorth = viewMode === "networth";
   const chartTitle =
-    title ?? (isNetWorth ? "Net Worth Performance" : "Portfolio Performance");
+    title ?? (isNetWorth ? t("netWorthTitle") : t("portfolioTitle"));
   const ChartIcon = isNetWorth ? Wallet : TrendingUp;
-  const valueLabel = isNetWorth ? "Net Worth" : "Value";
+  const valueLabel = isNetWorth ? t("netWorth") : t("value");
 
   if (isLoading) {
     return (
@@ -152,8 +153,8 @@ export function CategoryPerformanceChart({
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center h-48">
           <div className="text-muted-foreground text-sm text-center">
-            <p>No performance data yet</p>
-            <p className="text-xs mt-1">{emptyHint}</p>
+            <p>{t("empty")}</p>
+            <p className="text-xs mt-1">{emptyHint ?? t("emptyHint")}</p>
           </div>
         </CardContent>
       </Card>
@@ -174,8 +175,8 @@ export function CategoryPerformanceChart({
               <div className="flex gap-1 bg-muted rounded-md p-0.5">
                 {(
                   [
-                    ["portfolio", "Portfolio"],
-                    ["networth", "Net Worth"],
+                    ["portfolio", t("portfolio")],
+                    ["networth", t("netWorth")],
                   ] as const
                 ).map(([mode, label]) => (
                   <button
@@ -258,27 +259,14 @@ export function CategoryPerformanceChart({
                   if (!active || !payload || payload.length === 0) return null;
                   const dataPoint = payload[0]?.payload;
 
-                  // Format the date from timestamp for precise display
-                  let dateLabel = dataPoint?.date || "";
-                  if (dataPoint?.timestamp) {
-                    const date = new Date(dataPoint.timestamp);
-                    // Show full date with time for short ranges, date only for longer ranges
-                    if (timeRange === "1W") {
-                      dateLabel = date.toLocaleString("de-DE", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      });
-                    } else {
-                      dateLabel = date.toLocaleDateString("de-DE", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      });
-                    }
-                  }
+                  // Show the full date with time for short ranges, the
+                  // date only for longer ranges
+                  const dateLabel = dataPoint?.timestamp
+                    ? format.dateTime(
+                        dataPoint.timestamp,
+                        timeRange === "1W" ? "full" : "date",
+                      )
+                    : (dataPoint?.date ?? "");
 
                   return (
                     <div
@@ -309,10 +297,16 @@ export function CategoryPerformanceChart({
                               color: entry.color,
                             }}
                           >
-                            {entry.dataKey === "value"
-                              ? valueLabel
-                              : "Cost Basis"}
-                            : {formatWhole(entry.value as number, currency)}
+                            {t("tooltipRow", {
+                              series:
+                                entry.dataKey === "value"
+                                  ? valueLabel
+                                  : t("costBasis"),
+                              amount: formatWhole(
+                                entry.value as number,
+                                currency,
+                              ),
+                            })}
                           </p>
                         ))}
                     </div>
@@ -352,13 +346,15 @@ export function CategoryPerformanceChart({
           {hasCost && (
             <div className="flex items-center gap-1.5 text-xs">
               <div className="w-4 h-0.5 border-t border-dashed border-muted-foreground" />
-              <span className="text-muted-foreground">Cost Basis</span>
+              <span className="text-muted-foreground">
+                {t("costBasis")}
+              </span>
             </div>
           )}
         </div>
         {partial && (
           <p className="text-xs text-muted-foreground text-center mt-1">
-            Partial: a provider sync failed or a price is missing
+            {t("partial")}
           </p>
         )}
       </CardContent>

@@ -127,6 +127,21 @@ export type InvestmentSubcategory =
   | LiabilitiesSubcategory;
 
 /**
+ * Each category's subcategory slugs. Their display text lives in the
+ * `categories` message namespace (lib/config/categoryUI.tsx), not here.
+ */
+export interface SubcategoryByCategory {
+  cash: CashSubcategory;
+  equities: EquitiesSubcategory;
+  bonds: BondsSubcategory;
+  crypto: CryptoSubcategory;
+  commodities: CommoditiesSubcategory;
+  "real-estate": RealEstateSubcategory;
+  collectibles: CollectiblesSubcategory;
+  liabilities: LiabilitiesSubcategory;
+}
+
+/**
  * Mapping of categories to their valid subcategories
  */
 export const subcategoriesByCategory: Record<
@@ -167,65 +182,6 @@ export const subcategoriesByCategory: Record<
   ],
   liabilities: ["mortgages", "loans", "credit-cards", "margin-loans"],
 } as const;
-
-/**
- * Display names for subcategories
- */
-export const subcategoryDisplayNames: Record<InvestmentSubcategory, string> = {
-  // Cash
-  "savings-accounts": "Savings Accounts",
-  "checking-accounts": "Checking Accounts",
-  "money-market": "Money Market Funds",
-  cds: "Certificates of Deposit",
-  "treasury-bills": "Treasury Bills",
-  forex: "Foreign Currency",
-  "broker-cash": "Broker Cash",
-  // Equities
-  stocks: "Stocks",
-  etfs: "ETFs & Index Funds",
-  funds: "Mutual Funds",
-  options: "Options",
-  private: "Private Equity",
-  // Bonds
-  government: "Government Bonds",
-  corporate: "Corporate Bonds",
-  municipal: "Municipal Bonds",
-  savings: "Savings Bonds",
-  // Crypto
-  bitcoin: "Bitcoin",
-  ethereum: "Ethereum",
-  altcoins: "Altcoins",
-  stablecoins: "Stablecoins",
-  defi: "DeFi",
-  // Commodities
-  metals: "Precious Metals",
-  energy: "Energy",
-  industrial: "Industrial Metals",
-  agricultural: "Agricultural",
-  "rare-earth": "Rare Earth",
-  gemstones: "Gemstones",
-  // Real Estate
-  residential: "Residential",
-  commercial: "Commercial",
-  reits: "REITs",
-  crowdfunding: "Crowdfunding",
-  land: "Land",
-  // Collectibles
-  art: "Art",
-  watches: "Watches",
-  wine: "Wine",
-  cars: "Classic Cars",
-  jewelry: "Jewelry",
-  "trading-cards": "Trading Cards",
-  memorabilia: "Memorabilia & Ephemera",
-  nfts: "NFTs",
-  other: "Other",
-  // Liabilities
-  mortgages: "Mortgages",
-  loans: "Loans",
-  "credit-cards": "Credit Cards",
-  "margin-loans": "Margin Loans",
-};
 
 // ═══════════════════════════════════════════════════════════════
 // CLASSIFICATION RULES

@@ -10,21 +10,21 @@ import {
 } from "@/components/ui/shadcn/card";
 import { Button } from "@/components/ui/shadcn/button";
 import { ArrowRight, TrendingUp } from "lucide-react";
+import { useTranslations } from "next-intl";
+import {
+  useCategoryLabels,
+  type CategoryCardData,
+} from "@/lib/config/categoryUI";
 
-export interface SubcategoryCardData {
-  title: string;
-  description: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  implemented: boolean;
-  examples: string[];
-  /** Optional color for the icon background (hex color) */
-  color?: string;
-}
+/** A subcategory card: its catalogue label (title), route, icon and colour */
+export type SubcategoryCardData = Pick<
+  CategoryCardData,
+  "title" | "href" | "icon" | "implemented" | "color"
+>;
 
 interface SubcategoryCategoryCardProps {
   category: SubcategoryCardData;
-  /** Text for the action button (e.g., "View Accounts", "View Holdings") */
+  /** Text for the action button; defaults to "View Portfolio" */
   actionLabel?: string;
 }
 
@@ -34,8 +34,10 @@ interface SubcategoryCategoryCardProps {
  */
 export function SubcategoryCategoryCard({
   category,
-  actionLabel = "View Portfolio",
+  actionLabel,
 }: SubcategoryCategoryCardProps) {
+  const t = useTranslations("categories.card");
+  const labels = useCategoryLabels();
   const Icon = category.icon;
 
   // Default to primary color if no color specified
@@ -65,10 +67,12 @@ export function SubcategoryCategoryCard({
               />
             </div>
             <div>
-              <CardTitle className="text-lg">{category.title}</CardTitle>
+              <CardTitle className="text-lg">
+                {labels.name(category.title)}
+              </CardTitle>
               {!category.implemented && (
                 <span className="text-xs text-muted-foreground">
-                  Coming soon
+                  {t("comingSoon")}
                 </span>
               )}
             </div>
@@ -78,12 +82,12 @@ export function SubcategoryCategoryCard({
           )}
         </div>
         <CardDescription className="mt-2">
-          {category.description}
+          {labels.description(category.title)}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col flex-grow">
         <div className="flex flex-wrap gap-2 mb-4">
-          {category.examples.map((example) => (
+          {labels.examples(category.title).map((example) => (
             <span
               key={example}
               className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground"
@@ -96,13 +100,13 @@ export function SubcategoryCategoryCard({
           {category.implemented ? (
             <Button asChild className="w-full">
               <Link href={category.href}>
-                {actionLabel}
+                {actionLabel ?? t("viewPortfolio")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           ) : (
             <Button disabled className="w-full" variant="outline">
-              Coming Soon
+              {t("comingSoonButton")}
             </Button>
           )}
         </div>

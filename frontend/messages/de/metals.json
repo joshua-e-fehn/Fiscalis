@@ -29,7 +29,7 @@
     "compareMode": "Vergleichsmodus",
     "on": "An",
     "off": "Aus",
-    "perOz": "/Unze",
+    "perOz": "/Feinunze",
     "ytd": "{percent} seit Jahresbeginn",
     "comparisonTitle": "Wertentwicklung im Vergleich (Veränderung in %)",
     "metalPrice": "{metal}preis",

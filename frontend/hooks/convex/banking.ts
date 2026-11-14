@@ -2,6 +2,7 @@
 
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toActionError } from "@/lib/actionError";
 import { useState, useCallback } from "react";
 
 // ═══════════════════════════════════════════════════════════════
@@ -23,7 +24,7 @@ export function useCreateLinkToken() {
       const result = await createLinkToken();
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -52,7 +53,7 @@ export function useCreateUpdateLinkToken() {
         const result = await createUpdateLinkToken({ itemId });
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -85,7 +86,7 @@ export function useExchangeToken() {
         const result = await exchangeToken(params);
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -131,7 +132,7 @@ export function useDeletePlaidItem() {
       try {
         await deleteItem({ itemId });
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -178,7 +179,7 @@ export function useRefreshAccounts() {
         const result = await refreshAccounts({ itemId });
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -207,7 +208,7 @@ export function useUpdateInstitutionLogo() {
         const result = await updateLogo({ itemId });
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -235,7 +236,7 @@ export function useUpdateAllInstitutionLogos() {
       const result = await updateAllLogos();
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -292,7 +293,7 @@ export function useSyncTransactions() {
         const result = await syncTransactions(params ?? {});
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {

@@ -10,6 +10,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toActionError } from "@/lib/actionError";
 import { Id } from "@/convex/_generated/dataModel";
 
 // ═══════════════════════════════════════════════════════════════
@@ -60,7 +61,7 @@ export function useConnectBitpanda() {
       try {
         return await connectAction(params);
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -86,7 +87,7 @@ export function useSyncBitpandaConnection() {
       try {
         return await syncAction({ connectionId });
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -111,7 +112,7 @@ export function useSyncAllBitpandaConnections() {
     try {
       return await syncAction({});
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -135,7 +136,7 @@ export function useDeleteBitpandaConnection() {
       try {
         return await deleteAction({ connectionId });
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {

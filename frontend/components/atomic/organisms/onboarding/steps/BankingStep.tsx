@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { usePlaidLink } from "react-plaid-link";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toActionError } from "@/lib/actionError";
 import {
   Building2,
   Shield,
@@ -49,7 +50,7 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
       const result = await createLinkToken();
       setLinkToken(result.linkToken);
     } catch (error) {
-      console.error("Failed to create link token:", error);
+      console.error("Failed to create link token:", toActionError(error));
     } finally {
       setIsCreatingLink(false);
     }

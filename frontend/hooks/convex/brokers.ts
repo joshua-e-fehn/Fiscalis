@@ -2,6 +2,7 @@
 
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { toActionError } from "@/lib/actionError";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState, useCallback } from "react";
 
@@ -32,7 +33,7 @@ export function useRegisterSnaptrade() {
       const result = await registerAction({});
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -58,7 +59,7 @@ export function useDeleteSnaptradeUser() {
       const result = await deleteAction({});
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -92,7 +93,7 @@ export function useCreateConnectUrl() {
         setConnectUrl(result.connectUrl);
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -127,7 +128,7 @@ export function useHandleCallback() {
         const result = await handleCallbackAction({ authorizationId });
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -156,7 +157,7 @@ export function useDeleteConnection() {
         const result = await deleteAction({ connectionId });
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -257,7 +258,7 @@ export function useSyncPositions() {
         const result = await syncAction({ accountId });
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {
@@ -285,7 +286,7 @@ export function useSyncAll() {
       const result = await syncAction({});
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -311,7 +312,7 @@ export function useUpdateAllBrokerLogos() {
       const result = await updateAction({});
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -354,7 +355,7 @@ export function useListBrokers() {
       setBrokers(result.brokers);
       return result;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = toActionError(err);
       setError(error);
       throw error;
     } finally {
@@ -392,7 +393,7 @@ export function useSearchBrokers() {
         setResults(result.brokers);
         return result;
       } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
+        const error = toActionError(err);
         setError(error);
         throw error;
       } finally {

@@ -10,6 +10,7 @@ import { clerkLocalization } from "@/i18n/clerk";
 import { languageForLocale, localeDirection } from "@/i18n/locales";
 import { LocaleSync } from "@/providers/localeSync";
 import { ThemeProvider, ThemeSync } from "@/providers/themeProvider";
+import { Toaster } from "@/components/ui/shadcn/sonner";
 
 import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
@@ -55,6 +56,7 @@ export default async function AppLayout({
                 <ThemeSync />
                 <LocaleSync />
                 {children}
+                <Toaster richColors closeButton />
               </ConvexClientProvider>
             </ThemeProvider>
           </NextIntlClientProvider>

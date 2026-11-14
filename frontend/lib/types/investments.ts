@@ -13,7 +13,7 @@ export type { InvestmentCategory } from "./classification";
 /**
  * Currency options for displaying values
  */
-export type InvestmentCurrency = "eur" | "usd" | "chf";
+export type InvestmentCurrency = "eur" | "usd" | "gbp" | "chf";
 
 /**
  * Represents a single holding within a subcategory

@@ -1,3 +1,8 @@
+import {
+  DISPLAY_CURRENCIES,
+  type DisplayCurrency,
+} from "@/../services/finance/displayCurrency";
+
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING TYPES
 // ═══════════════════════════════════════════════════════════════
@@ -52,16 +57,21 @@ export interface ProfileFormData {
   theme: Theme;
 }
 
-export type Currency = "EUR" | "USD" | "GBP" | "CHF";
+/** A display currency (services/finance/displayCurrency.ts DISPLAY_CURRENCIES) */
+export type Currency = DisplayCurrency;
 export type Language = "en" | "de";
 export type Theme = "light" | "dark" | "system";
 
-export const CURRENCIES: { value: Currency; label: string; flag: string }[] = [
-  { value: "EUR", label: "Euro (€)", flag: "🇪🇺" },
-  { value: "USD", label: "US Dollar ($)", flag: "🇺🇸" },
-  { value: "GBP", label: "British Pound (£)", flag: "🇬🇧" },
-  { value: "CHF", label: "Swiss Franc (CHF)", flag: "🇨🇭" },
-];
+const CURRENCY_LABELS: Record<Currency, { label: string; flag: string }> = {
+  EUR: { label: "Euro (€)", flag: "🇪🇺" },
+  USD: { label: "US Dollar ($)", flag: "🇺🇸" },
+  GBP: { label: "British Pound (£)", flag: "🇬🇧" },
+  CHF: { label: "Swiss Franc (CHF)", flag: "🇨🇭" },
+};
+
+/** The display currencies in DISPLAY_CURRENCIES order, labelled. */
+export const CURRENCIES: { value: Currency; label: string; flag: string }[] =
+  DISPLAY_CURRENCIES.map((value) => ({ value, ...CURRENCY_LABELS[value] }));
 
 export const LANGUAGES: { value: Language; label: string }[] = [
   { value: "en", label: "English" },

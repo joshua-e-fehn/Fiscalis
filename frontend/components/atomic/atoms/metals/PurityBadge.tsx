@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface PurityBadgeProps {
@@ -42,6 +43,7 @@ export function PurityBadge({
   showKarat = false,
   className,
 }: PurityBadgeProps) {
+  const t = useTranslations("metals.badges");
   const karat = showKarat ? purityToKarat(purity) : null;
 
   const formattedPurity =
@@ -57,7 +59,11 @@ export function PurityBadge({
       )}
     >
       {formattedPurity}
-      {karat && <span className="ml-1 opacity-70">({karat}k)</span>}
+      {karat && (
+        <span className="ml-1 opacity-70">
+          {t("karat", { karat: String(karat) })}
+        </span>
+      )}
     </span>
   );
 }
@@ -72,12 +78,7 @@ export function CategoryBadge({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const labels: Record<typeof category, string> = {
-    coin: "Coin",
-    bar: "Bar",
-    jewelry: "Jewelry",
-    scrap: "Scrap",
-  };
+  const t = useTranslations("metals.itemCategory");
 
   const icons: Record<typeof category, string> = {
     coin: "🪙",
@@ -96,7 +97,7 @@ export function CategoryBadge({
       )}
     >
       <span>{icons[category]}</span>
-      <span>{labels[category]}</span>
+      <span>{t(category)}</span>
     </span>
   );
 }

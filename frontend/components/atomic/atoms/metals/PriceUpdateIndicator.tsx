@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
 
@@ -8,18 +8,6 @@ interface PriceUpdateIndicatorProps {
   isUpdating?: boolean;
   lastUpdated?: Date | number | null;
   className?: string;
-}
-
-function formatTimeAgo(date: Date | number): string {
-  const now = new Date();
-  const then = typeof date === "number" ? new Date(date) : date;
-  const diffMs = now.getTime() - then.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-
-  if (diffSec < 60) return `${diffSec}s ago`;
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
 }
 
 /**
@@ -30,19 +18,10 @@ export function PriceUpdateIndicator({
   lastUpdated,
   className,
 }: PriceUpdateIndicatorProps) {
-  const [timeAgo, setTimeAgo] = useState<string>("");
-
-  useEffect(() => {
-    if (!lastUpdated) return;
-
-    const tick = () => setTimeAgo(formatTimeAgo(lastUpdated));
-
-    // Update immediately, then every second
-    tick();
-    const interval = setInterval(tick, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastUpdated]);
+  const t = useTranslations("metals.holdings.priceUpdate");
+  const format = useFormatter();
+  // Re-render every second so "5 seconds ago" keeps counting
+  const now = useNow({ updateInterval: 1000 });
 
   return (
     <div
@@ -54,12 +33,12 @@ export function PriceUpdateIndicator({
       {isUpdating ? (
         <>
           <RefreshCw className="h-3 w-3 animate-spin" />
-          <span>Updating...</span>
+          <span>{t("updating")}</span>
         </>
       ) : lastUpdated ? (
-        <>
-          <span>Updated {timeAgo}</span>
-        </>
+        <span>
+          {t("updated", { when: format.relativeTime(lastUpdated, now) })}
+        </span>
       ) : null}
     </div>
   );

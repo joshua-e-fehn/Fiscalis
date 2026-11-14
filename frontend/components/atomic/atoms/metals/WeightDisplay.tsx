@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { gramsToTroyOunces } from "@/../services/finance/metals";
 
@@ -12,6 +13,12 @@ interface WeightDisplayProps {
   showUnit?: boolean;
   className?: string;
 }
+
+/**
+ * Weights follow the house number style of lib/utils/currency.ts (de-CH:
+ * 1'234.56) in every UI language, like amounts.
+ */
+const HOUSE_NUMBER_LOCALE = "de-CH";
 
 const sizeClasses = {
   sm: "text-xs",
@@ -26,24 +33,15 @@ export function WeightDisplay({
   showUnit = true,
   className,
 }: WeightDisplayProps) {
-  let value: number;
-  let unitLabel: string;
+  const t = useTranslations("metals.badges.weightUnit");
+  const value =
+    unit === "oz"
+      ? gramsToTroyOunces(grams)
+      : unit === "kg"
+        ? grams / 1000
+        : grams;
 
-  switch (unit) {
-    case "oz":
-      value = gramsToTroyOunces(grams);
-      unitLabel = "oz";
-      break;
-    case "kg":
-      value = grams / 1000;
-      unitLabel = "kg";
-      break;
-    default:
-      value = grams;
-      unitLabel = "g";
-  }
-
-  const formattedValue = new Intl.NumberFormat("de-DE", {
+  const formattedValue = new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
     minimumFractionDigits: unit === "oz" ? 2 : value < 10 ? 2 : 0,
     maximumFractionDigits: unit === "oz" ? 4 : 2,
   }).format(value);
@@ -52,7 +50,7 @@ export function WeightDisplay({
     <span className={cn(sizeClasses[size], className)}>
       {formattedValue}
       {showUnit && (
-        <span className="text-muted-foreground ml-0.5">{unitLabel}</span>
+        <span className="text-muted-foreground ml-0.5">{t(unit)}</span>
       )}
     </span>
   );
@@ -68,14 +66,15 @@ export function DualWeightDisplay({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
+  const t = useTranslations("metals.badges.weightUnit");
   const oz = gramsToTroyOunces(grams);
 
-  const formattedGrams = new Intl.NumberFormat("de-DE", {
+  const formattedGrams = new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
     minimumFractionDigits: grams < 10 ? 2 : 0,
     maximumFractionDigits: 2,
   }).format(grams);
 
-  const formattedOz = new Intl.NumberFormat("de-DE", {
+  const formattedOz = new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
   }).format(oz);
@@ -83,10 +82,10 @@ export function DualWeightDisplay({
   return (
     <span className={cn(sizeClasses[size], className)}>
       {formattedGrams}
-      <span className="text-muted-foreground">g</span>
+      <span className="text-muted-foreground">{t("g")}</span>
       <span className="text-muted-foreground mx-1">·</span>
       {formattedOz}
-      <span className="text-muted-foreground">oz</span>
+      <span className="text-muted-foreground">{t("oz")}</span>
     </span>
   );
 }

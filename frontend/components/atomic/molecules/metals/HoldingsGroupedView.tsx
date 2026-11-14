@@ -7,6 +7,7 @@ import {
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { HoldingsCardGrid } from "./HoldingsCardGrid";
 import { MetalIcon } from "@/components/atomic/atoms/metals";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -21,13 +22,6 @@ interface HoldingsGroupedViewProps {
   className?: string;
 }
 
-const metalLabels: Record<MetalsType, string> = {
-  gold: "Gold",
-  silver: "Silver",
-  platinum: "Platinum",
-  palladium: "Palladium",
-};
-
 const metalOrder: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
 
 export function HoldingsGroupedView({
@@ -37,6 +31,7 @@ export function HoldingsGroupedView({
   isLoading = false,
   className,
 }: HoldingsGroupedViewProps) {
+  const t = useTranslations("metals");
   const [expandedGroups, setExpandedGroups] = useState<Set<MetalsType>>(
     new Set(metalOrder),
   );
@@ -83,7 +78,7 @@ export function HoldingsGroupedView({
           className,
         )}
       >
-        No items found
+        {t("holdings.noItems")}
       </div>
     );
   }
@@ -122,10 +117,9 @@ export function HoldingsGroupedView({
                 <ChevronRight className="h-4 w-4" />
               )}
               <MetalIcon metal={metal} />
-              <span className="font-semibold">{metalLabels[metal]}</span>
+              <span className="font-semibold">{t(`metal.${metal}`)}</span>
               <span className="text-muted-foreground">
-                ({groupItems.length}{" "}
-                {groupItems.length === 1 ? "item" : "items"})
+                {t("holdings.itemCountParen", { count: groupItems.length })}
               </span>
               <span className="ml-auto text-muted-foreground">
                 {formatCurrency(totalValue, currency)}

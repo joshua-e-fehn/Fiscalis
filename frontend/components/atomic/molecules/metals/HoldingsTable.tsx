@@ -16,10 +16,9 @@ import {
   PurityBadge,
   CategoryBadge,
 } from "@/components/atomic/atoms/metals";
-import {
-  MetalItemWithValuation,
-} from "@/lib/types/metals-extended";
+import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { SortField, SortDirection } from "./HoldingsToolbar";
@@ -54,6 +53,7 @@ export function HoldingsTable({
   onSelectionChange,
   className,
 }: HoldingsTableProps) {
+  const t = useTranslations("metals.holdings");
   const SortButton = ({
     field,
     children,
@@ -111,11 +111,15 @@ export function HoldingsTable({
           <TableHeader>
             <TableRow>
               {selectionMode && <TableHead className="w-10"></TableHead>}
-              <TableHead className="w-[40%]">Item</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="text-right">Weight</TableHead>
-              <TableHead className="text-right">Value</TableHead>
-              <TableHead className="text-right">P/L</TableHead>
+              <TableHead className="w-[40%]">{t("columns.item")}</TableHead>
+              <TableHead>{t("columns.metal")}</TableHead>
+              <TableHead className="text-right">
+                {t("columns.weight")}
+              </TableHead>
+              <TableHead className="text-right">{t("columns.value")}</TableHead>
+              <TableHead className="text-right">
+                {t("columns.profitLoss")}
+              </TableHead>
               <TableHead className="w-8"></TableHead>
             </TableRow>
           </TableHeader>
@@ -154,11 +158,15 @@ export function HoldingsTable({
           <TableHeader>
             <TableRow>
               {selectionMode && <TableHead className="w-10"></TableHead>}
-              <TableHead className="w-[40%]">Item</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="text-right">Weight</TableHead>
-              <TableHead className="text-right">Value</TableHead>
-              <TableHead className="text-right">P/L</TableHead>
+              <TableHead className="w-[40%]">{t("columns.item")}</TableHead>
+              <TableHead>{t("columns.metal")}</TableHead>
+              <TableHead className="text-right">
+                {t("columns.weight")}
+              </TableHead>
+              <TableHead className="text-right">{t("columns.value")}</TableHead>
+              <TableHead className="text-right">
+                {t("columns.profitLoss")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -167,7 +175,7 @@ export function HoldingsTable({
                 colSpan={selectionMode ? 6 : 5}
                 className="h-24 text-center text-muted-foreground"
               >
-                No items found
+                {t("noItems")}
               </TableCell>
             </TableRow>
           </TableBody>
@@ -195,25 +203,40 @@ export function HoldingsTable({
                     }
                   }}
                   onCheckedChange={toggleAll}
+                  aria-label={t("selectAll")}
                 />
               </TableHead>
             )}
             <TableHead className="w-[40%]">
-              {onSort ? <SortButton field="name">Item</SortButton> : "Item"}
+              {onSort ? (
+                <SortButton field="name">{t("columns.item")}</SortButton>
+              ) : (
+                t("columns.item")
+              )}
             </TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>{t("columns.metal")}</TableHead>
             <TableHead className="text-right">
               {onSort ? (
-                <SortButton field="weight">Weight</SortButton>
+                <SortButton field="weight">{t("columns.weight")}</SortButton>
               ) : (
-                "Weight"
+                t("columns.weight")
               )}
             </TableHead>
             <TableHead className="text-right">
-              {onSort ? <SortButton field="value">Value</SortButton> : "Value"}
+              {onSort ? (
+                <SortButton field="value">{t("columns.value")}</SortButton>
+              ) : (
+                t("columns.value")
+              )}
             </TableHead>
             <TableHead className="text-right">
-              {onSort ? <SortButton field="profitLoss">P/L</SortButton> : "P/L"}
+              {onSort ? (
+                <SortButton field="profitLoss">
+                  {t("columns.profitLoss")}
+                </SortButton>
+              ) : (
+                t("columns.profitLoss")
+              )}
             </TableHead>
             {!selectionMode && <TableHead className="w-8"></TableHead>}
           </TableRow>
@@ -239,6 +262,7 @@ export function HoldingsTable({
                   <Checkbox
                     checked={selectedIds.has(item._id)}
                     onCheckedChange={() => toggleSelection(item._id)}
+                    aria-label={t("selectItem", { name: item.displayName })}
                   />
                 </TableCell>
               )}
@@ -250,7 +274,7 @@ export function HoldingsTable({
                     {item.purity && (
                       <PurityBadge purity={item.purity} size="sm" />
                     )}
-                    <span>×{item.quantity}</span>
+                    <span>{t("quantity", { count: item.quantity })}</span>
                   </div>
                 </div>
               </TableCell>

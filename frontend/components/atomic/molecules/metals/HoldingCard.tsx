@@ -9,10 +9,9 @@ import {
   PurityBadge,
   CategoryBadge,
 } from "@/components/atomic/atoms/metals";
-import {
-  MetalItemWithValuation,
-} from "@/lib/types/metals-extended";
+import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { MoreVertical, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
@@ -65,6 +64,8 @@ export function HoldingCard({
   onDelete,
   className,
 }: HoldingCardProps) {
+  const t = useTranslations("metals.holdings");
+  const tActions = useTranslations("common.actions");
   const style = metalStyles[item.metalType];
 
   return (
@@ -106,6 +107,7 @@ export function HoldingCard({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                      aria-label={t("moreActions")}
                     >
                       <MoreVertical className="h-4 w-4" />
                     </Button>
@@ -118,7 +120,7 @@ export function HoldingCard({
                           onEdit();
                         }}
                       >
-                        Edit
+                        {tActions("edit")}
                       </DropdownMenuItem>
                     )}
                     {onDelete && (
@@ -129,7 +131,7 @@ export function HoldingCard({
                           onDelete();
                         }}
                       >
-                        Delete
+                        {tActions("delete")}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -142,7 +144,7 @@ export function HoldingCard({
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
             <CategoryBadge category={item.category} />
             {item.purity && <PurityBadge purity={item.purity} size="sm" />}
-            <span>×{item.quantity}</span>
+            <span>{t("quantity", { count: item.quantity })}</span>
           </div>
 
           {/* Weight & Value */}
@@ -153,7 +155,9 @@ export function HoldingCard({
                 unit="oz"
                 size="sm"
               />
-              <div className="text-xs text-muted-foreground">Fine Weight</div>
+              <div className="text-xs text-muted-foreground">
+                {t("fineWeight")}
+              </div>
             </div>
             <div className="text-right">
               {/* No fresh spot and no cost: the value is unknown */}
@@ -193,6 +197,7 @@ export function HoldingCardCompact({
   onClick,
   className,
 }: Omit<HoldingCardProps, "onEdit" | "onDelete">) {
+  const t = useTranslations("metals.holdings");
   const style = metalStyles[item.metalType];
 
   return (
@@ -213,7 +218,7 @@ export function HoldingCardCompact({
         <div className="min-w-0">
           <div className="font-medium truncate">{item.displayName}</div>
           <div className="text-xs text-muted-foreground">
-            {item.quantity}× ·{" "}
+            {t("quantityPrefix", { count: item.quantity })} ·{" "}
             <WeightDisplay
               grams={item.fineWeightGrams * item.quantity}
               unit="oz"

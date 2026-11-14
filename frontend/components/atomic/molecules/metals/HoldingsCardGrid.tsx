@@ -5,10 +5,9 @@ import {
   HoldingCardSkeleton,
   AnimatedList,
 } from "@/components/atomic/atoms/metals";
-import {
-  MetalItemWithValuation,
-} from "@/lib/types/metals-extended";
+import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 interface HoldingsCardGridProps {
@@ -32,6 +31,8 @@ export function HoldingsCardGrid({
   compact = false,
   className,
 }: HoldingsCardGridProps) {
+  const t = useTranslations("metals.holdings");
+
   if (isLoading) {
     return (
       <div
@@ -55,7 +56,7 @@ export function HoldingsCardGrid({
           className,
         )}
       >
-        No items found
+        {t("noItems")}
       </div>
     );
   }

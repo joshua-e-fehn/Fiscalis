@@ -196,5 +196,69 @@
     "spotPrice": "Spotpreis",
     "openingBalance": "Anfangsbestand",
     "notes": "Notizen"
+  },
+  "holdings": {
+    "noItems": "Keine Positionen gefunden",
+    "noHoldings": "Keine Bestände",
+    "noHoldingsYet": "Noch keine Bestände",
+    "itemCount": "{count, plural, one {# Position} other {# Positionen}}",
+    "itemCountParen": "{count, plural, one {(# Position)} other {(# Positionen)}}",
+    "quantity": "×{count}",
+    "quantityPrefix": "{count}×",
+    "fineWeight": "Feingewicht",
+    "profitLoss": "G/V",
+    "moreActions": "Weitere Aktionen",
+    "allocation": "Vermögensaufteilung",
+    "other": "Sonstige (<{threshold} %)",
+    "largestHoldings": "Größte Bestände",
+    "columns": {
+      "item": "Position",
+      "metal": "Metall",
+      "weight": "Gewicht",
+      "value": "Wert",
+      "profitLoss": "G/V"
+    },
+    "selectAll": "Alle auswählen",
+    "selectItem": "{name} auswählen",
+    "toolbar": {
+      "cancelSelection": "Auswahl abbrechen",
+      "selectedCount": "{count, plural, one {# Position ausgewählt} other {# Positionen ausgewählt}}",
+      "searchPlaceholder": "Positionen suchen…",
+      "allMetals": "Alle Metalle",
+      "sortBy": "Sortieren nach",
+      "sort": {
+        "name": "Name",
+        "value": "Wert",
+        "weight": "Gewicht",
+        "profitLoss": "Gewinn/Verlust",
+        "dateAdded": "Hinzugefügt am"
+      },
+      "sellSelected": "Auswahl verkaufen",
+      "tableView": "Tabellenansicht",
+      "cardView": "Kartenansicht",
+      "groupedView": "Gruppierte Ansicht",
+      "exportCsv": "Als CSV exportieren",
+      "sellItems": "Positionen verkaufen",
+      "addItem": "Position hinzufügen"
+    },
+    "priceUpdate": {
+      "updating": "Wird aktualisiert…",
+      "updated": "Aktualisiert {when}"
+    }
+  },
+  "badges": {
+    "karat": "({karat} kt)",
+    "weightUnit": {
+      "g": "g",
+      "kg": "kg",
+      "oz": "oz"
+    }
+  },
+  "emptyState": {
+    "title": "Dein Tresor ist leer",
+    "description": "Füge deine erste Position hinzu und baue dein Edelmetall-Portfolio auf.",
+    "addFromCatalog": "Aus dem Katalog hinzufügen",
+    "addCustom": "Eigene Position hinzufügen",
+    "popular": "Beliebte Positionen für den Einstieg:"
   }
 }

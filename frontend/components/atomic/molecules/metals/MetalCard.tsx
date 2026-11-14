@@ -15,6 +15,7 @@ import {
 } from "@/components/atomic/atoms/metals";
 import { MetalsType, MetalSummary } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -33,28 +34,23 @@ interface MetalCardProps {
 const metalConfig: Record<
   MetalsType,
   {
-    label: string;
     borderClass: string;
     bgClass: string;
   }
 > = {
   gold: {
-    label: "Gold",
     borderClass: "border-l-metal-gold",
     bgClass: "hover:bg-metal-gold/5",
   },
   silver: {
-    label: "Silver",
     borderClass: "border-l-metal-silver",
     bgClass: "hover:bg-metal-silver/5",
   },
   platinum: {
-    label: "Platinum",
     borderClass: "border-l-metal-platinum",
     bgClass: "hover:bg-metal-platinum/5",
   },
   palladium: {
-    label: "Palladium",
     borderClass: "border-l-metal-palladium",
     bgClass: "hover:bg-metal-palladium/5",
   },
@@ -69,6 +65,7 @@ export function MetalCard({
   className,
   onClick,
 }: MetalCardProps) {
+  const t = useTranslations("metals");
   const config = metalConfig[metal];
   const hasHoldings = summary.itemCount > 0;
 
@@ -78,7 +75,7 @@ export function MetalCard({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <MetalIcon metal={metal} />
-            {config.label}
+            {t(`metal.${metal}`)}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -103,7 +100,7 @@ export function MetalCard({
         <CardTitle className="text-sm font-medium flex items-center justify-between">
           <div className="flex items-center gap-2">
             <MetalIcon metal={metal} />
-            {config.label}
+            {t(`metal.${metal}`)}
           </div>
           {/* Spot Price */}
           <div className="text-right">
@@ -115,7 +112,9 @@ export function MetalCard({
                   className="text-sm font-medium text-muted-foreground"
                   duration={400}
                 />
-                <span className="text-xs text-muted-foreground">/oz</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("prices.perOz")}
+                </span>
               </div>
             ) : (
               <span className="text-xs text-muted-foreground">--</span>
@@ -139,19 +138,22 @@ export function MetalCard({
               />
               <span>·</span>
               <span>
-                {summary.totalItems}{" "}
-                {summary.totalItems === 1 ? "item" : "items"}
+                {t("holdings.itemCount", { count: summary.totalItems })}
               </span>
             </div>
             {summary.profitLossPercent !== null && (
               <div className="mt-1">
                 <PercentageChange value={summary.profitLossPercent} size="sm" />
-                <span className="text-xs text-muted-foreground ml-1">P/L</span>
+                <span className="text-xs text-muted-foreground ml-1">
+                  {t("holdings.profitLoss")}
+                </span>
               </div>
             )}
           </>
         ) : (
-          <div className="text-muted-foreground text-sm">No holdings</div>
+          <div className="text-muted-foreground text-sm">
+            {t("holdings.noHoldings")}
+          </div>
         )}
       </CardContent>
     </Card>

@@ -131,10 +131,12 @@ export interface SnapshotLike {
 }
 
 /**
- * Keep an optional field absent rather than present-but-undefined, so a
- * converted object has the same keys as the original.
+ * A copy of `target` with the money fields `keys` multiplied by `rate`.
+ * A field that is not a number (null, absent) is kept as it is, so a
+ * converted object has the same keys as the original and "no value"
+ * stays "no value".
  */
-function withScaled<T extends object, K extends keyof T>(
+export function scaleMoney<T extends object, K extends keyof T>(
   target: T,
   keys: readonly K[],
   rate: number,
@@ -160,7 +162,7 @@ export function snapshotInCurrency<T extends SnapshotLike>(
   unitsPerEur: number,
 ): T {
   if (unitsPerEur === 1) return snapshot;
-  const converted = withScaled(
+  const converted = scaleMoney(
     snapshot,
     [
       "totalAssets",
@@ -175,7 +177,7 @@ export function snapshotInCurrency<T extends SnapshotLike>(
   return {
     ...converted,
     categoryBreakdown: snapshot.categoryBreakdown.map((category) => {
-      const entry = withScaled(
+      const entry = scaleMoney(
         category,
         ["value", "costBasis", "coveredValue", "netFlow"] as const,
         unitsPerEur,
@@ -184,7 +186,7 @@ export function snapshotInCurrency<T extends SnapshotLike>(
       return {
         ...entry,
         sources: category.sources.map((source) => {
-          const s = withScaled(
+          const s = scaleMoney(
             source,
             ["value", "costBasis", "coveredValue", "netFlow"] as const,
             unitsPerEur,
@@ -193,7 +195,7 @@ export function snapshotInCurrency<T extends SnapshotLike>(
           return {
             ...s,
             holdings: source.holdings.map((h) =>
-              withScaled(h, ["value", "cost"] as const, unitsPerEur),
+              scaleMoney(h, ["value", "cost"] as const, unitsPerEur),
             ),
           };
         }),
@@ -219,4 +221,124 @@ export function seriesInCurrency<T extends { timestamp: number; value: number }>
       rateOn(history, point.timestamp) ?? fallbackUnitsPerEur,
     ),
   }));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Aggregates (point in time, latest rate)
+// ═══════════════════════════════════════════════════════════════
+
+/** Money fields of a holding row (frontend lib/types/investments.ts Holding). */
+interface HoldingRowLike {
+  value: number;
+  costBasis: number | null;
+  profitLoss: number | null;
+}
+
+/** Money fields of a subcategory card (lib/types/investments.ts SubcategoryData). */
+interface SubcategoryCardLike {
+  totalValue: number;
+  costBasis: number | null;
+  profitLoss: number | null;
+  topHoldings: HoldingRowLike[];
+}
+
+/** Money fields of a category summary (lib/types/investments.ts CategorySummary). */
+export interface CategorySummaryLike {
+  totalValue: number;
+  totalCost: number | null;
+  profitLoss: number | null;
+  ytdProfitLoss: number | null;
+  valueAtYearStart: number | null;
+  subcategories: SubcategoryCardLike[];
+}
+
+/**
+ * A category summary (an EUR aggregate) in the display currency at one
+ * rate: the totals, cost, P/L and YTD amounts, each subcategory card and
+ * its top holdings. Percentages and coverage are scale-invariant and kept.
+ */
+export function categorySummaryInCurrency<T extends CategorySummaryLike>(
+  summary: T,
+  unitsPerEur: number,
+): T {
+  if (unitsPerEur === 1) return summary;
+  return {
+    ...scaleMoney(
+      summary,
+      [
+        "totalValue",
+        "totalCost",
+        "profitLoss",
+        "ytdProfitLoss",
+        "valueAtYearStart",
+      ] as const,
+      unitsPerEur,
+    ),
+    subcategories: summary.subcategories.map((sub) => ({
+      ...scaleMoney(
+        sub,
+        ["totalValue", "costBasis", "profitLoss"] as const,
+        unitsPerEur,
+      ),
+      topHoldings: sub.topHoldings.map((h) =>
+        scaleMoney(h, ["value", "costBasis", "profitLoss"] as const, unitsPerEur),
+      ),
+    })),
+  };
+}
+
+/** Money fields of a dashboard category card (hooks/convex/portfolio.ts). */
+interface AssetCategoryLike {
+  totalValue: number;
+  costBasis: number | null;
+  profitLoss: number | null;
+}
+
+/** Money fields of the portfolio overview (hooks/convex/portfolio.ts PortfolioSummary). */
+export interface PortfolioSummaryLike {
+  totalAssets: number;
+  totalLiabilities: number;
+  netWorth: number;
+  totalCostBasis: number | null;
+  costLine: number | null;
+  unrealizedProfitLoss: number | null;
+  assetCategories: AssetCategoryLike[];
+  liabilities: { totalBalance: number; monthlyPayment: number } | null;
+}
+
+/**
+ * The portfolio overview (EUR) in the display currency at one rate: net
+ * worth, totals, cost line and P/L, each category card and the
+ * liabilities card's balance and monthly payment. Percentages, coverage,
+ * counts and timestamps are kept.
+ */
+export function portfolioSummaryInCurrency<T extends PortfolioSummaryLike>(
+  summary: T,
+  unitsPerEur: number,
+): T {
+  if (unitsPerEur === 1) return summary;
+  return {
+    ...scaleMoney(
+      summary,
+      [
+        "totalAssets",
+        "totalLiabilities",
+        "netWorth",
+        "totalCostBasis",
+        "costLine",
+        "unrealizedProfitLoss",
+      ] as const,
+      unitsPerEur,
+    ),
+    assetCategories: summary.assetCategories.map((c) =>
+      scaleMoney(c, ["totalValue", "costBasis", "profitLoss"] as const, unitsPerEur),
+    ),
+    liabilities:
+      summary.liabilities &&
+      scaleMoney(
+        summary.liabilities,
+        ["totalBalance", "monthlyPayment"] as const,
+        unitsPerEur,
+      ),
+  };
 }

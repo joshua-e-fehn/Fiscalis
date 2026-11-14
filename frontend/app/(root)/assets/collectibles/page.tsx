@@ -23,7 +23,6 @@ export default function CollectiblesPage() {
       <InvestmentDashboardSection
         category="collectibles"
         summary={summary}
-        currency="eur"
         isLoading={isLoading}
       />
 

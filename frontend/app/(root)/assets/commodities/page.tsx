@@ -34,7 +34,6 @@ export default function CommoditiesPage() {
         <InvestmentDashboardSection
           category="commodities"
           summary={summary}
-          currency="eur"
           isLoading={isLoading}
           showTopHoldings={hasHoldings ?? false}
         />

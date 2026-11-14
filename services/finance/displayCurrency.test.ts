@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   DISPLAY_CURRENCIES,
+  categorySummaryInCurrency,
   fromEur,
   isDisplayCurrency,
+  portfolioSummaryInCurrency,
   rateOn,
+  scaleMoney,
   seriesInCurrency,
   snapshotInCurrency,
   toDisplayCurrency,
@@ -210,5 +213,149 @@ describe("return invariance", () => {
     expect(usd.modifiedDietzPercent).toBeCloseTo(eur.modifiedDietzPercent!, 10);
     expect(usd.timeWeightedPercent).toBeCloseTo(eur.timeWeightedPercent!, 10);
     expect(usd.profitLoss).toBeCloseTo(eur.profitLoss * rate, 8);
+  });
+});
+
+describe("scaleMoney", () => {
+  it("scales the named number fields and keeps null and absent ones", () => {
+    const row: { value: number; cost: number | null; pl?: number; label: string } = {
+      value: -15_000,
+      cost: null,
+      label: "loan",
+    };
+    const out = scaleMoney(row, ["value", "cost", "pl"] as const, 1.25);
+    expect(out).toEqual({ value: -18_750, cost: null, label: "loan" });
+    expect("pl" in out).toBe(false);
+    expect(row.value).toBe(-15_000);
+  });
+});
+
+describe("categorySummaryInCurrency", () => {
+  // EUR figures; 0.85 GBP per EUR
+  const GBP = 0.85;
+  const summary = {
+    totalValue: 10_000,
+    totalCost: 8_000,
+    profitLoss: 2_000,
+    profitLossPercent: 25,
+    profitLossCoverage: 0.9,
+    ytdProfitLoss: null,
+    ytdProfitLossPercent: null,
+    valueAtYearStart: null,
+    subcategories: [
+      {
+        id: "stocks",
+        name: "Stocks",
+        totalValue: 10_000,
+        costBasis: 8_000,
+        profitLoss: 2_000,
+        profitLossPercent: 25,
+        holdingsCount: 2,
+        topHoldings: [
+          {
+            id: "a",
+            name: "ACME",
+            value: 6_000,
+            costBasis: null,
+            profitLoss: null,
+            profitLossPercent: null,
+            allocationPercent: 60,
+          },
+        ],
+      },
+    ],
+  };
+
+  it("converts every amount and keeps percentages", () => {
+    const out = categorySummaryInCurrency(summary, GBP);
+    expect(out.totalValue).toBeCloseTo(8_500);
+    expect(out.totalCost).toBeCloseTo(6_800);
+    expect(out.profitLoss).toBeCloseTo(1_700);
+    expect(out.profitLossPercent).toBe(25);
+    expect(out.profitLossCoverage).toBe(0.9);
+    expect(out.ytdProfitLoss).toBeNull();
+    const sub = out.subcategories[0];
+    expect(sub.totalValue).toBeCloseTo(8_500);
+    expect(sub.costBasis).toBeCloseTo(6_800);
+    expect(sub.profitLossPercent).toBe(25);
+    expect(sub.holdingsCount).toBe(2);
+    expect(sub.topHoldings[0]).toMatchObject({
+      name: "ACME",
+      costBasis: null,
+      allocationPercent: 60,
+    });
+    expect(sub.topHoldings[0].value).toBeCloseTo(5_100);
+  });
+
+  it("keeps the summary consistent: P/L = value - cost after conversion", () => {
+    const out = categorySummaryInCurrency(summary, GBP);
+    expect(out.totalValue - out.totalCost!).toBeCloseTo(out.profitLoss!);
+  });
+
+  it("is the identity at rate 1 (EUR)", () => {
+    expect(categorySummaryInCurrency(summary, 1)).toBe(summary);
+  });
+});
+
+describe("portfolioSummaryInCurrency", () => {
+  // 1.17 USD per EUR
+  const USD = 1.17;
+  const summary = {
+    totalAssets: 100_000,
+    totalLiabilities: 15_000,
+    netWorth: 85_000,
+    totalCostBasis: 60_000,
+    costLine: 80_000,
+    unrealizedProfitLoss: 20_000,
+    unrealizedProfitLossPercent: 33.3,
+    unrealizedProfitLossCoverage: 0.8,
+    assetCategories: [
+      {
+        id: "equities",
+        totalValue: 70_000,
+        costBasis: null,
+        profitLoss: null,
+        profitLossPercent: null,
+        holdingsCount: 4,
+      },
+    ],
+    liabilities: {
+      totalBalance: 15_000,
+      monthlyPayment: 500,
+      loansCount: 1,
+      accountsCount: 0,
+    },
+    asOf: 1_700_000_000_000,
+  };
+
+  it("converts totals, cards and the liabilities card", () => {
+    const out = portfolioSummaryInCurrency(summary, USD);
+    expect(out.totalAssets).toBeCloseTo(117_000);
+    expect(out.totalLiabilities).toBeCloseTo(17_550);
+    expect(out.netWorth).toBeCloseTo(99_450);
+    expect(out.totalAssets - out.totalLiabilities).toBeCloseTo(out.netWorth);
+    expect(out.totalCostBasis).toBeCloseTo(70_200);
+    expect(out.costLine).toBeCloseTo(93_600);
+    expect(out.unrealizedProfitLoss).toBeCloseTo(23_400);
+    expect(out.unrealizedProfitLossPercent).toBe(33.3);
+    expect(out.unrealizedProfitLossCoverage).toBe(0.8);
+    expect(out.asOf).toBe(summary.asOf);
+    expect(out.assetCategories[0].totalValue).toBeCloseTo(81_900);
+    expect(out.assetCategories[0].costBasis).toBeNull();
+    expect(out.assetCategories[0].holdingsCount).toBe(4);
+    expect(out.liabilities?.totalBalance).toBeCloseTo(17_550);
+    expect(out.liabilities?.monthlyPayment).toBeCloseTo(585);
+    expect(out.liabilities?.loansCount).toBe(1);
+  });
+
+  it("keeps a missing liabilities card missing", () => {
+    expect(
+      portfolioSummaryInCurrency({ ...summary, liabilities: null }, USD)
+        .liabilities,
+    ).toBeNull();
+  });
+
+  it("is the identity at rate 1 (EUR)", () => {
+    expect(portfolioSummaryInCurrency(summary, 1)).toBe(summary);
   });
 });

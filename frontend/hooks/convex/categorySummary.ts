@@ -9,12 +9,14 @@
  */
 
 import { useMemo } from "react";
+import { useDisplayCurrency } from "./displayCurrency";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { CategoryPosition } from "@/convex/categories";
 import type {
   CategorySummary,
   Holding,
+  InvestmentCurrency,
   SubcategoryData,
 } from "@/lib/types/investments";
 import {
@@ -28,6 +30,7 @@ import {
   type CategoryHolding,
   type HoldingsSummary,
 } from "@/../services/portfolio/categorySummary";
+import { categorySummaryInCurrency } from "@/../services/finance/displayCurrency";
 
 /**
  * Result of categories.getEquities / getBonds / getCrypto / getRealEstate /
@@ -119,7 +122,9 @@ export function subcategoryCards(
 }
 
 /**
- * Category summary with one card per configured subcategory.
+ * Category summary with one card per configured subcategory, in the
+ * display currency (`currency`) at the latest rate; the server summarises
+ * in EUR.
  *
  * @param data the category query result (undefined while loading)
  * @param subcategories the category's subcategory cards from
@@ -129,7 +134,13 @@ export function useCategorySummary(
   data: CategoryPositionsData | undefined,
   subcategories: SubcategoryData[],
   topHoldingsPerSubcategory = 3,
-): { summary: CategorySummary | null; isLoading: boolean } {
+): {
+  summary: CategorySummary | null;
+  currency: InvestmentCurrency;
+  isLoading: boolean;
+} {
+  const display = useDisplayCurrency();
+  const { unitsPerEur } = display;
   const summary = useMemo<CategorySummary | null>(() => {
     if (data === undefined || data === null) return null;
     const { positions, vaultHoldings, summary: total } = data;
@@ -139,7 +150,7 @@ export function useCategorySummary(
       ...vaultHoldings,
     ];
 
-    return toCategorySummary(
+    const eur = toCategorySummary(
       total,
       subcategories.map((base) => {
         const sub = total.bySubcategory[base.id] ?? EMPTY;
@@ -158,7 +169,12 @@ export function useCategorySummary(
         };
       }),
     );
-  }, [data, subcategories, topHoldingsPerSubcategory]);
+    return categorySummaryInCurrency(eur, unitsPerEur);
+  }, [data, subcategories, topHoldingsPerSubcategory, unitsPerEur]);
 
-  return { summary, isLoading: data === undefined };
+  return {
+    summary,
+    currency: display.currency,
+    isLoading: data === undefined || display.isLoading,
+  };
 }

@@ -31,7 +31,6 @@ export default function CryptoAssetsOverviewPage() {
       <InvestmentDashboardSection
         category="crypto"
         summary={summary}
-        currency="eur"
         isLoading={isLoading}
         showTopHoldings={hasHoldings ?? false}
         customAllocationChart={<CryptoAllocationChart maxPositions={8} />}

@@ -22,8 +22,8 @@ import {
 } from "lucide-react";
 import { InvestmentDashboardSection } from "@/components/atomic/molecules/investments";
 import { useLiabilitiesSummary } from "@/hooks/convex/liabilities";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
 import { formatCurrency } from "@/lib/utils/currency";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { AddLoanDialog } from "@/components/atomic/organisms/loans/add-loan-dialog";
 
 /**
@@ -85,19 +85,21 @@ interface LiabilityCategoryCardProps {
   category: LiabilityCategory;
   value: number;
   holdingsCount: number;
+  /** Currency `value` is in (the summary's) */
+  currency: InvestmentCurrency;
 }
 
 const LiabilityCategoryCard = ({
   category,
   value,
   holdingsCount,
+  currency,
 }: LiabilityCategoryCardProps) => {
   const Icon = category.icon;
   const hasHoldings = holdingsCount > 0;
 
-  const baseCurrency = useBaseCurrency();
   const formatValue = (val: number) =>
-    formatCurrency(val, baseCurrency, { compact: true });
+    formatCurrency(val, currency, { compact: true });
 
   return (
     <Card
@@ -185,8 +187,7 @@ const LiabilityCategoryCard = ({
 };
 
 export default function LiabilitiesPage() {
-  const { summary, isLoading } = useLiabilitiesSummary();
-  const baseCurrency = useBaseCurrency();
+  const { summary, currency, isLoading } = useLiabilitiesSummary();
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Check if there are any liabilities
@@ -228,7 +229,7 @@ export default function LiabilitiesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-destructive">
-              {formatCurrency(summary.totalValue, baseCurrency)}
+              {formatCurrency(summary.totalValue, currency)}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Across{" "}
@@ -246,7 +247,7 @@ export default function LiabilitiesPage() {
       <InvestmentDashboardSection
         category="liabilities"
         summary={summary}
-        currency={baseCurrency}
+        currency={currency}
         isLoading={isLoading}
         showTopHoldings={hasLiabilities ?? false}
       />
@@ -269,6 +270,7 @@ export default function LiabilitiesPage() {
                 category={category}
                 value={data.value}
                 holdingsCount={data.holdingsCount}
+                currency={currency}
               />
             );
           })}

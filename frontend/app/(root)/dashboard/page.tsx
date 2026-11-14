@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -25,7 +26,7 @@ import type { ChartTimeRange } from "@/components/atomic/molecules/metals";
 import { RetirementTeaserCard } from "@/components/atomic/molecules/retirement";
 import { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency } from "@/lib/utils/currency";
-import { liabilityCountsLabel } from "@/../services/portfolio/aggregate";
+import { useCategoryLabels } from "@/lib/config/categoryUI";
 import {
   TrendingUp,
   TrendingDown,
@@ -145,6 +146,8 @@ function YTDNetWorthCard({
   currency,
   isLoading = false,
 }: YTDNetWorthCardProps) {
+  const t = useTranslations("dashboard.ytdNetWorth");
+  const format = useFormatter();
   const isPositive = (ytdChange ?? 0) >= 0;
   const hasData = ytdChange !== null;
 
@@ -157,7 +160,7 @@ function YTDNetWorthCard({
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          YTD Net Worth
+          {t("title")}
         </CardTitle>
         <div className="text-muted-foreground">
           <Calendar className="h-4 w-4" />
@@ -187,7 +190,9 @@ function YTDNetWorthCard({
               // includes its move against the euro (amounts are stored in EUR)
               currency === "eur" ? (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {formatPercent(ytdChangePercent)} change since Jan 1
+                  {t("changeSinceJan1", {
+                    percent: formatPercent(ytdChangePercent),
+                  })}
                 </p>
               ) : (
                 <UiTooltipProvider>
@@ -197,11 +202,13 @@ function YTDNetWorthCard({
                         className="text-xs text-muted-foreground mt-1"
                         tabIndex={0}
                       >
-                        {formatPercent(ytdChangePercent)} change since Jan 1
+                        {t("changeSinceJan1", {
+                          percent: formatPercent(ytdChangePercent),
+                        })}
                       </p>
                     </UiTooltipTrigger>
                     <UiTooltipContent className="max-w-xs">
-                      {`Measured in ${currency.toUpperCase()}: includes the change in the euro exchange rate since Jan 1.`}
+                      {t("fxEffectHint", { currency: currency.toUpperCase() })}
                     </UiTooltipContent>
                   </UiTooltip>
                 </UiTooltipProvider>
@@ -209,7 +216,7 @@ function YTDNetWorthCard({
             )}
             {partial && (
               <p className="text-xs text-muted-foreground mt-1">
-                Partial: a provider sync failed or a price is missing
+                {t("partial")}
               </p>
             )}
           </>
@@ -220,10 +227,10 @@ function YTDNetWorthCard({
             </div>
             <p className="text-xs mt-1">
               {trackingSince !== null
-                ? `Not enough history (tracking since ${new Date(
-                    trackingSince,
-                  ).toLocaleDateString("de-DE")})`
-                : "No data for this year"}
+                ? t("trackingSince", {
+                    date: format.dateTime(trackingSince, "short"),
+                  })
+                : t("noData")}
             </p>
           </div>
         )}
@@ -254,18 +261,18 @@ function NetWorthCard({
   currency,
   isLoading = false,
 }: NetWorthCardProps) {
+  const t = useTranslations("dashboard.netWorth");
   const isProfit = (profitLoss ?? 0) >= 0;
   // Only call out coverage when part of the assets has no cost basis.
   const coveredPercent = partialCoveragePercent(profitLossCoverage);
-  const coverageLabel =
-    coveredPercent !== null ? ` on ${coveredPercent}% of assets` : "";
+  const percent = formatPercent(profitLossPercent);
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
           <Wallet className="h-4 w-4" />
-          Total Net Worth
+          {t("title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -292,8 +299,12 @@ function NetWorthCard({
                   {formatCurrency(Math.abs(profitLoss), currency)}
                 </span>
                 <span className="text-muted-foreground">
-                  ({formatPercent(profitLossPercent)}) unrealized
-                  {coverageLabel}
+                  {coveredPercent !== null
+                    ? t("unrealizedCoverage", {
+                        percent,
+                        covered: coveredPercent,
+                      })
+                    : t("unrealized", { percent })}
                 </span>
               </div>
             )}
@@ -321,12 +332,15 @@ function AllocationChart({
   currency,
   isLoading = false,
 }: AllocationChartProps) {
+  const t = useTranslations("dashboard.allocation");
+  const labels = useCategoryLabels();
   // Filter to only categories with value
   const activeCategories = categories.filter((cat) => cat.totalValue > 0);
 
   // Calculate percentages
   const chartData = activeCategories.map((cat) => ({
-    name: cat.name,
+    id: cat.id,
+    name: labels.categoryName(cat.id),
     value: cat.totalValue,
     color: cat.color,
     percent: totalAssets > 0 ? (cat.totalValue / totalAssets) * 100 : 0,
@@ -337,7 +351,7 @@ function AllocationChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Asset Allocation</CardTitle>
+          <CardTitle className="text-lg">{t("title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-[250px]">
@@ -352,13 +366,13 @@ function AllocationChart({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Asset Allocation</CardTitle>
+          <CardTitle className="text-lg">{t("title")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
             <PiggyBank className="h-12 w-12 mb-2 opacity-50" />
-            <p>No assets to display</p>
-            <p className="text-sm">Add investments to see your allocation</p>
+            <p>{t("empty")}</p>
+            <p className="text-sm">{t("emptyHint")}</p>
           </div>
         </CardContent>
       </Card>
@@ -368,10 +382,8 @@ function AllocationChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Asset Allocation</CardTitle>
-        <CardDescription>
-          Distribution across investment categories
-        </CardDescription>
+        <CardTitle className="text-lg">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col md:flex-row items-center gap-4">
@@ -417,7 +429,7 @@ function AllocationChart({
           <div className="flex-1 space-y-2">
             {chartData.map((cat) => (
               <Link
-                key={cat.name}
+                key={cat.id}
                 href={cat.href}
                 className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors group"
               >
@@ -453,6 +465,8 @@ interface CategoryCardProps {
 }
 
 function CategoryCard({ category, currency }: CategoryCardProps) {
+  const t = useTranslations("dashboard.categoryCard");
+  const labels = useCategoryLabels();
   const hasValue = category.totalValue > 0;
   const isProfit = (category.profitLoss ?? 0) >= 0;
 
@@ -469,7 +483,7 @@ function CategoryCard({ category, currency }: CategoryCardProps) {
                 {category.icon}
               </div>
               <CardTitle className="text-sm font-medium">
-                {category.name}
+                {labels.categoryName(category.id)}
               </CardTitle>
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
@@ -498,8 +512,7 @@ function CategoryCard({ category, currency }: CategoryCardProps) {
               )}
               {category.holdingsCount > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  {category.holdingsCount} holding
-                  {category.holdingsCount !== 1 ? "s" : ""}
+                  {t("holdings", { count: category.holdingsCount })}
                 </p>
               )}
             </>
@@ -509,7 +522,7 @@ function CategoryCard({ category, currency }: CategoryCardProps) {
                 <Minus className="h-4 w-4" />
               </div>
               <p className="text-xs mt-1">
-                {category.implemented ? "No holdings" : "Coming soon"}
+                {category.implemented ? t("noHoldings") : t("comingSoon")}
               </p>
             </div>
           )}
@@ -536,7 +549,15 @@ function LiabilitiesCard({
 }: LiabilitiesCardProps) {
   const { totalBalance, monthlyPayment, loansCount, accountsCount } =
     liabilities;
-  const countsLabel = liabilityCountsLabel(accountsCount, loansCount);
+  const t = useTranslations("dashboard.liabilitiesCard");
+  const countsLabel =
+    accountsCount > 0 && loansCount > 0
+      ? t("accountsAndLoans", { accounts: accountsCount, loans: loansCount })
+      : accountsCount > 0
+        ? t("accounts", { accounts: accountsCount })
+        : loansCount > 0
+          ? t("loans", { loans: loansCount })
+          : null;
   return (
     <Link href="/liabilities">
       <Card className="hover:shadow-md hover:border-primary/50 transition-all cursor-pointer border-loss/20 bg-loss/5 h-full">
@@ -544,7 +565,7 @@ function LiabilitiesCard({
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
-              Liabilities
+              {t("title")}
             </CardTitle>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -564,8 +585,9 @@ function LiabilitiesCard({
               )}
               {monthlyPayment > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {formatCurrency(monthlyPayment, currency)}/month in loan
-                  payments
+                  {t("monthlyPayments", {
+                    amount: formatCurrency(monthlyPayment, currency),
+                  })}
                 </p>
               )}
             </>
@@ -581,6 +603,7 @@ function LiabilitiesCard({
 // ═══════════════════════════════════════════════════════════════
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard");
   // Figures in the display currency, tagged with it
   const { summary, currency, isLoading } = usePortfolioOverview();
   // The live totals the headline cards show: the YTD card and the chart end
@@ -605,8 +628,8 @@ export default function DashboardPage() {
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <PageHeader
-        title="Dashboard"
-        subtitle="Your complete financial overview"
+        title={t("page.title")}
+        subtitle={t("page.subtitle")}
       />
 
       {/* Row 1: Net Worth + Key Metrics */}
@@ -625,7 +648,7 @@ export default function DashboardPage() {
 
         {/* Total Assets */}
         <HeroKPICard
-          title="Total Assets"
+          title={t("kpi.totalAssets")}
           value={summary?.totalAssets ?? 0}
           icon={<PiggyBank className="h-4 w-4" />}
           currency={currency}
@@ -635,7 +658,7 @@ export default function DashboardPage() {
 
         {/* Total Liabilities */}
         <HeroKPICard
-          title="Total Liabilities"
+          title={t("kpi.totalLiabilities")}
           value={summary?.totalLiabilities ?? 0}
           icon={<CreditCard className="h-4 w-4" />}
           currency={currency}
@@ -671,7 +694,7 @@ export default function DashboardPage() {
           partial={portfolioChart.partial}
           currency={portfolioChart.currency}
           isLoading={isLoading || portfolioChart.isLoading}
-          title="Portfolio Development"
+          title={t("page.performanceTitle")}
         />
       </div>
 
@@ -680,7 +703,9 @@ export default function DashboardPage() {
 
       {/* Row 3: Category Cards + Liabilities */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Investment Categories</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          {t("page.investmentCategories")}
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {summary?.assetCategories.map((category) => (
             <CategoryCard

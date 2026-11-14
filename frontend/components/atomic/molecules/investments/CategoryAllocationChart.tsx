@@ -6,7 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useCategoryLabels } from "@/lib/config/categoryUI";
 import { SubcategoryData } from "@/lib/types/investments";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -21,12 +23,15 @@ export function CategoryAllocationChart({
   isLoading = false,
   className,
 }: CategoryAllocationChartProps) {
+  const t = useTranslations("dashboard.allocationChart");
+  const labels = useCategoryLabels();
+
   if (isLoading) {
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Allocation
+            {t("title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-48">
@@ -66,7 +71,7 @@ export function CategoryAllocationChart({
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Allocation
+            {t("title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center h-48">
@@ -76,7 +81,7 @@ export function CategoryAllocationChart({
             <div className="absolute inset-4 rounded-full bg-background" />
           </div>
           <span className="text-sm text-muted-foreground mt-4">
-            No holdings yet
+            {t("empty")}
           </span>
         </CardContent>
       </Card>
@@ -85,7 +90,8 @@ export function CategoryAllocationChart({
 
   // Prepare data for pie chart
   const data = filteredData.map((s) => ({
-    name: s.name,
+    key: s.id,
+    name: labels.name(s.label),
     value: (s.totalValue / totalValue) * 100,
     absoluteValue: s.totalValue,
     color: s.color,
@@ -94,7 +100,8 @@ export function CategoryAllocationChart({
   // Add "Other" category if there are small items
   if (otherValue > 0) {
     data.push({
-      name: "Other (<2%)",
+      key: "other",
+      name: t("other"),
       value: (otherValue / totalValue) * 100,
       absoluteValue: otherValue,
       color: otherColor,
@@ -105,7 +112,7 @@ export function CategoryAllocationChart({
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          Allocation
+          {t("title")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -145,7 +152,7 @@ export function CategoryAllocationChart({
         {/* Legend */}
         <div className="flex flex-wrap justify-center gap-3 mt-2">
           {data.map((item) => (
-            <div key={item.name} className="flex items-center gap-1.5 text-xs">
+            <div key={item.key} className="flex items-center gap-1.5 text-xs">
               <div
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: item.color }}

@@ -6,7 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useCategoryLabels } from "@/lib/config/categoryUI";
 import { SubcategoryData, InvestmentCurrency } from "@/lib/types/investments";
 import { currencySuffixes } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -27,12 +29,15 @@ export function TopHoldingsList({
   isLoading = false,
   className,
 }: TopHoldingsListProps) {
+  const t = useTranslations("dashboard.topHoldings");
+  const labels = useCategoryLabels();
+
   if (isLoading) {
     return (
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Largest Holdings
+            {t("title")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -60,11 +65,13 @@ export function TopHoldingsList({
       <Card className={cn("h-full", className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
-            Largest Holdings
+            {t("title")}
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-32">
-          <span className="text-sm text-muted-foreground">No holdings yet</span>
+          <span className="text-sm text-muted-foreground">
+            {t("empty")}
+          </span>
         </CardContent>
       </Card>
     );
@@ -80,7 +87,7 @@ export function TopHoldingsList({
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">
-          Largest Holdings
+          {t("title")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -92,10 +99,11 @@ export function TopHoldingsList({
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: subcategory.color }}
               />
-              <span className="text-sm font-medium">{subcategory.name}</span>
+              <span className="text-sm font-medium">
+                {labels.name(subcategory.label)}
+              </span>
               <span className="text-xs text-muted-foreground">
-                ({subcategory.holdingsCount} holding
-                {subcategory.holdingsCount !== 1 ? "s" : ""})
+                {t("count", { count: subcategory.holdingsCount })}
               </span>
             </div>
 

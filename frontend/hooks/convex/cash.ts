@@ -8,6 +8,7 @@
  */
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
@@ -41,6 +42,7 @@ export function useCashSummary(): {
   const cashData = useQuery(api.categories.getCashHoldings);
   const display = useDisplayCurrency();
   const { unitsPerEur } = display;
+  const t = useTranslations("dashboard.cashHoldings");
 
   const isLoading = cashData === undefined || display.isLoading;
 
@@ -76,7 +78,7 @@ export function useCashSummary(): {
           const value = bankAccountValue(acc);
           holdings.push({
             id: acc._id,
-            name: acc.name || acc.officialName || "Bank Account",
+            name: acc.name || acc.officialName || t("bankAccount"),
             subcategoryId: subcategory,
             value,
             costBasis: null,
@@ -99,7 +101,7 @@ export function useCashSummary(): {
           const value = positionValue(pos);
           holdings.push({
             id: pos._id,
-            name: pos.symbol ?? pos.name ?? "Cash Position",
+            name: pos.symbol ?? pos.name ?? t("cashPosition"),
             subcategoryId: subcategory,
             value,
             costBasis: null,
@@ -122,7 +124,9 @@ export function useCashSummary(): {
             const value = accountCash(acc);
             holdings.push({
               id: acc._id,
-              name: `${acc.institutionName || acc.name} - Cash`,
+              name: t("brokerCash", {
+                account: acc.institutionName || acc.name,
+              }),
               subcategoryId: subcategory,
               value,
               costBasis: null,
@@ -169,7 +173,7 @@ export function useCashSummary(): {
       },
       unitsPerEur,
     );
-  }, [cashData, display.isLoading, unitsPerEur]);
+  }, [cashData, display.isLoading, unitsPerEur, t]);
 
   return {
     summary,

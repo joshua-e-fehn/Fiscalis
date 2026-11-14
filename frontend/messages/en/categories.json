@@ -1,0 +1,287 @@
+{
+  "equities": {
+    "name": "Equities",
+    "subcategories": {
+      "stocks": {
+        "name": "Public Stocks",
+        "description": "Individual company shares traded on public stock exchanges",
+        "examples": "Apple, Microsoft, Tesla, Amazon"
+      },
+      "etfs": {
+        "name": "ETFs & Index Funds",
+        "description": "Passive funds tracking market indices for diversified exposure",
+        "examples": "S&P 500, MSCI World, NASDAQ-100, DAX"
+      },
+      "funds": {
+        "name": "Mutual Funds",
+        "description": "Actively managed investment funds with professional portfolio management",
+        "examples": "Growth Funds, Value Funds, Sector Funds, Balanced Funds"
+      },
+      "options": {
+        "name": "Options",
+        "description": "Derivative contracts for hedging or leveraged exposure",
+        "examples": "Call Options, Put Options, Spreads, Covered Calls"
+      },
+      "private": {
+        "name": "Private Equity",
+        "description": "Investments in private companies, startups, and angel investments",
+        "examples": "Startups, Venture Capital, Angel Investments, PE Funds"
+      }
+    }
+  },
+  "commodities": {
+    "name": "Commodities",
+    "subcategories": {
+      "metals": {
+        "name": "Precious Metals",
+        "description": "Track gold, silver, platinum, and palladium prices with real-time charts",
+        "examples": "Gold, Silver, Platinum, Palladium"
+      },
+      "energy": {
+        "name": "Energy",
+        "description": "Oil, natural gas, and other energy commodity prices",
+        "examples": "Crude Oil, Natural Gas, Heating Oil, Gasoline"
+      },
+      "industrial": {
+        "name": "Industrial Metals",
+        "description": "Base metals used in manufacturing and construction",
+        "examples": "Copper, Aluminum, Zinc, Nickel"
+      },
+      "agricultural": {
+        "name": "Agricultural",
+        "description": "Grains, softs, and other agricultural commodities",
+        "examples": "Wheat, Corn, Soybeans, Coffee"
+      },
+      "rare-earth": {
+        "name": "Rare Earth",
+        "description": "Strategic rare earth elements used in technology and defense",
+        "examples": "Neodymium, Dysprosium, Lithium, Cobalt"
+      },
+      "gemstones": {
+        "name": "Gemstones",
+        "description": "Diamonds, rubies, sapphires, and other precious gemstones",
+        "examples": "Diamonds, Rubies, Sapphires, Emeralds"
+      }
+    }
+  },
+  "bonds": {
+    "name": "Bonds",
+    "subcategories": {
+      "government": {
+        "name": "Government Bonds",
+        "description": "Treasury bills, notes, and bonds issued by national governments including inflation-protected securities",
+        "examples": "US Treasuries, German Bunds, UK Gilts, TIPS/I-Bonds"
+      },
+      "corporate": {
+        "name": "Corporate Bonds",
+        "description": "Investment-grade and high-yield bonds issued by corporations",
+        "examples": "Investment Grade, High Yield, Convertible Bonds, Green Bonds"
+      },
+      "municipal": {
+        "name": "Municipal Bonds",
+        "description": "Tax-advantaged bonds issued by states, cities, and local governments",
+        "examples": "General Obligation, Revenue Bonds, Tax-Free Munis, Build America"
+      },
+      "savings": {
+        "name": "Savings Bonds",
+        "description": "Government-backed savings certificates and retail bonds",
+        "examples": "Series I Bonds, Series EE Bonds, Premium Bonds, Savings Certificates"
+      },
+      "funds": {
+        "name": "Bond Funds & ETFs",
+        "description": "Diversified fixed income exposure through funds and ETFs",
+        "examples": "Aggregate Bond, Short-Term, Long-Term, International"
+      }
+    }
+  },
+  "real-estate": {
+    "name": "Real Estate",
+    "subcategories": {
+      "residential": {
+        "name": "Residential",
+        "description": "Single-family homes, apartments, condos, and vacation properties",
+        "examples": "Primary Home, Rental Properties, Vacation Homes, Condos"
+      },
+      "commercial": {
+        "name": "Commercial",
+        "description": "Office buildings, retail spaces, warehouses, and industrial properties",
+        "examples": "Office Space, Retail, Warehouses, Mixed-Use"
+      },
+      "reits": {
+        "name": "REITs",
+        "description": "Real Estate Investment Trusts - publicly traded real estate securities",
+        "examples": "Equity REITs, Mortgage REITs, Hybrid REITs, REIT ETFs"
+      },
+      "crowdfunding": {
+        "name": "Crowdfunding",
+        "description": "Real estate investments through crowdfunding platforms",
+        "examples": "Fundrise, CrowdStreet, RealtyMogul, Groundfloor"
+      },
+      "land": {
+        "name": "Land",
+        "description": "Raw land, farmland, and undeveloped property investments",
+        "examples": "Raw Land, Farmland, Timber, Development Land"
+      }
+    }
+  },
+  "cash": {
+    "name": "Cash & Savings",
+    "subcategories": {
+      "checking-accounts": {
+        "name": "Checking Accounts",
+        "description": "Everyday transaction accounts linked via banking connections",
+        "examples": "Personal Checking, Business Checking, Joint Accounts"
+      },
+      "savings-accounts": {
+        "name": "Savings Accounts",
+        "description": "High-yield savings accounts and regular bank savings",
+        "examples": "High-Yield Savings, Regular Savings, Online Savings, Business Savings"
+      },
+      "money-market": {
+        "name": "Money Market Funds",
+        "description": "Short-term, low-risk investment funds with high liquidity",
+        "examples": "Government MMF, Prime MMF, Tax-Exempt MMF, Retail MMF"
+      },
+      "cds": {
+        "name": "Certificates of Deposit",
+        "description": "Fixed-term deposits with guaranteed interest rates",
+        "examples": "3-Month CD, 6-Month CD, 1-Year CD, CD Ladders"
+      },
+      "treasury-bills": {
+        "name": "Treasury Bills",
+        "description": "Short-term government securities with maturities under one year",
+        "examples": "4-Week T-Bill, 8-Week T-Bill, 13-Week T-Bill, 26-Week T-Bill"
+      },
+      "forex": {
+        "name": "Foreign Currency (Forex)",
+        "description": "Foreign currency holdings and exchange positions",
+        "examples": "EUR, GBP, JPY, CHF"
+      },
+      "broker-cash": {
+        "name": "Broker Cash",
+        "description": "Uninvested cash held in brokerage accounts, auto-detected from broker connections",
+        "examples": "Settlement Cash, Sweep Accounts, Margin Cash"
+      }
+    }
+  },
+  "crypto": {
+    "name": "Cryptocurrency",
+    "subcategories": {
+      "bitcoin": {
+        "name": "Bitcoin",
+        "description": "Bitcoin and wrapped Bitcoin tokens",
+        "examples": "BTC, WBTC"
+      },
+      "ethereum": {
+        "name": "Ethereum",
+        "description": "Ethereum and liquid staking tokens",
+        "examples": "ETH, stETH, rETH, WETH"
+      },
+      "altcoins": {
+        "name": "Altcoins",
+        "description": "Alternative cryptocurrencies beyond BTC and ETH",
+        "examples": "SOL, ADA, AVAX, DOT, MATIC"
+      },
+      "stablecoins": {
+        "name": "Stablecoins",
+        "description": "Price-stable cryptocurrencies pegged to fiat currencies",
+        "examples": "USDT, USDC, DAI, FRAX"
+      },
+      "defi": {
+        "name": "DeFi",
+        "description": "Decentralized finance positions including staking and liquidity",
+        "examples": "Staking, LP Positions, Yield Farming, Lending"
+      }
+    },
+    "groups": {
+      "btc-eth": {
+        "name": "Bitcoin & Ethereum",
+        "description": "The two largest cryptocurrencies and their ecosystem tokens",
+        "examples": "BTC, WBTC, ETH, stETH, rETH, WETH"
+      }
+    }
+  },
+  "collectibles": {
+    "name": "Collectibles",
+    "subcategories": {
+      "art": {
+        "name": "Art",
+        "description": "Fine art, paintings, sculptures, and artistic collectibles",
+        "examples": "Paintings, Sculptures, Prints, Photography"
+      },
+      "watches": {
+        "name": "Watches",
+        "description": "Luxury timepieces and vintage watch collections",
+        "examples": "Rolex, Patek Philippe, Audemars Piguet, Omega"
+      },
+      "wine": {
+        "name": "Wine",
+        "description": "Fine wines and vintage bottles as investment assets",
+        "examples": "Bordeaux, Burgundy, Champagne, Napa Valley"
+      },
+      "cars": {
+        "name": "Classic Cars",
+        "description": "Vintage automobiles and collector vehicles",
+        "examples": "Porsche, Ferrari, Mercedes-Benz, Muscle Cars"
+      },
+      "jewelry": {
+        "name": "Jewelry",
+        "description": "Precious jewelry, gemstones, and designer pieces",
+        "examples": "Diamonds, Colored Gems, Vintage Jewelry, Designer Pieces"
+      },
+      "trading-cards": {
+        "name": "Trading Cards",
+        "description": "Sports cards, Pokémon, Magic: The Gathering, and other collectible cards",
+        "examples": "Sports Cards, Pokémon, Magic: The Gathering, Yu-Gi-Oh!"
+      },
+      "memorabilia": {
+        "name": "Memorabilia & Ephemera",
+        "description": "Numismatic coins, stamps, postcards, and historical collectibles (not bullion)",
+        "examples": "Numismatic Coins, Stamps, Postcards, Historical Items"
+      },
+      "nfts": {
+        "name": "NFTs",
+        "description": "Non-fungible tokens and digital collectibles",
+        "examples": "Art NFTs, PFP Collections, Gaming NFTs, Music NFTs"
+      },
+      "other": {
+        "name": "Other Collectibles",
+        "description": "Any collectible items not covered by other categories",
+        "examples": "Toys, Memorabilia, Antiques, Rare Books"
+      }
+    }
+  },
+  "liabilities": {
+    "name": "Liabilities",
+    "subcategories": {
+      "mortgages": {
+        "name": "Mortgages",
+        "description": "Home loans and property mortgages",
+        "examples": "Primary Residence, Investment Property, Second Home"
+      },
+      "loans": {
+        "name": "Loans",
+        "description": "Personal, auto, student, and other loans",
+        "examples": "Auto Loans, Student Loans, Personal Loans"
+      },
+      "credit-cards": {
+        "name": "Credit Cards",
+        "description": "Credit card balances and revolving credit",
+        "examples": "Visa, Mastercard, Amex, Store Cards"
+      },
+      "margin-loans": {
+        "name": "Margin Loans",
+        "description": "Borrowed funds from brokerage accounts",
+        "examples": "Broker Margin, Securities Lending"
+      }
+    }
+  },
+  "unclassified": {
+    "name": "Unclassified"
+  },
+  "card": {
+    "comingSoon": "Coming soon",
+    "comingSoonButton": "Coming Soon",
+    "viewPortfolio": "View Portfolio"
+  }
+}

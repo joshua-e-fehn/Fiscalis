@@ -1,6 +1,10 @@
 /**
  * Investment Category UI Configuration
  *
+ * Holds slugs, icons, colours and routes only: every name, description and
+ * example lives in the `categories` message namespace, under the entry's
+ * SubcategoryLabel, and is rendered through useCategoryLabels.
+ *
  * Layer 2 of the two-layer category system. Builds on top of the canonical
  * types in classification.ts to provide UI-specific metadata for each
  * subcategory, with compile-time enforcement that every subcategory is
@@ -12,7 +16,7 @@
  * will cause a TypeScript compile error.
  */
 
-import { createElement, type ComponentType } from "react";
+import { createElement, useMemo, type ComponentType } from "react";
 import {
   // Cash icons
   Wallet,
@@ -62,18 +66,15 @@ import {
 import { Icon } from "lucide-react";
 import { gemRing } from "@lucide/lab";
 
-import type {
-  CashSubcategory,
-  EquitiesSubcategory,
-  BondsSubcategory,
-  CryptoSubcategory,
-  CommoditiesSubcategory,
-  RealEstateSubcategory,
-  CollectiblesSubcategory,
-  LiabilitiesSubcategory,
-  InvestmentCategory,
+import { useTranslations } from "next-intl";
+
+import {
+  subcategoriesByCategory,
+  type InvestmentCategory,
+  type SubcategoryByCategory,
 } from "@/lib/types/classification";
 import type { SubcategoryData } from "@/lib/types/investments";
+import type { Messages } from "@/i18n/messages";
 
 // ═══════════════════════════════════════════════════════════════
 // COLOR PALETTES (single source of truth)
@@ -178,19 +179,56 @@ export const categoryPrimaryColors: Record<InvestmentCategory, string> =
 // TYPES
 // ═══════════════════════════════════════════════════════════════
 
+/** The keys of the merged display groups (see DisplayGroupOverride). */
+export type CryptoDisplayGroup = "btc-eth";
+
+/**
+ * Where a card's text lives in the `categories` message namespace: the
+ * entry has a `name`, a `description` and comma-separated `examples`
+ * (messages/<language>/categories.json). Render it with useCategoryLabels.
+ */
+export type SubcategoryLabel =
+  | {
+      [C in InvestmentCategory]: `${C}.subcategories.${SubcategoryByCategory[C]}`;
+    }[InvestmentCategory]
+  | `crypto.groups.${CryptoDisplayGroup}`;
+
+/** The text of one subcategory (or display group) in the catalogue. */
+interface SubcategoryMessages {
+  name: string;
+  description: string;
+  examples: string;
+}
+
+/** What the `categories` namespace must hold for every category. */
+type CategoriesCatalogue = {
+  [C in InvestmentCategory]: {
+    name: string;
+    subcategories: Record<SubcategoryByCategory[C], SubcategoryMessages>;
+  };
+} & {
+  crypto: { groups: Record<CryptoDisplayGroup, SubcategoryMessages> };
+  unclassified: { name: string };
+};
+
+type Covers<T extends CategoriesCatalogue> = T;
+/**
+ * Compile-time exhaustiveness check: a subcategory slug in
+ * classification.ts without a name, description and examples in
+ * messages/en/categories.json fails tsc here (German is checked against
+ * English in i18n/messages.ts).
+ */
+export type CheckedCategoriesCatalogue = Covers<Messages["categories"]>;
+
 /**
  * UI metadata for a single subcategory.
  * Every subcategory in classification.ts MUST have an entry.
  */
 export interface SubcategoryUIMeta {
-  /** Display title for the card */
-  title: string;
-  /** Short description of the subcategory */
-  description: string;
+  /** Its name, description and examples in the message catalogue */
+  label: SubcategoryLabel;
   /** Lucide icon component */
   icon: ComponentType<{ className?: string }>;
-  /** Example items shown as tags on the card */
-  examples: string[];
   /** Hex color for the icon background */
   color: string;
   /** Route to the subcategory detail page */
@@ -202,7 +240,7 @@ export interface SubcategoryUIMeta {
    * displayGroup key into a single UI card. The merged card uses
    * metadata from the corresponding DisplayGroupOverride.
    */
-  displayGroup?: string;
+  displayGroup?: CryptoDisplayGroup;
   /**
    * Optional section grouping for page-level layout splitting.
    * E.g. equities uses "public" | "private" to split into two grids.
@@ -216,15 +254,11 @@ export interface SubcategoryUIMeta {
  */
 export interface DisplayGroupOverride {
   /** Matches the `displayGroup` key on SubcategoryUIMeta entries */
-  key: string;
-  /** Title for the merged card */
-  title: string;
-  /** Description for the merged card */
-  description: string;
+  key: CryptoDisplayGroup;
+  /** Name, description and examples of the merged card */
+  label: SubcategoryLabel;
   /** Icon for the merged card */
   icon: ComponentType<{ className?: string }>;
-  /** Combined examples */
-  examples: string[];
   /** Route for the merged card */
   href: string;
   /** Hex color for the merged card */
@@ -233,20 +267,42 @@ export interface DisplayGroupOverride {
 
 /**
  * Card data ready for rendering by SubcategoryCategoryCard.
- * This matches the existing SubcategoryCardData interface.
  */
 export interface CategoryCardData {
-  title: string;
-  description: string;
+  /**
+   * The card's name, description and examples in the message catalogue
+   * (SubcategoryCategoryCard renders them; unique, so pages key by it)
+   */
+  title: SubcategoryLabel;
   href: string;
   icon: ComponentType<{ className?: string }>;
   implemented: boolean;
-  examples: string[];
   color?: string;
   /** Optional section for page-level grouping */
   section?: string;
   /** The classification subcategory slugs this card covers */
   subcategories: string[];
+}
+
+/**
+ * A category's subcategory records with each entry's catalogue label
+ * (`<category>.subcategories.<slug>`) filled in from its slug.
+ */
+function labelled<C extends InvestmentCategory>(
+  category: C,
+  entries: Record<SubcategoryByCategory[C], Omit<SubcategoryUIMeta, "label">>,
+): Record<SubcategoryByCategory[C], SubcategoryUIMeta> {
+  return Object.fromEntries(
+    Object.entries<Omit<SubcategoryUIMeta, "label">>(entries).map(
+      ([slug, meta]) => [
+        slug,
+        {
+          ...meta,
+          label: `${category}.subcategories.${slug}` as SubcategoryLabel,
+        },
+      ],
+    ),
+  ) as Record<SubcategoryByCategory[C], SubcategoryUIMeta>;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -265,277 +321,172 @@ const GemRingIcon = ({ className }: { className?: string }) => (
 // --- Cash ---
 const cashColors = categoryColorPalettes.cash;
 
-export const cashSubcategoryUI: Record<CashSubcategory, SubcategoryUIMeta> = {
+export const cashSubcategoryUI = labelled("cash", {
   "checking-accounts": {
-    title: "Checking Accounts",
-    description: "Everyday transaction accounts linked via banking connections",
     icon: Wallet,
-    examples: ["Personal Checking", "Business Checking", "Joint Accounts"],
     color: cashColors["checking-accounts"],
     href: "/cash/checking",
     implemented: false,
   },
   "savings-accounts": {
-    title: "Savings Accounts",
-    description: "High-yield savings accounts and regular bank savings",
     icon: PiggyBank,
-    examples: [
-      "High-Yield Savings",
-      "Regular Savings",
-      "Online Savings",
-      "Business Savings",
-    ],
     color: cashColors["savings-accounts"],
     href: "/cash/savings",
     implemented: false,
   },
   "money-market": {
-    title: "Money Market Funds",
-    description: "Short-term, low-risk investment funds with high liquidity",
     icon: Landmark,
-    examples: ["Government MMF", "Prime MMF", "Tax-Exempt MMF", "Retail MMF"],
     color: cashColors["money-market"],
     href: "/cash/money-market",
     implemented: false,
   },
   cds: {
-    title: "Certificates of Deposit",
-    description: "Fixed-term deposits with guaranteed interest rates",
     icon: Clock,
-    examples: ["3-Month CD", "6-Month CD", "1-Year CD", "CD Ladders"],
     color: cashColors.cds,
     href: "/cash/cds",
     implemented: false,
   },
   "treasury-bills": {
-    title: "Treasury Bills",
-    description:
-      "Short-term government securities with maturities under one year",
     icon: Banknote,
-    examples: [
-      "4-Week T-Bill",
-      "8-Week T-Bill",
-      "13-Week T-Bill",
-      "26-Week T-Bill",
-    ],
     color: cashColors["treasury-bills"],
     href: "/cash/tbills",
     implemented: false,
   },
   forex: {
-    title: "Foreign Currency (Forex)",
-    description: "Foreign currency holdings and exchange positions",
     icon: ArrowRightLeft,
-    examples: ["EUR", "GBP", "JPY", "CHF"],
     color: cashColors.forex,
     href: "/cash/forex",
     implemented: false,
   },
   "broker-cash": {
-    title: "Broker Cash",
-    description:
-      "Uninvested cash held in brokerage accounts, auto-detected from broker connections",
     icon: ChartCandlestick,
-    examples: ["Settlement Cash", "Sweep Accounts", "Margin Cash"],
     color: cashColors["broker-cash"],
     href: "/cash/broker-cash",
     implemented: false,
   },
-};
+});
 
 // --- Equities ---
 const equitiesColors = categoryColorPalettes.equities;
 
-export const equitiesSubcategoryUI: Record<
-  EquitiesSubcategory,
-  SubcategoryUIMeta
-> = {
+export const equitiesSubcategoryUI = labelled("equities", {
   stocks: {
-    title: "Public Stocks",
-    description: "Individual company shares traded on public stock exchanges",
     icon: TrendingUp,
-    examples: ["Apple", "Microsoft", "Tesla", "Amazon"],
     color: equitiesColors.stocks,
     href: "/equities/stocks",
     implemented: false,
     section: "public",
   },
   etfs: {
-    title: "ETFs & Index Funds",
-    description:
-      "Passive funds tracking market indices for diversified exposure",
     icon: BarChart3,
-    examples: ["S&P 500", "MSCI World", "NASDAQ-100", "DAX"],
     color: equitiesColors.etfs,
     href: "/equities/etfs",
     implemented: false,
     section: "public",
   },
   funds: {
-    title: "Mutual Funds",
-    description:
-      "Actively managed investment funds with professional portfolio management",
     icon: PieChart,
-    examples: ["Growth Funds", "Value Funds", "Sector Funds", "Balanced Funds"],
     color: equitiesColors.funds,
     href: "/equities/funds",
     implemented: false,
     section: "public",
   },
   options: {
-    title: "Options",
-    description: "Derivative contracts for hedging or leveraged exposure",
     icon: Activity,
-    examples: ["Call Options", "Put Options", "Spreads", "Covered Calls"],
     color: equitiesColors.options,
     href: "/equities/options",
     implemented: false,
     section: "public",
   },
   private: {
-    title: "Private Equity",
-    description:
-      "Investments in private companies, startups, and angel investments",
     icon: Briefcase,
-    examples: ["Startups", "Venture Capital", "Angel Investments", "PE Funds"],
     color: equitiesColors.private,
     href: "/equities/private",
     implemented: false,
     section: "private",
   },
-};
+});
 
 // --- Bonds ---
 const bondsColors = categoryColorPalettes.bonds;
 
-export const bondsSubcategoryUI: Record<BondsSubcategory, SubcategoryUIMeta> = {
+export const bondsSubcategoryUI = labelled("bonds", {
   government: {
-    title: "Government Bonds",
-    description:
-      "Treasury bills, notes, and bonds issued by national governments including inflation-protected securities",
     icon: Landmark,
-    examples: ["US Treasuries", "German Bunds", "UK Gilts", "TIPS/I-Bonds"],
     color: bondsColors.government,
     href: "/bonds/government",
     implemented: false,
   },
   corporate: {
-    title: "Corporate Bonds",
-    description: "Investment-grade and high-yield bonds issued by corporations",
     icon: Building,
-    examples: [
-      "Investment Grade",
-      "High Yield",
-      "Convertible Bonds",
-      "Green Bonds",
-    ],
     color: bondsColors.corporate,
     href: "/bonds/corporate",
     implemented: false,
   },
   municipal: {
-    title: "Municipal Bonds",
-    description:
-      "Tax-advantaged bonds issued by states, cities, and local governments",
     icon: Building2,
-    examples: [
-      "General Obligation",
-      "Revenue Bonds",
-      "Tax-Free Munis",
-      "Build America",
-    ],
     color: bondsColors.municipal,
     href: "/bonds/municipal",
     implemented: false,
   },
   savings: {
-    title: "Savings Bonds",
-    description: "Government-backed savings certificates and retail bonds",
     icon: PiggyBank,
-    examples: [
-      "Series I Bonds",
-      "Series EE Bonds",
-      "Premium Bonds",
-      "Savings Certificates",
-    ],
     color: bondsColors.savings,
     href: "/bonds/savings",
     implemented: false,
   },
   funds: {
-    title: "Bond Funds & ETFs",
-    description: "Diversified fixed income exposure through funds and ETFs",
     icon: BarChart3,
-    examples: ["Aggregate Bond", "Short-Term", "Long-Term", "International"],
     color: bondsColors.funds,
     href: "/bonds/funds",
     implemented: false,
   },
-};
+});
 
 // --- Crypto ---
 const cryptoColors = categoryColorPalettes.crypto;
 
-export const cryptoSubcategoryUI: Record<CryptoSubcategory, SubcategoryUIMeta> =
-  {
+export const cryptoSubcategoryUI = labelled("crypto", {
     bitcoin: {
-      title: "Bitcoin",
-      description: "Bitcoin and wrapped Bitcoin tokens",
       icon: Bitcoin,
-      examples: ["BTC", "WBTC"],
       color: cryptoColors.bitcoin,
       href: "/assets/crypto/btc-eth",
       implemented: false,
       displayGroup: "btc-eth",
     },
     ethereum: {
-      title: "Ethereum",
-      description: "Ethereum and liquid staking tokens",
       icon: Bitcoin, // Overridden by display group
-      examples: ["ETH", "stETH", "rETH", "WETH"],
       color: cryptoColors.ethereum,
       href: "/assets/crypto/btc-eth",
       implemented: false,
       displayGroup: "btc-eth",
     },
     altcoins: {
-      title: "Altcoins",
-      description: "Alternative cryptocurrencies beyond BTC and ETH",
       icon: Coins,
-      examples: ["SOL", "ADA", "AVAX", "DOT", "MATIC"],
       color: cryptoColors.altcoins,
       href: "/assets/crypto/altcoins",
       implemented: false,
     },
     stablecoins: {
-      title: "Stablecoins",
-      description: "Price-stable cryptocurrencies pegged to fiat currencies",
       icon: CircleDollarSign,
-      examples: ["USDT", "USDC", "DAI", "FRAX"],
       color: cryptoColors.stablecoins,
       href: "/assets/crypto/stablecoins",
       implemented: false,
     },
     defi: {
-      title: "DeFi",
-      description:
-        "Decentralized finance positions including staking and liquidity",
       icon: Layers,
-      examples: ["Staking", "LP Positions", "Yield Farming", "Lending"],
       color: cryptoColors.defi,
       href: "/assets/crypto/defi",
       implemented: false,
     },
-  };
+  });
 
 /** Display group overrides for crypto (BTC + ETH merged card) */
 export const cryptoDisplayGroups: DisplayGroupOverride[] = [
   {
     key: "btc-eth",
-    title: "Bitcoin & Ethereum",
-    description: "The two largest cryptocurrencies and their ecosystem tokens",
+    label: "crypto.groups.btc-eth",
     icon: Bitcoin,
-    examples: ["BTC", "WBTC", "ETH", "stETH", "rETH", "WETH"],
     href: "/assets/crypto/btc-eth",
     color: cryptoColors.bitcoin,
   },
@@ -544,265 +495,170 @@ export const cryptoDisplayGroups: DisplayGroupOverride[] = [
 // --- Commodities ---
 const commoditiesColors = categoryColorPalettes.commodities;
 
-export const commoditiesSubcategoryUI: Record<
-  CommoditiesSubcategory,
-  SubcategoryUIMeta
-> = {
+export const commoditiesSubcategoryUI = labelled("commodities", {
   metals: {
-    title: "Precious Metals",
-    description:
-      "Track gold, silver, platinum, and palladium prices with real-time charts",
     icon: Coins,
-    examples: ["Gold", "Silver", "Platinum", "Palladium"],
     color: commoditiesColors.metals,
     href: "/assets/commodities/metals",
     implemented: true,
   },
   energy: {
-    title: "Energy",
-    description: "Oil, natural gas, and other energy commodity prices",
     icon: Fuel,
-    examples: ["Crude Oil", "Natural Gas", "Heating Oil", "Gasoline"],
     color: commoditiesColors.energy,
     href: "/assets/commodities/energy",
     implemented: false,
   },
   industrial: {
-    title: "Industrial Metals",
-    description: "Base metals used in manufacturing and construction",
     icon: Factory,
-    examples: ["Copper", "Aluminum", "Zinc", "Nickel"],
     color: commoditiesColors.industrial,
     href: "/assets/commodities/industrial",
     implemented: false,
   },
   agricultural: {
-    title: "Agricultural",
-    description: "Grains, softs, and other agricultural commodities",
     icon: Wheat,
-    examples: ["Wheat", "Corn", "Soybeans", "Coffee"],
     color: commoditiesColors.agricultural,
     href: "/assets/commodities/agricultural",
     implemented: false,
   },
   "rare-earth": {
-    title: "Rare Earth",
-    description: "Strategic rare earth elements used in technology and defense",
     icon: Atom,
-    examples: ["Neodymium", "Dysprosium", "Lithium", "Cobalt"],
     color: commoditiesColors["rare-earth"],
     href: "/assets/commodities/rare-earth",
     implemented: false,
   },
   gemstones: {
-    title: "Gemstones",
-    description: "Diamonds, rubies, sapphires, and other precious gemstones",
     icon: Gem,
-    examples: ["Diamonds", "Rubies", "Sapphires", "Emeralds"],
     color: commoditiesColors.gemstones,
     href: "/assets/commodities/gemstones",
     implemented: false,
   },
-};
+});
 
 // --- Real Estate ---
 const realEstateColors = categoryColorPalettes["real-estate"];
 
-export const realEstateSubcategoryUI: Record<
-  RealEstateSubcategory,
-  SubcategoryUIMeta
-> = {
+export const realEstateSubcategoryUI = labelled("real-estate", {
   residential: {
-    title: "Residential",
-    description:
-      "Single-family homes, apartments, condos, and vacation properties",
     icon: Home,
-    examples: ["Primary Home", "Rental Properties", "Vacation Homes", "Condos"],
     color: realEstateColors.residential,
     href: "/real-estate/residential",
     implemented: false,
   },
   commercial: {
-    title: "Commercial",
-    description:
-      "Office buildings, retail spaces, warehouses, and industrial properties",
     icon: Building2,
-    examples: ["Office Space", "Retail", "Warehouses", "Mixed-Use"],
     color: realEstateColors.commercial,
     href: "/real-estate/commercial",
     implemented: false,
   },
   reits: {
-    title: "REITs",
-    description:
-      "Real Estate Investment Trusts - publicly traded real estate securities",
     icon: BarChart3,
-    examples: ["Equity REITs", "Mortgage REITs", "Hybrid REITs", "REIT ETFs"],
     color: realEstateColors.reits,
     href: "/real-estate/reits",
     implemented: false,
   },
   crowdfunding: {
-    title: "Crowdfunding",
-    description: "Real estate investments through crowdfunding platforms",
     icon: Users,
-    examples: ["Fundrise", "CrowdStreet", "RealtyMogul", "Groundfloor"],
     color: realEstateColors.crowdfunding,
     href: "/real-estate/crowdfunding",
     implemented: false,
   },
   land: {
-    title: "Land",
-    description: "Raw land, farmland, and undeveloped property investments",
     icon: TreePine,
-    examples: ["Raw Land", "Farmland", "Timber", "Development Land"],
     color: realEstateColors.land,
     href: "/real-estate/land",
     implemented: false,
   },
-};
+});
 
 // --- Collectibles ---
 const collectiblesColors = categoryColorPalettes.collectibles;
 
-export const collectiblesSubcategoryUI: Record<
-  CollectiblesSubcategory,
-  SubcategoryUIMeta
-> = {
+export const collectiblesSubcategoryUI = labelled("collectibles", {
   art: {
-    title: "Art",
-    description: "Fine art, paintings, sculptures, and artistic collectibles",
     icon: Palette,
-    examples: ["Paintings", "Sculptures", "Prints", "Photography"],
     color: collectiblesColors.art,
     href: "/collectibles/art",
     implemented: false,
   },
   watches: {
-    title: "Watches",
-    description: "Luxury timepieces and vintage watch collections",
     icon: Watch,
-    examples: ["Rolex", "Patek Philippe", "Audemars Piguet", "Omega"],
     color: collectiblesColors.watches,
     href: "/collectibles/watches",
     implemented: false,
   },
   wine: {
-    title: "Wine",
-    description: "Fine wines and vintage bottles as investment assets",
     icon: Wine,
-    examples: ["Bordeaux", "Burgundy", "Champagne", "Napa Valley"],
     color: collectiblesColors.wine,
     href: "/collectibles/wine",
     implemented: false,
   },
   cars: {
-    title: "Classic Cars",
-    description: "Vintage automobiles and collector vehicles",
     icon: Car,
-    examples: ["Porsche", "Ferrari", "Mercedes-Benz", "Muscle Cars"],
     color: collectiblesColors.cars,
     href: "/collectibles/cars",
     implemented: false,
   },
   jewelry: {
-    title: "Jewelry",
-    description: "Precious jewelry, gemstones, and designer pieces",
     icon: GemRingIcon,
-    examples: [
-      "Diamonds",
-      "Colored Gems",
-      "Vintage Jewelry",
-      "Designer Pieces",
-    ],
     color: collectiblesColors.jewelry,
     href: "/collectibles/jewelry",
     implemented: false,
   },
   "trading-cards": {
-    title: "Trading Cards",
-    description:
-      "Sports cards, Pokémon, Magic: The Gathering, and other collectible cards",
     icon: IdCardLanyard,
-    examples: ["Sports Cards", "Pokémon", "Magic: The Gathering", "Yu-Gi-Oh!"],
     color: collectiblesColors["trading-cards"],
     href: "/collectibles/cards",
     implemented: false,
   },
   memorabilia: {
-    title: "Memorabilia & Ephemera",
-    description:
-      "Numismatic coins, stamps, postcards, and historical collectibles (not bullion)",
     icon: Stamp,
-    examples: ["Numismatic Coins", "Stamps", "Postcards", "Historical Items"],
     color: collectiblesColors.memorabilia,
     href: "/collectibles/memorabilia",
     implemented: false,
   },
   nfts: {
-    title: "NFTs",
-    description: "Non-fungible tokens and digital collectibles",
     icon: Image,
-    examples: ["Art NFTs", "PFP Collections", "Gaming NFTs", "Music NFTs"],
     color: collectiblesColors.nfts,
     href: "/collectibles/nfts",
     implemented: false,
   },
   other: {
-    title: "Other Collectibles",
-    description: "Any collectible items not covered by other categories",
     icon: Package,
-    examples: ["Toys", "Memorabilia", "Antiques", "Rare Books"],
     color: collectiblesColors.other,
     href: "/collectibles/other",
     implemented: false,
   },
-};
+});
 
 // --- Liabilities ---
 const liabilitiesColors = categoryColorPalettes.liabilities;
 
-export const liabilitiesSubcategoryUI: Record<
-  LiabilitiesSubcategory,
-  SubcategoryUIMeta
-> = {
+export const liabilitiesSubcategoryUI = labelled("liabilities", {
   mortgages: {
-    title: "Mortgages",
-    description: "Home loans and property mortgages",
     icon: Home,
-    examples: ["Primary Residence", "Investment Property", "Second Home"],
     color: liabilitiesColors.mortgages,
     href: "/liabilities/mortgages",
     implemented: false,
   },
   loans: {
-    title: "Loans",
-    description: "Personal, auto, student, and other loans",
     icon: Banknote,
-    examples: ["Auto Loans", "Student Loans", "Personal Loans"],
     color: liabilitiesColors.loans,
     href: "/liabilities/loans",
     implemented: false,
   },
   "credit-cards": {
-    title: "Credit Cards",
-    description: "Credit card balances and revolving credit",
     icon: CreditCard,
-    examples: ["Visa", "Mastercard", "Amex", "Store Cards"],
     color: liabilitiesColors["credit-cards"],
     href: "/liabilities/credit-cards",
     implemented: false,
   },
   "margin-loans": {
-    title: "Margin Loans",
-    description: "Borrowed funds from brokerage accounts",
     icon: TrendingDown,
-    examples: ["Broker Margin", "Securities Lending"],
     color: liabilitiesColors["margin-loans"],
     href: "/liabilities/margin",
     implemented: false,
   },
-};
+});
 
 // ═══════════════════════════════════════════════════════════════
 // CARD BUILDER
@@ -837,12 +693,10 @@ export function buildCategoryCards(
       grouped.set(meta.displayGroup, existing);
     } else {
       ungrouped.push({
-        title: meta.title,
-        description: meta.description,
+        title: meta.label,
         href: meta.href,
         icon: meta.icon,
         implemented: meta.implemented,
-        examples: meta.examples,
         color: meta.color,
         section: meta.section,
         subcategories: [slug],
@@ -855,12 +709,10 @@ export function buildCategoryCards(
     const override = displayGroups?.find((g) => g.key === key);
     if (override) {
       mergedCards.push({
-        title: override.title,
-        description: override.description,
+        title: override.label,
         href: override.href,
         icon: override.icon,
         implemented: metas.every((m) => m.implemented),
-        examples: override.examples,
         color: override.color,
         section: metas[0]?.section,
         subcategories: slugs,
@@ -870,12 +722,10 @@ export function buildCategoryCards(
       const first = metas[0];
       if (first) {
         mergedCards.push({
-          title: first.title,
-          description: first.description,
+          title: first.label,
           href: first.href,
           icon: first.icon,
           implemented: first.implemented,
-          examples: first.examples,
           color: first.color,
           section: first.section,
           subcategories: slugs,
@@ -989,7 +839,7 @@ export function makeSubcategoryBase(
 ): SubcategoryData {
   return {
     id: slug,
-    name: meta.title,
+    label: meta.label,
     href: meta.href,
     icon: createElement(meta.icon, { className: "h-4 w-4" }),
     color: meta.color,
@@ -1001,4 +851,59 @@ export function makeSubcategoryBase(
     holdingsCount: 0,
     implemented: meta.implemented,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LABELS — the catalogue text of categories and subcategories
+// ═══════════════════════════════════════════════════════════════
+
+/** A dashboard category: an investment category or unclassified holdings */
+export type CategoryLabelId = InvestmentCategory | "unclassified";
+
+/** Whether `value` is an investment category slug. */
+export function isInvestmentCategory(
+  value: string,
+): value is InvestmentCategory {
+  return Object.hasOwn(subcategoriesByCategory, value);
+}
+
+/**
+ * The catalogue label of a stored subcategory slug, or null when the slug
+ * does not belong to the category (legacy or unknown data).
+ */
+export function subcategoryLabel(
+  category: InvestmentCategory,
+  slug: string,
+): SubcategoryLabel | null {
+  const slugs: readonly string[] = subcategoriesByCategory[category];
+  return slugs.includes(slug)
+    ? (`${category}.subcategories.${slug}` as SubcategoryLabel)
+    : null;
+}
+
+/**
+ * Names, descriptions and examples of categories and subcategories in the
+ * user's language.
+ */
+export function useCategoryLabels() {
+  const t = useTranslations("categories");
+  return useMemo(
+    () => ({
+      /** "Equities", "Cash & Savings", "Unclassified", … */
+      categoryName: (id: CategoryLabelId) => t(`${id}.name`),
+      /**
+       * A stored category slug's name; an unknown slug is shown as stored
+       */
+      categoryNameOf: (slug: string) =>
+        isInvestmentCategory(slug) || slug === "unclassified"
+          ? t(`${slug}.name`)
+          : slug,
+      name: (label: SubcategoryLabel) => t(`${label}.name`),
+      description: (label: SubcategoryLabel) => t(`${label}.description`),
+      /** The example tags (the catalogue lists them comma-separated) */
+      examples: (label: SubcategoryLabel) =>
+        t(`${label}.examples`).split(", "),
+    }),
+    [t],
+  );
 }

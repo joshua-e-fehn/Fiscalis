@@ -13,6 +13,8 @@
  */
 
 import { ReactNode, useMemo, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
+import type { Messages } from "@/i18n/messages";
 import { cn } from "@/lib/utils";
 import {
   Card,
@@ -48,22 +50,29 @@ import {
 } from "lucide-react";
 import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfitLoss";
 
-/** A short date for "since …" notes on the KPI cards */
-function formatSince(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+/** A KPI card title in the catalogue (dashboard.section) */
+export type KPITitleKey = Extract<
+  keyof Messages["dashboard"]["section"],
+  | "totalValue"
+  | "totalCash"
+  | "profitLoss"
+  | "ytdChange"
+  | "ytdReturn"
+  | "ytdReturnEstimated"
+  | "portfolioAllocation"
+  | "activeAccounts"
+>;
 
 /**
  * The YTD card's title (D2): a return when it is net of purchases and
  * deposits, else a plain change.
  */
-function ytdTitle(flowAdjusted: boolean, flowsEstimated: boolean): string {
-  if (!flowAdjusted) return "YTD Change";
-  return flowsEstimated ? "YTD Return (est.)" : "YTD Return";
+function ytdTitleKey(
+  flowAdjusted: boolean,
+  flowsEstimated: boolean,
+): KPITitleKey {
+  if (!flowAdjusted) return "ytdChange";
+  return flowsEstimated ? "ytdReturnEstimated" : "ytdReturn";
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -82,6 +91,8 @@ export interface KPICardConfig {
   type: KPICardType;
   /** Custom title override */
   title?: string;
+  /** Title override from the catalogue (dashboard.section) */
+  titleKey?: KPITitleKey;
   /** Custom icon override */
   icon?: LucideIcon;
   /** For custom cards: render function */
@@ -156,7 +167,7 @@ export const STANDARD_KPI_CARDS: [KPICardConfig, KPICardConfig, KPICardConfig] =
 
 /** Cash KPI cards: Total Cash, Portfolio %, Accounts */
 export const CASH_KPI_CARDS: [KPICardConfig, KPICardConfig, KPICardConfig] = [
-  { type: "total-value", title: "Total Cash Holdings", icon: Wallet },
+  { type: "total-value", titleKey: "totalCash", icon: Wallet },
   { type: "portfolio-allocation" },
   { type: "accounts-count" },
 ];
@@ -197,9 +208,11 @@ function TotalValueCard({
   totalValue,
   currency,
   isLoading,
-  title = "Total Portfolio Value",
+  title: titleOverride,
   icon: Icon = TrendingUp,
 }: TotalValueCardProps) {
+  const t = useTranslations("dashboard.section");
+  const title = titleOverride ?? t("totalValue");
   if (isLoading) {
     return <KPICardSkeleton title={title} />;
   }
@@ -277,10 +290,12 @@ function ProfitLossCard({
   currency,
   isLoading,
   hasHoldings,
-  title = "Total Profit / Loss",
+  title: titleOverride,
   note = null,
   invertColors = false,
 }: ProfitLossCardProps) {
+  const t = useTranslations("dashboard.section");
+  const title = titleOverride ?? t("profitLoss");
   if (isLoading) {
     return <KPICardSkeleton title={title} />;
   }
@@ -339,9 +354,7 @@ function ProfitLossCard({
           </>
         ) : (
           <div className="text-muted-foreground text-sm">
-            {hasHoldings
-              ? "Add cost data to track performance"
-              : "No holdings yet"}
+            {hasHoldings ? t("addCostData") : t("noHoldings")}
           </div>
         )}
       </CardContent>
@@ -375,6 +388,8 @@ function YTDPerformanceCard({
   title,
   invertColors = false,
 }: YTDPerformanceCardProps) {
+  const t = useTranslations("dashboard.section");
+  const format = useFormatter();
   if (isLoading) {
     return <KPICardSkeleton title={title} />;
   }
@@ -390,7 +405,11 @@ function YTDPerformanceCard({
     : null;
 
 
-  const currentYear = new Date().getFullYear();
+  // 1 January of the current year, for "Since …"
+  const yearStart = format.dateTime(
+    new Date(new Date().getFullYear(), 0, 1),
+    "date",
+  );
 
   return (
     <Card className="h-full">
@@ -430,17 +449,20 @@ function YTDPerformanceCard({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Since Jan 1, {currentYear}
-              {partial && " · partial: a sync failed or a price is missing"}
+              {partial
+                ? t("sincePartial", { date: yearStart })
+                : t("since", { date: yearStart })}
             </p>
           </>
         ) : (
           <div className="text-muted-foreground text-sm">
             {!hasHoldings
-              ? "No holdings yet"
+              ? t("noHoldings")
               : trackingSince !== null
-                ? `Not enough history (tracked since ${formatSince(trackingSince)})`
-                : "No data for this year yet"}
+                ? t("trackedSince", {
+                    date: format.dateTime(trackingSince, "date"),
+                  })
+                : t("noDataThisYear")}
           </div>
         )}
       </CardContent>
@@ -459,8 +481,9 @@ function PortfolioAllocationCard({
   totalPortfolioAssets,
   isLoading,
 }: PortfolioAllocationCardProps) {
+  const t = useTranslations("dashboard.section");
   if (isLoading) {
-    return <KPICardSkeleton title="Portfolio Allocation" />;
+    return <KPICardSkeleton title={t("portfolioAllocation")} />;
   }
 
   const hasData = totalPortfolioAssets > 0;
@@ -479,7 +502,7 @@ function PortfolioAllocationCard({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
           <PieChart className="h-4 w-4" />
-          Portfolio Allocation
+          {t("portfolioAllocation")}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -488,15 +511,15 @@ function PortfolioAllocationCard({
             <span className="text-3xl font-bold">{formattedPercent}%</span>
             <p className="text-xs text-muted-foreground mt-1">
               {isHighAllocation
-                ? "High cash position (conservative)"
+                ? t("highCash")
                 : isLowAllocation
-                  ? "Low cash reserve"
-                  : "of total portfolio"}
+                  ? t("lowCash")
+                  : t("ofTotalPortfolio")}
             </p>
           </>
         ) : (
           <div className="text-muted-foreground text-sm">
-            Add assets to see allocation
+            {t("addAssets")}
           </div>
         )}
       </CardContent>
@@ -513,8 +536,9 @@ function AccountsCountCard({
   accountsCount,
   isLoading,
 }: AccountsCountCardProps) {
+  const t = useTranslations("dashboard.section");
   if (isLoading) {
-    return <KPICardSkeleton title="Active Accounts" />;
+    return <KPICardSkeleton title={t("activeAccounts")} />;
   }
 
   return (
@@ -522,13 +546,13 @@ function AccountsCountCard({
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
           <Building2 className="h-4 w-4" />
-          Active Accounts
+          {t("activeAccounts")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <span className="text-3xl font-bold">{accountsCount}</span>
         <p className="text-xs text-muted-foreground mt-1">
-          {accountsCount === 1 ? "account" : "accounts"} linked
+          {t("accountsLinked", { count: accountsCount })}
         </p>
       </CardContent>
     </Card>
@@ -557,6 +581,8 @@ export function InvestmentDashboardSection({
   invertColors = category === "liabilities",
   className,
 }: InvestmentDashboardSectionProps) {
+  const t = useTranslations("dashboard.section");
+  const format = useFormatter();
   // The summary hooks return their figures in the display currency
   const displayCurrency = useDisplayCurrency().currency;
   const currency = currencyOverride ?? displayCurrency;
@@ -603,8 +629,8 @@ export function InvestmentDashboardSection({
     plData.source !== "since-tracking"
       ? undefined
       : sinceTrackingProfit
-        ? "Profit / Loss since tracking started"
-        : "Change since tracking started";
+        ? t("profitLossSinceTracking")
+        : t("changeSinceTracking");
   // A cost-basis P/L covers only the holdings that have a cost basis
   const coveredPercent =
     plData.source === "cost-basis"
@@ -612,11 +638,11 @@ export function InvestmentDashboardSection({
       : null;
   const plNote =
     plData.since !== null
-      ? `Since ${formatSince(plData.since)}${
-          sinceTrackingProfit ? ", net of purchases and deposits" : ""
-        }`
+      ? t(sinceTrackingProfit ? "sinceNetOfFlows" : "since", {
+          date: format.dateTime(plData.since, "date"),
+        })
       : coveredPercent !== null
-        ? `On ${coveredPercent}% of the value: holdings without a cost basis are left out`
+        ? t("coverage", { percent: coveredPercent })
         : null;
 
   // The chart: the engine's series for the category over the selected
@@ -667,7 +693,9 @@ export function InvestmentDashboardSection({
             totalValue={summary?.totalValue ?? 0}
             currency={currency}
             isLoading={isLoading}
-            title={config.title}
+            title={
+              config.title ?? (config.titleKey && t(config.titleKey))
+            }
             icon={config.icon}
           />
         );
@@ -681,7 +709,10 @@ export function InvestmentDashboardSection({
             currency={currency}
             isLoading={isPLLoading}
             hasHoldings={hasHoldings}
-            title={config.title ?? plTitle}
+            title={
+              config.title ??
+              (config.titleKey ? t(config.titleKey) : plTitle)
+            }
             note={plNote}
             invertColors={invertColors}
           />
@@ -700,7 +731,13 @@ export function InvestmentDashboardSection({
             hasHoldings={hasHoldings}
             title={
               config.title ??
-              ytdTitle(categoryYTD.flowAdjusted, categoryYTD.flowsEstimated)
+              t(
+                config.titleKey ??
+                  ytdTitleKey(
+                    categoryYTD.flowAdjusted,
+                    categoryYTD.flowsEstimated,
+                  ),
+              )
             }
             invertColors={invertColors}
           />
@@ -781,9 +818,7 @@ export function InvestmentDashboardSection({
             isLoading={isLoading || chart.isLoading}
             title={performanceChartTitle}
             emptyHint={
-              hasHoldings
-                ? "History appears after the next daily snapshot"
-                : undefined
+              hasHoldings ? t("historyHint") : undefined
             }
           />
         ) : (

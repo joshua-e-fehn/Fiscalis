@@ -1,0 +1,132 @@
+{
+  "page": {
+    "title": "Übersicht",
+    "subtitle": "Deine gesamte finanzielle Lage auf einen Blick",
+    "performanceTitle": "Portfolioentwicklung",
+    "investmentCategories": "Anlagekategorien"
+  },
+  "netWorth": {
+    "title": "Nettovermögen gesamt",
+    "unrealized": "({percent}) unrealisiert",
+    "unrealizedCoverage": "({percent}) unrealisiert, auf {covered} % der Vermögenswerte"
+  },
+  "kpi": {
+    "totalAssets": "Vermögenswerte gesamt",
+    "totalLiabilities": "Verbindlichkeiten gesamt"
+  },
+  "ytdNetWorth": {
+    "title": "Nettovermögen seit Jahresbeginn (YTD)",
+    "changeSinceJan1": "{percent} Veränderung seit 1. Januar",
+    "fxEffectHint": "Gemessen in {currency}: enthält die Veränderung des Euro-Wechselkurses seit dem 1. Januar.",
+    "partial": "Unvollständig: Eine Synchronisierung ist fehlgeschlagen oder ein Preis fehlt",
+    "trackingSince": "Noch zu wenig Verlauf (erfasst seit {date})",
+    "noData": "Keine Daten für dieses Jahr"
+  },
+  "allocation": {
+    "title": "Vermögensaufteilung",
+    "description": "Verteilung auf die Anlagekategorien",
+    "empty": "Keine Vermögenswerte vorhanden",
+    "emptyHint": "Füge Anlagen hinzu, um deine Vermögensaufteilung zu sehen"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, one {# Bestand} other {# Bestände}}",
+    "noHoldings": "Keine Bestände",
+    "comingSoon": "Demnächst"
+  },
+  "liabilitiesCard": {
+    "title": "Verbindlichkeiten",
+    "accounts": "{accounts, plural, one {# Konto} other {# Konten}}",
+    "loans": "{loans, plural, one {# Kredit} other {# Kredite}}",
+    "accountsAndLoans": "{accounts, plural, one {# Konto} other {# Konten}} · {loans, plural, one {# Kredit} other {# Kredite}}",
+    "monthlyPayments": "{amount}/Monat an Kreditraten"
+  },
+  "section": {
+    "totalValue": "Portfoliowert gesamt",
+    "totalCash": "Liquidität gesamt",
+    "profitLoss": "Gewinn/Verlust gesamt",
+    "profitLossSinceTracking": "Gewinn/Verlust seit Beginn der Erfassung",
+    "changeSinceTracking": "Veränderung seit Beginn der Erfassung",
+    "since": "Seit {date}",
+    "sinceNetOfFlows": "Seit {date}, bereinigt um Käufe und Einzahlungen",
+    "coverage": "Auf {percent} % des Werts: Bestände ohne Einstandswert sind nicht berücksichtigt",
+    "addCostData": "Hinterlege Einstandswerte, um die Wertentwicklung zu verfolgen",
+    "noHoldings": "Noch keine Bestände",
+    "ytdChange": "Veränderung seit Jahresbeginn (YTD)",
+    "ytdReturn": "Rendite seit Jahresbeginn (YTD)",
+    "ytdReturnEstimated": "Rendite seit Jahresbeginn (YTD, geschätzt)",
+    "sincePartial": "Seit {date} · unvollständig: Eine Synchronisierung ist fehlgeschlagen oder ein Preis fehlt",
+    "trackedSince": "Noch zu wenig Verlauf (erfasst seit {date})",
+    "noDataThisYear": "Noch keine Daten für dieses Jahr",
+    "portfolioAllocation": "Anteil am Portfolio",
+    "highCash": "Hohe Liquidität (konservativ)",
+    "lowCash": "Geringe Liquiditätsreserve",
+    "ofTotalPortfolio": "des gesamten Portfolios",
+    "addAssets": "Füge Vermögenswerte hinzu, um die Aufteilung zu sehen",
+    "activeAccounts": "Aktive Konten",
+    "accountsLinked": "{count, plural, one {Konto verknüpft} other {Konten verknüpft}}",
+    "historyHint": "Der Verlauf erscheint nach dem nächsten täglichen Snapshot"
+  },
+  "allocationChart": {
+    "title": "Aufteilung",
+    "empty": "Noch keine Bestände",
+    "other": "Sonstige (<2 %)"
+  },
+  "performanceChart": {
+    "portfolioTitle": "Wertentwicklung des Portfolios",
+    "netWorthTitle": "Entwicklung des Nettovermögens",
+    "portfolio": "Portfolio",
+    "netWorth": "Nettovermögen",
+    "value": "Wert",
+    "costBasis": "Einstandswert",
+    "empty": "Noch keine Daten zur Wertentwicklung",
+    "emptyHint": "Füge Bestände hinzu, um die Wertentwicklung deines Portfolios zu verfolgen",
+    "tooltipRow": "{series}: {amount}",
+    "partial": "Unvollständig: Eine Synchronisierung ist fehlgeschlagen oder ein Preis fehlt"
+  },
+  "topHoldings": {
+    "title": "Größte Bestände",
+    "empty": "Noch keine Bestände",
+    "count": "({count, plural, one {# Bestand} other {# Bestände}})"
+  },
+  "positions": {
+    "title": "Alle Positionen",
+    "description": "Gesamtansicht über alle Finanzanbieter",
+    "empty": "Keine Positionen gefunden",
+    "emptyHint": "Verbinde deine Konten, um deine Bestände zu sehen",
+    "shownOfTotal": "{shown} von {total, plural, one {# Position} other {# Positionen}}",
+    "showLess": "Weniger anzeigen",
+    "viewAll": "Alle anzeigen",
+    "searchPlaceholder": "Positionen suchen …",
+    "provider": "Anbieter",
+    "allProviders": "Alle Anbieter",
+    "category": "Kategorie",
+    "allCategories": "Alle Kategorien",
+    "providers": {
+      "plaid": "Bank",
+      "snaptrade": "Broker",
+      "bitpanda": "Bitpanda",
+      "manual": "Manuell"
+    },
+    "providerFilter": {
+      "plaid": "Banken",
+      "snaptrade": "Broker",
+      "bitpanda": "Bitpanda",
+      "manual": "Manuell"
+    },
+    "columns": {
+      "source": "Quelle",
+      "position": "Position",
+      "category": "Kategorie",
+      "quantity": "Menge",
+      "value": "Wert",
+      "profitLoss": "G/V"
+    },
+    "shown": "{count, plural, one {# Position angezeigt} other {# Positionen angezeigt}}",
+    "total": "Gesamt: {amount}"
+  },
+  "cashHoldings": {
+    "bankAccount": "Bankkonto",
+    "cashPosition": "Liquiditätsposition",
+    "brokerCash": "{account} – Guthaben"
+  }
+}

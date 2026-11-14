@@ -34,7 +34,15 @@
     "title": "Ruhestandsplan",
     "subtitle": "Ziel: Ruhestand mit {age} Jahren. Dieser Plan aktualisiert sich automatisch, wenn sich dein Portfolio ändert.",
     "subtitleFallback": "Dein gespeicherter Ruhestandsplan.",
-    "editPlan": "Plan bearbeiten"
+    "editPlan": "Plan bearbeiten",
+    "startOver": {
+      "button": "Neu beginnen",
+      "title": "Mit einem neuen Plan neu beginnen?",
+      "description": "Damit löschst du deinen gespeicherten Ruhestandsplan mit allen Antworten. Dein Geburtsdatum bleibt in deinem Profil. Das lässt sich nicht rückgängig machen.",
+      "confirm": "Plan löschen",
+      "resetting": "Wird gelöscht…",
+      "failed": "Wir konnten deinen Plan nicht löschen. Bitte versuche es erneut."
+    }
   },
   "results": {
     "timelineTitle": "Prüfe dein Rentenalter",

@@ -34,7 +34,15 @@
     "title": "Retirement Plan",
     "subtitle": "Targeting retirement at age {age}. This plan updates automatically as your portfolio changes.",
     "subtitleFallback": "Your saved retirement plan.",
-    "editPlan": "Edit plan"
+    "editPlan": "Edit plan",
+    "startOver": {
+      "button": "Start over",
+      "title": "Start over with a new plan?",
+      "description": "This deletes your saved retirement plan and all its answers. Your date of birth stays in your profile. This can't be undone.",
+      "confirm": "Delete plan",
+      "resetting": "Deleting…",
+      "failed": "We couldn't delete your plan. Please try again."
+    }
   },
   "results": {
     "timelineTitle": "Check your retirement age",

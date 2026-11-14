@@ -238,8 +238,8 @@ Retire in 5 years, want €4,000/mo (today's money), €2,000/mo from pensions (
 
 - [x] `getRetirementPlan` (query) — returns the user's plan or `null`. Auth via `getUserIdentity()`.
 - [x] `saveRetirementPlan` (mutation) — upsert by `userId`; accepts partial inputs + `currentStep`; merges them over the existing plan (or the create defaults) and runs `validateRetirementInputs` on the result. The retirement-after-current-age check applies only when the plan ends up `active`. `currentStep` must be 1–8; an invalid `birthDate` snapshot is dropped (the profile is canonical).
-- [x] `updateRetirementStep` (mutation) — lightweight step persistence between wizard screens (step 1–8). Currently unused by the UI.
-- [x] `resetRetirementPlan` (mutation) — delete/reset to draft.
+- [x] ~~`updateRetirementStep`~~ — removed (ENG-205): every "Next" already saves the step's answers and `currentStep` through `saveRetirementPlan`, so a draft resumes where the user left off.
+- [x] `resetRetirementPlan` (mutation) — delete the plan; the dashboard's "Start over" action (confirm dialog) calls it and returns to the wizard intro (ENG-205).
 - [x] ~~`getRetirementResults` (query)~~ — **intentionally not a server query.** Results are composed **client-side** in `useRetirementResults` (plan + profile date of birth + dashboard net worth → `computeRetirementResults`), because the dashboard net worth is itself a client-side composition. Equally reactive; keeps the math in one tested place.
 - [x] Edge cases: validation runs in the wizard (inline, blocking) and again server-side (`saveRetirementPlan`); the compute edge cases (no plan, zero/negative net worth, pensions ≥ expenses, retirementAge ≤ currentAge, 0% withdrawal rate, on-track) are handled in the pure service + surfaced in the UI.
 - [x] Onboarding: `saveUserSettings` and `setBirthDate` share `assertValidBirthDate` (built on `validateBirthDate`); ProfileStep shows the same error inline before saving.
@@ -253,7 +253,7 @@ Retire in 5 years, want €4,000/mo (today's money), €2,000/mo from pensions (
 - [x] `useRetirementFundingBase()` — the dashboard's assets per category and `totalLiabilities` (`usePortfolioOverview("eur")`), plus the linked residence mortgage projected by its loan schedule
 - [x] `planToInputs(plan, profileBirthDate)` / `currentAgeForPlan(...)` — shared by the hooks and the wizard
 - [x] `useSaveRetirementPlan()` → `useMutation(api.retirement.saveRetirementPlan)`
-- [x] `useUpdateRetirementStep()`, `useResetRetirementPlan()`
+- [x] `useResetRetirementPlan()` (`useUpdateRetirementStep()` removed in ENG-205)
 - [x] Re-export from [`frontend/hooks/convex/index.ts`](../frontend/hooks/convex/index.ts)
 - [x] `useRetirementPreview(inputs)` client-only hook for instant in-wizard previews (no round-trip)
 
@@ -350,4 +350,4 @@ Shown at `/retirement` once a plan exists (edit re-enters the wizard).
 - **Taxes** on withdrawals and pensions.
 - User-selectable asset categories for the funding base (v1 = dashboard net worth; the primary residence is never in it).
 - Tracking physical real estate as a first-class net-worth asset (separate feature; would then require excluding the primary residence from the funding basis).
-- No UI to reset/start over (`resetRetirementPlan` exists but is unused), and `ageReachTargetWithoutSaving` is computed but not displayed.
+- `ageReachTargetWithoutSaving` is computed but not displayed.

@@ -144,7 +144,6 @@ export {
 export {
   useRetirementPlan,
   useSaveRetirementPlan,
-  useUpdateRetirementStep,
   useResetRetirementPlan,
   useRetirementResults,
   useRetirementPreview,

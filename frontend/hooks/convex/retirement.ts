@@ -73,13 +73,6 @@ export function useSaveRetirementPlan() {
 		save({ ...args, currency });
 }
 
-/** Persist the current wizard step (rebasing the plan into the display currency). */
-export function useUpdateRetirementStep() {
-	const update = useMutation(api.retirement.updateRetirementStep);
-	const currency = useRetirementCurrency();
-	return (args: { step: number }) => update({ ...args, currency });
-}
-
 /** Delete the plan and start over. */
 export function useResetRetirementPlan() {
 	return useMutation(api.retirement.resetRetirementPlan);

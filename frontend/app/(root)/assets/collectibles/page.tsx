@@ -7,17 +7,21 @@ import {
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useCollectiblesSummary } from "@/hooks/convex/collectibles";
-import { collectiblesCategoryCards } from "@/lib/config/categoryUI";
+import {
+  collectiblesCategoryCards,
+  useCategoryLabels,
+} from "@/lib/config/categoryUI";
 
 export default function CollectiblesPage() {
   const { summary, isLoading } = useCollectiblesSummary();
   const t = useTranslations("assets.collectibles");
+  const labels = useCategoryLabels();
   const tAction = useTranslations("assets.actions");
 
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title={t("title")}
+        title={labels.categoryName("collectibles")}
         subtitle={t("subtitle")}
         actions={[{ label: tAction("addItem"), disabled: true }]}
       />

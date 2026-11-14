@@ -12,7 +12,6 @@
     "viewCollection": "View Collection"
   },
   "bonds": {
-    "title": "Bonds",
     "subtitle": "Track your fixed income investments - government bonds, corporate bonds, and bond funds.",
     "categories": "Bond Categories"
   },
@@ -23,23 +22,19 @@
     "categories": "Cash Categories"
   },
   "equities": {
-    "title": "Equities",
     "subtitle": "Track your stock portfolio, ETFs, mutual funds, and private equity investments.",
     "publicMarkets": "Public Markets",
     "privateMarkets": "Private Markets"
   },
   "realEstate": {
-    "title": "Real Estate",
     "subtitle": "Track your real estate investments - residential properties, commercial holdings, REITs, and more.",
     "categories": "Property Categories"
   },
   "collectibles": {
-    "title": "Collectibles",
     "subtitle": "Track your collectible investments - art, wine, watches, classic cars, and more.",
     "categories": "Collectible Categories"
   },
   "commodities": {
-    "title": "Commodities",
     "subtitle": "Track real-time prices and manage your holdings across different commodity types",
     "categories": "Commodity Categories"
   },
@@ -108,22 +103,5 @@
       "priceAsOf": "Price as of {date}",
       "lastKnownPrice": "Last known price"
     }
-  },
-  "liabilities": {
-    "title": "Liabilities",
-    "subtitle": "Track your debts, loans, mortgages, and credit card balances.",
-    "addLoan": "Add Loan",
-    "total": "Total Liabilities",
-    "acrossAccounts": "Across {count, plural, one {# account} other {# accounts}}",
-    "byType": "By Type",
-    "noBalances": "No balances",
-    "accounts": "{count, plural, one {# account} other {# accounts}}",
-    "viewDetails": "View Details",
-    "track": "Track Liability",
-    "comingSoon": "Coming Soon",
-    "toolsTitle": "Loan Calculator & Tracker",
-    "toolsDescription": "Use the advanced loan calculator to plan repayments, compare scenarios, and track your debt payoff progress.",
-    "loanCalculator": "Loan Calculator",
-    "connectBank": "Connect Bank"
   }
 }

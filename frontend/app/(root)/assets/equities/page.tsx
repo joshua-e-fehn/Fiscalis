@@ -10,11 +10,13 @@ import { useEquitiesSummary } from "@/hooks/convex/equities";
 import {
   equitiesPublicCards,
   equitiesPrivateCards,
+  useCategoryLabels,
 } from "@/lib/config/categoryUI";
 
 export default function EquitiesPage() {
   const { summary, isLoading } = useEquitiesSummary();
   const t = useTranslations("assets.equities");
+  const labels = useCategoryLabels();
   const tAction = useTranslations("assets.actions");
 
   // Check if there are any holdings
@@ -23,7 +25,7 @@ export default function EquitiesPage() {
   return (
     <div className="container mx-auto py-6 space-y-8">
       <PageHeader
-        title={t("title")}
+        title={labels.categoryName("equities")}
         subtitle={t("subtitle")}
         actions={[
           { label: tAction("connectBroker"), href: "/integrations/brokers" },

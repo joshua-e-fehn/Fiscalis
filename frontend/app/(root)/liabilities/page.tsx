@@ -94,7 +94,8 @@ const LiabilityCategoryCard = ({
   holdingsCount,
   currency,
 }: LiabilityCategoryCardProps) => {
-  const t = useTranslations("assets.liabilities");
+  const t = useTranslations("loans.liabilitiesOverview");
+  const tCard = useTranslations("categories.card");
   const labels = useCategoryLabels();
   const label = liabilitiesSubcategoryUI[category.id].label;
   const Icon = category.icon;
@@ -180,7 +181,7 @@ const LiabilityCategoryCard = ({
           </Button>
         ) : (
           <Button disabled className="w-full" variant="outline">
-            {t("comingSoon")}
+            {tCard("comingSoonButton")}
           </Button>
         )}
       </CardContent>
@@ -191,7 +192,11 @@ const LiabilityCategoryCard = ({
 export default function LiabilitiesPage() {
   const { summary, currency, isLoading } = useLiabilitiesSummary();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const t = useTranslations("assets.liabilities");
+  const t = useTranslations("loans.liabilitiesOverview");
+  const tLoans = useTranslations("loans.list");
+  const tCalculator = useTranslations("calculators.loan");
+  const tAction = useTranslations("assets.actions");
+  const labels = useCategoryLabels();
 
   // Check if there are any liabilities
   const hasLiabilities = summary && summary.totalValue > 0;
@@ -210,12 +215,14 @@ export default function LiabilitiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("title")}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {labels.categoryName("liabilities")}
+          </h1>
           <p className="text-muted-foreground mt-2">{t("subtitle")}</p>
         </div>
         <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          {t("addLoan")}
+          {tLoans("addLoan")}
         </Button>
       </div>
 
@@ -291,13 +298,13 @@ export default function LiabilitiesPage() {
         <CardContent className="flex gap-4">
           <Button variant="outline" asChild>
             <Link href="/tools/calculators/loan">
-              {t("loanCalculator")}
+              {tCalculator("title")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/integrations/banking">
-              {t("connectBank")}
+              {tAction("connectBank")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

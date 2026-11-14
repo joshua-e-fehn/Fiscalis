@@ -12,7 +12,6 @@
     "viewCollection": "Sammlung ansehen"
   },
   "bonds": {
-    "title": "Anleihen",
     "subtitle": "Behalte deine festverzinslichen Anlagen im Blick – Staatsanleihen, Unternehmensanleihen und Anleihefonds.",
     "categories": "Anleihekategorien"
   },
@@ -23,23 +22,19 @@
     "categories": "Liquiditätskategorien"
   },
   "equities": {
-    "title": "Aktien",
     "subtitle": "Behalte dein Aktienportfolio, ETFs, Investmentfonds und Private-Equity-Anlagen im Blick.",
     "publicMarkets": "Öffentliche Märkte",
     "privateMarkets": "Private Märkte"
   },
   "realEstate": {
-    "title": "Immobilien",
     "subtitle": "Behalte deine Immobilienanlagen im Blick – Wohnimmobilien, Gewerbeimmobilien, REITs und mehr.",
     "categories": "Immobilienkategorien"
   },
   "collectibles": {
-    "title": "Sammlerstücke",
     "subtitle": "Behalte deine Sammlerstücke im Blick – Kunst, Wein, Uhren, Oldtimer und mehr.",
     "categories": "Kategorien der Sammlerstücke"
   },
   "commodities": {
-    "title": "Rohstoffe",
     "subtitle": "Verfolge Echtzeitpreise und verwalte deine Bestände über verschiedene Rohstoffarten hinweg",
     "categories": "Rohstoffkategorien"
   },
@@ -76,9 +71,9 @@
         "deposit": "Einzahlung",
         "withdraw": "Auszahlung",
         "withdrawal": "Auszahlung",
-        "receive": "Empfang",
-        "send": "Versand",
-        "transfer": "Übertrag",
+        "receive": "Erhalten",
+        "send": "Gesendet",
+        "transfer": "Übertragung",
         "reward": "Prämie",
         "staking": "Staking",
         "dividend": "Dividende",
@@ -108,22 +103,5 @@
       "priceAsOf": "Preis vom {date}",
       "lastKnownPrice": "Letzter bekannter Preis"
     }
-  },
-  "liabilities": {
-    "title": "Verbindlichkeiten",
-    "subtitle": "Behalte deine Schulden, Kredite, Hypotheken und Kreditkartensalden im Blick.",
-    "addLoan": "Kredit hinzufügen",
-    "total": "Verbindlichkeiten gesamt",
-    "acrossAccounts": "Über {count, plural, one {# Konto} other {# Konten}}",
-    "byType": "Nach Art",
-    "noBalances": "Keine Salden",
-    "accounts": "{count, plural, one {# Konto} other {# Konten}}",
-    "viewDetails": "Details ansehen",
-    "track": "Verbindlichkeit erfassen",
-    "comingSoon": "Demnächst verfügbar",
-    "toolsTitle": "Kreditrechner & Tracker",
-    "toolsDescription": "Nutze den erweiterten Kreditrechner, um Rückzahlungen zu planen, Szenarien zu vergleichen und den Abbau deiner Schulden zu verfolgen.",
-    "loanCalculator": "Kreditrechner",
-    "connectBank": "Bank verbinden"
   }
 }

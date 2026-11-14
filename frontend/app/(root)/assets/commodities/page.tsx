@@ -7,11 +7,15 @@ import {
   PageHeader,
 } from "@/components/atomic/molecules/investments";
 import { useCommoditiesSummary } from "@/hooks/convex/commodities";
-import { commoditiesCategoryCards } from "@/lib/config/categoryUI";
+import {
+  commoditiesCategoryCards,
+  useCategoryLabels,
+} from "@/lib/config/categoryUI";
 
 export default function CommoditiesPage() {
   const { summary, isLoading } = useCommoditiesSummary();
   const t = useTranslations("assets.commodities");
+  const labels = useCategoryLabels();
   const tAction = useTranslations("assets.actions");
 
   // Check if there are any holdings
@@ -20,7 +24,7 @@ export default function CommoditiesPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-6 md:px-24 gap-6">
       <PageHeader
-        title={t("title")}
+        title={labels.categoryName("commodities")}
         subtitle={t("subtitle")}
         actions={[
           {

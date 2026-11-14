@@ -440,5 +440,17 @@
     "summaryTimeSaved": "Zeit gespart:",
     "summaryInterestSaved": "Zinsen gespart:",
     "save": "Szenario speichern"
+  },
+  "liabilitiesOverview": {
+    "subtitle": "Behalte deine Schulden, Kredite, Hypotheken und Kreditkartensalden im Blick.",
+    "total": "Verbindlichkeiten gesamt",
+    "acrossAccounts": "Verteilt auf {count, plural, one {# Konto} other {# Konten}}",
+    "byType": "Nach Art",
+    "noBalances": "Keine Salden",
+    "accounts": "{count, plural, one {# Konto} other {# Konten}}",
+    "viewDetails": "Details ansehen",
+    "track": "Verbindlichkeit erfassen",
+    "toolsTitle": "Kreditrechner & Tracker",
+    "toolsDescription": "Nutze den erweiterten Kreditrechner, um Rückzahlungen zu planen, Szenarien zu vergleichen und den Abbau deiner Schulden zu verfolgen."
   }
 }

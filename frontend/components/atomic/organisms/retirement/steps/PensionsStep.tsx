@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/shadcn/button";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import { Switch } from "@/components/ui/shadcn/switch";
-import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
+import { useRetirementAmountsCurrency } from "@/hooks/convex/retirement";
 import {
 	DEFAULT_PENSION_DEDUCTION_RATE,
 	netPensionMonthly,
@@ -24,8 +24,9 @@ export function PensionsStep({
 	onNext,
 	onBack,
 	isSaving,
+	currency: inputsCurrency,
 }: RetirementStepProps) {
-	const { currency } = useDisplayCurrency();
+	const currency = useRetirementAmountsCurrency(inputsCurrency);
 	const sources = data.pensionSources;
 	const deductionRate =
 		data.pensionDeductionRate ?? DEFAULT_PENSION_DEDUCTION_RATE;

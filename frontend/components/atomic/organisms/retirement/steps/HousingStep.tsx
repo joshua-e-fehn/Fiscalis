@@ -16,8 +16,8 @@ import { Switch } from "@/components/ui/shadcn/switch";
 import {
 	useRetirementMortgageAccounts,
 	useRetirementMortgageCandidates,
+	useRetirementAmountsCurrency,
 } from "@/hooks/convex/retirement";
-import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { validateRetirementInputs } from "@/lib/types/retirement";
 import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
@@ -35,15 +35,16 @@ export function HousingStep({
 	onNext,
 	onBack,
 	isSaving,
+	currency: inputsCurrency,
 }: RetirementStepProps) {
-	const { currency } = useDisplayCurrency();
+	const currency = useRetirementAmountsCurrency(inputsCurrency);
 	const errors = validateRetirementInputs(data);
 	const equityError = errors.fundableRealEstateEquity;
 	const mortgageError =
 		errors.primaryResidenceMortgageRate ??
 		errors.primaryResidenceMortgagePayment;
 	const loans = useRetirementMortgageCandidates();
-	const accounts = useRetirementMortgageAccounts();
+	const accounts = useRetirementMortgageAccounts(inputsCurrency);
 	const linkedAccount = data.primaryResidenceAccountId;
 	const selected = data.primaryResidenceLoanId
 		? `${LOAN_PREFIX}${data.primaryResidenceLoanId}`

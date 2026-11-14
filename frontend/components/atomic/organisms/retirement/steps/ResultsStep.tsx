@@ -37,7 +37,11 @@ export function ResultsStep({
 
 	return (
 		<div className="w-full space-y-5">
-			<RetirementResultsView results={results} assumptions={data} />
+			<RetirementResultsView
+				results={results}
+				assumptions={data}
+				currency={currency}
+			/>
 
 			<div className="flex items-center justify-between">
 				<Button variant="ghost" onClick={onBack} disabled={isSaving}>

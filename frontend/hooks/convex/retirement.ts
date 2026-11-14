@@ -10,6 +10,8 @@ import {
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocalToday } from "@/hooks/useLocalToday";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import { toInvestmentCurrency } from "@/lib/utils/currency";
 import { useDisplayCurrency } from "./displayCurrency";
 import { useLoans } from "./loans";
 
@@ -26,6 +28,18 @@ import { useLoans } from "./loans";
 function useRetirementCurrency(): string | undefined {
 	const display = useDisplayCurrency();
 	return display.isLoading ? undefined : display.code;
+}
+
+/**
+ * The currency to label retirement amounts with: `currency`, the one they
+ * are in (the wizard's form currency, a result's currency), else the
+ * display currency.
+ */
+export function useRetirementAmountsCurrency(
+	currency: string | undefined,
+): InvestmentCurrency {
+	const display = useDisplayCurrency();
+	return (currency && toInvestmentCurrency(currency)) || display.currency;
 }
 
 /**
@@ -81,9 +95,14 @@ export function useRetirementMortgageCandidates() {
 	);
 }
 
-/** Bank (Plaid) mortgage accounts the home can be linked to instead. */
-export function useRetirementMortgageAccounts() {
-	const currency = useRetirementCurrency();
+/**
+ * Bank (Plaid) mortgage accounts the home can be linked to instead, with
+ * balances in `inputsCurrency` (the wizard's form currency) when given,
+ * else in the display currency.
+ */
+export function useRetirementMortgageAccounts(inputsCurrency?: string) {
+	const displayCurrency = useRetirementCurrency();
+	const currency = inputsCurrency ?? displayCurrency;
 	return useQuery(
 		api.retirement.getResidenceMortgageAccounts,
 		currency === undefined ? "skip" : { currency },

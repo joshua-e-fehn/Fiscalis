@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
+import { useRetirementAmountsCurrency } from "@/hooks/convex/retirement";
 import {
 	type RetirementAssumptions,
 	type RetirementResults,
@@ -24,13 +25,24 @@ interface Props {
 	assumptions?: RetirementAssumptions;
 	/** Saved-plan dashboard: problems point to "Edit plan" instead of "Go back". */
 	onEdit?: () => void;
+	/**
+	 * The currency `results` was computed in (the wizard's form currency, or
+	 * the saved results' own); the display currency when omitted.
+	 */
+	currency?: string;
 }
 
 /**
  * The shared retirement results presentation — reused by both the final wizard
  * step (live preview) and the saved-plan dashboard.
  */
-export function RetirementResultsView({ results, assumptions, onEdit }: Props) {
+export function RetirementResultsView({
+	results,
+	assumptions,
+	onEdit,
+	currency: resultsCurrency,
+}: Props) {
+	const currency = useRetirementAmountsCurrency(resultsCurrency);
 	if (results === undefined) return <ResultsLoading />;
 	if (results === null) return null;
 
@@ -64,11 +76,12 @@ export function RetirementResultsView({ results, assumptions, onEdit }: Props) {
 	return (
 		<div className="space-y-5">
 			<div className="grid gap-5 lg:grid-cols-2">
-				<RetirementProgressCard results={results} />
-				<RequiredSavingsCard results={results} />
+				<RetirementProgressCard results={results} currency={currency} />
+				<RequiredSavingsCard results={results} currency={currency} />
 			</div>
-			<PensionCoverageBreakdown results={results} />
-			<RetirementProjectionChart results={results} />
+			<PensionCoverageBreakdown results={results} currency={currency} />
+			<RetirementProjectionChart results={results} currency={currency} />
+			{/* Takes the results' currency in the batch that removes useBaseCurrency */}
 			<FourPercentRuleExplainer results={results} assumptions={assumptions} />
 		</div>
 	);

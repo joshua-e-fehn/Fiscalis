@@ -52,6 +52,7 @@ export function RetirementDashboard({ onEdit }: RetirementDashboardProps) {
 				results={results}
 				assumptions={plan ?? undefined}
 				onEdit={onEdit}
+				currency={results?.currency}
 			/>
 		</div>
 	);

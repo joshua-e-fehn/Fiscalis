@@ -18,6 +18,9 @@ import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
 import type { RetirementStepProps } from "./types";
 
+/** The monthly gross pension the deduction hint works through */
+const EXAMPLE_GROSS_PENSION = 1_500;
+
 export function PensionsStep({
 	data,
 	update,
@@ -127,7 +130,7 @@ export function PensionsStep({
 								/>
 								{source.indexed !== false
 									? "Rises with inflation"
-									: "Fixed in euros (e.g. many company pensions)"}
+									: "Fixed amount (e.g. many company pensions)"}
 							</label>
 						</div>
 					</div>
@@ -177,7 +180,7 @@ export function PensionsStep({
 					}
 				>
 					{deductionError ??
-						`A flat rate for health & care insurance (≈ 11–12% in the KVdR) plus income tax. The default ${Math.round(DEFAULT_PENSION_DEDUCTION_RATE * 100)}% turns €1,500 gross into about €1,245 net.`}
+						`A flat rate for health & care insurance (≈ 11–12% in the KVdR) plus income tax. The default ${Math.round(DEFAULT_PENSION_DEDUCTION_RATE * 100)}% turns ${formatCurrency(EXAMPLE_GROSS_PENSION, currency, { fractionDigits: 0 })} gross into about ${formatCurrency(EXAMPLE_GROSS_PENSION * (1 - DEFAULT_PENSION_DEDUCTION_RATE), currency, { fractionDigits: 0 })} net.`}
 				</p>
 			</div>
 

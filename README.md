@@ -26,7 +26,39 @@ Fiscalis is a modern wealth management dashboard that aggregates all your financ
 - 💰 **Loan & Debt Management** — Amortization schedules, what-if scenarios, and payoff strategies
 - 🌍 **World Economic Data** — World Bank indicators with interactive country comparisons
 - 📊 **Portfolio Analytics** — Performance tracking, asset allocation charts, and historical snapshots
+- 💱 **Display Currency** — See every figure in EUR, USD, GBP or CHF
+- 🌗 **Light & Dark Theme** — Light, dark, or follow the system
+- 🔑 **Read-only API** — Your net worth over a key-authenticated REST endpoint ([docs/API.md](./docs/API.md))
 - 🔐 **Secure by Design** — AES-256-GCM encryption for sensitive tokens, Clerk authentication
+
+### Settings
+
+**Settings → General** (`/settings/general`) holds your display name, date of
+birth (used by the retirement planner), display currency, language and theme.
+The same fields are asked once during onboarding.
+
+- **Theme.** Light, dark or system. Choosing one previews it at once; it is
+  saved with the form and applied on every device you sign in on.
+- **Language.** English or German, stored with your profile. The interface is
+  rendered in English until the German translation is complete. Amounts keep
+  one format in every language (`-15'000€`, `1'234.00 CHF`).
+- **Display currency.** EUR, USD, GBP or CHF. Everything is stored and synced
+  in EUR; the app converts at the presentation boundary, so switching back and
+  forth changes no data:
+  - Totals, positions, profit and loss and allocations use the latest daily
+    exchange rate (mirrored daily: the USD/CHF rate store first, ECB
+    reference rates otherwise).
+  - Charts, year-to-date and performance figures convert each day at that
+    day's rate, so their returns are returns in your currency and include the
+    exchange-rate effect. They can differ from the EUR figures.
+  - Unrealised profit and loss is the EUR figure at today's rate, not cost at
+    historical rates.
+  - A loan's own pages, provider account rows and metal transactions stay in
+    their own currency; the totals they add up to are converted.
+  - When the latest rate is more than a week old, or no rate is available and
+    an approximate built-in one is used, the header says so.
+- **API.** `GET /api/v1/net-worth` stays in EUR whatever the display currency;
+  pass `?currency=USD`, `GBP` or `CHF` to convert (see [docs/API.md](./docs/API.md)).
 
 ---
 
@@ -170,6 +202,7 @@ See [frontend/README.md](./frontend/README.md) for required environment variable
 | [Services README](./services/README.md)           | Shared calculation services       |
 | [Convex README](./frontend/convex/README.md)      | Backend queries and mutations     |
 | [Loan Calculator Spec](./docs/LOANS_PAGE_SPEC.md) | Loan calculator specification     |
+| [API Reference](./docs/API.md)                    | The public net worth REST API     |
 
 ---
 

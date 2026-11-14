@@ -299,7 +299,9 @@ export default function ApiKeysPage() {
           <CardTitle>Usage</CardTitle>
           <CardDescription>
             Send the key in the Authorization header. Keys in URLs are not
-            accepted. Each key is limited to 60 requests per minute.
+            accepted. Each key is limited to 60 requests per minute. Amounts
+            are in EUR; add <code>?currency=USD</code>, <code>GBP</code> or{" "}
+            <code>CHF</code> to convert them at the latest exchange rate.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
@@ -313,6 +315,7 @@ export default function ApiKeysPage() {
   "totalAssets": 150000.00,
   "totalLiabilities": 26543.22,
   "currency": "EUR",
+  "fxRateDate": null,
   "asOf": "2026-01-01T12:00:00.000Z",
   "dataAsOf": "2026-01-01T06:00:41.000Z",
   "categories": [

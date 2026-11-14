@@ -20,13 +20,6 @@ import {
 } from "@/../services/finance/displayCurrency";
 import { useUserSettings } from "./onboarding";
 
-/**
- * Display currencies the data hooks convert into today. Widened to
- * DISPLAY_CURRENCIES once every consumer converts, so a preference never
- * labels an EUR figure with another currency.
- */
-export const SUPPORTED_DISPLAY_CURRENCIES: readonly DisplayCurrency[] = ["EUR"];
-
 /** How the rate in use was obtained; "identity" for EUR */
 export type DisplayRateSource = "identity" | "market" | "stale" | "fallback";
 
@@ -47,12 +40,14 @@ export interface DisplayCurrencyState {
   fromEurNullable: (amountEur: number | null | undefined) => number | null;
 }
 
-/** The user's display currency, as far as the data hooks can convert into it. */
+/**
+ * The user's display currency: their stored preference when it is one of
+ * DISPLAY_CURRENCIES, else EUR (no settings yet, or a code saved before
+ * the allowlist).
+ */
 function useEffectiveCode(): { code: DisplayCurrency; settingsLoading: boolean } {
   const settings = useUserSettings();
-  const preferred = toDisplayCurrency(settings?.defaultCurrency);
-  const code =
-    preferred && SUPPORTED_DISPLAY_CURRENCIES.includes(preferred) ? preferred : SUPPORTED_DISPLAY_CURRENCIES[0];
+  const code = toDisplayCurrency(settings?.defaultCurrency) ?? "EUR";
   return { code, settingsLoading: settings === undefined };
 }
 

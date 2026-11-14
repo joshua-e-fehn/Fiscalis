@@ -33,8 +33,8 @@ import {
   type Theme,
 } from "@/lib/types/onboarding";
 import { useUpdateSettings, useUserSettings } from "@/hooks/convex/onboarding";
-import { SUPPORTED_DISPLAY_CURRENCIES } from "@/hooks/convex/displayCurrency";
 import { MAX_DISPLAY_NAME_LENGTH } from "@/../services/settings/userSettings";
+import { toDisplayCurrency } from "@/../services/finance/displayCurrency";
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Light", icon: Sun },
@@ -42,18 +42,13 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: "system", label: "System", icon: Monitor },
 ];
 
-/** Currencies figures can be shown in today (the rest are listed, disabled). */
-function isSelectableCurrency(currency: Currency): boolean {
-  return SUPPORTED_DISPLAY_CURRENCIES.some((c) => c === currency);
-}
-
 type StoredSettings = NonNullable<ReturnType<typeof useUserSettings>>;
 
 function toFormData(settings: StoredSettings | null): ProfileFormData {
   return {
     displayName: settings?.displayName ?? "",
     birthDate: settings?.birthDate ?? "",
-    defaultCurrency: (settings?.defaultCurrency as Currency) ?? "EUR",
+    defaultCurrency: toDisplayCurrency(settings?.defaultCurrency) ?? "EUR",
     language: (settings?.language as Language) ?? "en",
     theme: settings?.theme ?? "system",
   };
@@ -223,19 +218,19 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
               </SelectTrigger>
               <SelectContent>
                 {CURRENCIES.map((currency) => (
-                  <SelectItem
-                    key={currency.value}
-                    value={currency.value}
-                    disabled={!isSelectableCurrency(currency.value)}
-                  >
-                    {currency.label}
+                  <SelectItem key={currency.value} value={currency.value}>
+                    <span className="flex items-center gap-2">
+                      <span>{currency.flag}</span>
+                      <span>{currency.label}</span>
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">
-              Figures are shown in euros for now. US dollar, British pound and
-              Swiss franc are coming soon.
+              Totals, charts and returns are converted at the latest exchange
+              rate, history at each day&apos;s rate. Loans and account rows
+              keep their own currency.
             </p>
           </div>
           <div className="flex flex-1 flex-col gap-2">

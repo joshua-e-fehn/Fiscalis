@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/shadcn/select";
 import { cn } from "@/lib/utils";
 import { todayLocalISO, validateBirthDate } from "@/lib/utils/date";
+import { toDisplayCurrency } from "@/../services/finance/displayCurrency";
 import {
   ProfileFormData,
   Currency,
@@ -92,7 +93,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
           prev.displayName,
         birthDate: existingSettings?.birthDate || prev.birthDate,
         defaultCurrency:
-          (existingSettings?.defaultCurrency as Currency) ||
+          toDisplayCurrency(existingSettings?.defaultCurrency) ??
           prev.defaultCurrency,
         language: (existingSettings?.language as Language) || prev.language,
         theme: existingSettings?.theme || prev.theme,

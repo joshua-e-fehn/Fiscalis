@@ -74,6 +74,14 @@ interface IntegrationConnectionCardProps {
   className?: string;
 }
 
+/**
+ * Shown when a disconnect fails. Disconnect revokes at the provider first and
+ * keeps the local data when that fails (ENG-225); Convex hides server error
+ * text in production, so the message is fixed here.
+ */
+export const DISCONNECT_FAILED_MESSAGE =
+  "Could not disconnect. Nothing was removed; please try again.";
+
 export function IntegrationConnectionCard({
   name,
   logo,

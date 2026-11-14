@@ -315,18 +315,30 @@ export const handleCallback = action({
       throw new Error("User not registered with SnapTrade");
     }
 
-    // Check if this authorization already exists
-    type ConnectionResult = { _id: string } | null;
-    const existingConnection: ConnectionResult = await ctx.runQuery(
-      internal.brokers.getConnectionByAuthorizationId,
-      { authorizationId: args.authorizationId },
-    );
+    // An authorization we already store: the portal returned from a
+    // reconnect (createConnectUrl with connectionId). Re-sync it now so the
+    // repaired connection leaves its error state without waiting for the
+    // nightly sync
+    const existingConnection: Doc<"brokerConnections"> | null =
+      await ctx.runQuery(internal.brokers.getConnectionByAuthorizationId, {
+        authorizationId: args.authorizationId,
+      });
 
     if (existingConnection) {
+      if (existingConnection.userId !== userId) {
+        throw new Error("Connection not found");
+      }
+      await syncConnectionAndSnapshot(
+        ctx,
+        userId,
+        existingConnection._id,
+        "snaptrade-reconnect",
+      );
       return {
         success: true,
         alreadyExists: true,
         connectionId: existingConnection._id,
+        brokerName: existingConnection.brokerName,
       };
     }
 
@@ -366,23 +378,13 @@ export const handleCallback = action({
         },
       );
 
-      // Initial sync of the new connection's accounts and holdings; a
-      // failure leaves the connection in an error state for a later retry
-      const syncResult = await syncSnaptrade(ctx, userId, {
-        kind: "connection",
+      // Initial sync of the new connection's accounts and holdings
+      await syncConnectionAndSnapshot(
+        ctx,
+        userId,
         connectionId,
-      });
-
-      // No snapshot when nothing synced; tagged partial when only some
-      // accounts did
-      const snapshot = syncResult && snaptradeSyncSnapshot(syncResult);
-      if (snapshot?.take) {
-        await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
-          userId,
-          source: "snaptrade-connect",
-          partial: snapshot.partial,
-        });
-      }
+        "snaptrade-connect",
+      );
 
       return {
         success: true,
@@ -502,8 +504,20 @@ export const deleteConnection = action({
           authorizationId: connection.authorizationId,
         });
       } catch (error) {
-        console.error("SnapTrade delete connection error:", describeError(error));
-        // Continue to delete from our database even if SnapTrade call fails
+        // Already gone at SnapTrade: nothing left to revoke. Anything else
+        // keeps the local data so the user can retry, rather than leaving a
+        // live authorization behind
+        const parsedError = parseSnapTradeError(error);
+        if (
+          parsedError.code !== "CONNECTION_NOT_FOUND" &&
+          parsedError.code !== "USER_NOT_FOUND"
+        ) {
+          console.error(
+            "SnapTrade delete connection error:",
+            describeError(error),
+          );
+          throw new Error(formatErrorForUser(error));
+        }
       }
     }
 
@@ -539,6 +553,32 @@ interface SnaptradeSyncResult {
 /** Whether a sync takes a snapshot: accounts stored vs failures reported. */
 function snaptradeSyncSnapshot(result: SnaptradeSyncResult) {
   return providerSyncSnapshot(result.accountsProcessed, result.errors.length);
+}
+
+/**
+ * Sync one connection's accounts and holdings, then snapshot the portfolio.
+ * A failed sync leaves the connection in an error state for a later retry;
+ * no snapshot when nothing synced, tagged partial when only some accounts
+ * did.
+ */
+async function syncConnectionAndSnapshot(
+  ctx: ActionCtx,
+  userId: string,
+  connectionId: Id<"brokerConnections">,
+  source: "snaptrade-connect" | "snaptrade-reconnect",
+): Promise<void> {
+  const syncResult = await syncSnaptrade(ctx, userId, {
+    kind: "connection",
+    connectionId,
+  });
+  const snapshot = syncResult && snaptradeSyncSnapshot(syncResult);
+  if (snapshot?.take) {
+    await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+      userId,
+      source,
+      partial: snapshot.partial,
+    });
+  }
 }
 
 /** What a sync covers: every connection, one connection, or one account. */

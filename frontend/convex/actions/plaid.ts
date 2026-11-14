@@ -14,6 +14,7 @@ import { encrypt, decrypt } from "../lib/encryption";
 import { NO_CURRENCY } from "../../../services/finance/currency";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
+import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -53,13 +54,9 @@ function getCountryCodes(): CountryCode[] {
   return codes.map((code) => code.trim().toUpperCase() as CountryCode);
 }
 
-// Parse products from environment
+// Products to request at link time; never auth/identity (ENG-225)
 function getProducts(): Products[] {
-  const products = process.env.PLAID_PRODUCTS?.split(",") || [
-    "auth",
-    "transactions",
-  ];
-  return products.map((p) => p.trim().toLowerCase() as Products);
+  return plaidLinkProducts(process.env.PLAID_PRODUCTS) as Products[];
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -670,175 +667,55 @@ export const syncTransactions = action({
   },
 });
 
+// ═══════════════════════════════════════════════════════════════
+// DISCONNECT
+// ═══════════════════════════════════════════════════════════════
+
 /**
- * Get auth data (account and routing numbers)
+ * Disconnect a bank: revoke the item at Plaid (`itemRemove`, which ends the
+ * user's consent and Plaid's billing for it), then delete the local data.
+ *
+ * An item Plaid no longer knows (already removed, or its access token
+ * invalid) is deleted locally anyway; any other Plaid failure keeps the
+ * local data so the user can retry, instead of leaving a live item behind.
  */
-export const getAuth = action({
-  args: { itemId: v.optional(v.string()) },
-  handler: async (ctx, args) => {
+export const disconnectItem = action({
+  args: { itemId: v.string() },
+  handler: async (ctx, args): Promise<{ success: boolean }> => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
-    const plaidClient = getPlaidClient();
-    const encryptionKey = getEncryptionKey();
 
-    // Get items
-    let items;
-    if (args.itemId) {
-      const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
-        itemId: args.itemId,
-      });
-      if (!item || item.userId !== userId) {
-        throw new Error("Item not found or unauthorized");
-      }
-      items = [item];
-    } else {
-      items = await ctx.runQuery(internal.banking.getItemsByUserInternal, {
-        userId,
-      });
+    const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
+      itemId: args.itemId,
+    });
+    if (!item || item.userId !== userId) {
+      throw new Error("Item not found or unauthorized");
     }
 
-    const allAccounts: Array<{
-      accountId: string;
-      name: string;
-      mask: string | null;
-      type: string;
-    }> = [];
-    const allNumbers: Array<{
-      accountId: string;
-      account: string | null;
-      routing: string | null;
-      wireRouting: string | null;
-    }> = [];
-
-    for (const item of items) {
-      const accessToken = decrypt(item.accessToken, encryptionKey);
-
-      try {
-        const response = await plaidClient.authGet({
-          access_token: accessToken,
-        });
-
-        for (const acc of response.data.accounts) {
-          allAccounts.push({
-            accountId: acc.account_id,
-            name: acc.name,
-            mask: acc.mask,
-            type: acc.type,
-          });
-        }
-
-        for (const num of response.data.numbers.ach) {
-          allNumbers.push({
-            accountId: num.account_id,
-            account: num.account,
-            routing: num.routing,
-            wireRouting: num.wire_routing,
-          });
-        }
-      } catch (error) {
-        console.error(`Error getting auth for item ${item.itemId}:`, describeError(error));
-      }
-    }
-
-    return { accounts: allAccounts, numbers: allNumbers };
-  },
-});
-
-/**
- * Get identity data (account holder information)
- */
-export const getIdentity = action({
-  args: { itemId: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const userId = identity.subject;
-    const plaidClient = getPlaidClient();
-    const encryptionKey = getEncryptionKey();
-
-    // Get items
-    let items;
-    if (args.itemId) {
-      const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
-        itemId: args.itemId,
+    try {
+      await getPlaidClient().itemRemove({
+        access_token: decrypt(item.accessToken, getEncryptionKey()),
       });
-      if (!item || item.userId !== userId) {
-        throw new Error("Item not found or unauthorized");
+    } catch (error: unknown) {
+      const code = (
+        error as { response?: { data?: { error_code?: string } } }
+      )?.response?.data?.error_code;
+      if (code !== "ITEM_NOT_FOUND" && code !== "INVALID_ACCESS_TOKEN") {
+        console.error("Plaid itemRemove error:", describeError(error));
+        throw new Error(
+          "Could not disconnect this bank at Plaid. Please try again.",
+        );
       }
-      items = [item];
-    } else {
-      items = await ctx.runQuery(internal.banking.getItemsByUserInternal, {
-        userId,
-      });
+      console.warn(`Plaid item already gone (${code}); deleting locally`);
     }
 
-    const results: Array<{
-      itemId: string;
-      accounts: Array<{
-        accountId: string;
-        owners: Array<{
-          names: string[];
-          emails: Array<{ data: string; primary: boolean; type: string }>;
-          phoneNumbers: Array<{ data: string; primary: boolean; type: string }>;
-          addresses: Array<{
-            data: {
-              city: string | null;
-              region: string | null;
-              postalCode: string | null;
-              country: string | null;
-              street: string | null;
-            };
-            primary: boolean;
-          }>;
-        }>;
-      }>;
-    }> = [];
+    await ctx.runMutation(internal.banking.deleteItemData, {
+      itemId: args.itemId,
+      userId,
+    });
 
-    for (const item of items) {
-      const accessToken = decrypt(item.accessToken, encryptionKey);
-
-      try {
-        const response = await plaidClient.identityGet({
-          access_token: accessToken,
-        });
-
-        results.push({
-          itemId: item.itemId,
-          accounts: response.data.accounts.map((acc) => ({
-            accountId: acc.account_id,
-            owners: (acc.owners || []).map((owner) => ({
-              names: owner.names,
-              emails: owner.emails.map((e) => ({
-                data: e.data,
-                primary: e.primary,
-                type: String(e.type),
-              })),
-              phoneNumbers: owner.phone_numbers.map((p) => ({
-                data: p.data,
-                primary: p.primary,
-                type: String(p.type),
-              })),
-              addresses: owner.addresses.map((a) => ({
-                data: {
-                  city: a.data.city,
-                  region: a.data.region,
-                  postalCode: a.data.postal_code,
-                  country: a.data.country,
-                  street: a.data.street ?? null,
-                },
-                primary: a.primary ?? false,
-              })),
-            })),
-          })),
-        });
-      } catch (error) {
-        console.error(`Error getting identity for item ${item.itemId}:`, describeError(error));
-      }
-    }
-
-    return { identity: results };
+    return { success: true };
   },
 });

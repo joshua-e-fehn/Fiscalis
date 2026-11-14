@@ -4,8 +4,11 @@
  * `userId` arg. Fails if any exported `query` / `mutation` / `action` in
  * frontend/convex declares one. Internal functions are exempt — only server
  * code can call them.
+ *
+ * Guard for ENG-225: functions removed because they leaked PII or skipped
+ * the provider-side revoke must not come back as public functions.
  */
-import { readFileSync, readdirSync, statSync } from "fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "fs";
 import path from "path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -71,7 +74,65 @@ export function findClientUserIdArgs(fileName: string, source: string) {
   return hits;
 }
 
+/** `export const foo = action({...})` → "file:foo" for every public builder */
+export function findPublicFunctions(fileName: string, source: string) {
+  const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest);
+  const names: string[] = [];
+  for (const stmt of sf.statements) {
+    if (!ts.isVariableStatement(stmt)) continue;
+    const exported = stmt.modifiers?.some(
+      (m) => m.kind === ts.SyntaxKind.ExportKeyword,
+    );
+    if (!exported) continue;
+    for (const decl of stmt.declarationList.declarations) {
+      const init = decl.initializer;
+      if (!init || !ts.isCallExpression(init)) continue;
+      if (!ts.isIdentifier(init.expression)) continue;
+      if (!PUBLIC_BUILDERS.has(init.expression.text)) continue;
+      names.push(`${fileName}:${decl.name.getText(sf)}`);
+    }
+  }
+  return names;
+}
+
+/**
+ * Public functions removed in ENG-225: Plaid auth/identity returned account
+ * numbers and identity PII; the delete mutations removed local data without
+ * revoking the item/authorization at the provider (use the actions instead).
+ */
+const REMOVED_PUBLIC_FUNCTIONS = [
+  "actions/plaid.ts:getAuth",
+  "actions/plaid.ts:getIdentity",
+  "banking.ts:deleteItem",
+  "brokers.ts:deleteConnection",
+];
+
 describe("public Convex functions", () => {
+  it("do not bring back removed PII or revoke-skipping functions", () => {
+    const publicFunctions = new Set(
+      listSourceFiles(CONVEX_DIR).flatMap((file) =>
+        findPublicFunctions(
+          path.relative(CONVEX_DIR, file).split(path.sep).join("/"),
+          readFileSync(file, "utf8"),
+        ),
+      ),
+    );
+    expect(
+      REMOVED_PUBLIC_FUNCTIONS.filter((name) => publicFunctions.has(name)),
+    ).toEqual([]);
+    // The auth debugging module (testAuth returned identity claims)
+    expect(existsSync(path.join(CONVEX_DIR, "test.ts"))).toBe(false);
+  });
+
+  it("lists public functions only", () => {
+    const src = `
+      export const a = action({ args: {}, handler: h });
+      export const b = internalAction({ args: {}, handler: h });
+      const c = query({ args: {}, handler: h });
+    `;
+    expect(findPublicFunctions("x.ts", src)).toEqual(["x.ts:a"]);
+  });
+
   it("never accept a client-supplied userId", () => {
     const hits = listSourceFiles(CONVEX_DIR).flatMap((file) =>
       findClientUserIdArgs(

@@ -127,7 +127,7 @@ DATABASE_URL="postgresql://..."
 PLAID_CLIENT_ID="..."
 PLAID_SECRET="..."  # Use sandbox/development/production secret
 PLAID_ENV="sandbox"  # sandbox | development | production
-PLAID_PRODUCTS="auth,transactions,identity,investments"
+PLAID_PRODUCTS="transactions" # auth/identity are always dropped (ENG-225)
 PLAID_COUNTRY_CODES="US,DE,GB,FR,ES,IT"
 
 # ===========================================

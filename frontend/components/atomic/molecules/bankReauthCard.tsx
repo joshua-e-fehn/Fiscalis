@@ -28,6 +28,7 @@ import {
 import { Button } from "@/components/ui/shadcn/button";
 import { Landmark, AlertCircle, MoreHorizontal, Unlink } from "lucide-react";
 import { useDeletePlaidItem } from "@/hooks/convex/banking";
+import { DISCONNECT_FAILED_MESSAGE } from "@/components/atomic/molecules/integrations";
 import {
   PlaidUpdateButton,
   ItemNeedingReauth,
@@ -43,8 +44,10 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
 
   const institutionName = item.institutionName || "Unknown Bank";
 
+  // A failed revoke at Plaid keeps the bank (ENG-225); the hook keeps the
+  // error, shown on the card, so the user can retry
   const handleDisconnect = async () => {
-    await deleteItem.mutate(item.itemId);
+    await deleteItem.mutate(item.itemId).catch(() => undefined);
     setShowDisconnectDialog(false);
   };
 
@@ -135,6 +138,11 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
                     purposes. Click reconnect to restore access to your
                     accounts.
                   </p>
+                  {deleteItem.error && (
+                    <p className="mt-2 text-sm text-destructive">
+                      {DISCONNECT_FAILED_MESSAGE}
+                    </p>
+                  )}
                 </div>
                 <PlaidUpdateButton
                   item={item}

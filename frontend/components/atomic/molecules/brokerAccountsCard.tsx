@@ -19,6 +19,7 @@ import { useSyncContextSafe } from "@/providers/syncProvider";
 import {
   IntegrationConnectionCard,
   IntegrationAccountItem,
+  DISCONNECT_FAILED_MESSAGE,
 } from "@/components/atomic/molecules/integrations";
 
 // Type for broker connection from Convex
@@ -80,7 +81,11 @@ export function BrokerAccountsCard({
   connection,
   accounts,
 }: BrokerAccountsCardProps) {
-  const { deleteConnection, isLoading: isDeleting } = useDeleteConnection();
+  const {
+    deleteConnection,
+    isLoading: isDeleting,
+    error: deleteError,
+  } = useDeleteConnection();
   const { syncAll, isLoading: isLocalSyncing } = useSyncAll();
 
   // Get global sync state (may be undefined if outside SyncProvider)
@@ -94,8 +99,10 @@ export function BrokerAccountsCard({
     return null;
   }
 
+  // A failed revoke at SnapTrade keeps the connection (ENG-225); the hook
+  // keeps the error, shown on the card, so the user can retry
   const handleDisconnect = async () => {
-    await deleteConnection(connection._id);
+    await deleteConnection(connection._id).catch(() => undefined);
   };
 
   const handleSync = async () => {
@@ -124,7 +131,9 @@ export function BrokerAccountsCard({
       totalValueEur={totalValue}
       totalCashEur={totalCash}
       lastSyncAt={connection.lastSyncAt}
-      errorMessage={connection.errorMessage}
+      errorMessage={
+        deleteError ? DISCONNECT_FAILED_MESSAGE : connection.errorMessage
+      }
       secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
       onSync={handleSync}
       onDisconnect={handleDisconnect}

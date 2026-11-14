@@ -10,5 +10,8 @@ export {
 } from "./IntegrationStatusBadge";
 export { IntegrationConnectionMenu } from "./IntegrationConnectionMenu";
 export { IntegrationAccountItem } from "./IntegrationAccountItem";
-export { IntegrationConnectionCard } from "./IntegrationConnectionCard";
+export {
+  IntegrationConnectionCard,
+  DISCONNECT_FAILED_MESSAGE,
+} from "./IntegrationConnectionCard";
 export { IntegrationEmptyState } from "./IntegrationEmptyState";

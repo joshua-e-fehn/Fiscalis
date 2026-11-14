@@ -82,6 +82,11 @@ cd services && bun install && bun run test      # vitest — the repo's only tes
   `convex deploy --cmd 'bun run build'` when `VERCEL_ENV=production`, with the
   production `CONVEX_DEPLOY_KEY` from Vercel. Every merge to `main` therefore
   ships matching frontend and backend. Never push functions to prod by hand.
+- `build:vercel` (prod branch) goes through `frontend/scripts/vercel-build.sh`,
+  which retries `convex deploy` up to twice (30s, 60s) only on `RaceDetected`
+  (concurrent push from near-simultaneous merges); other failures exit as-is.
+  It skips the retry once `main` has moved past the build's commit, so an
+  older build never pushes its functions over a newer one.
 - **Dev:** Convex deployment `blessed-ermine-693` (`frontend/.env.local`).
   `bunx convex dev` pushes there; Vercel preview builds also use it, for
   codegen only.

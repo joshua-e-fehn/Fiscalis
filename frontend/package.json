@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "bunx convex codegen && next build --webpack",
-    "build:vercel": "if [ \"$VERCEL_ENV\" = \"production\" ]; then bunx convex deploy --cmd 'bun run build'; else bun run build; fi",
+    "build:vercel": "if [ \"$VERCEL_ENV\" = \"production\" ]; then sh scripts/vercel-build.sh; else bun run build; fi",
     "start": "next start",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p convex",

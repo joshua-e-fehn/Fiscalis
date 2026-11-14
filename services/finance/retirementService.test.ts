@@ -1,11 +1,18 @@
+import { readFileSync } from "fs";
+import path from "path";
 import { describe, it, expect } from "vitest";
 
 import {
   computeRetirementResults,
+  FUNDING_CATEGORIES,
+  FUNDING_TREATMENT_LABELS,
   firstRetirementInputError,
+  firstRetirementInputIssue,
   inflateToFuture,
   portfolioTargetFromAnnualGap,
   requiredMonthlyContribution,
+  retirementInputIssues,
+  retirementIssueMessage,
   retirementPlanProblem,
   validatePensionSources,
   validateRetirementAges,
@@ -1315,6 +1322,106 @@ describe("linked account mortgage validation", () => {
     );
     expect(errors.primaryResidenceMortgagePayment).toBe(
       "Mortgage repayment must be zero or more",
+    );
+  });
+});
+
+describe("input issues (codes for the translated UI)", () => {
+  it("reports each rule as a code with its parameters", () => {
+    expect(
+      retirementInputIssues({
+        ...baseInputs,
+        currentAge: 40,
+        retirementAge: 130,
+        monthlyExpensesToday: 0,
+        fundableRealEstateEquity: -1,
+        pensionSources: [{ label: "State", monthlyAmount: -1 }],
+        inflationRate: 0.25,
+        withdrawalRate: 0,
+        pensionDeductionRate: 0.7,
+        primaryResidenceMortgageRate: 0.3,
+        primaryResidenceMortgagePayment: -5,
+      }),
+    ).toEqual({
+      retirementAge: { code: "ageRange", field: "retirementAge", min: 0, max: 120 },
+      monthlyExpensesToday: { code: "expensesNotPositive" },
+      fundableRealEstateEquity: {
+        code: "amountNegative",
+        field: "fundableRealEstateEquity",
+      },
+      pensionSources: { code: "amountNegative", field: "pensionSources" },
+      inflationRate: { code: "rateRange", field: "inflationRate", max: 20 },
+      withdrawalRate: { code: "withdrawalRateRange", max: 20 },
+      pensionDeductionRate: {
+        code: "rateRange",
+        field: "pensionDeductionRate",
+        max: 60,
+      },
+      primaryResidenceMortgageRate: {
+        code: "rateRange",
+        field: "primaryResidenceMortgageRate",
+        max: 20,
+      },
+      primaryResidenceMortgagePayment: {
+        code: "amountNegative",
+        field: "primaryResidenceMortgagePayment",
+      },
+    });
+    expect(retirementInputIssues(baseInputs)).toEqual({});
+  });
+
+  it("returns the first issue among the given fields", () => {
+    expect(
+      firstRetirementInputIssue(
+        { ...baseInputs, currentAge: 70, retirementAge: 67 },
+        { fields: ["currentAge"] },
+      ),
+    ).toEqual({ code: "retirementNotAfterCurrent" });
+    expect(firstRetirementInputIssue(baseInputs)).toBeUndefined();
+  });
+
+  it("keeps the English messages the string validators return", () => {
+    expect(
+      retirementIssueMessage({
+        code: "ageRange",
+        field: "currentAge",
+        min: 0,
+        max: 120,
+      }),
+    ).toBe("Current age must be a whole number between 0 and 120");
+    expect(
+      retirementIssueMessage({ code: "withdrawalRateRange", max: 20 }),
+    ).toBe("Withdrawal rate must be above 0% and at most 20%");
+    expect(
+      retirementIssueMessage({
+        code: "amountNegative",
+        field: "monthlyExpensesToday",
+      }),
+    ).toBe("Monthly expenses must be zero or more");
+    expect(
+      retirementIssueMessage({
+        code: "rateRange",
+        field: "withdrawalTaxRate",
+        max: 60,
+      }),
+    ).toBe("Tax on withdrawals must be between 0% and 60%");
+  });
+});
+
+describe("wizard translations", () => {
+  const messages = JSON.parse(
+    readFileSync(
+      path.resolve(__dirname, "../../frontend/messages/en/retirement.json"),
+      "utf8",
+    ),
+  );
+
+  it("names every funding category and growth treatment", () => {
+    expect(Object.keys(messages.portfolioStep.categories).sort()).toEqual(
+      FUNDING_CATEGORIES.map((c) => c.id).sort(),
+    );
+    expect(Object.keys(messages.portfolioStep.treatments).sort()).toEqual(
+      Object.keys(FUNDING_TREATMENT_LABELS).sort(),
     );
   });
 });

@@ -1078,11 +1078,6 @@ export function roundYears(years: number): number {
 // Input validation (shared by the wizard UI and convex/retirement.ts)
 // ───────────────────────────────────────────────────────────────
 
-/** Field → user-facing error message. An empty object means the input is valid. */
-export type RetirementInputErrors = Partial<
-  Record<keyof RetirementInputs, string>
->;
-
 export type RetirementAssumptionField =
   | "inflationRate"
   | "withdrawalRate"
@@ -1094,14 +1089,108 @@ export type RetirementAssumptions = Pick<
   RetirementAssumptionField
 >;
 
-const ASSUMPTION_LABELS: Record<RetirementAssumptionField, string> = {
+/** Amounts that must be finite and zero or more. */
+export type RetirementAmountField =
+  | "monthlyExpensesToday"
+  | "fundableRealEstateEquity"
+  | "primaryResidenceMortgagePayment"
+  | "pensionSources";
+
+/** Rates bounded to 0% … a maximum (0% allowed). */
+export type RetirementBoundedRateField =
+  | "inflationRate"
+  | "optimisticReturn"
+  | "conservativeReturn"
+  | "primaryResidenceMortgageRate"
+  | "pensionDeductionRate"
+  | "withdrawalTaxRate";
+
+/**
+ * Why an input is invalid: a code and its parameters (maxima as whole
+ * percentages). The UI renders it in the user's language
+ * (retirement.validation.<code>); {@link retirementIssueMessage} gives the
+ * English text that the string validators and the Convex mutations use.
+ */
+export type RetirementInputIssue =
+  | {
+      code: "ageRange";
+      field: "currentAge" | "retirementAge";
+      min: number;
+      max: number;
+    }
+  | { code: "retirementNotAfterCurrent" }
+  | { code: "rateRange"; field: RetirementBoundedRateField; max: number }
+  | { code: "withdrawalRateRange"; max: number }
+  | { code: "conservativeAboveExpected" }
+  | { code: "amountNegative"; field: RetirementAmountField }
+  | { code: "expensesNotPositive" };
+
+/** Field → why it is invalid. An empty object means the input is valid. */
+export type RetirementInputIssues = Partial<
+  Record<keyof RetirementInputs, RetirementInputIssue>
+>;
+
+/** Field → English error message. An empty object means the input is valid. */
+export type RetirementInputErrors = Partial<
+  Record<keyof RetirementInputs, string>
+>;
+
+const AGE_LABELS = {
+  currentAge: "Current age",
+  retirementAge: "Retirement age",
+} as const;
+
+const RATE_LABELS: Record<RetirementBoundedRateField, string> = {
   optimisticReturn: "Expected return",
   conservativeReturn: "Conservative return",
   inflationRate: "Inflation rate",
-  withdrawalRate: "Withdrawal rate",
+  primaryResidenceMortgageRate: "Mortgage rate",
+  pensionDeductionRate: "Pension tax & health insurance",
+  withdrawalTaxRate: "Tax on withdrawals",
 };
 
-const MAX_RATE_LABEL = `${Math.round(MAX_RETIREMENT_RATE * 100)}%`;
+const AMOUNT_MESSAGES: Record<RetirementAmountField, string> = {
+  monthlyExpensesToday: "Monthly expenses must be zero or more",
+  fundableRealEstateEquity: "Property value must be zero or more",
+  primaryResidenceMortgagePayment: "Mortgage repayment must be zero or more",
+  pensionSources: "Pension amounts must be zero or more",
+};
+
+/** The English message of an issue (no trailing full stop). */
+export function retirementIssueMessage(issue: RetirementInputIssue): string {
+  switch (issue.code) {
+    case "ageRange":
+      return `${AGE_LABELS[issue.field]} must be a whole number between ${issue.min} and ${issue.max}`;
+    case "retirementNotAfterCurrent":
+      return "Retirement age must be after your current age";
+    case "rateRange":
+      return `${RATE_LABELS[issue.field]} must be between 0% and ${issue.max}%`;
+    case "withdrawalRateRange":
+      return `Withdrawal rate must be above 0% and at most ${issue.max}%`;
+    case "conservativeAboveExpected":
+      return "Conservative return can't be higher than the expected return";
+    case "amountNegative":
+      return AMOUNT_MESSAGES[issue.field];
+    case "expensesNotPositive":
+      return "Monthly expenses must be more than zero";
+  }
+}
+
+function issueMessages<K extends string>(
+  issues: Partial<Record<K, RetirementInputIssue>>,
+): Partial<Record<K, string>> {
+  const messages: Partial<Record<K, string>> = {};
+  for (const [field, issue] of Object.entries(issues) as [
+    K,
+    RetirementInputIssue,
+  ][]) {
+    messages[field] = retirementIssueMessage(issue);
+  }
+  return messages;
+}
+
+const MAX_RATE_PERCENT = Math.round(MAX_RETIREMENT_RATE * 100);
+const MAX_DEDUCTION_PERCENT = Math.round(MAX_RETIREMENT_DEDUCTION_RATE * 100);
 
 function isNonNegativeAmount(amount: number): boolean {
   return Number.isFinite(amount) && amount >= 0;
@@ -1120,67 +1209,93 @@ function isSupportedAge(age: number): boolean {
  * (default) the retirement age must also be after the current age — drafts
  * saved mid-wizard may skip that check.
  */
-export function validateRetirementAges(
+export function retirementAgeIssues(
   ages: Pick<RetirementInputs, "currentAge" | "retirementAge">,
   { requireValidTimeline = true }: { requireValidTimeline?: boolean } = {},
-): RetirementInputErrors {
-  const errors: RetirementInputErrors = {};
-  const range = `a whole number between ${MIN_RETIREMENT_PLAN_AGE} and ${MAX_RETIREMENT_PLAN_AGE}`;
+): RetirementInputIssues {
+  const issues: RetirementInputIssues = {};
+  const range = { min: MIN_RETIREMENT_PLAN_AGE, max: MAX_RETIREMENT_PLAN_AGE };
   if (!isSupportedAge(ages.currentAge)) {
-    errors.currentAge = `Current age must be ${range}`;
+    issues.currentAge = { code: "ageRange", field: "currentAge", ...range };
   }
   if (!isSupportedAge(ages.retirementAge)) {
-    errors.retirementAge = `Retirement age must be ${range}`;
+    issues.retirementAge = { code: "ageRange", field: "retirementAge", ...range };
   } else if (
     requireValidTimeline &&
-    !errors.currentAge &&
+    !issues.currentAge &&
     ages.retirementAge <= ages.currentAge
   ) {
-    errors.retirementAge = "Retirement age must be after your current age";
+    issues.retirementAge = { code: "retirementNotAfterCurrent" };
   }
-  return errors;
+  return issues;
 }
+
+/** {@link retirementAgeIssues} as English messages. */
+export function validateRetirementAges(
+  ages: Pick<RetirementInputs, "currentAge" | "retirementAge">,
+  options?: { requireValidTimeline?: boolean },
+): RetirementInputErrors {
+  return issueMessages(retirementAgeIssues(ages, options));
+}
+
+const ASSUMPTION_FIELDS: readonly RetirementAssumptionField[] = [
+  "optimisticReturn",
+  "conservativeReturn",
+  "inflationRate",
+  "withdrawalRate",
+];
 
 /**
  * Rates are fractions (0.04 = 4%) between 0 and MAX_RETIREMENT_RATE. The
  * withdrawal rate must be above 0 (0% ⇒ infinite target), and the conservative
  * return may not exceed the expected one.
  */
-export function validateRetirementAssumptions(
+export function retirementAssumptionIssues(
   assumptions: RetirementAssumptions,
-): Partial<Record<RetirementAssumptionField, string>> {
-  const errors: Partial<Record<RetirementAssumptionField, string>> = {};
-  for (const field of Object.keys(
-    ASSUMPTION_LABELS,
-  ) as RetirementAssumptionField[]) {
+): Partial<Record<RetirementAssumptionField, RetirementInputIssue>> {
+  const issues: Partial<Record<RetirementAssumptionField, RetirementInputIssue>> =
+    {};
+  for (const field of ASSUMPTION_FIELDS) {
     const rate = assumptions[field];
-    const label = ASSUMPTION_LABELS[field];
     if (field === "withdrawalRate") {
       if (!(rate > 0 && rate <= MAX_RETIREMENT_RATE)) {
-        errors[field] = `${label} must be above 0% and at most ${MAX_RATE_LABEL}`;
+        issues[field] = { code: "withdrawalRateRange", max: MAX_RATE_PERCENT };
       }
     } else if (!(rate >= 0 && rate <= MAX_RETIREMENT_RATE)) {
-      errors[field] = `${label} must be between 0% and ${MAX_RATE_LABEL}`;
+      issues[field] = { code: "rateRange", field, max: MAX_RATE_PERCENT };
     }
   }
   if (
-    !errors.optimisticReturn &&
-    !errors.conservativeReturn &&
+    !issues.optimisticReturn &&
+    !issues.conservativeReturn &&
     assumptions.conservativeReturn > assumptions.optimisticReturn
   ) {
-    errors.conservativeReturn =
-      "Conservative return can't be higher than the expected return";
+    issues.conservativeReturn = { code: "conservativeAboveExpected" };
   }
-  return errors;
+  return issues;
+}
+
+/** {@link retirementAssumptionIssues} as English messages. */
+export function validateRetirementAssumptions(
+  assumptions: RetirementAssumptions,
+): Partial<Record<RetirementAssumptionField, string>> {
+  return issueMessages(retirementAssumptionIssues(assumptions));
 }
 
 /** Pension amounts must be finite and zero or more. */
+export function pensionSourceIssues(
+  sources: PensionSource[],
+): RetirementInputIssues {
+  return sources.every((s) => isNonNegativeAmount(s.monthlyAmount))
+    ? {}
+    : { pensionSources: { code: "amountNegative", field: "pensionSources" } };
+}
+
+/** {@link pensionSourceIssues} as English messages. */
 export function validatePensionSources(
   sources: PensionSource[],
 ): RetirementInputErrors {
-  return sources.every((s) => isNonNegativeAmount(s.monthlyAmount))
-    ? {}
-    : { pensionSources: "Pension amounts must be zero or more" };
+  return issueMessages(pensionSourceIssues(sources));
 }
 
 /**
@@ -1189,58 +1304,82 @@ export function validatePensionSources(
  * after the current age and monthly expenses above zero. Drafts saved
  * mid-wizard pass false.
  */
-export function validateRetirementInputs(
+export function retirementInputIssues(
   inputs: RetirementInputs,
   options?: { requireValidTimeline?: boolean },
-): RetirementInputErrors {
+): RetirementInputIssues {
   const { requireValidTimeline = true } = options ?? {};
-  const errors: RetirementInputErrors = {
-    ...validateRetirementAges(inputs, { requireValidTimeline }),
-    ...validatePensionSources(inputs.pensionSources),
-    ...validateRetirementAssumptions(inputs),
+  const issues: RetirementInputIssues = {
+    ...retirementAgeIssues(inputs, { requireValidTimeline }),
+    ...pensionSourceIssues(inputs.pensionSources),
+    ...retirementAssumptionIssues(inputs),
   };
   if (!isNonNegativeAmount(inputs.monthlyExpensesToday)) {
-    errors.monthlyExpensesToday = "Monthly expenses must be zero or more";
+    issues.monthlyExpensesToday = {
+      code: "amountNegative",
+      field: "monthlyExpensesToday",
+    };
   } else if (requireValidTimeline && !(inputs.monthlyExpensesToday > 0)) {
-    errors.monthlyExpensesToday = "Monthly expenses must be more than zero";
+    issues.monthlyExpensesToday = { code: "expensesNotPositive" };
   }
   if (!isNonNegativeAmount(inputs.fundableRealEstateEquity ?? 0)) {
-    errors.fundableRealEstateEquity = "Property value must be zero or more";
+    issues.fundableRealEstateEquity = {
+      code: "amountNegative",
+      field: "fundableRealEstateEquity",
+    };
   }
   const mortgageRate = inputs.primaryResidenceMortgageRate;
   if (
     mortgageRate !== undefined &&
     !(mortgageRate >= 0 && mortgageRate <= MAX_RETIREMENT_RATE)
   ) {
-    errors.primaryResidenceMortgageRate = `Mortgage rate must be between 0% and ${MAX_RATE_LABEL}`;
+    issues.primaryResidenceMortgageRate = {
+      code: "rateRange",
+      field: "primaryResidenceMortgageRate",
+      max: MAX_RATE_PERCENT,
+    };
   }
   if (!isNonNegativeAmount(inputs.primaryResidenceMortgagePayment ?? 0)) {
-    errors.primaryResidenceMortgagePayment =
-      "Mortgage repayment must be zero or more";
+    issues.primaryResidenceMortgagePayment = {
+      code: "amountNegative",
+      field: "primaryResidenceMortgagePayment",
+    };
   }
-  return { ...errors, ...validateRetirementDeductions(inputs) };
+  return { ...issues, ...retirementDeductionIssues(inputs) };
 }
 
-const DEDUCTION_LABELS = {
-  pensionDeductionRate: "Pension tax & health insurance",
-  withdrawalTaxRate: "Tax on withdrawals",
-} as const;
+/** {@link retirementInputIssues} as English messages. */
+export function validateRetirementInputs(
+  inputs: RetirementInputs,
+  options?: { requireValidTimeline?: boolean },
+): RetirementInputErrors {
+  return issueMessages(retirementInputIssues(inputs, options));
+}
+
+const DEDUCTION_FIELDS = [
+  "pensionDeductionRate",
+  "withdrawalTaxRate",
+] as const satisfies readonly RetirementBoundedRateField[];
 
 /** Deduction rates (when set) are fractions from 0 to MAX_RETIREMENT_DEDUCTION_RATE. */
-export function validateRetirementDeductions(
-  inputs: Pick<RetirementInputs, keyof typeof DEDUCTION_LABELS>,
-): RetirementInputErrors {
-  const errors: RetirementInputErrors = {};
-  const max = `${Math.round(MAX_RETIREMENT_DEDUCTION_RATE * 100)}%`;
-  for (const field of Object.keys(
-    DEDUCTION_LABELS,
-  ) as (keyof typeof DEDUCTION_LABELS)[]) {
+export function retirementDeductionIssues(
+  inputs: Pick<RetirementInputs, (typeof DEDUCTION_FIELDS)[number]>,
+): RetirementInputIssues {
+  const issues: RetirementInputIssues = {};
+  for (const field of DEDUCTION_FIELDS) {
     const rate = inputs[field];
     if (rate !== undefined && !(rate >= 0 && rate <= MAX_RETIREMENT_DEDUCTION_RATE)) {
-      errors[field] = `${DEDUCTION_LABELS[field]} must be between 0% and ${max}`;
+      issues[field] = { code: "rateRange", field, max: MAX_DEDUCTION_PERCENT };
     }
   }
-  return errors;
+  return issues;
+}
+
+/** {@link retirementDeductionIssues} as English messages. */
+export function validateRetirementDeductions(
+  inputs: Pick<RetirementInputs, (typeof DEDUCTION_FIELDS)[number]>,
+): RetirementInputErrors {
+  return issueMessages(retirementDeductionIssues(inputs));
 }
 
 /** Cross-field rules report on the partner field: checking the key checks it too. */
@@ -1252,12 +1391,12 @@ const CROSS_FIELD_PARTNERS: Partial<
 };
 
 /**
- * The first validation error among `fields` (every field when omitted), incl.
- * a cross-field error they cause on a partner field. Drafts check only the
+ * The first validation issue among `fields` (every field when omitted), incl.
+ * a cross-field issue they cause on a partner field. Drafts check only the
  * fields being saved, so a value stored under older, looser rules can't block
  * the rest of the wizard.
  */
-export function firstRetirementInputError(
+export function firstRetirementInputIssue(
   inputs: RetirementInputs,
   {
     fields,
@@ -1266,14 +1405,26 @@ export function firstRetirementInputError(
     fields?: (keyof RetirementInputs)[];
     requireValidTimeline?: boolean;
   } = {},
-): string | undefined {
-  const errors = validateRetirementInputs(inputs, { requireValidTimeline });
+): RetirementInputIssue | undefined {
+  const issues = retirementInputIssues(inputs, { requireValidTimeline });
   const checked =
     fields?.flatMap((f) => {
       const partner = CROSS_FIELD_PARTNERS[f];
       return partner ? [f, partner] : [f];
-    }) ?? (Object.keys(errors) as (keyof RetirementInputs)[]);
-  return checked.map((f) => errors[f]).find(Boolean);
+    }) ?? (Object.keys(issues) as (keyof RetirementInputs)[]);
+  return checked.map((f) => issues[f]).find(Boolean);
+}
+
+/** {@link firstRetirementInputIssue} as an English message. */
+export function firstRetirementInputError(
+  inputs: RetirementInputs,
+  options?: {
+    fields?: (keyof RetirementInputs)[];
+    requireValidTimeline?: boolean;
+  },
+): string | undefined {
+  const issue = firstRetirementInputIssue(inputs, options);
+  return issue && retirementIssueMessage(issue);
 }
 
 /** Why a plan's results can't be shown: a short title and explanation. */

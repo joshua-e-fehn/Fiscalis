@@ -56,7 +56,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
 
   return (
     <div className="flex flex-col items-center px-4 py-8 relative">
-      {/* Confetti Effect (fills its particles after mount) */}
+      {/* Confetti Effect (particles are created on first render, cleared after 3s) */}
       <ConfettiEffect />
 
       <motion.div

@@ -46,6 +46,7 @@ const statusConfig: Record<
       | "error"
       | "reauthRequired"
       | "pending"
+      | "retrying"
       | "disconnected";
     icon: React.ComponentType<{ className?: string }>;
     variant: "default" | "secondary" | "destructive" | "outline";
@@ -83,13 +84,13 @@ const statusConfig: Record<
     className: "text-orange-600 border-orange-600",
   },
   needs_reauth: {
-    label: "Re-auth Required",
+    label: "reauthRequired",
     icon: AlertTriangle,
     variant: "outline",
     className: "text-orange-600 border-orange-600",
   },
   transient_error: {
-    label: "Retrying",
+    label: "retrying",
     icon: Clock,
     variant: "outline",
     className: "text-yellow-600 border-yellow-600",

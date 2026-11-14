@@ -5,6 +5,7 @@
     "error": "Error",
     "reauthRequired": "Re-auth required",
     "pending": "Pending",
+    "retrying": "Retrying",
     "disconnected": "Disconnected"
   },
   "connection": {

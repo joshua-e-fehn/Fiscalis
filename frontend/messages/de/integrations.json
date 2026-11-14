@@ -5,6 +5,7 @@
     "error": "Fehler",
     "reauthRequired": "Erneute Anmeldung nötig",
     "pending": "Ausstehend",
+    "retrying": "Neuer Versuch",
     "disconnected": "Getrennt"
   },
   "connection": {

@@ -88,6 +88,45 @@
       "alertOne": "Your connection to {name} needs to be re-authenticated.",
       "alertOneUnnamed": "Your connection to a bank needs to be re-authenticated.",
       "alertMany": "{count, plural, one {# bank connection needs to be re-authenticated.} other {# bank connections need to be re-authenticated.}}"
+    },
+    "transactions": {
+      "title": "Transactions",
+      "subtitle": "Your bank transactions across all connected accounts.",
+      "open": "Transactions",
+      "sync": "Sync transactions",
+      "syncing": "Syncing transactions…",
+      "syncDone": "{count, plural, =0 {Up to date: no new transactions.} one {# transaction updated.} other {# transactions updated.}}",
+      "syncPartial": "{failed, plural, one {# bank could not be synced.} other {# banks could not be synced.}} Try again later.",
+      "syncFailed": "Transactions could not be synced. Try again later.",
+      "filters": {
+        "account": "Account",
+        "allAccounts": "All accounts",
+        "from": "From",
+        "to": "To",
+        "search": "Search",
+        "searchPlaceholder": "Search descriptions…",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "date": "Date",
+        "description": "Description",
+        "account": "Account",
+        "amount": "Amount"
+      },
+      "pending": "Pending",
+      "moneyIn": "Money in",
+      "moneyOut": "Money out",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "searchOrder": "Search results are sorted by best match.",
+      "empty": {
+        "noBankTitle": "No bank connected",
+        "noBankDescription": "Connect a bank to see its transactions here.",
+        "noTransactionsTitle": "No transactions yet",
+        "noTransactionsDescription": "Sync your transactions to fetch them from your bank. New ones also arrive with the daily sync.",
+        "noMatchesTitle": "No matching transactions",
+        "noMatchesDescription": "Try another account, date range or search term."
+      }
     }
   },
   "brokers": {

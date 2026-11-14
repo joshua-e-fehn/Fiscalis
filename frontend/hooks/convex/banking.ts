@@ -262,11 +262,13 @@ export const TRANSACTIONS_PAGE_SIZE = 50;
 /**
  * The signed-in user's bank transactions, newest first and paginated,
  * optionally for one account and an inclusive date range (YYYY-MM-DD).
+ * With `search`, matches on the description, best match first.
  */
 export function useTransactions(filters?: {
   accountId?: string;
   startDate?: string;
   endDate?: string;
+  search?: string;
 }) {
   return usePaginatedQuery(api.banking.listTransactions, filters ?? {}, {
     initialNumItems: TRANSACTIONS_PAGE_SIZE,

@@ -562,7 +562,8 @@ export const refreshAccounts = action({
 });
 
 /**
- * Admin action to sync accounts for a user - for use from dashboard without auth
+ * Sync accounts, then transactions, for each of a user's items. Used by
+ * the daily sync and "Sync all" (actions/syncAll.ts); internal, no auth.
  */
 export const syncAccountsForUserAdmin = internalAction({
   args: { userId: v.string() },
@@ -591,6 +592,19 @@ export const syncAccountsForUserAdmin = internalAction({
       } catch (error) {
         failed++;
         console.error(`Error syncing item ${item.itemId}:`, describeError(error));
+        continue;
+      }
+      // New transactions arrive with the daily sync (ENG-190). Balances are
+      // what net worth needs, so a transaction failure does not fail the item
+      try {
+        await ctx.runAction(internal.actions.plaid.syncItemTransactions, {
+          itemId: item.itemId,
+        });
+      } catch (error) {
+        console.error(
+          `Error syncing transactions for item ${item.itemId}:`,
+          describeError(error),
+        );
       }
     }
 

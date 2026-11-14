@@ -105,7 +105,9 @@ const EMPTY_PAGE = { page: [], isDone: true, continueCursor: "" };
 /**
  * The signed-in user's bank transactions, newest first, one page at a time
  * (usePaginatedQuery). Optionally one account and an inclusive date range
- * (YYYY-MM-DD); both read an index, so a page costs its own size.
+ * (YYYY-MM-DD); both read an index, so a page costs its own size. With
+ * `search`, the description search index is read instead, best match
+ * first, and the date range filters its results.
  */
 export const listTransactions = query({
   args: {
@@ -113,8 +115,12 @@ export const listTransactions = query({
     accountId: v.optional(v.string()),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
+    search: v.optional(v.string()),
   },
-  handler: async (ctx, { paginationOpts, accountId, startDate, endDate }) => {
+  handler: async (
+    ctx,
+    { paginationOpts, accountId, startDate, endDate, search },
+  ) => {
     const userId = await getUserId(ctx);
     if (!userId) return EMPTY_PAGE;
 
@@ -125,6 +131,27 @@ export const listTransactions = query({
         .withIndex("by_account", (q) => q.eq("accountId", accountId))
         .first();
       if (!account || account.userId !== userId) return EMPTY_PAGE;
+    }
+
+    const term = search?.trim();
+    if (term) {
+      return await ctx.db
+        .query("plaidTransactions")
+        .withSearchIndex("search_name", (q) => {
+          const byUser = q.search("name", term).eq("userId", userId);
+          return accountId ? byUser.eq("accountId", accountId) : byUser;
+        })
+        .filter((q) => {
+          const from = startDate
+            ? q.gte(q.field("date"), startDate)
+            : q.eq(true, true);
+          const to = endDate ? q.lte(q.field("date"), endDate) : q.eq(true, true);
+          return q.and(from, to);
+        })
+        .paginate(paginationOpts);
+    }
+
+    if (accountId) {
       return await ctx.db
         .query("plaidTransactions")
         .withIndex("by_account_date", (q) => {

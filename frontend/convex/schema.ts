@@ -139,7 +139,12 @@ export default defineSchema({
 		.index("by_account_date", ["accountId", "date"])
 		.index("by_account_synced", ["accountId", "syncedAt"])
 		.index("by_date", ["userId", "date"])
-		.index("by_plaid_id", ["plaidTransactionId"]),
+		.index("by_plaid_id", ["plaidTransactionId"])
+		// Description search on the Transactions page (banking.listTransactions)
+		.searchIndex("search_name", {
+			searchField: "name",
+			filterFields: ["userId", "accountId"],
+		}),
 
 	// ═══════════════════════════════════════════════════════════════
 	// BROKERS (SnapTrade)

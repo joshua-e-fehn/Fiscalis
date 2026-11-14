@@ -13,8 +13,8 @@
 
 import {
   InvestmentDashboardSection,
-  SubcategoryCategoryCard,
 } from "@/components/atomic/molecules/investments";
+import { SubcategoryCardSection } from "@/components/atomic/molecules/investments/SubcategoryCategoryCard";
 import { CryptoAllocationChart } from "@/components/atomic/molecules/crypto";
 import { useCryptoSummary } from "@/hooks/convex/crypto";
 import { cryptoCategoryCards } from "@/lib/config/categoryUI";
@@ -37,24 +37,12 @@ export default function CryptoAssetsOverviewPage() {
       />
 
       {/* Crypto Subcategory Cards */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="h-px flex-1 bg-border" />
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Crypto Categories
-          </h2>
-          <div className="h-px flex-1 bg-border" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {cryptoCategoryCards.map((category) => (
-            <SubcategoryCategoryCard
-              key={category.title}
-              category={category}
-              actionLabel="View Holdings"
-            />
-          ))}
-        </div>
-      </div>
+      <SubcategoryCardSection
+        title="Crypto Categories"
+        cards={cryptoCategoryCards}
+        actionLabel="View Holdings"
+        columns={4}
+      />
     </div>
   );
 }

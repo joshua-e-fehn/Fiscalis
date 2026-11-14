@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  PieChart,
   Wallet,
   TrendingUp,
   Shield,
@@ -15,6 +15,7 @@ import {
   LineChart,
   Bitcoin,
   CheckCircle2,
+  Gem,
   Sparkles,
 } from "lucide-react";
 import { SignInButton, SignedOut, SignedIn } from "@clerk/nextjs";
@@ -50,6 +51,7 @@ const fadeInUp = {
 };
 
 export default function HomePage() {
+  const t = useTranslations("landing");
   return (
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       {/* Animated Background */}
@@ -184,9 +186,7 @@ export default function HomePage() {
               className="text-xl text-white/50 max-w-2xl mx-auto mb-4"
               variants={itemVariants}
             >
-              Track all your investments, assets, and liabilities. Know your
-              true net worth with real-time updates across stocks, crypto, real
-              estate, and more.
+              {t("hero.subheadline")}
             </motion.p>
 
             {/* Tagline */}
@@ -242,11 +242,11 @@ export default function HomePage() {
             >
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4" />
-                <span>Bank-level security</span>
+                <span>{t("trust.readOnly")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4" />
-                <span>Real-time sync</span>
+                <span>{t("trust.dailySync")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Globe2 className="w-4 h-4" />
@@ -304,21 +304,21 @@ export default function HomePage() {
             <FeatureCard
               icon={Bitcoin}
               title="Cryptocurrency"
-              description="Track your crypto across exchanges and wallets. Support for 100+ coins and tokens."
+              description={t("features.cryptoDescription")}
               color="gold"
               delay={0.2}
             />
             <FeatureCard
-              icon={PieChart}
-              title="Real Estate"
-              description="Add properties with automatic valuation estimates. Track rental income and expenses."
+              icon={Gem}
+              title={t("features.metalsTitle")}
+              description={t("features.metalsDescription")}
               color="purple"
               delay={0.3}
             />
             <FeatureCard
               icon={Wallet}
               title="Debts & Liabilities"
-              description="Monitor loans, mortgages, and credit cards. See your true net worth."
+              description={t("features.liabilitiesDescription")}
               color="red"
               delay={0.4}
             />
@@ -355,7 +355,7 @@ export default function HomePage() {
             <StepCard
               number={1}
               title="Create Your Account"
-              description="Sign up in seconds with your email or social login. No credit card required."
+              description={t("steps.createDescription")}
               delay={0}
             />
             <StepCard
@@ -367,7 +367,7 @@ export default function HomePage() {
             <StepCard
               number={3}
               title="See Your Net Worth"
-              description="Watch your complete wealth picture come together in real-time."
+              description={t("steps.netWorthDescription")}
               delay={0.2}
             />
           </div>
@@ -392,9 +392,7 @@ export default function HomePage() {
                 </span>
               </h2>
               <p className="text-lg text-white/50 mb-8">
-                We never see your bank credentials. Your sensitive data is
-                encrypted with military-grade encryption and we only use
-                read-only connections.
+                {t("security.description")}
               </p>
               <ul className="space-y-4">
                 <SecurityFeature text="AES-256-GCM encryption for all sensitive tokens" />
@@ -446,8 +444,7 @@ export default function HomePage() {
                 </span>
               </h2>
               <p className="text-lg text-white/50 mb-10 max-w-2xl mx-auto">
-                Join thousands of users who have already discovered the power of
-                unified wealth management.
+                {t("cta.description")}
               </p>
               <SignedOut>
                 <Link href="/waitlist">

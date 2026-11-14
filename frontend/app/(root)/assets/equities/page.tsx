@@ -2,9 +2,9 @@
 
 import {
   InvestmentDashboardSection,
-  SubcategoryCategoryCard,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
+import { SubcategoryCardSection } from "@/components/atomic/molecules/investments/SubcategoryCategoryCard";
 import { useEquitiesSummary } from "@/hooks/convex/equities";
 import {
   equitiesPublicCards,
@@ -34,44 +34,19 @@ export default function EquitiesPage() {
       />
 
       {/* Public Equities Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="h-px flex-1 bg-border" />
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Public Markets
-          </h2>
-          <div className="h-px flex-1 bg-border" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {equitiesPublicCards.map((category) => (
-            <SubcategoryCategoryCard
-              key={category.title}
-              category={category}
-              actionLabel="View Holdings"
-            />
-          ))}
-        </div>
-      </div>
+      <SubcategoryCardSection
+        title="Public Markets"
+        cards={equitiesPublicCards}
+        actionLabel="View Holdings"
+        columns={4}
+      />
 
       {/* Private Equities Section */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="h-px flex-1 bg-border" />
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Private Markets
-          </h2>
-          <div className="h-px flex-1 bg-border" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {equitiesPrivateCards.map((category) => (
-            <SubcategoryCategoryCard
-              key={category.title}
-              category={category}
-              actionLabel="View Holdings"
-            />
-          ))}
-        </div>
-      </div>
+      <SubcategoryCardSection
+        title="Private Markets"
+        cards={equitiesPrivateCards}
+        actionLabel="View Holdings"
+      />
     </div>
   );
 }

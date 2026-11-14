@@ -15,12 +15,15 @@ import {
 	HandCoins,
 	House,
 	Landmark,
+	LayoutGrid,
 	PieChart,
 	PiggyBank,
 	ReceiptText,
 	Settings2,
 	Star,
+	type LucideIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type * as React from "react";
 
 import { NavigationDropdown } from "@/components/atomic/molecules/navigationDropdown";
@@ -33,8 +36,31 @@ import {
 	SidebarHeader,
 	SidebarRail,
 } from "@/components/ui/shadcn/sidebar";
+import {
+	FEATURES,
+	filterMenuByFeature,
+	type FeatureFlag,
+} from "@/lib/config/features";
 
-const data = {
+interface NavigationItem {
+	title: string;
+	url: string;
+	icon?: LucideIcon;
+	isActive?: boolean;
+	/** Hidden unless this flag is on (planned, not built yet) */
+	feature?: FeatureFlag;
+	items?: {
+		title: string;
+		url: string;
+		icon?: LucideIcon;
+		feature?: FeatureFlag;
+	}[];
+}
+
+const data: Record<
+	"navigationPortfolio" | "navigationIntegrations" | "navigationTools" | "others",
+	NavigationItem[]
+> = {
 	navigationPortfolio: [
 		{
 			title: "Dashboard",
@@ -88,7 +114,7 @@ const data = {
 		},
 		{
 			title: "Liabilities",
-			url: "#",
+			url: "/liabilities",
 			icon: CreditCard,
 			items: [
 				{
@@ -107,6 +133,7 @@ const data = {
 					title: "Pies",
 					url: "#",
 					icon: PieChart,
+					feature: "pies",
 				},
 			],
 		},
@@ -162,6 +189,7 @@ const data = {
 			title: "Documentation",
 			url: "#",
 			icon: BookOpen,
+			feature: "documentation",
 			items: [
 				{
 					title: "Introduction",
@@ -197,19 +225,43 @@ const data = {
 				{
 					title: "Team",
 					url: "#",
+					feature: "teamSettings",
 				},
 				{
 					title: "Billing",
 					url: "#",
+					feature: "billing",
 				},
 				{
 					title: "Limits",
 					url: "#",
+					feature: "usageLimits",
 				},
 			],
 		},
 	],
 };
+
+/**
+ * Liabilities opens a group, so its own page gets an "Overview" entry (the
+ * one label added here, hence translated).
+ */
+function withLiabilitiesOverview(
+	items: NavigationItem[],
+	overview: string,
+): NavigationItem[] {
+	return items.map((item) =>
+		item.url === "/liabilities"
+			? {
+					...item,
+					items: [
+						{ title: overview, url: "/liabilities", icon: LayoutGrid },
+						...(item.items ?? []),
+					],
+				}
+			: item,
+	);
+}
 
 export function NavigationSidebar({
 	user,
@@ -221,6 +273,11 @@ export function NavigationSidebar({
 		avatar: string;
 	};
 } & React.ComponentProps<typeof Sidebar>) {
+	const t = useTranslations("navigation");
+	const portfolio = withLiabilitiesOverview(
+		data.navigationPortfolio,
+		t("liabilitiesOverview"),
+	);
 	return (
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
@@ -229,14 +286,14 @@ export function NavigationSidebar({
 			<SidebarContent>
 				<NavigationDropdown
 					groupLabel="Portfolio"
-					items={data.navigationPortfolio}
+					items={filterMenuByFeature(portfolio, FEATURES)}
 				/>
-				<NavigationDropdown groupLabel="Tools" items={data.navigationTools} />
+				<NavigationDropdown groupLabel="Tools" items={filterMenuByFeature(data.navigationTools, FEATURES)} />
 				<NavigationDropdown
 					groupLabel="Integrations"
-					items={data.navigationIntegrations}
+					items={filterMenuByFeature(data.navigationIntegrations, FEATURES)}
 				/>
-				<NavigationDropdown groupLabel="Others" items={data.others} />
+				<NavigationDropdown groupLabel="Others" items={filterMenuByFeature(data.others, FEATURES)} />
 			</SidebarContent>
 			<SidebarFooter>
 				<NavigationUserMenu user={user} />

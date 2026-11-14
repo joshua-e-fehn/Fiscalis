@@ -1,0 +1,25 @@
+{
+  "hero": {
+    "subheadline": "Behalte alle deine Investments, Vermögenswerte und Verbindlichkeiten im Blick. Kenne dein echtes Nettovermögen, automatisch aktualisiert über Bankkonten, Aktien, Krypto, Edelmetalle und mehr."
+  },
+  "trust": {
+    "readOnly": "Nur Lesezugriff",
+    "dailySync": "Tägliche automatische Synchronisierung"
+  },
+  "features": {
+    "cryptoDescription": "Importiere deine Bitpanda-Bestände automatisch mit einem API-Schlüssel mit reinem Lesezugriff.",
+    "metalsTitle": "Edelmetalle",
+    "metalsDescription": "Verwalte Gold- und Silberbarren und -münzen, bewertet zu aktuellen Händlerpreisen.",
+    "liabilitiesDescription": "Behalte deine Kredite und Tilgungspläne im Blick. Sieh dein echtes Nettovermögen."
+  },
+  "steps": {
+    "createDescription": "Registriere dich mit deiner E-Mail-Adresse oder einem Social Login. Der Zugang wird schrittweise über eine Warteliste freigegeben. Keine Kreditkarte nötig.",
+    "netWorthDescription": "Sieh zu, wie dein gesamtes Vermögen zusammenkommt, jeden Tag automatisch aktualisiert."
+  },
+  "security": {
+    "description": "Wir sehen deine Bankzugangsdaten nie. Zugangstokens und API-Schlüssel werden verschlüsselt gespeichert, und jede Verbindung hat nur Lesezugriff."
+  },
+  "cta": {
+    "description": "Bring deine Konten, Bestände und Kredite zusammen und sieh dein gesamtes Nettovermögen an einem Ort."
+  }
+}

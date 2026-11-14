@@ -17,7 +17,6 @@ import {
   OnboardingCard,
   OnboardingCardContent,
 } from "../shared/OnboardingCard";
-import { SkipButton } from "../shared/SkipButton";
 import { Input } from "@/components/ui/shadcn/input";
 import { Label } from "@/components/ui/shadcn/label";
 import {
@@ -46,11 +45,10 @@ import {
 
 interface ProfileStepProps {
   onNext: () => void;
-  onSkip: () => void;
   onBack: () => void;
 }
 
-export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
+export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const { user } = useUser();
   const saveSettings = useSaveUserSettings();
   const completeProfile = useCompleteProfileStep();
@@ -312,16 +310,13 @@ export function ProfileStep({ onNext, onSkip, onBack }: ProfileStepProps) {
               {saveError}
             </p>
           )}
-          <div className="flex items-center gap-4">
-            <OnboardingButton
-              onClick={onBack}
-              variant="ghost"
-              icon={<ArrowLeft className="w-4 h-4" />}
-            >
-              Back
-            </OnboardingButton>
-            <SkipButton onClick={onSkip} />
-          </div>
+          <OnboardingButton
+            onClick={onBack}
+            variant="ghost"
+            icon={<ArrowLeft className="w-4 h-4" />}
+          >
+            Back
+          </OnboardingButton>
         </motion.div>
       </motion.div>
     </div>

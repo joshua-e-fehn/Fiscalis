@@ -13,6 +13,26 @@ function assertValidBirthDate(birthDate: string): string {
   return result.value;
 }
 
+/** The mandatory profile step (lib/types/onboarding.ts OnboardingStep.PROFILE). */
+const PROFILE_STEP = 2;
+
+/**
+ * User-owned tables (each has a by_user index). A row in any of them means the
+ * user already used the app (migrations:markExistingUsersOnboarded).
+ */
+export const USER_DATA_TABLES = [
+  "userSettings",
+  "plaidItems",
+  "brokerConnections",
+  "bitpandaConnections",
+  "vaultItems",
+  "loans",
+  "retirementPlans",
+  "portfolioSnapshots",
+  "apiKeys",
+  "worldBankFavorites",
+] as const;
+
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING QUERIES
 // ═══════════════════════════════════════════════════════════════
@@ -38,13 +58,17 @@ export const getOnboardingProgress = query({
 });
 
 /**
- * Check if user has completed onboarding
+ * Check if user has completed onboarding. Returns null when the request is
+ * not authenticated (yet), so the onboarding gate can wait instead of
+ * treating a signed-in user whose Convex token is still loading as new.
+ * Users who predate the gate are marked onboarded by
+ * migrations:markExistingUsersOnboarded.
  */
 export const hasCompletedOnboarding = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<boolean | null> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return false;
+    if (!identity) return null;
 
     const userId = identity.subject;
 
@@ -231,6 +255,9 @@ export const skipStep = mutation({
       .first();
 
     if (!progress) throw new Error("Onboarding not initialized");
+    if (args.step === PROFILE_STEP) {
+      throw new Error("The profile step cannot be skipped");
+    }
 
     const skippedSteps = progress.skippedSteps.includes(args.step)
       ? progress.skippedSteps
@@ -350,6 +377,9 @@ export const completeOnboarding = mutation({
       .first();
 
     if (!progress) throw new Error("Onboarding not initialized");
+    if (!progress.profileCompleted) {
+      throw new Error("Complete your profile before finishing onboarding");
+    }
 
     await ctx.db.patch(progress._id, {
       onboardingCompleted: true,

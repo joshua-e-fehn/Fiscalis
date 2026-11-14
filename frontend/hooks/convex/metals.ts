@@ -33,7 +33,6 @@ interface UseMetalsReturn {
   isLoading: boolean;
   isError: boolean;
   pricesLoading: boolean;
-  pricesError: Error | null;
   /** The raw price feed (quote columns EUR/USD/CHF), for the Prices tab */
   prices: MetalsPrices | undefined;
   /** Spot quotes in the display currency (native columns, else EUR × rate) */
@@ -197,13 +196,8 @@ function useVaultRates(spot: SpotExchangeRates | undefined) {
 export function useMetals(): UseMetalsReturn {
   const metalItems = useQuery(api.vault.getUserVaultItems);
 
-  // Prices from the time-series store: the quotes and the Prices tab
-  const {
-    data: prices,
-    isLoading: pricesLoading,
-    isError: pricesError,
-    error,
-  } = useMetalsPrices();
+  // The latest price snapshot: the quotes and the Prices tab
+  const { data: prices, isLoading: pricesLoading } = useMetalsPrices();
   const { currency, displayRate, unitsPerEur, ratesLoading } = useVaultRates(
     prices?.all?.exchangeRates,
   );
@@ -245,7 +239,6 @@ export function useMetals(): UseMetalsReturn {
     isLoading: metalItems === undefined || ratesLoading,
     isError: metalItems === undefined && !pricesLoading,
     pricesLoading,
-    pricesError: pricesError ? (error as Error) : null,
     prices,
     spotPrices,
     ratesLoading,

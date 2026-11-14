@@ -62,7 +62,8 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
     birthDate: "",
     defaultCurrency: "EUR",
     language: "en",
-    theme: "dark",
+    // Same default as ThemeProvider and the server-side insert defaults
+    theme: "system",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);

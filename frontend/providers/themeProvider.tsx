@@ -32,24 +32,24 @@ export function ThemeProvider({
 }
 
 /**
- * Applies the signed-in user's stored settings: userSettings.theme to
- * next-themes and userSettings.language to <html lang>. Runs only when the
- * stored values change, so a live preview on the settings page is not undone
- * until it is saved or discarded. Must sit under ConvexClientProvider.
+ * Applies the signed-in user's stored userSettings.theme to next-themes. Runs
+ * only when the stored value changes, so a live preview on the settings page
+ * is not undone until it is saved or discarded. Must sit under
+ * ConvexClientProvider.
+ *
+ * userSettings.language is stored but deliberately not applied to <html lang>:
+ * every UI string is English, so lang stays "en" (app/layout.tsx) until the
+ * UI is actually localised. Marking English pages lang="de" would make
+ * browsers offer translation and screen readers mispronounce the text.
  */
 export function ThemeSync() {
   const settings = useUserSettings();
   const { setTheme } = useTheme();
   const storedTheme = settings?.theme;
-  const storedLanguage = settings?.language;
 
   useEffect(() => {
     if (storedTheme) setTheme(storedTheme);
   }, [storedTheme, setTheme]);
-
-  useEffect(() => {
-    if (storedLanguage) document.documentElement.lang = storedLanguage;
-  }, [storedLanguage]);
 
   return null;
 }

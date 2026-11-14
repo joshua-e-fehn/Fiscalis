@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -104,10 +105,6 @@ function pickFields(values: RetirementInputs, fields: PlanField[]) {
 	};
 }
 
-// Convex hides server error messages in production, so failures that pass the
-// client-side validation get a generic message.
-const SAVE_FAILED = "We couldn't save your plan. Please try again.";
-
 /** Horizontal slide in the direction of travel (1 = forward, -1 = back). */
 const STEP_VARIANTS = {
 	enter: (direction: number) => ({ opacity: 0, x: 50 * direction }),
@@ -121,13 +118,24 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 	const saveProfileBirthDate = useSetBirthDate();
 	const settings = useUserSettings();
 	const display = useDisplayCurrency();
+	const t = useTranslations("retirement.wizard");
+	// A fresh plan starts with one (editable) state pension row, named in the
+	// user's language.
+	const defaultPensionLabel = t("defaultPensionLabel");
+	const defaultInputs = useMemo<RetirementInputs>(
+		() => ({
+			...DEFAULT_RETIREMENT_INPUTS,
+			pensionSources: [{ label: defaultPensionLabel, monthlyAmount: 0 }],
+		}),
+		[defaultPensionLabel],
+	);
 
 	const [step, setStep] = useState<RetirementStep>(RetirementStep.INTRO);
 	const [furthestStep, setFurthestStep] = useState<RetirementStep>(
 		RetirementStep.INTRO,
 	);
 	const [direction, setDirection] = useState<1 | -1>(1);
-	const [data, setData] = useState<RetirementInputs>(DEFAULT_RETIREMENT_INPUTS);
+	const [data, setData] = useState<RetirementInputs>(defaultInputs);
 	const [birthDate, setBirthDate] = useState("");
 	// Editing an ACTIVE plan: nothing is written until "Save my plan".
 	const [editingActive, setEditingActive] = useState(false);
@@ -149,7 +157,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 		if (!plan) {
 			// Nothing stored to read in the new currency: start the amounts over
 			setData((prev) => ({
-				...DEFAULT_RETIREMENT_INPUTS,
+				...defaultInputs,
 				birthDate: prev.birthDate,
 				currentAge: prev.currentAge,
 			}));
@@ -160,7 +168,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 				pensionSources:
 					inputs.pensionSources.length > 0
 						? inputs.pensionSources
-						: DEFAULT_RETIREMENT_INPUTS.pensionSources,
+						: defaultInputs.pensionSources,
 			});
 			// Editing an existing (active) plan starts at the first input step so the
 			// user can review/change every answer; a draft resumes where they left off.
@@ -174,7 +182,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 		}
 		setBirthDate(settings?.birthDate ?? plan?.birthDate ?? "");
 		setHydrated(true);
-	}, [hydrated, plan, settings, display.code]);
+	}, [hydrated, plan, settings, display.code, defaultInputs]);
 
 	const currencyChanged =
 		hydrated && !display.isLoading && formCurrency !== display.code;
@@ -219,8 +227,10 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 		() => (birthDate ? validateBirthDate(birthDate) : null),
 		[birthDate],
 	);
+	// dob.error is the shared validator's message, still English (see the
+	// error-code batch).
 	const dobError = !dob
-		? "Date of birth is required"
+		? t("birthDateRequired")
 		: dob.ok
 			? undefined
 			: dob.error;
@@ -272,7 +282,9 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 				return true;
 			} catch (err) {
 				console.error("Failed to save retirement plan:", err);
-				setSaveError(SAVE_FAILED);
+				// Convex hides server error messages in production, so failures
+				// that pass the client-side validation get a generic message.
+				setSaveError(t("saveFailed"));
 				return false;
 			} finally {
 				setIsSaving(false);
@@ -286,6 +298,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 			savePlan,
 			saveProfileBirthDate,
 			formCurrency,
+			t,
 		],
 	);
 
@@ -340,9 +353,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 		<div className="space-y-8 pb-12">
 			{editingActive && onCancel && (
 				<div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm">
-					<span className="text-muted-foreground">
-						You&apos;re editing your saved plan. Changes apply when you save.
-					</span>
+					<span className="text-muted-foreground">{t("editingBanner")}</span>
 					<Button
 						variant="ghost"
 						size="sm"
@@ -350,7 +361,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 						disabled={isSaving}
 					>
 						<X className="mr-1 h-4 w-4" />
-						Discard changes
+						{t("discardChanges")}
 					</Button>
 				</div>
 			)}
@@ -358,7 +369,10 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 			{currencyChanged && (
 				<div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm">
 					<span className="text-muted-foreground">
-						{`Your display currency changed to ${display.code}. The amounts in this form are still in ${formCurrency} and save in ${formCurrency}.`}
+						{t("currencyChanged", {
+							display: display.code,
+							form: formCurrency ?? display.code,
+						})}
 					</span>
 					<Button
 						variant="ghost"
@@ -366,14 +380,17 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 						onClick={reloadInDisplayCurrency}
 						disabled={isSaving}
 					>
-						{`Reload in ${display.code}`}
+						{t("reloadInCurrency", { currency: display.code })}
 					</Button>
 				</div>
 			)}
 
 			{!currencyChanged && plan && plan.storedCurrency !== plan.currency && (
 				<p className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
-					{`Your plan was entered in ${plan.storedCurrency}. Its amounts are shown in ${plan.currency} at today's exchange rate, and your next save keeps them in ${plan.currency}.`}
+					{t("storedCurrency", {
+						stored: plan.storedCurrency,
+						shown: plan.currency,
+					})}
 				</p>
 			)}
 

@@ -31,7 +31,6 @@ export {
 	FUNDING_CATEGORIES,
 	FUNDING_TREATMENT_LABELS,
 	firstRetirementInputError,
-	formatYears,
 	fundingTreatmentFor,
 	inflateToFuture,
 	isOnTrack,
@@ -42,6 +41,7 @@ export {
 	netPensionMonthly,
 	retirementPlanProblem,
 	retirementTimeline,
+	roundYears,
 	validatePensionSources,
 	validateRetirementAges,
 	validateRetirementAssumptions,
@@ -64,7 +64,8 @@ export const DEFAULT_RETIREMENT_INPUTS: RetirementInputs = {
 	monthlyExpensesToday: 3000,
 	ownsPrimaryResidence: false,
 	fundableRealEstateEquity: 0,
-	pensionSources: [{ label: "State pension", monthlyAmount: 0 }],
+	// The wizard adds a translated "State pension" row (retirement.wizard.defaultPensionLabel)
+	pensionSources: [],
 	inflationRate: DEFAULT_INFLATION_RATE,
 	withdrawalRate: DEFAULT_WITHDRAWAL_RATE,
 	optimisticReturn: DEFAULT_OPTIMISTIC_RETURN,
@@ -85,16 +86,17 @@ export enum RetirementStep {
 
 export const RETIREMENT_STEP_COUNT = RetirementStep.RESULTS;
 
-export const RETIREMENT_STEP_LABELS: Record<RetirementStep, string> = {
-	[RetirementStep.INTRO]: "Start",
-	[RetirementStep.PERSONAL]: "Age",
-	[RetirementStep.EXPENSES]: "Expenses",
-	[RetirementStep.HOUSING]: "Housing",
-	[RetirementStep.PENSIONS]: "Pensions",
-	[RetirementStep.PORTFOLIO]: "Portfolio",
-	[RetirementStep.ASSUMPTIONS]: "Assumptions",
-	[RetirementStep.RESULTS]: "Results",
-};
+/** Message key of each step's name, under retirement.steps. */
+export const RETIREMENT_STEP_KEYS = {
+	[RetirementStep.INTRO]: "intro",
+	[RetirementStep.PERSONAL]: "personal",
+	[RetirementStep.EXPENSES]: "expenses",
+	[RetirementStep.HOUSING]: "housing",
+	[RetirementStep.PENSIONS]: "pensions",
+	[RetirementStep.PORTFOLIO]: "portfolio",
+	[RetirementStep.ASSUMPTIONS]: "assumptions",
+	[RetirementStep.RESULTS]: "results",
+} as const satisfies Record<RetirementStep, string>;
 
 /** Status of a stored plan. */
 export type RetirementPlanStatus = "draft" | "active";

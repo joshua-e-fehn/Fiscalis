@@ -1,12 +1,14 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import {
 	Card,
 	CardContent,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import { formatYears, type RetirementResults } from "@/lib/types/retirement";
+import { type RetirementResults, roundYears } from "@/lib/types/retirement";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -15,6 +17,11 @@ interface Props {
 	currency: InvestmentCurrency;
 	results: RetirementResults;
 	className?: string;
+}
+
+/** An amount called out in the copy (the <b> tag of its messages). */
+function strong(chunks: ReactNode) {
+	return <span className="font-medium text-foreground">{chunks}</span>;
 }
 
 /**
@@ -29,40 +36,39 @@ export function PensionCoverageBreakdown({ results, currency, className }: Props
 
 	const pensionPct = expense > 0 ? (pension / expense) * 100 : 0;
 	const portfolioPct = expense > 0 ? (portfolio / expense) * 100 : 0;
+	const t = useTranslations("retirement");
+	const tFinance = useTranslations("common.finance");
+	const pensionArgs = {
+		b: strong,
+		today: formatCurrency(results.pensionTodayMonthly, currency),
+		future: formatCurrency(results.pensionFutureMonthly, currency),
+	};
 
 	return (
 		<Card className={className}>
 			<CardHeader>
-				<CardTitle className="text-base">
-					Monthly expenses at retirement
-				</CardTitle>
+				<CardTitle className="text-base">{t("coverage.title")}</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<p className="text-sm text-muted-foreground">
-					Your{" "}
-					<span className="font-medium text-foreground">
-						{formatCurrency(results.expenseTodayMonthly, currency)}/mo
-					</span>{" "}
-					of expenses today grows to{" "}
-					<span className="font-medium text-foreground">
-						{formatCurrency(expense, currency)}/mo
-					</span>{" "}
-					in {formatYears(results.yearsToRetirement)} after inflation.
+					{t.rich("coverage.expensesGrow", {
+						b: strong,
+						today: formatCurrency(results.expenseTodayMonthly, currency),
+						future: formatCurrency(expense, currency),
+						years: t("yearsDative", { count: roundYears(results.yearsToRetirement) }),
+					})}
 					{results.pensionTodayMonthly > 0 && (
 						<>
 							{" "}
-							Your pensions of{" "}
-							<span className="font-medium text-foreground">
-								{formatCurrency(results.pensionTodayMonthly, currency)}/mo
-							</span>{" "}
-							in today&apos;s money
-							{results.pensionDeductionsMonthly > 0 &&
-								` (after ${formatCurrency(results.pensionDeductionsMonthly, currency)}/mo tax & health insurance)`}{" "}
-							come to{" "}
-							<span className="font-medium text-foreground">
-								{formatCurrency(results.pensionFutureMonthly, currency)}/mo
-							</span>
-							.
+							{results.pensionDeductionsMonthly > 0
+								? t.rich("coverage.pensionsAfterDeductions", {
+										...pensionArgs,
+										deductions: formatCurrency(
+											results.pensionDeductionsMonthly,
+											currency,
+										),
+									})
+								: t.rich("coverage.pensions", pensionArgs)}
 						</>
 					)}
 				</p>
@@ -73,26 +79,26 @@ export function PensionCoverageBreakdown({ results, currency, className }: Props
 						className="flex items-center justify-center bg-emerald-500 text-[11px] font-medium text-white"
 						style={{ width: `${pensionPct}%` }}
 					>
-						{pensionPct >= 12 ? "Pensions" : ""}
+						{pensionPct >= 12 ? t("pensions") : ""}
 					</div>
 					<div
 						className="flex items-center justify-center bg-primary text-[11px] font-medium text-primary-foreground"
 						style={{ width: `${portfolioPct}%` }}
 					>
-						{portfolioPct >= 12 ? "Portfolio" : ""}
+						{portfolioPct >= 12 ? tFinance("portfolio") : ""}
 					</div>
 				</div>
 
 				<div className="grid grid-cols-2 gap-3 text-sm">
 					<Legend
 						color="bg-emerald-500"
-						label="Covered by pensions"
-						value={formatCurrency(pension, currency)}
+						label={t("coverage.coveredByPensions")}
+						value={t("perMonth", { amount: formatCurrency(pension, currency) })}
 					/>
 					<Legend
 						color="bg-primary"
-						label="Funded by portfolio"
-						value={formatCurrency(portfolio, currency)}
+						label={t("coverage.fundedByPortfolio")}
+						value={t("perMonth", { amount: formatCurrency(portfolio, currency) })}
 					/>
 				</div>
 			</CardContent>
@@ -114,7 +120,7 @@ function Legend({
 			<span className={`h-3 w-3 rounded-sm ${color}`} />
 			<div>
 				<p className="text-muted-foreground">{label}</p>
-				<p className="font-semibold">{value}/mo</p>
+				<p className="font-semibold">{value}</p>
 			</div>
 		</div>
 	);

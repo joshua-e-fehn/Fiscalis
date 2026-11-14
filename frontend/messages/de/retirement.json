@@ -1,0 +1,122 @@
+{
+  "years": "{count, plural, one {# Jahr} other {# Jahre}}",
+  "yearsDative": "{count, plural, one {# Jahr} other {# Jahren}}",
+  "perMonth": "{amount}/Monat",
+  "perMonthUnit": "/ Monat",
+  "pensions": "Renten",
+  "steps": {
+    "intro": "Start",
+    "personal": "Alter",
+    "expenses": "Ausgaben",
+    "housing": "Wohnen",
+    "pensions": "Renten",
+    "portfolio": "Portfolio",
+    "assumptions": "Annahmen",
+    "results": "Ergebnis"
+  },
+  "stepShell": {
+    "saving": "Wird gespeichert…"
+  },
+  "progress": {
+    "stepOf": "Schritt {current} von {total}"
+  },
+  "wizard": {
+    "defaultPensionLabel": "Gesetzliche Rente",
+    "editingBanner": "Du bearbeitest deinen gespeicherten Plan. Die Änderungen gelten, sobald du speicherst.",
+    "discardChanges": "Änderungen verwerfen",
+    "currencyChanged": "Deine Anzeigewährung ist jetzt {display}. Die Beträge in diesem Formular sind weiterhin in {form} und werden in {form} gespeichert.",
+    "reloadInCurrency": "In {currency} neu laden",
+    "storedCurrency": "Dein Plan wurde in {stored} erfasst. Seine Beträge werden zum heutigen Wechselkurs in {shown} angezeigt, und beim nächsten Speichern bleiben sie in {shown}.",
+    "birthDateRequired": "Geburtsdatum ist erforderlich",
+    "saveFailed": "Wir konnten deinen Plan nicht speichern. Bitte versuche es erneut."
+  },
+  "dashboard": {
+    "title": "Ruhestandsplan",
+    "subtitle": "Ziel: Ruhestand mit {age} Jahren. Dieser Plan aktualisiert sich automatisch, wenn sich dein Portfolio ändert.",
+    "subtitleFallback": "Dein gespeicherter Ruhestandsplan.",
+    "editPlan": "Plan bearbeiten"
+  },
+  "results": {
+    "timelineTitle": "Prüfe dein Rentenalter",
+    "timelineBody": "Dein Rentenalter muss über deinem aktuellen Alter liegen, damit ein Plan erstellt werden kann.",
+    "assumptionsTitle": "Prüfe deine Annahmen",
+    "editHint": "Bearbeite deinen Plan, um das anzupassen.",
+    "backHint": "Geh zurück und passe es an."
+  },
+  "progressCard": {
+    "title": "Dein Ruhestandsziel",
+    "target": "Benötigtes Zielportfolio",
+    "in": "In",
+    "progressToday": "Fortschritt heute (vorsichtig)",
+    "growth": "Deine aktuellen <b>{current}</b> wachsen bei vorsichtigen {rate} pro Jahr bis zum Ruhestand auf <b>{projected}</b> — das sind <b>{pct}%</b> des oben gezeigten Ziels (ohne zusätzliche monatliche Sparrate). Bei den erwarteten {expectedRate} wären es {expectedPct}%.",
+    "netDebt": "Deine Verbindlichkeiten übersteigen deine Vermögenswerte um {debt}. Dein Plan beginnt bei {zero}, daher kommt der Abbau dieser Schulden zu der berechneten monatlichen Sparrate hinzu.",
+    "pensionsCoverAll": "Deine Renteneinkünfte decken deine erwarteten Ausgaben bereits — keine Entnahme aus dem Portfolio nötig."
+  },
+  "savingsCard": {
+    "title": "Wie viel du monatlich sparen solltest",
+    "pensionsCoverAll": "Deine Renten decken deine erwarteten Ausgaben, du musst also kein Portfolio für den Ruhestand ansparen.",
+    "onTrack": "Mit deinem aktuellen Vermögen und dem erwarteten Wachstum erreichst du dein Ziel, ohne zusätzlich zu sparen. Weiter so!",
+    "expectedCase": "Erwartetes Szenario",
+    "conservativeCase": "Vorsichtiges Szenario",
+    "expectedHint": "bei {rate} pro Jahr — ein Portfolio, das sich etwa alle {years, plural, one {# Jahr} other {# Jahre}} verdoppelt",
+    "expectedHintNoGrowth": "bei {rate} pro Jahr",
+    "conservativeHint": "bei vorsichtigen {rate} pro Jahr",
+    "indexed": "Betrag im ersten Monat, steigt mit der Inflation — bis zum Ruhestand auf {amount} (erwartet).",
+    "flat": "Ein fester nominaler Betrag pro Monat bis zum Ruhestand; durch die Inflation sind spätere Zahlungen weniger wert.",
+    "netDebt": "Diese Beträge starten bei {zero} und enthalten nicht den Abbau deiner aktuellen Schulden.",
+    "mortgageNotProjected": "Die volle Restschuld deiner Hypothek von {balance} gilt als beim Ruhestand noch offen und ist Teil deines Ziels: Trage Zinssatz und Monatsrate im Plan ein, um sie fortzuschreiben.",
+    "mortgageOwedAtRetirement": "Zusätzlich zahlst du die Raten deiner Hypothek von {payment}/Monat weiter aus deinem Einkommen; die {balance} Restschuld beim Ruhestand sind Teil deines Ziels.",
+    "mortgageRepaidBefore": "Zusätzlich zahlst du die Raten deiner Hypothek von {payment}/Monat weiter aus deinem Einkommen, bis der Kredit getilgt ist."
+  },
+  "coverage": {
+    "title": "Monatliche Ausgaben im Ruhestand",
+    "expensesGrow": "Deine heutigen Ausgaben von <b>{today}/Monat</b> steigen inflationsbereinigt in {years} auf <b>{future}/Monat</b>.",
+    "pensions": "Deine Renten von <b>{today}/Monat</b> in heutigem Geld entsprechen dann <b>{future}/Monat</b>.",
+    "pensionsAfterDeductions": "Deine Renten von <b>{today}/Monat</b> in heutigem Geld (nach {deductions}/Monat Steuern & Krankenversicherung) entsprechen dann <b>{future}/Monat</b>.",
+    "coveredByPensions": "Durch Renten gedeckt",
+    "fundedByPortfolio": "Aus dem Portfolio finanziert"
+  },
+  "chart": {
+    "title": "Voraussichtliche Entwicklung des Portfolios",
+    "age": "Alter {age}",
+    "target": "Ziel",
+    "expectedSaving": "Erwartet + Sparen",
+    "conservativeSaving": "Vorsichtig + Sparen",
+    "expectedNoSaving": "Erwartet, ohne Sparen",
+    "conservativeNoSaving": "Vorsichtig, ohne Sparen",
+    "footnote": "Vier Verläufe: deine erwartete und deine vorsichtige Rendite, jeweils mit deiner monatlichen Sparrate und mit deinem aktuellen Portfolio ohne weitere Einzahlungen. Die gestrichelte Linie ist dein Ziel."
+  },
+  "explainer": {
+    "trigger": "Warum diese Zahlen? Die 4-%-Regel erklärt",
+    "rule": "Die <b>4-%-Regel</b> ist eine einfache Faustregel: Du kannst jedes Jahr etwa 4% deines Portfolios entnehmen, ohne es über einen langen Ruhestand aufzubrauchen. Umgekehrt heißt das: Dein Portfolio muss das <b>25-Fache</b> des jährlichen Betrags betragen, den es decken soll.",
+    "customRate": "Dein Plan verwendet stattdessen <b>{rate}</b>, daher muss dein Portfolio das <b>{multiple}-Fache</b> dieses Betrags betragen.",
+    "whereFrom": "Woher kommen die 4%?",
+    "marketReturn": "<b>≈ 7–8%</b> langfristig erwartete Marktrendite pro Jahr",
+    "inflation": "<b>− ~2%</b> Inflation, damit dein Geld seine Kaufkraft behält",
+    "buffer": "<b>− ein Puffer</b>, um in schlechten Börsenjahren sicher zu bleiben",
+    "result": "= etwa 4%, die du jedes Jahr ausgeben kannst",
+    "inflationHandlingRate": "Da die Entnahmerate die Inflation im Ruhestand bereits berücksichtigt, rechnen wir sie nicht doppelt ein. Vor dem Ruhestand lassen wir deine Ausgaben und Renten um {rate} pro Jahr steigen und jeden Teil deines Portfolios mit seiner eigenen erwarteten Rendite wachsen — so bleibt alles stimmig.",
+    "inflationHandling": "Da die Entnahmerate die Inflation im Ruhestand bereits berücksichtigt, rechnen wir sie nicht doppelt ein. Vor dem Ruhestand lassen wir deine Ausgaben und Renten mit der Inflationsrate steigen und jeden Teil deines Portfolios mit seiner eigenen erwarteten Rendite wachsen — so bleibt alles stimmig.",
+    "simpleTarget": "Mit deinen heutigen Ausgaben und heutigen Renten (ohne Inflation) läge das Ziel für deinen Plan bei <b>{target}</b>.",
+    "adjustedTargetRate": "Bereinigt um {years} Inflation von {rate} liegt das realistische Ziel bei <b>{target}</b>.",
+    "adjustedTarget": "Bereinigt um {years} Inflation liegt das realistische Ziel bei <b>{target}</b>.",
+    "difference": "{reason, select, fixedPensionsAndMortgage {Der Unterschied ist die Inflation, mit der deine festen Renten nicht mithalten, plus die beim Ruhestand noch offene Hypothek.} fixedPensions {Der Unterschied ist die Inflation, mit der deine festen Renten nicht mithalten.} mortgage {Der Unterschied ist die Inflation, plus die beim Ruhestand noch offene Hypothek.} other {Der Unterschied ist die Inflation.}}",
+    "taxIncluded": "Beide enthalten {rate} Steuern auf Entnahmen.",
+    "taxExcluded": "Beide sind vor Steuern: Steuern auf Entnahmen sind nicht enthalten."
+  },
+  "teaser": {
+    "titleActive": "Dein Ruhestandsplan",
+    "titleDraft": "Schließe deinen Ruhestandsplan ab",
+    "titleNew": "Plane deinen Ruhestand",
+    "needsReview": "Dein Plan sollte kurz geprüft werden — öffne ihn, um dein Rentenalter oder deine Annahmen anzupassen.",
+    "pensionsCoverAll": "Deine Renten decken deine erwarteten Ausgaben bereits.",
+    "netDebt": "Deine Verbindlichkeiten übersteigen derzeit deine Vermögenswerte — sie abzubauen ist der erste Schritt.",
+    "onTrack": "Du bist auf Kurs für dein Ziel von {target}.",
+    "onTrackExpected": "Auf Kurs bei der erwarteten Rendite von {rate}; mit {amount}/Monat Sparrate ist auch das vorsichtige Szenario gedeckt.",
+    "progress": "Du hast {pct}% deines Ziels von {target} erreicht.",
+    "draft": "Mach dort weiter, wo du aufgehört hast, und sieh deine Zahl.",
+    "new": "Mach aus deinem Ruhestandsziel in wenigen Minuten einen monatlichen Sparplan.",
+    "viewPlan": "Plan ansehen",
+    "getStarted": "Loslegen"
+  }
+}

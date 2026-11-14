@@ -1,7 +1,8 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { RETIREMENT_STEP_LABELS, RetirementStep } from "@/lib/types/retirement";
+import { useTranslations } from "next-intl";
+import { RETIREMENT_STEP_KEYS, RetirementStep } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
 
 interface RetirementWizardProgressProps {
@@ -20,6 +21,7 @@ export function RetirementWizardProgress({
 	furthestStep = currentStep,
 	onStepClick,
 }: RetirementWizardProgressProps) {
+	const t = useTranslations("retirement");
 	const n = STEPS.length;
 	const pct = ((currentStep - 1) / (n - 1)) * 100;
 	return (
@@ -76,7 +78,7 @@ export function RetirementWizardProgress({
 											: "text-muted-foreground",
 									)}
 								>
-									{RETIREMENT_STEP_LABELS[step]}
+									{t(`steps.${RETIREMENT_STEP_KEYS[step]}`)}
 								</span>
 							</button>
 						);
@@ -87,10 +89,8 @@ export function RetirementWizardProgress({
 			{/* Mobile */}
 			<div className="md:hidden">
 				<div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-					<span>
-						Step {currentStep} of {n}
-					</span>
-					<span>{RETIREMENT_STEP_LABELS[currentStep]}</span>
+					<span>{t("progress.stepOf", { current: currentStep, total: n })}</span>
+					<span>{t(`steps.${RETIREMENT_STEP_KEYS[currentStep]}`)}</span>
 				</div>
 				<div className="h-1.5 w-full overflow-hidden rounded-full bg-border">
 					<div

@@ -5,15 +5,12 @@
 import type { MetalCurrency, MetalType } from "./metals";
 
 // ═══════════════════════════════════════════════════════════════
-// Price Types (from Supabase via /api/metals/*)
+// Price Types (the latest snapshot from convex/metalPrices.ts)
 // ═══════════════════════════════════════════════════════════════
 
 /** Aliases of the one definition in lib/types/metals.ts */
 export type MetalsCurrency = MetalCurrency;
 export type MetalsType = MetalType;
-
-/** Purity levels for gold (in per-mille) */
-export type GoldPurity = 333 | 585 | 750 | 833 | 900 | 916 | 999;
 
 /** Base metal price in all currencies */
 export interface MetalPrice {
@@ -22,39 +19,7 @@ export interface MetalPrice {
   chf: number | null;
 }
 
-/** Gold purity prices per gram */
-export interface GoldPurityPrices {
-  333: number | null;
-  585: number | null;
-  750: number | null;
-  833: number | null;
-  900: number | null;
-  916: number | null;
-  999: number | null;
-}
-
-/** Gold extended prices from /api/metals/gold/prices/extended */
-export interface GoldExtendedPrices {
-  ounce: MetalPrice;
-  gram: {
-    eur: number | null;
-    usd: number | null;
-    chf: number | null;
-  };
-  kilo: {
-    eur: number | null;
-    usd: number | null;
-    chf: number | null;
-  };
-  purity: {
-    eur: GoldPurityPrices;
-    usd: GoldPurityPrices;
-    chf: GoldPurityPrices;
-  };
-  timestamp: string;
-}
-
-/** All metals prices from /api/metals/prices/all/latest */
+/** All metals in EUR/USD/CHF with the EUR rates (hooks/metals.ts useMetalsPrices) */
 export interface AllMetalPrices {
   gold: MetalPrice;
   silver: MetalPrice;
@@ -67,10 +32,9 @@ export interface AllMetalPrices {
   timestamp: string;
 }
 
-/** Combined prices (all metals + gold extended) */
+/** The latest prices, as useMetalsPrices serves them */
 export interface MetalsPrices {
   all: AllMetalPrices;
-  goldExtended: GoldExtendedPrices | null;
 }
 
 // ═══════════════════════════════════════════════════════════════

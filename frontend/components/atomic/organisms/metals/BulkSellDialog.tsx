@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
+import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -25,6 +26,7 @@ import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
+import { useErrorMessage } from "@/i18n/errors";
 import {
   ledgerUnitsPerEur,
   saleProfitLossIn,
@@ -60,6 +62,9 @@ export function BulkSellDialog({
   currency: valuationCurrency,
   onSuccess,
 }: BulkSellDialogProps) {
+  const t = useTranslations("metals.bulkSell");
+  const tActions = useTranslations("common.actions");
+  const toErrorMessage = useErrorMessage();
   const display = useDisplayCurrency();
   const currency = valuationCurrency ?? display.currency;
   const displayCode = display.code;
@@ -145,7 +150,7 @@ export function BulkSellDialog({
     setError(null);
 
     if (!isValid) {
-      setError("Please fill in valid quantities and prices for all items");
+      setError(t("errors.invalid"));
       return;
     }
 
@@ -157,7 +162,11 @@ export function BulkSellDialog({
           vaultItemId: entry.item._id as Id<"vaultItems">,
           quantity: entry.quantity,
           pricePerUnit: parseFloat(entry.pricePerUnit),
-          notes: `Bulk sale of ${entry.quantity} × ${entry.item.displayName}`,
+          // Stored with the sale, written in the user's language
+          notes: t("saleNote", {
+            quantity: entry.quantity,
+            name: entry.item.displayName,
+          }),
         })),
         currency: saleCurrency,
         transactionDate: saleDate,
@@ -167,9 +176,7 @@ export function BulkSellDialog({
     } catch (err) {
       console.error("Failed to record sales:", err);
       setError(
-        err instanceof ConvexError
-          ? String(err.data)
-          : "Failed to record sales. Please try again.",
+        err instanceof ConvexError ? toErrorMessage(err) : t("errors.failed"),
       );
     } finally {
       setIsSubmitting(false);
@@ -184,11 +191,10 @@ export function BulkSellDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Sell {items.length} Item{items.length !== 1 ? "s" : ""}
+            {t("title", { count: items.length })}
           </DialogTitle>
           <DialogDescription>
-            Enter the sale price for each item. All sales will be recorded with
-            the same date and currency.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -196,7 +202,7 @@ export function BulkSellDialog({
           {/* Common fields */}
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="saleDate">Sale Date</Label>
+              <Label htmlFor="saleDate">{t("saleDate")}</Label>
               <Input
                 id="saleDate"
                 type="date"
@@ -206,7 +212,7 @@ export function BulkSellDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
+              <Label htmlFor="currency">{t("currency")}</Label>
               <CurrencySelect
                 id="currency"
                 value={saleCurrency}
@@ -238,11 +244,15 @@ export function BulkSellDialog({
                             {entry.item.displayName}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {entry.item.quantity} available • Sell price:{" "}
-                            {Number.isFinite(entry.item.currentSellPrice)
-                              ? formatCurrency(entry.item.currentSellPrice, currency)
-                              : "—"}
-                            /unit
+                            {t("itemLine", {
+                              count: entry.item.quantity,
+                              price: Number.isFinite(entry.item.currentSellPrice)
+                                ? formatCurrency(
+                                    entry.item.currentSellPrice,
+                                    currency,
+                                  )
+                                : "—",
+                            })}
                           </div>
                         </div>
                       </div>
@@ -266,7 +276,7 @@ export function BulkSellDialog({
                     {/* Inputs */}
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Quantity</Label>
+                        <Label className="text-xs">{t("quantity")}</Label>
                         <Input
                           type="number"
                           min={1}
@@ -287,7 +297,7 @@ export function BulkSellDialog({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Price per Unit</Label>
+                        <Label className="text-xs">{t("pricePerUnit")}</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -301,7 +311,7 @@ export function BulkSellDialog({
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Total</Label>
+                        <Label className="text-xs">{t("total")}</Label>
                         <div className="h-8 flex items-center text-sm font-medium">
                           {formatCurrency(saleValue, saleCurrency)}
                         </div>
@@ -318,11 +328,15 @@ export function BulkSellDialog({
           {/* Summary */}
           <div className="py-4 space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Items to sell</span>
-              <span className="font-medium">{totals.itemCount} units</span>
+              <span className="text-muted-foreground">{t("itemsToSell")}</span>
+              <span className="font-medium">
+                {t("units", { count: totals.itemCount })}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Sale Value</span>
+              <span className="text-muted-foreground">
+                {t("totalSaleValue")}
+              </span>
               <span className="font-semibold">
                 {formatCurrency(totals.totalSaleValue, saleCurrency)}
               </span>
@@ -330,7 +344,7 @@ export function BulkSellDialog({
             {totals.profit !== null && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  Estimated Total Profit/Loss
+                  {t("estimatedTotalProfitLoss")}
                 </span>
                 <span
                   className={cn(
@@ -365,14 +379,13 @@ export function BulkSellDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Record {sellEntries.length} Sale
-              {sellEntries.length !== 1 ? "s" : ""}
+              {t("submit", { count: sellEntries.length })}
             </Button>
           </DialogFooter>
         </form>

@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -13,12 +14,11 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/shadcn/chart";
-import { MetalChartData } from "@/lib/types/metals";
+import { MetalChartData, type MetalType } from "@/lib/types/metals";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { TimeRange } from "@/../services/finance/financeService";
-import { formatDate } from "@/lib/utils/date";
 import {
   isRecordedClose,
   percentFromFirstClose,
@@ -32,6 +32,12 @@ interface PriceChartProps {
   chartConfig: ChartConfig;
   dataKey: string;
 }
+
+/** Axis and tooltip dates: the time within a day, else day and month */
+const TIME_OF_DAY = { hour: "2-digit", minute: "2-digit" } as const;
+const DAY_MONTH = { day: "2-digit", month: "2-digit" } as const;
+const isIntraday = (timeRange: TimeRange) =>
+  timeRange === "Hour" || timeRange === "Day";
 
 /** A missing close (null, or 0 from the API) is a gap, never a price */
 const hasPrice = (d: MetalChartData) => isRecordedClose(d.price);
@@ -47,6 +53,8 @@ const CustomTooltipContent = ({
   timeRange: TimeRange;
   currency: InvestmentCurrency;
 }) => {
+  const t = useTranslations("metals.chart");
+  const format = useFormatter();
   if (!active || !payload || !payload[0]) return null;
 
   const data = payload[0].payload as MetalChartData;
@@ -54,9 +62,10 @@ const CustomTooltipContent = ({
   return (
     <div className="bg-background border rounded-lg p-3 shadow-lg">
       <p className="text-xs text-muted-foreground mb-1">
-        {timeRange === "Hour" || timeRange === "Day"
-          ? formatDate(new Date(label), "short")
-          : formatDate(new Date(label), "date")}
+        {format.dateTime(
+          new Date(label),
+          isIntraday(timeRange) ? TIME_OF_DAY : DAY_MONTH,
+        )}
       </p>
       {hasPrice(data) ? (
         <p className="text-sm font-medium">
@@ -64,7 +73,7 @@ const CustomTooltipContent = ({
         </p>
       ) : (
         <p className="text-xs text-muted-foreground italic">
-          No price recorded
+          {t("noPrice")}
         </p>
       )}
     </div>
@@ -78,6 +87,8 @@ export const PriceChart = memo(function PriceChart({
   chartConfig,
   dataKey,
 }: PriceChartProps) {
+  const t = useTranslations("metals.chart");
+  const format = useFormatter();
   // The raw closes, gaps as null so the line breaks there (no filling)
   const plotted = useMemo(
     () =>
@@ -99,7 +110,7 @@ export const PriceChart = memo(function PriceChart({
     <div className="relative h-full">
       {hasGaps && (
         <p className="absolute right-3 top-0 z-10 text-xs text-muted-foreground">
-          Gaps: no price recorded
+          {t("gaps")}
         </p>
       )}
       <ChartContainer config={chartConfig}>
@@ -129,9 +140,10 @@ export const PriceChart = memo(function PriceChart({
             tickMargin={8}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
             tickFormatter={(value) =>
-              timeRange === "Hour" || timeRange === "Day"
-                ? formatDate(new Date(value), "short")
-                : formatDate(new Date(value), "date")
+              format.dateTime(
+                new Date(value),
+                isIntraday(timeRange) ? TIME_OF_DAY : DAY_MONTH,
+              )
             }
           />
           <YAxis
@@ -168,7 +180,7 @@ export const PriceChart = memo(function PriceChart({
 // Compare Chart - shows normalized % performance for multiple metals
 interface CompareChartProps {
   datasets: {
-    metal: string;
+    metal: MetalType;
     data: MetalChartData[];
     color: string;
   }[];
@@ -181,6 +193,8 @@ export const CompareChart = memo(function CompareChart({
   timeRange,
   className,
 }: CompareChartProps) {
+  const t = useTranslations("metals");
+  const format = useFormatter();
   // Normalize data to percentage change from start
   const normalizedData = useMemo(() => {
     if (!datasets || datasets.length === 0) return [];
@@ -218,7 +232,7 @@ export const CompareChart = memo(function CompareChart({
   if (normalizedData.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
-        Select metals to compare
+        {t("chart.selectToCompare")}
       </div>
     );
   }
@@ -261,9 +275,10 @@ export const CompareChart = memo(function CompareChart({
             tickMargin={8}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
             tickFormatter={(value) =>
-              timeRange === "Hour" || timeRange === "Day"
-                ? formatDate(new Date(value), "short")
-                : formatDate(new Date(value), "date")
+              format.dateTime(
+                new Date(value),
+                isIntraday(timeRange) ? TIME_OF_DAY : DAY_MONTH,
+              )
             }
           />
           <YAxis
@@ -280,7 +295,7 @@ export const CompareChart = memo(function CompareChart({
               if (!active || !payload) return null;
               // Filter out entries that aren't metal data
               const metalEntries = payload.filter(
-                (entry): entry is typeof entry & { dataKey: string } =>
+                (entry): entry is typeof entry & { dataKey: MetalType } =>
                   typeof entry.dataKey === "string" &&
                   datasets.some((d) => d.metal === entry.dataKey),
               );
@@ -288,9 +303,10 @@ export const CompareChart = memo(function CompareChart({
               return (
                 <div className="bg-background border rounded-lg p-3 shadow-lg">
                   <p className="text-xs text-muted-foreground mb-2">
-                    {timeRange === "Hour" || timeRange === "Day"
-                      ? formatDate(new Date(label), "short")
-                      : formatDate(new Date(label), "date")}
+                    {format.dateTime(
+                      new Date(label),
+                      isIntraday(timeRange) ? TIME_OF_DAY : DAY_MONTH,
+                    )}
                   </p>
                   {metalEntries.map((entry) => (
                     <div
@@ -301,7 +317,11 @@ export const CompareChart = memo(function CompareChart({
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: entry.color }}
                       />
-                      <span className="capitalize">{entry.dataKey}:</span>
+                      <span>
+                        {t("chart.seriesLabel", {
+                          metal: t(`metal.${entry.dataKey}`),
+                        })}
+                      </span>
                       <span
                         className={
                           entry.value !== undefined && entry.value >= 0

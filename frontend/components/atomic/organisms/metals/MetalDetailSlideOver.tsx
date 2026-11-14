@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { useFormatter, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -63,6 +64,9 @@ export function MetalDetailSlideOver({
   onClose,
   currency,
 }: MetalDetailSlideOverProps) {
+  const t = useTranslations("metals.detail");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -84,12 +88,9 @@ export function MetalDetailSlideOver({
 
   if (!item) return null;
 
+  // A calendar date (YYYY-MM-DD), so formatted in UTC
   const purchaseDate = item.purchaseDate
-    ? new Date(item.purchaseDate).toLocaleDateString("de-DE", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
+    ? format.dateTime(new Date(item.purchaseDate), "dateOnly")
     : null;
 
   return (
@@ -114,7 +115,7 @@ export function MetalDetailSlideOver({
           <StaggerItem>
             <div className="mt-6 p-4 rounded-lg bg-muted/50">
               <div className="text-sm text-muted-foreground mb-1">
-                Current Value
+                {t("currentValue")}
               </div>
               {item.marketValue === null ? (
                 <>
@@ -122,8 +123,7 @@ export function MetalDetailSlideOver({
                     —
                   </span>
                   <p className="text-xs text-muted-foreground mt-1">
-                    No current spot price and no purchase price: the value
-                    is unknown and counted as 0 in the totals
+                    {t("unknownValue")}
                   </p>
                 </>
               ) : (
@@ -143,7 +143,7 @@ export function MetalDetailSlideOver({
                     size="md"
                   />
                   <span className="text-sm text-muted-foreground ml-2">
-                    since purchase
+                    {t("sincePurchase")}
                   </span>
                 </div>
               )}
@@ -154,37 +154,37 @@ export function MetalDetailSlideOver({
           <StaggerItem>
             <div className="mt-6 space-y-4">
               <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
-                Item Details
+                {t("itemDetails")}
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
-                <DetailRow label="Category">
+                <DetailRow label={t("category")}>
                   <CategoryBadge category={item.category} />
                 </DetailRow>
-                <DetailRow label="Purity">
+                <DetailRow label={t("purity")}>
                   <PurityBadge
                     purity={item.purity}
                     showKarat={item.metalType === "gold"}
                   />
                 </DetailRow>
-                <DetailRow label="Quantity">
+                <DetailRow label={t("quantity")}>
                   <span className="font-medium">{item.quantity}</span>
                 </DetailRow>
-                <DetailRow label="Total Weight">
+                <DetailRow label={t("totalWeight")}>
                   <DualWeightDisplay grams={item.weightGrams * item.quantity} />
                 </DetailRow>
-                <DetailRow label="Fine Weight">
+                <DetailRow label={t("fineWeight")}>
                   <DualWeightDisplay
                     grams={item.fineWeightGrams * item.quantity}
                   />
                 </DetailRow>
-                <DetailRow label="Buy Premium">
+                <DetailRow label={t("buyPremium")}>
                   <span className="font-medium">
                     {item.buyPremium >= 0 ? "+" : ""}
                     {(item.buyPremium * 100).toFixed(1)}%
                   </span>
                 </DetailRow>
-                <DetailRow label="Sell Premium">
+                <DetailRow label={t("sellPremium")}>
                   <span
                     className={cn(
                       "font-medium",
@@ -205,32 +205,32 @@ export function MetalDetailSlideOver({
             {/* Valuation Details */}
             <div className="space-y-4">
               <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
-                Valuation
+                {t("valuation")}
               </h3>
 
               <div className="space-y-3">
-                <DetailRowFull label="Current Buy Price (per unit)">
+                <DetailRowFull label={t("currentBuyPrice")}>
                   <PriceDisplay
                     value={item.currentBuyPrice}
                     currency={currency}
                     size="md"
                   />
                 </DetailRowFull>
-                <DetailRowFull label="Current Sell Price (per unit)">
+                <DetailRowFull label={t("currentSellPrice")}>
                   <PriceDisplay
                     value={item.currentSellPrice}
                     currency={currency}
                     size="md"
                   />
                 </DetailRowFull>
-                <DetailRowFull label="Melt Value (total)">
+                <DetailRowFull label={t("meltValue")}>
                   <PriceDisplay
                     value={item.meltValue}
                     currency={currency}
                     size="md"
                   />
                 </DetailRowFull>
-                <DetailRowFull label="Market Value (total at sell price)">
+                <DetailRowFull label={t("marketValue")}>
                   {item.marketValue === null ? (
                     <span className="text-muted-foreground">—</span>
                   ) : (
@@ -242,7 +242,7 @@ export function MetalDetailSlideOver({
                   )}
                 </DetailRowFull>
                 {item.totalCost !== null && (
-                  <DetailRowFull label="Total Cost">
+                  <DetailRowFull label={t("totalCost")}>
                     <PriceDisplay
                       value={item.totalCost}
                       currency={currency}
@@ -262,7 +262,7 @@ export function MetalDetailSlideOver({
               <Separator className="my-6" />
               <div className="space-y-4">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
-                  Purchase Info
+                  {t("purchaseInfo")}
                 </h3>
 
                 <div className="space-y-3">
@@ -273,7 +273,7 @@ export function MetalDetailSlideOver({
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">
-                          Price per Unit
+                          {t("pricePerUnit")}
                         </div>
                         <PriceDisplay
                           value={item.purchasePricePerUnit}
@@ -291,7 +291,7 @@ export function MetalDetailSlideOver({
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">
-                          Purchase Date
+                          {t("purchaseDate")}
                         </div>
                         <div className="font-medium">{purchaseDate}</div>
                       </div>
@@ -304,7 +304,7 @@ export function MetalDetailSlideOver({
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">
-                          Storage Location
+                          {t("storageLocation")}
                         </div>
                         <div className="font-medium">
                           {item.storageLocation}
@@ -323,7 +323,7 @@ export function MetalDetailSlideOver({
               <Separator className="my-6" />
               <div className="space-y-2">
                 <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">
-                  Notes
+                  {t("notes")}
                 </h3>
                 <p className="text-sm">{item.notes}</p>
               </div>
@@ -341,7 +341,7 @@ export function MetalDetailSlideOver({
                   className="w-full"
                 >
                   <BadgeDollarSign className="h-4 w-4 mr-2" />
-                  Sell Item
+                  {t("sell")}
                 </Button>
               )}
 
@@ -353,7 +353,7 @@ export function MetalDetailSlideOver({
                   className="flex-1"
                 >
                   <Edit2 className="h-4 w-4 mr-2" />
-                  Edit
+                  {tActions("edit")}
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
@@ -365,25 +365,23 @@ export function MetalDetailSlideOver({
                       )}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
+                      {tActions("delete")}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Item?</AlertDialogTitle>
+                      <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will permanently delete &ldquo;{item.displayName}&rdquo; from
-                        your vault including all transaction history. This
-                        action cannot be undone.
+                        {t("deleteDescription", { name: item.displayName })}
                         <br />
                         <br />
-                        <strong>Tip:</strong> If you sold this item, use the
-                        &ldquo;Sell Item&rdquo; button instead to record the sale and track
-                        your realized P/L.
+                        {t.rich("deleteTip", {
+                          strong: (chunks) => <strong>{chunks}</strong>,
+                        })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogCancel>{tActions("cancel")}</AlertDialogCancel>
                       <AlertDialogAction
                         onClick={handleDelete}
                         disabled={isDeleting}
@@ -392,7 +390,7 @@ export function MetalDetailSlideOver({
                         {isDeleting && (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         )}
-                        Delete
+                        {tActions("delete")}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>

@@ -32,6 +32,8 @@ import navigationEn from "@/messages/en/navigation.json";
 import navigationDe from "@/messages/de/navigation.json";
 import loansEn from "@/messages/en/loans.json";
 import loansDe from "@/messages/de/loans.json";
+import metalsEn from "@/messages/en/metals.json";
+import metalsDe from "@/messages/de/metals.json";
 
 import type { Language } from "./locales";
 
@@ -48,6 +50,7 @@ const en = {
   landing: landingEn,
   navigation: navigationEn,
   loans: loansEn,
+  metals: metalsEn,
 };
 
 export type Messages = typeof en;
@@ -65,6 +68,7 @@ const de = {
   landing: landingDe,
   navigation: navigationDe,
   loans: loansDe,
+  metals: metalsDe,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = { en, de };

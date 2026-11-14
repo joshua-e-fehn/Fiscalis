@@ -3,27 +3,38 @@ import { Transaction } from "@/components/atomic/molecules/metals";
 /** An opening balance's cost or date that was never entered */
 const UNKNOWN = "unknown";
 
+/** The columns of the transactions CSV, in order */
+export const TRANSACTION_CSV_COLUMNS = [
+  "date",
+  "type",
+  "item",
+  "metal",
+  "quantity",
+  "pricePerUnit",
+  "total",
+  "currency",
+  "spotPrice",
+  "openingBalance",
+  "notes",
+] as const;
+
+/** The header text of each column, in the user's language (from the caller) */
+export type TransactionCsvHeaders = Record<
+  (typeof TRANSACTION_CSV_COLUMNS)[number],
+  string
+>;
+
 /**
  * Export transactions to CSV file; opening balances included, with an
- * unknown cost or date written as "unknown"
+ * unknown cost or date written as "unknown". Headers are translated by the
+ * caller; values stay machine-readable (ISO dates, plain decimals, codes).
  */
 export function exportTransactionsToCSV(
   transactions: Transaction[],
+  headerText: TransactionCsvHeaders,
   filename: string = "metal-transactions.csv",
 ): void {
-  const headers = [
-    "Date",
-    "Type",
-    "Item",
-    "Metal",
-    "Quantity",
-    "Price Per Unit",
-    "Total",
-    "Currency",
-    "Spot Price",
-    "Opening Balance",
-    "Notes",
-  ];
+  const headers = TRANSACTION_CSV_COLUMNS.map((column) => headerText[column]);
 
   const rows = transactions.map((tx) => [
     tx.transactionDate ?? UNKNOWN,

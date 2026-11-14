@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toActionError } from "@/lib/actionError";
@@ -41,6 +42,8 @@ const SUPPORTED_BROKERS = [
 ];
 
 export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
+  const t = useTranslations("onboarding.brokers");
+  const tActions = useTranslations("common.actions");
   const [isConnecting, setIsConnecting] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
@@ -110,26 +113,22 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#3B82F6]/10 border border-[#3B82F6]/20 mb-4">
             <LineChart className="w-8 h-8 text-[#3B82F6]" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">
-            Connect Your Investment Accounts
-          </h2>
-          <p className="text-white/50">
-            Import your stocks, ETFs, and bonds automatically
-          </p>
+          <h2 className="text-3xl font-bold text-white mb-2">{t("title")}</h2>
+          <p className="text-white/50">{t("subtitle")}</p>
         </motion.div>
 
         {/* Benefits */}
         <motion.div className="mb-8 space-y-3" variants={itemVariants}>
-          <BenefitItem text="Real-time portfolio updates" delay={0.1} />
-          <BenefitItem text="Support for 15+ brokerages" delay={0.2} />
-          <BenefitItem text="Dividend & performance tracking" delay={0.3} />
+          <BenefitItem text={t("benefitRealtime")} delay={0.1} />
+          <BenefitItem text={t("benefitBrokerages")} delay={0.2} />
+          <BenefitItem text={t("benefitDividends")} delay={0.3} />
         </motion.div>
 
         {/* Connected Accounts */}
         {hasConnections && (
           <motion.div className="mb-6" variants={itemVariants}>
             <h3 className="text-sm font-medium text-white/60 mb-3">
-              Connected Brokers
+              {t("connected")}
             </h3>
             <div className="space-y-3">
               {brokerConnections.map((connection) => (
@@ -157,7 +156,7 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
         {/* Supported Brokers */}
         <motion.div className="mb-6" variants={itemVariants}>
           <h3 className="text-sm font-medium text-white/40 mb-3 text-center">
-            Supported Brokers
+            {t("supported")}
           </h3>
           <div className="flex flex-wrap justify-center gap-2">
             {SUPPORTED_BROKERS.map((broker) => (
@@ -194,16 +193,15 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
                 className="w-full"
               >
                 {isConnecting
-                  ? "Opening Connection..."
+                  ? t("opening")
                   : hasConnections
-                    ? "Add Another Broker"
-                    : "Connect Brokerage Account"}
+                    ? t("addAnother")
+                    : t("connect")}
               </OnboardingButton>
 
               {redirectUrl && (
                 <p className="text-white/40 text-xs mt-3">
-                  A new window should have opened. Complete the connection
-                  there.
+                  {t("newWindow")}
                 </p>
               )}
             </div>
@@ -216,7 +214,7 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
           variants={itemVariants}
         >
           <Shield className="w-4 h-4" />
-          <span>Secure connection via SnapTrade • Read-only access</span>
+          <span>{t("security")}</span>
         </motion.div>
 
         {/* Actions */}
@@ -230,7 +228,7 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
             className="w-full"
             icon={<ArrowRight className="w-5 h-5" />}
           >
-            {hasConnections ? "Continue" : "Continue Without Brokers"}
+            {hasConnections ? tActions("continue") : t("continueWithout")}
           </OnboardingButton>
           <div className="flex items-center gap-4">
             <OnboardingButton
@@ -238,7 +236,7 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
               variant="ghost"
               icon={<ArrowLeft className="w-4 h-4" />}
             >
-              Back
+              {tActions("back")}
             </OnboardingButton>
             {!hasConnections && <SkipButton onClick={onSkip} />}
           </div>

@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import { motion, HTMLMotionProps } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
@@ -33,6 +34,7 @@ export const OnboardingButton = forwardRef<
     },
     ref,
   ) => {
+    const t = useTranslations("common.actions");
     const variantStyles = {
       primary: cn(
         "bg-gradient-to-r from-[#D4AF37] to-[#B8962E]",
@@ -79,7 +81,7 @@ export const OnboardingButton = forwardRef<
         {isLoading ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Loading...</span>
+            <span>{t("loading")}</span>
           </>
         ) : (
           <>

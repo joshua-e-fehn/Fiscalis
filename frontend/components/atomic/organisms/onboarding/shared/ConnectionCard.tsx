@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, AlertCircle, Loader2, Clock } from "lucide-react";
 
@@ -23,30 +24,32 @@ export function ConnectionCard({
   icon,
   className,
 }: ConnectionCardProps) {
+  const t = useTranslations("onboarding.shared");
+  const tStatus = useTranslations("integrations.status");
   const statusConfig = {
     connected: {
       icon: CheckCircle2,
       color: "text-emerald-500",
       bg: "bg-emerald-500/10",
-      text: "Connected",
+      text: tStatus("connected"),
     },
     error: {
       icon: AlertCircle,
       color: "text-red-500",
       bg: "bg-red-500/10",
-      text: "Error",
+      text: tStatus("error"),
     },
     syncing: {
       icon: Loader2,
       color: "text-[#3B82F6]",
       bg: "bg-[#3B82F6]/10",
-      text: "Syncing",
+      text: tStatus("syncing"),
     },
     retrying: {
       icon: Clock,
       color: "text-amber-500",
       bg: "bg-amber-500/10",
-      text: "Retrying",
+      text: tStatus("retrying"),
     },
   };
 
@@ -73,7 +76,7 @@ export function ConnectionCard({
       <div className="flex-1 min-w-0">
         <h4 className="text-white font-medium truncate">{name}</h4>
         <p className="text-white/50 text-sm">
-          {accountCount} {accountCount === 1 ? "account" : "accounts"}
+          {t("accounts", { count: accountCount })}
         </p>
       </div>
 
@@ -112,12 +115,13 @@ interface ConnectionListProps {
 
 export function ConnectionList({
   connections,
-  emptyMessage = "No connections yet",
+  emptyMessage,
 }: ConnectionListProps) {
+  const t = useTranslations("onboarding.shared");
   if (connections.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-white/40 text-sm">{emptyMessage}</p>
+        <p className="text-white/40 text-sm">{emptyMessage ?? t("noConnections")}</p>
       </div>
     );
   }

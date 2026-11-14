@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { Bitcoin, Shield, ArrowRight, ArrowLeft, Wallet } from "lucide-react";
 import { OnboardingButton } from "../shared/OnboardingButton";
 import {
@@ -23,6 +24,8 @@ interface CryptoStepProps {
 }
 
 export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
+  const t = useTranslations("onboarding.crypto");
+  const tActions = useTranslations("common.actions");
   const updateConnectionStatus = useUpdateConnectionStatus();
 
   // Bitpanda holds crypto (plus metals/stocks/cash) via a read-only API key
@@ -52,30 +55,22 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 mb-4">
             <Bitcoin className="w-8 h-8 text-[#D4AF37]" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">
-            Connect Bitpanda
-          </h2>
-          <p className="text-white/50">
-            Track Bitcoin, Ethereum and 100+ other assets — plus metals, stocks
-            and cash
-          </p>
+          <h2 className="text-3xl font-bold text-white mb-2">{t("title")}</h2>
+          <p className="text-white/50">{t("subtitle")}</p>
         </motion.div>
 
         {/* Benefits */}
         <motion.div className="mb-8 space-y-3" variants={itemVariants}>
-          <BenefitItem
-            text="Crypto, precious metals, commodities & stocks in one place"
-            delay={0.1}
-          />
-          <BenefitItem text="Connect with a read-only API key" delay={0.2} />
-          <BenefitItem text="Automatic valuation in your base currency" delay={0.3} />
+          <BenefitItem text={t("benefitAssets")} delay={0.1} />
+          <BenefitItem text={t("benefitApiKey")} delay={0.2} />
+          <BenefitItem text={t("benefitValuation")} delay={0.3} />
         </motion.div>
 
         {/* Connected Accounts */}
         {hasConnections && (
           <motion.div className="mb-6" variants={itemVariants}>
             <h3 className="text-sm font-medium text-white/60 mb-3">
-              Connected
+              {t("connected")}
             </h3>
             <div className="space-y-3">
               {connections.map((connection) => (
@@ -109,7 +104,7 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
               </div>
 
               <BitpandaConnectButton buttonVariant="secondary" className="w-full">
-                {hasConnections ? "Add Another Account" : "Connect Bitpanda"}
+                {hasConnections ? t("addAnother") : t("connect")}
               </BitpandaConnectButton>
             </div>
           </OnboardingCardContent>
@@ -121,7 +116,7 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
           variants={itemVariants}
         >
           <Shield className="w-4 h-4" />
-          <span>Read-only API key • Encrypted at rest</span>
+          <span>{t("security")}</span>
         </motion.div>
 
         {/* Actions */}
@@ -135,7 +130,7 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
             className="w-full"
             icon={<ArrowRight className="w-5 h-5" />}
           >
-            {hasConnections ? "Continue" : "Continue Without Bitpanda"}
+            {hasConnections ? tActions("continue") : t("continueWithout")}
           </OnboardingButton>
           <div className="flex items-center gap-4">
             <OnboardingButton
@@ -143,7 +138,7 @@ export function CryptoStep({ onNext, onSkip, onBack }: CryptoStepProps) {
               variant="ghost"
               icon={<ArrowLeft className="w-4 h-4" />}
             >
-              Back
+              {tActions("back")}
             </OnboardingButton>
             {!hasConnections && <SkipButton onClick={onSkip} />}
           </div>

@@ -20,14 +20,15 @@ export enum OnboardingStep {
 
 export const TOTAL_STEPS = 6;
 
-export const STEP_LABELS: Record<OnboardingStep, string> = {
-  [OnboardingStep.WELCOME]: "Welcome",
-  [OnboardingStep.PROFILE]: "Profile",
-  [OnboardingStep.BANKING]: "Banking",
-  [OnboardingStep.BROKERS]: "Brokers",
-  [OnboardingStep.CRYPTO]: "Crypto",
-  [OnboardingStep.COMPLETION]: "Complete",
-};
+/** Each step's label key under onboarding.steps */
+export const STEP_KEYS = {
+  [OnboardingStep.WELCOME]: "welcome",
+  [OnboardingStep.PROFILE]: "profile",
+  [OnboardingStep.BANKING]: "banking",
+  [OnboardingStep.BROKERS]: "brokers",
+  [OnboardingStep.CRYPTO]: "crypto",
+  [OnboardingStep.COMPLETION]: "completion",
+} as const satisfies Record<OnboardingStep, string>;
 
 export interface OnboardingProgress {
   _id: string;
@@ -63,6 +64,8 @@ export interface ProfileFormData {
 export type Currency = DisplayCurrency;
 export type { Language, Theme };
 
+// `label` is English; onboarding renders onboarding.profile.currencies.<code>
+// instead. It stays for the settings form until that is translated.
 const CURRENCY_LABELS: Record<Currency, { label: string; flag: string }> = {
   EUR: { label: "Euro (€)", flag: "🇪🇺" },
   USD: { label: "US Dollar ($)", flag: "🇺🇸" },

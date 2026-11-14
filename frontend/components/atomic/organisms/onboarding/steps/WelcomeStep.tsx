@@ -2,15 +2,19 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { PieChart, Wallet, TrendingUp, ArrowRight } from "lucide-react";
 import { OnboardingButton } from "../shared/OnboardingButton";
 import { containerVariants, itemVariants } from "@/lib/types/onboarding";
+import { useCategoryLabels } from "@/lib/config/categoryUI";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 
 interface WelcomeStepProps {
   onNext: () => void;
 }
 
 export function WelcomeStep({ onNext }: WelcomeStepProps) {
+  const t = useTranslations("onboarding.welcome");
   return (
     <div className="flex flex-col items-center px-4 py-8">
       <motion.div
@@ -34,7 +38,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           >
             <Image
               src="/fiscalisIcon.svg"
-              alt="Fiscalis Logo"
+              alt={t("logoAlt")}
               width={64}
               height={64}
               className="object-contain"
@@ -47,10 +51,13 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            Welcome to{" "}
-            <span className="bg-gradient-to-r from-[#D4AF37] to-[#F4CF57] bg-clip-text text-transparent">
-              Fiscalis
-            </span>
+            {t.rich("title", {
+              brand: (chunks) => (
+                <span className="bg-gradient-to-r from-[#D4AF37] to-[#F4CF57] bg-clip-text text-transparent">
+                  {chunks}
+                </span>
+              ),
+            })}
           </motion.h1>
           <motion.p
             className="text-xl text-white/60 max-w-md mx-auto"
@@ -58,7 +65,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            Your complete wealth picture, in one place.
+            {t("subtitle")}
           </motion.p>
         </motion.div>
 
@@ -69,20 +76,20 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
         >
           <ValuePropCard
             icon={PieChart}
-            title="Track Everything"
-            description="Stocks, crypto, real estate, cash, precious metals — all in one view"
+            title={t("trackTitle")}
+            description={t("trackDescription")}
             delay={0.5}
           />
           <ValuePropCard
             icon={Wallet}
-            title="Know Your Debts"
-            description="Loans, mortgages, credit cards at a glance"
+            title={t("debtsTitle")}
+            description={t("debtsDescription")}
             delay={0.6}
           />
           <ValuePropCard
             icon={TrendingUp}
-            title="True Net Worth"
-            description="Assets minus liabilities, updated in real-time"
+            title={t("netWorthTitle")}
+            description={t("netWorthDescription")}
             delay={0.7}
           />
         </motion.div>
@@ -115,7 +122,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
             size="lg"
             icon={<ArrowRight className="w-5 h-5" />}
           >
-            Let&apos;s Get Started
+            {t("getStarted")}
           </OnboardingButton>
         </motion.div>
       </motion.div>
@@ -156,18 +163,22 @@ function ValuePropCard({
 
 // Simple Dashboard Mockup Component
 function DashboardMockup() {
+  const t = useTranslations("onboarding.welcome");
+  const { categoryName } = useCategoryLabels();
   return (
     <div className="w-full max-w-lg mx-auto p-6">
       {/* Net Worth Header */}
       <div className="text-left mb-6">
-        <p className="text-white/40 text-sm mb-1">Total Net Worth</p>
+        <p className="text-white/40 text-sm mb-1">
+          {t("mockupNetWorth")}
+        </p>
         <motion.p
           className="text-3xl font-bold text-white"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.2 }}
         >
-          €247,832.00
+          {formatCurrency(247832, "EUR")}
         </motion.p>
         <motion.span
           className="text-emerald-500 text-sm"
@@ -175,17 +186,42 @@ function DashboardMockup() {
           animate={{ opacity: 1 }}
           transition={{ delay: 1.4 }}
         >
-          +12.4% this year
+          {t("mockupChange", { change: formatPercent(12.4, true, 1) })}
         </motion.span>
       </div>
 
       {/* Asset Bars */}
       <div className="space-y-3">
-        <MockupBar label="Equities" value={45} color="#3B82F6" delay={1.5} />
-        <MockupBar label="Crypto" value={25} color="#D4AF37" delay={1.6} />
-        <MockupBar label="Cash" value={15} color="#22c55e" delay={1.7} />
-        <MockupBar label="Real Estate" value={10} color="#8B5CF6" delay={1.8} />
-        <MockupBar label="Liabilities" value={-5} color="#EF4444" delay={1.9} />
+        <MockupBar
+          label={categoryName("equities")}
+          value={45}
+          color="#3B82F6"
+          delay={1.5}
+        />
+        <MockupBar
+          label={categoryName("crypto")}
+          value={25}
+          color="#D4AF37"
+          delay={1.6}
+        />
+        <MockupBar
+          label={categoryName("cash")}
+          value={15}
+          color="#22c55e"
+          delay={1.7}
+        />
+        <MockupBar
+          label={categoryName("real-estate")}
+          value={10}
+          color="#8B5CF6"
+          delay={1.8}
+        />
+        <MockupBar
+          label={categoryName("liabilities")}
+          value={-5}
+          color="#EF4444"
+          delay={1.9}
+        />
       </div>
     </div>
   );
@@ -204,7 +240,9 @@ function MockupBar({ label, value, color, delay }: MockupBarProps) {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-white/50 text-xs w-20 text-left">{label}</span>
+      <span className="text-white/50 text-xs w-28 text-left truncate">
+        {label}
+      </span>
       <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
         <motion.div
           className="h-full rounded-full"

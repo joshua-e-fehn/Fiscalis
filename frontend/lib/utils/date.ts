@@ -35,10 +35,31 @@ const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 /** Oldest supported age for a date of birth (inclusive). */
 const MAX_BIRTH_DATE_AGE = 120;
 
-/** Result of {@link validateBirthDate}: the trimmed value and age, or an error. */
+/**
+ * Why a date of birth is rejected. The UI renders the code in the user's
+ * language (onboarding.profile.birthDateErrors.<code>).
+ */
+export type BirthDateError = "format" | "invalid" | "future" | "outOfRange";
+
+const BIRTH_DATE_ERROR_TEXT: Record<BirthDateError, string> = {
+  format: "Date of birth must be in YYYY-MM-DD format",
+  invalid: "Date of birth is not a valid calendar date",
+  future: "Date of birth cannot be in the future",
+  outOfRange: "Date of birth is out of the supported range",
+};
+
+/**
+ * Result of {@link validateBirthDate}: the trimmed value and age, or an error
+ * code. `error` is the English text of the code, for the Convex mutations and
+ * the screens not translated yet.
+ */
 export type BirthDateValidation =
   | { ok: true; value: string; age: number }
-  | { ok: false; error: string };
+  | { ok: false; code: BirthDateError; error: string };
+
+function birthDateFailure(code: BirthDateError): BirthDateValidation {
+  return { ok: false, code, error: BIRTH_DATE_ERROR_TEXT[code] };
+}
 
 /**
  * Validate an ISO date of birth (YYYY-MM-DD): a real calendar date, not in the
@@ -55,7 +76,7 @@ export function validateBirthDate(
   const value = birthDate.trim();
   const match = ISO_DATE_PATTERN.exec(value);
   if (!match) {
-    return { ok: false, error: "Date of birth must be in YYYY-MM-DD format" };
+    return birthDateFailure("format");
   }
   const [by, bm, bd] = [Number(match[1]), Number(match[2]), Number(match[3])];
   const parsed = new Date(by, bm - 1, bd);
@@ -64,7 +85,7 @@ export function validateBirthDate(
     parsed.getMonth() === bm - 1 &&
     parsed.getDate() === bd;
   if (!isRealDate) {
-    return { ok: false, error: "Date of birth is not a valid calendar date" };
+    return birthDateFailure("invalid");
   }
 
   const ty = today.getFullYear();
@@ -75,10 +96,10 @@ export function validateBirthDate(
 
   // A negative age means the date lies in the future.
   if (age < 0) {
-    return { ok: false, error: "Date of birth cannot be in the future" };
+    return birthDateFailure("future");
   }
   if (age > MAX_BIRTH_DATE_AGE) {
-    return { ok: false, error: "Date of birth is out of the supported range" };
+    return birthDateFailure("outOfRange");
   }
   return { ok: true, value, age };
 }

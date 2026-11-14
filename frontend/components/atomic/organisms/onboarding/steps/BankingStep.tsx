@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { usePlaidLink } from "react-plaid-link";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -33,6 +34,8 @@ interface BankingStepProps {
 }
 
 export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
+  const t = useTranslations("onboarding.banking");
+  const tActions = useTranslations("common.actions");
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
   const [isExchanging, setIsExchanging] = useState(false);
@@ -101,29 +104,22 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
             <Building2 className="w-8 h-8 text-emerald-500" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-2">
-            Connect Your Bank Accounts
-          </h2>
-          <p className="text-white/50">
-            See your checking, savings, and credit cards in one view
-          </p>
+          <h2 className="text-3xl font-bold text-white mb-2">{t("title")}</h2>
+          <p className="text-white/50">{t("subtitle")}</p>
         </motion.div>
 
         {/* Benefits */}
         <motion.div className="mb-8 space-y-3" variants={itemVariants}>
-          <BenefitItem text="Automatic balance updates" delay={0.1} />
-          <BenefitItem
-            text="Transaction history & categorization"
-            delay={0.2}
-          />
-          <BenefitItem text="Multi-currency support" delay={0.3} />
+          <BenefitItem text={t("benefitBalances")} delay={0.1} />
+          <BenefitItem text={t("benefitTransactions")} delay={0.2} />
+          <BenefitItem text={t("benefitCurrencies")} delay={0.3} />
         </motion.div>
 
         {/* Connected Accounts */}
         {hasConnections && (
           <motion.div className="mb-6" variants={itemVariants}>
             <h3 className="text-sm font-medium text-white/60 mb-3">
-              Connected Accounts
+              {t("connected")}
             </h3>
             <div className="space-y-3">
               {plaidAccounts.map((account) => (
@@ -163,10 +159,10 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
                 className="w-full"
               >
                 {isExchanging
-                  ? "Connecting..."
+                  ? t("connecting")
                   : hasConnections
-                    ? "Add Another Bank"
-                    : "Connect Bank Account"}
+                    ? t("addAnother")
+                    : t("connect")}
               </OnboardingButton>
             </div>
           </OnboardingCardContent>
@@ -178,7 +174,7 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
           variants={itemVariants}
         >
           <Shield className="w-4 h-4" />
-          <span>Bank-level encryption • Read-only access</span>
+          <span>{t("security")}</span>
         </motion.div>
 
         {/* Actions */}
@@ -192,7 +188,7 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
             className="w-full"
             icon={<ArrowRight className="w-5 h-5" />}
           >
-            {hasConnections ? "Continue" : "Continue Without Banking"}
+            {hasConnections ? tActions("continue") : t("continueWithout")}
           </OnboardingButton>
           <div className="flex items-center gap-4">
             <OnboardingButton
@@ -200,7 +196,7 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
               variant="ghost"
               icon={<ArrowLeft className="w-4 h-4" />}
             >
-              Back
+              {tActions("back")}
             </OnboardingButton>
             {!hasConnections && <SkipButton onClick={onSkip} />}
           </div>

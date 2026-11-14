@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import {
   OnboardingStep,
-  STEP_LABELS,
+  STEP_KEYS,
   TOTAL_STEPS,
 } from "@/lib/types/onboarding";
 
@@ -24,6 +25,7 @@ export function OnboardingProgress({
   showLabels = true,
   onStepClick,
 }: OnboardingProgressProps) {
+  const t = useTranslations("onboarding.steps");
   const steps = Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1);
 
   const handleStepClick = (step: number) => {
@@ -121,7 +123,7 @@ export function OnboardingProgress({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: step * 0.05 + 0.2 }}
                 >
-                  {STEP_LABELS[step as OnboardingStep]}
+                  {t(STEP_KEYS[step as OnboardingStep])}
                 </motion.button>
               )}
             </div>
@@ -144,16 +146,17 @@ export function OnboardingProgressCompact({
   totalSteps = TOTAL_STEPS,
   className,
 }: OnboardingProgressCompactProps) {
+  const t = useTranslations("onboarding");
   const progress = (currentStep / totalSteps) * 100;
 
   return (
     <div className={cn("w-full", className)}>
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-white/60">
-          Step {currentStep} of {totalSteps}
+          {t("progress.stepOf", { current: currentStep, total: totalSteps })}
         </span>
         <span className="text-sm font-medium text-white">
-          {STEP_LABELS[currentStep as OnboardingStep]}
+          {t(`steps.${STEP_KEYS[currentStep]}`)}
         </span>
       </div>
       <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">

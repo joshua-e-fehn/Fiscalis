@@ -1,0 +1,115 @@
+{
+  "steps": {
+    "welcome": "Willkommen",
+    "profile": "Profil",
+    "banking": "Banken",
+    "brokers": "Broker",
+    "crypto": "Krypto",
+    "completion": "Fertig"
+  },
+  "progress": {
+    "stepOf": "Schritt {current} von {total}"
+  },
+  "shared": {
+    "skip": "Vorerst überspringen",
+    "noConnections": "Noch keine Verbindungen",
+    "accounts": "{count, plural, one {# Konto} other {# Konten}}"
+  },
+  "welcome": {
+    "logoAlt": "Fiscalis-Logo",
+    "title": "Willkommen bei <brand>Fiscalis</brand>",
+    "subtitle": "Dein gesamtes Vermögen auf einen Blick.",
+    "trackTitle": "Alles im Blick",
+    "trackDescription": "Aktien, Krypto, Immobilien, Liquidität, Edelmetalle – alles in einer Ansicht",
+    "debtsTitle": "Schulden im Griff",
+    "debtsDescription": "Kredite, Hypotheken und Kreditkarten auf einen Blick",
+    "netWorthTitle": "Echtes Nettovermögen",
+    "netWorthDescription": "Vermögenswerte minus Verbindlichkeiten, in Echtzeit aktualisiert",
+    "mockupNetWorth": "Gesamtes Nettovermögen",
+    "mockupChange": "{change} in diesem Jahr",
+    "getStarted": "Los geht's"
+  },
+  "profile": {
+    "title": "Personalisiere Fiscalis",
+    "subtitle": "Lege deine Einstellungen fest, um das Beste aus Fiscalis herauszuholen",
+    "displayName": "Anzeigename",
+    "displayNamePlaceholder": "Dein Name",
+    "birthDate": "Geburtsdatum",
+    "birthDateHint": "Wird für Planungstools wie deine Ruhestandsprognose verwendet.",
+    "birthDateErrors": {
+      "format": "Das Geburtsdatum muss im Format JJJJ-MM-TT angegeben werden.",
+      "invalid": "Das Geburtsdatum ist kein gültiges Kalenderdatum.",
+      "future": "Das Geburtsdatum darf nicht in der Zukunft liegen.",
+      "outOfRange": "Das Geburtsdatum liegt außerhalb des unterstützten Bereichs."
+    },
+    "currency": "Bevorzugte Währung",
+    "currencies": {
+      "EUR": "Euro (€)",
+      "USD": "US-Dollar ($)",
+      "GBP": "Britisches Pfund (£)",
+      "CHF": "Schweizer Franken (CHF)"
+    },
+    "theme": "Design",
+    "themes": {
+      "light": "Hell",
+      "dark": "Dunkel",
+      "system": "System"
+    },
+    "saveFailed": "Dein Profil konnte nicht gespeichert werden. Bitte versuche es erneut."
+  },
+  "banking": {
+    "title": "Verbinde deine Bankkonten",
+    "subtitle": "Sieh Girokonten, Sparkonten und Kreditkarten in einer Ansicht",
+    "benefitBalances": "Automatische Aktualisierung der Kontostände",
+    "benefitTransactions": "Transaktionsverlauf & Kategorisierung",
+    "benefitCurrencies": "Unterstützung mehrerer Währungen",
+    "connected": "Verbundene Konten",
+    "connecting": "Wird verbunden…",
+    "addAnother": "Weitere Bank hinzufügen",
+    "connect": "Bankkonto verbinden",
+    "security": "Verschlüsselung auf Bankniveau • Nur Lesezugriff",
+    "continueWithout": "Ohne Bankkonten fortfahren"
+  },
+  "brokers": {
+    "title": "Verbinde deine Depots",
+    "subtitle": "Importiere deine Aktien, ETFs und Anleihen automatisch",
+    "benefitRealtime": "Portfolio-Updates in Echtzeit",
+    "benefitBrokerages": "Unterstützung für über 15 Broker",
+    "benefitDividends": "Dividenden & Wertentwicklung im Blick",
+    "connected": "Verbundene Broker",
+    "supported": "Unterstützte Broker",
+    "opening": "Verbindung wird geöffnet…",
+    "addAnother": "Weiteren Broker hinzufügen",
+    "connect": "Depot verbinden",
+    "newWindow": "Ein neues Fenster sollte sich geöffnet haben. Schließe die Verbindung dort ab.",
+    "security": "Sichere Verbindung über SnapTrade • Nur Lesezugriff",
+    "continueWithout": "Ohne Broker fortfahren"
+  },
+  "crypto": {
+    "title": "Bitpanda verbinden",
+    "subtitle": "Verfolge Bitcoin, Ethereum und über 100 weitere Werte – dazu Metalle, Aktien und Liquidität",
+    "benefitAssets": "Krypto, Edelmetalle, Rohstoffe & Aktien an einem Ort",
+    "benefitApiKey": "Verbindung mit einem API-Schlüssel mit Lesezugriff",
+    "benefitValuation": "Automatische Bewertung in deiner Basiswährung",
+    "connected": "Verbunden",
+    "addAnother": "Weiteres Konto hinzufügen",
+    "connect": "Bitpanda verbinden",
+    "security": "API-Schlüssel mit Lesezugriff • Verschlüsselt gespeichert",
+    "continueWithout": "Ohne Bitpanda fortfahren"
+  },
+  "completion": {
+    "title": "Alles bereit! 🎉",
+    "subtitle": "Deine Vermögensübersicht ist startklar",
+    "summaryConnected": "Das hast du verbunden",
+    "summaryEmpty": "Zusammenfassung",
+    "bankAccounts": "Bankkonten",
+    "brokerageAccounts": "Depots",
+    "cryptoWallets": "Krypto-Wallets",
+    "notConnected": "Nicht verbunden",
+    "connectLater": "Du kannst deine Konten jederzeit in den Einstellungen verbinden",
+    "syncing": "Deine Konten werden synchronisiert. Öffne deine Übersicht, um dein gesamtes Vermögen zu sehen.",
+    "goToDashboard": "Zur Übersicht",
+    "goBack": "Zurück",
+    "addAccounts": "Konten hinzufügen"
+  }
+}

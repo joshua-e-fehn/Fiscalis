@@ -33,7 +33,6 @@ import {
   type Theme,
 } from "@/lib/types/onboarding";
 import { useUpdateSettings, useUserSettings } from "@/hooks/convex/onboarding";
-import { useApplyLanguage } from "@/providers/localeSync";
 import { SUPPORTED_DISPLAY_CURRENCIES } from "@/hooks/convex/displayCurrency";
 import { MAX_DISPLAY_NAME_LENGTH } from "@/../services/settings/userSettings";
 
@@ -95,7 +94,6 @@ export function GeneralSettingsForm() {
 
 function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
   const updateSettings = useUpdateSettings();
-  const applyLanguage = useApplyLanguage();
   const { setTheme } = useTheme();
 
   const [formData, setFormData] = useState<ProfileFormData>(initial);
@@ -154,11 +152,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
       });
       savedTheme.current = formData.theme;
       setSaved(true);
-      // Re-render in the saved language (no-op when it is unchanged);
-      // LocaleSync retries if the cookie cannot be written.
-      applyLanguage(formData.language).catch((error: unknown) =>
-        console.error("Failed to apply the language:", error),
-      );
+      // LocaleSync re-renders in the saved language
     } catch (error) {
       console.error("Failed to save settings:", error);
       setSaveError("We couldn't save your settings. Please try again.");

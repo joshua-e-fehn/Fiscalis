@@ -61,9 +61,6 @@ export const INTL_TAGS = {
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
 
-/** The Intl tags next-intl accepts (AppConfig.Locale). */
-export const INTL_LOCALES = LANGUAGES.map((language) => INTL_TAGS[language]);
-
 /** Each language's name in that language, for language pickers. */
 export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   en: "English",

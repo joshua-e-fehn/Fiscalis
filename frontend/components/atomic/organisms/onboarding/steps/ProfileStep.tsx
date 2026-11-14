@@ -46,7 +46,6 @@ import {
   useCompleteProfileStep,
 } from "@/hooks/convex/onboarding";
 import { languageForLocale } from "@/i18n/locales";
-import { useApplyLanguage } from "@/providers/localeSync";
 
 interface ProfileStepProps {
   onNext: () => void;
@@ -59,7 +58,6 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const completeProfile = useCompleteProfileStep();
   const existingSettings = useUserSettings();
   const { setTheme } = useTheme();
-  const applyLanguage = useApplyLanguage();
   // Preselect the language the app is shown in (cookie or browser language,
   // limited to RENDERED_LANGUAGES, so English until German is rendered)
   const currentLanguage = languageForLocale(useLocale());
@@ -121,10 +119,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
         theme: formData.theme,
       });
       await completeProfile();
-      // Switch the UI to the chosen language; LocaleSync retries on failure.
-      applyLanguage(formData.language).catch((error: unknown) =>
-        console.error("Failed to apply the language:", error),
-      );
+      // LocaleSync switches the UI to the saved language
       onNext();
     } catch (error) {
       console.error("Failed to save settings:", error);

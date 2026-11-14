@@ -1,10 +1,14 @@
-import { v } from "convex/values";
+import { v, type VLiteral } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { validateBirthDate } from "../lib/utils/date";
 import {
+  LANGUAGES,
+  THEMES,
   validateSettings,
+  type Language,
   type SettingsInput,
   type SettingsPatch,
+  type Theme,
 } from "../../services/settings/userSettings";
 
 /**
@@ -28,11 +32,21 @@ function assertValidSettings(input: SettingsInput): SettingsPatch {
   return result.value;
 }
 
-const languageValidator = v.union(v.literal("en"), v.literal("de"));
+// One list each (services/settings/userSettings.ts), so adding a language
+// or theme is a change there only
+const languageValidator = v.union(
+  ...(LANGUAGES.map((language) => v.literal(language)) as [
+    VLiteral<Language>,
+    VLiteral<Language>,
+    ...VLiteral<Language>[],
+  ]),
+);
 const themeValidator = v.union(
-  v.literal("light"),
-  v.literal("dark"),
-  v.literal("system"),
+  ...(THEMES.map((theme) => v.literal(theme)) as [
+    VLiteral<Theme>,
+    VLiteral<Theme>,
+    ...VLiteral<Theme>[],
+  ]),
 );
 
 /** The mandatory profile step (lib/types/onboarding.ts OnboardingStep.PROFILE). */

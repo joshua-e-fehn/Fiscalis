@@ -17,12 +17,11 @@ import { useUserSettings } from "@/hooks/convex/onboarding";
 
 /**
  * Switch the UI to `language`: write the locale cookie the server renders
- * from and re-render the server components. Persist userSettings.language
- * first; it is the source of truth for signed-in users. A language the UI is
- * not rendered in yet (RENDERED_LANGUAGES) renders as English, so storing it
- * changes nothing visible and causes no refresh.
+ * from and re-render the server components. A language the UI is not
+ * rendered in yet (RENDERED_LANGUAGES) renders as English, so it changes
+ * nothing visible and causes no refresh.
  */
-export function useApplyLanguage() {
+function useApplyLanguage() {
   const router = useRouter();
   const current = languageForLocale(useLocale());
 
@@ -40,15 +39,16 @@ export function useApplyLanguage() {
 /**
  * Keeps the server render in step with the browser and the user's settings:
  * - the time zone cookie holds the browser's zone, so server-formatted dates
- *   match the viewer's clock;
+ *   match the viewer's clock from the next request on (no refresh);
  * - when the stored userSettings.language differs from the language the page
- *   was rendered in (another device changed it, or a new browser), the locale
- *   cookie is updated and the page refreshed. It never writes userSettings.
+ *   was rendered in (saved in Settings > General or onboarding, or changed on
+ *   another device), the locale cookie is updated and the page refreshed.
+ *   This is the only path that applies a language; it never writes
+ *   userSettings.
  *
  * Must sit under ConvexClientProvider and NextIntlClientProvider.
  */
 export function LocaleSync() {
-  const router = useRouter();
   const renderedTimeZone = useTimeZone();
   const settings = useUserSettings();
   const applyLanguage = useApplyLanguage();
@@ -57,14 +57,14 @@ export function LocaleSync() {
   const zoneSent = useRef(false);
 
   useEffect(() => {
-    // Once per page load, so blocked cookies cannot cause a refresh loop.
+    // Once per page load. Takes effect on the next request: nothing formats
+    // dates on the server yet, so a refresh would only cost a re-render.
     if (zoneSent.current) return;
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (!zone || zone === renderedTimeZone) return;
     zoneSent.current = true;
     document.cookie = `${TIME_ZONE_COOKIE}=${encodeURIComponent(zone)}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; samesite=lax`;
-    router.refresh();
-  }, [renderedTimeZone, router]);
+  }, [renderedTimeZone]);
 
   useEffect(() => {
     // Try each stored value once, so a failing cookie write cannot loop.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Tabs,
   TabsContent,
@@ -126,38 +127,20 @@ function useMoneyFormat() {
   };
 }
 
-const PAYMENT_INTERVALS: Record<
-  PaymentInterval,
-  { label: string; payment: string; period: string }
-> = {
-  MONTHLY: { label: "Monthly", payment: "Monthly Payment", period: "month" },
-  QUARTERLY: {
-    label: "Quarterly",
-    payment: "Quarterly Payment",
-    period: "quarter",
-  },
-  SEMI_ANNUAL: {
-    label: "Semi-annual",
-    payment: "Semi-annual Payment",
-    period: "half-year",
-  },
-  ANNUAL: { label: "Yearly", payment: "Yearly Payment", period: "year" },
-};
-
-function getIntervalLabel(interval: PaymentInterval): string {
-  return PAYMENT_INTERVALS[interval].label;
-}
-
-function getPaymentLabel(interval: PaymentInterval): string {
-  return PAYMENT_INTERVALS[interval].payment;
-}
+const PAYMENT_INTERVALS: PaymentInterval[] = [
+  "MONTHLY",
+  "QUARTERLY",
+  "SEMI_ANNUAL",
+  "ANNUAL",
+];
 
 function PaymentIntervalOptions() {
+  const t = useTranslations("calculators.loan.intervals");
   return (
     <>
-      {(Object.keys(PAYMENT_INTERVALS) as PaymentInterval[]).map((value) => (
+      {PAYMENT_INTERVALS.map((value) => (
         <SelectItem key={value} value={value}>
-          {PAYMENT_INTERVALS[value].label}
+          {t(`${value}.label`)}
         </SelectItem>
       ))}
     </>
@@ -172,13 +155,11 @@ function generateId(): string {
 // Loan Type Definitions with Explanations
 // ============================================================================
 
+/** The loan types the calculator explains (BULLET is a LoanType too). */
+type LoanTypeId = "ANNUITY" | "CONSTANT_PRINCIPAL" | "INTEREST_ONLY" | "BULLET";
+
 interface LoanTypeInfo {
-  id: LoanType | "INTEREST_ONLY" | "BULLET";
-  name: string;
-  shortDescription: string;
-  howItWorks: string[];
-  bestFor: string[];
-  watchOut: string[];
+  id: LoanTypeId;
   icon: React.ReactNode;
   color: string;
 }
@@ -186,145 +167,101 @@ interface LoanTypeInfo {
 const LOAN_TYPES: LoanTypeInfo[] = [
   {
     id: "ANNUITY",
-    name: "Fixed Payment Loan",
-    shortDescription: "Same payment every period, most common type",
-    howItWorks: [
-      "You pay the same amount every period for the entire loan term",
-      "Early payments are mostly interest, later payments are mostly principal",
-      "The total debt decreases steadily over time",
-    ],
-    bestFor: [
-      "Homebuyers who want predictable budgets",
-      "Long-term loans (15-30 years)",
-      "People who prefer stability over flexibility",
-    ],
-    watchOut: [
-      "You pay more interest in the early years",
-      "Less flexibility if your income changes",
-    ],
     icon: <TrendingDown className="h-6 w-6" />,
     color: "bg-blue-500",
   },
   {
     id: "CONSTANT_PRINCIPAL",
-    name: "Declining Payment Loan",
-    shortDescription: "Payments start high and decrease over time",
-    howItWorks: [
-      "You pay a fixed amount of principal each period, plus interest",
-      "As the debt decreases, so does the interest, making payments smaller",
-      "Total interest paid is less than a fixed payment loan",
-    ],
-    bestFor: [
-      "People expecting lower income later (near retirement)",
-      "Those who can afford higher initial payments",
-      "Borrowers who want to minimize total interest paid",
-    ],
-    watchOut: [
-      "Initial payments can be 20-30% higher than fixed payment loans",
-      "May not qualify if income barely covers the first payment",
-    ],
     icon: <Target className="h-6 w-6" />,
     color: "bg-green-500",
   },
   {
     id: "INTEREST_ONLY",
-    name: "Interest-Only Loan",
-    shortDescription: "Pay only interest, then principal later",
-    howItWorks: [
-      "For a set period, you only pay interest - the debt doesn't decrease",
-      "After the interest-only period, you start paying principal too",
-      "Payments jump significantly when the principal payments begin",
-    ],
-    bestFor: [
-      "Real estate investors expecting to sell before principal payments start",
-      "People expecting higher income in the future",
-      "Short-term financing needs",
-    ],
-    watchOut: [
-      "You build no equity during the interest-only period",
-      "Payment shock when regular payments begin",
-      "Risk of owing more than the asset is worth",
-    ],
     icon: <Clock className="h-6 w-6" />,
     color: "bg-amber-500",
   },
   {
     id: "BULLET",
-    name: "Balloon / Bullet Loan",
-    shortDescription: "Pay interest only, entire principal due at end",
-    howItWorks: [
-      "You pay only interest throughout the entire loan term",
-      "The full principal amount is due as one lump sum at the end",
-      "Periodic payments are very low, but you need a plan for the final payment",
-    ],
-    bestFor: [
-      "Bridge financing (short-term loans until permanent financing is arranged)",
-      "Investors planning to sell the asset before the loan matures",
-      "Construction loans or development projects",
-    ],
-    watchOut: [
-      "High risk - you must have a plan to pay off or refinance",
-      "If you can't pay the balloon, you could lose the asset",
-      "No equity built during the loan term",
-    ],
     icon: <AlertTriangle className="h-6 w-6" />,
     color: "bg-red-500",
   },
 ];
 
+/** The explanation bullets of a loan type, in the viewer's language. */
+function useLoanTypePoints(id: LoanTypeId) {
+  const t = useTranslations("calculators.loan.types");
+  return {
+    howItWorks: [
+      t(`${id}.howItWorks1`),
+      t(`${id}.howItWorks2`),
+      t(`${id}.howItWorks3`),
+    ],
+    bestFor: [t(`${id}.bestFor1`), t(`${id}.bestFor2`), t(`${id}.bestFor3`)],
+    watchOut: [
+      t(`${id}.watchOut1`),
+      t(`${id}.watchOut2`),
+      ...(id === "INTEREST_ONLY" || id === "BULLET"
+        ? [t(`${id}.watchOut3`)]
+        : []),
+    ],
+  };
+}
+
 // ============================================================================
 // Chart Configuration
 // ============================================================================
 
-const paymentChartConfig: ChartConfig = {
-  principal: {
-    label: "Principal",
-    color: "hsl(142, 76%, 36%)",
-  },
-  interest: {
-    label: "Interest",
-    color: "hsl(24, 95%, 53%)",
-  },
-  balance: {
-    label: "Remaining Balance",
-    color: "hsl(221, 83%, 53%)",
-  },
-};
+function usePaymentChartConfig(): ChartConfig {
+  const t = useTranslations("calculators.loan.charts");
+  return {
+    principal: {
+      label: t("principal"),
+      color: "hsl(142, 76%, 36%)",
+    },
+    interest: {
+      label: t("interest"),
+      color: "hsl(24, 95%, 53%)",
+    },
+    balance: {
+      label: t("balance"),
+      color: "hsl(221, 83%, 53%)",
+    },
+  };
+}
 
 // ============================================================================
 // Main Page Component
 // ============================================================================
 
 export default function LoanCalculatorPage() {
-  const [selectedLoanType, setSelectedLoanType] = useState<string>("ANNUITY");
+  const t = useTranslations("calculators.loan");
+  const [selectedLoanType, setSelectedLoanType] =
+    useState<LoanTypeId>("ANNUITY");
+  const selected =
+    LOAN_TYPES.find((lt) => lt.id === selectedLoanType) ?? LOAN_TYPES[0];
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <PageHeader
-        title="Loan Calculator"
-        subtitle="Understand different loan types, visualize your payments, and find the best option for your situation. We'll show you exactly where your money goes."
-      />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       {/* Tabs for Calculate and Compare */}
       <Tabs defaultValue="calculate" className="w-full">
         <TabsList className="grid grid-cols-2 mb-8 max-w-md">
           <TabsTrigger value="calculate">
             <Calculator className="w-4 h-4 mr-2" />
-            Calculate Loan
+            {t("tabs.calculate")}
           </TabsTrigger>
           <TabsTrigger value="compare">
             <GitCompareArrows className="w-4 h-4 mr-2" />
-            Compare All Types
+            {t("tabs.compare")}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="calculate">
           {/* Loan Type Selection */}
           <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">
-              1. Choose Your Loan Type
-            </h2>
+            <h2 className="text-2xl font-semibold mb-4">{t("chooseType")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {LOAN_TYPES.map((loanType) => (
                 <LoanTypeCard
@@ -346,23 +283,22 @@ export default function LoanCalculatorPage() {
               >
                 <span className="flex items-center gap-2">
                   <HelpCircle className="h-4 w-4" />
-                  Understanding{" "}
-                  {LOAN_TYPES.find((lt) => lt.id === selectedLoanType)?.name}
+                  {t("understanding", {
+                    name: t(`types.${selected.id}.name`),
+                  })}
                 </span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-4">
-              <LoanTypeExplanation
-                loanType={LOAN_TYPES.find((lt) => lt.id === selectedLoanType)!}
-              />
+              <LoanTypeExplanation loanType={selected} />
             </CollapsibleContent>
           </Collapsible>
 
           {/* Calculator Section */}
           <div className="mb-8">
             <h2 className="text-2xl font-semibold mb-4">
-              2. Calculate Your Loan
+              {t("calculateSection")}
             </h2>
             {selectedLoanType === "ANNUITY" && <AnnuityCalculator />}
             {selectedLoanType === "CONSTANT_PRINCIPAL" && (
@@ -394,6 +330,7 @@ function LoanTypeCard({
   isSelected: boolean;
   onSelect: () => void;
 }) {
+  const t = useTranslations("calculators.loan.types");
   return (
     <Card
       className={`cursor-pointer transition-all hover:shadow-lg ${
@@ -407,13 +344,15 @@ function LoanTypeCard({
             {loanType.icon}
           </div>
           <div>
-            <CardTitle className="text-lg">{loanType.name}</CardTitle>
+            <CardTitle className="text-lg">
+              {t(`${loanType.id}.name`)}
+            </CardTitle>
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">
-          {loanType.shortDescription}
+          {t(`${loanType.id}.shortDescription`)}
         </p>
       </CardContent>
     </Card>
@@ -425,6 +364,8 @@ function LoanTypeCard({
 // ============================================================================
 
 function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
+  const t = useTranslations("calculators.loan");
+  const points = useLoanTypePoints(loanType.id);
   return (
     <Card className="mt-6">
       <CardHeader>
@@ -433,8 +374,12 @@ function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
             {loanType.icon}
           </div>
           <div>
-            <CardTitle className="text-xl">{loanType.name}</CardTitle>
-            <CardDescription>{loanType.shortDescription}</CardDescription>
+            <CardTitle className="text-xl">
+              {t(`types.${loanType.id}.name`)}
+            </CardTitle>
+            <CardDescription>
+              {t(`types.${loanType.id}.shortDescription`)}
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -443,10 +388,10 @@ function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
           <div>
             <h4 className="font-semibold flex items-center gap-2 mb-2">
               <HelpCircle className="h-4 w-4 text-blue-500" />
-              How It Works
+              {t("howItWorks")}
             </h4>
             <ul className="space-y-2">
-              {loanType.howItWorks.map((item, i) => (
+              {points.howItWorks.map((item, i) => (
                 <li
                   key={i}
                   className="text-sm text-muted-foreground flex items-start gap-2"
@@ -460,10 +405,10 @@ function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
           <div>
             <h4 className="font-semibold flex items-center gap-2 mb-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              Best For
+              {t("bestFor")}
             </h4>
             <ul className="space-y-2">
-              {loanType.bestFor.map((item, i) => (
+              {points.bestFor.map((item, i) => (
                 <li
                   key={i}
                   className="text-sm text-muted-foreground flex items-start gap-2"
@@ -477,10 +422,10 @@ function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
           <div>
             <h4 className="font-semibold flex items-center gap-2 mb-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
-              Watch Out For
+              {t("watchOut")}
             </h4>
             <ul className="space-y-2">
-              {loanType.watchOut.map((item, i) => (
+              {points.watchOut.map((item, i) => (
                 <li
                   key={i}
                   className="text-sm text-muted-foreground flex items-start gap-2"
@@ -512,6 +457,7 @@ function ExtraPaymentsSection({
   termYears: number;
   paymentInterval: PaymentInterval;
 }) {
+  const t = useTranslations("calculators.loan");
   const addOneTimePayment = () => {
     setConfig({
       ...config,
@@ -546,14 +492,16 @@ function ExtraPaymentsSection({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Gift className="h-5 w-5 text-green-600" />
-          <h4 className="font-semibold">Prepayments</h4>
+          <h4 className="font-semibold">{t("prepayments.title")}</h4>
         </div>
         <div className="flex items-center gap-2">
           <Label
             htmlFor="extra-payments-toggle"
             className="text-sm text-muted-foreground"
           >
-            {config.enabled ? "Enabled" : "Disabled"}
+            {config.enabled
+              ? t("prepayments.enabled")
+              : t("prepayments.disabled")}
           </Label>
           <Switch
             id="extra-payments-toggle"
@@ -569,10 +517,7 @@ function ExtraPaymentsSection({
         <div className="space-y-4">
           {/* Additional Principal */}
           <div className="space-y-2">
-            <Label>
-              Additional Principal (every{" "}
-              {getIntervalLabel(paymentInterval).toLowerCase()})
-            </Label>
+            <Label>{t(`intervals.${paymentInterval}.recurring`)}</Label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <CircleDollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -590,26 +535,25 @@ function ExtraPaymentsSection({
                 />
               </div>
               <span className="text-sm text-muted-foreground whitespace-nowrap">
-                per {PAYMENT_INTERVALS[paymentInterval].period}
+                {t(`intervals.${paymentInterval}.perPeriod`)}
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              This amount will be added to every regular payment.
+              {t("prepayments.recurringHint")}
             </p>
           </div>
 
           {/* One-Time Prepayments */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>One-Time Prepayments</Label>
+              <Label>{t("prepayments.oneTime")}</Label>
               <Button variant="outline" size="sm" onClick={addOneTimePayment}>
                 <Plus className="h-4 w-4 mr-1" />
-                Add Prepayment
+                {t("prepayments.add")}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Schedule specific prepayments in certain years (e.g., yearly
-              bonus, inheritance).
+              {t("prepayments.oneTimeHint")}
             </p>
 
             {config.oneTimePayments.length > 0 && (
@@ -622,7 +566,7 @@ function ExtraPaymentsSection({
                     <div className="flex-1 grid grid-cols-3 gap-2 items-center">
                       <div className="flex items-center gap-2">
                         <Label className="text-xs whitespace-nowrap">
-                          Year
+                          {t("prepayments.year")}
                         </Label>
                         <Select
                           value={payment.year.toString()}
@@ -657,7 +601,7 @@ function ExtraPaymentsSection({
                             })
                           }
                           className="w-24"
-                          placeholder="Amount"
+                          placeholder={t("prepayments.amountPlaceholder")}
                         />
                       </div>
                       <div className="flex items-center gap-2">
@@ -673,9 +617,11 @@ function ExtraPaymentsSection({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="fixed">Fixed amount</SelectItem>
+                            <SelectItem value="fixed">
+                              {t("prepayments.fixedAmount")}
+                            </SelectItem>
                             <SelectItem value="percent">
-                              % of Balance
+                              {t("prepayments.percentOfBalance")}
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -686,6 +632,7 @@ function ExtraPaymentsSection({
                       size="icon"
                       onClick={() => removeOneTimePayment(payment.id)}
                       className="shrink-0"
+                      aria-label={t("prepayments.remove")}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -717,6 +664,7 @@ function ResultsSummary({
   paymentInterval: PaymentInterval;
   additionalStats?: { label: string; value: string; color?: string }[];
 }) {
+  const t = useTranslations("calculators.loan");
   const { formatCurrency, formatCurrencyPrecise } = useMoneyFormat();
   const hasExtraPayments =
     resultWithoutExtra &&
@@ -733,27 +681,31 @@ function ResultsSummary({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-muted rounded-lg p-4">
           <div className="text-sm text-muted-foreground">
-            {getPaymentLabel(paymentInterval)}
+            {t(`intervals.${paymentInterval}.payment`)}
           </div>
           <div className="text-2xl font-bold">
             {formatCurrencyPrecise(result.typicalPayment)}
           </div>
         </div>
         <div className="bg-muted rounded-lg p-4">
-          <div className="text-sm text-muted-foreground">Total Interest</div>
+          <div className="text-sm text-muted-foreground">
+            {t("summary.totalInterest")}
+          </div>
           <div className="text-2xl font-bold text-orange-600">
             {formatCurrency(result.totalInterest)}
           </div>
         </div>
         <div className="bg-muted rounded-lg p-4">
-          <div className="text-sm text-muted-foreground">Total Cost</div>
+          <div className="text-sm text-muted-foreground">
+            {t("summary.totalCost")}
+          </div>
           <div className="text-2xl font-bold">
             {formatCurrency(result.totalPayment)}
           </div>
         </div>
         <div className="bg-muted rounded-lg p-4">
           <div className="text-sm text-muted-foreground">
-            Interest / Principal
+            {t("summary.interestToPrincipal")}
           </div>
           <div className="text-2xl font-bold">
             {((result.totalInterest / principal) * 100).toFixed(0)}%
@@ -773,12 +725,12 @@ function ResultsSummary({
         <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg p-4">
           <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
             <Gift className="h-5 w-5" />
-            Prepayment Savings
+            {t("summary.savingsTitle")}
           </h4>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <div className="text-green-600 dark:text-green-400">
-                Interest Saved
+                {t("summary.interestSaved")}
               </div>
               <div className="text-lg font-bold text-green-700 dark:text-green-300">
                 {formatCurrency(interestSaved)}
@@ -786,24 +738,28 @@ function ResultsSummary({
             </div>
             <div>
               <div className="text-green-600 dark:text-green-400">
-                Periods Saved
+                {t("summary.periodsSaved")}
               </div>
               <div className="text-lg font-bold text-green-700 dark:text-green-300">
-                {periodsSaved} payments
+                {t("summary.payments", { count: periodsSaved })}
               </div>
             </div>
             <div>
               <div className="text-green-600 dark:text-green-400">
-                Original Term
+                {t("summary.originalTerm")}
               </div>
               <div className="text-lg font-bold text-green-700 dark:text-green-300">
-                {resultWithoutExtra.numberOfPayments} payments
+                {t("summary.payments", {
+                  count: resultWithoutExtra.numberOfPayments,
+                })}
               </div>
             </div>
             <div>
-              <div className="text-green-600 dark:text-green-400">New Term</div>
+              <div className="text-green-600 dark:text-green-400">
+                {t("summary.newTerm")}
+              </div>
               <div className="text-lg font-bold text-green-700 dark:text-green-300">
-                {result.numberOfPayments} payments
+                {t("summary.payments", { count: result.numberOfPayments })}
               </div>
             </div>
           </div>
@@ -820,6 +776,8 @@ function PaymentBreakdownChart({
   schedule: AmortizationRow[];
   paymentInterval: PaymentInterval;
 }) {
+  const t = useTranslations("calculators.loan.charts");
+  const paymentChartConfig = usePaymentChartConfig();
   const { formatCurrency, formatCompact } = useMoneyFormat();
   const periodsPerYear = getPaymentsPerYear(paymentInterval);
 
@@ -866,9 +824,9 @@ function PaymentBreakdownChart({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div>
-        <h4 className="font-semibold mb-2">Payment Breakdown by Year</h4>
+        <h4 className="font-semibold mb-2">{t("breakdownByYear")}</h4>
         <p className="text-sm text-muted-foreground mb-4">
-          Principal (green) vs interest (orange) over time.
+          {t("breakdownHint")}
         </p>
         <ChartContainer config={paymentChartConfig} className="h-[250px]">
           <BarChart data={yearlyData} stackOffset="sign">
@@ -877,27 +835,30 @@ function PaymentBreakdownChart({
               dataKey="year"
               tickLine={false}
               tickMargin={10}
-              tickFormatter={(value) => `Y${value}`}
+              tickFormatter={(value) => t("yearTick", { year: value })}
             />
-            <YAxis
-              tickFormatter={(value) => formatCompact(value)}
-            />
+            <YAxis tickFormatter={(value) => formatCompact(value)} />
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={() => "Payment"}
+                  labelFormatter={() => t("payment")}
                   formatter={(value, name, item) => (
                     <div className="flex flex-col gap-1">
                       <span>
-                        {name === "principal" ? "Principal" : "Interest"}:{" "}
-                        {formatCurrency(Number(value))}
+                        {t(
+                          name === "principal"
+                            ? "principalValue"
+                            : "interestValue",
+                          { amount: formatCurrency(Number(value)) },
+                        )}
                       </span>
                       {name === "interest" && (
                         <span className="font-semibold border-t pt-1 mt-1">
-                          Total:{" "}
-                          {formatCurrency(
-                            item.payload.principal + item.payload.interest,
-                          )}
+                          {t("totalValue", {
+                            amount: formatCurrency(
+                              item.payload.principal + item.payload.interest,
+                            ),
+                          })}
                         </span>
                       )}
                     </div>
@@ -922,10 +883,8 @@ function PaymentBreakdownChart({
       </div>
 
       <div>
-        <h4 className="font-semibold mb-2">Remaining Balance Over Time</h4>
-        <p className="text-sm text-muted-foreground mb-4">
-          Watch your debt decrease as you make payments.
-        </p>
+        <h4 className="font-semibold mb-2">{t("balanceOverTime")}</h4>
+        <p className="text-sm text-muted-foreground mb-4">{t("balanceHint")}</p>
         <ChartContainer config={paymentChartConfig} className="h-[250px]">
           <AreaChart data={yearlyData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -933,16 +892,18 @@ function PaymentBreakdownChart({
               dataKey="year"
               tickLine={false}
               tickMargin={10}
-              tickFormatter={(value) => `Y${value}`}
+              tickFormatter={(value) => t("yearTick", { year: value })}
             />
-            <YAxis
-              tickFormatter={(value) => formatCompact(value)}
-            />
+            <YAxis tickFormatter={(value) => formatCompact(value)} />
             <ChartTooltip
               content={
                 <ChartTooltipContent
                   formatter={(value) => (
-                    <span>Balance: {formatCurrency(Number(value))}</span>
+                    <span>
+                      {t("balanceValue", {
+                        amount: formatCurrency(Number(value)),
+                      })}
+                    </span>
                   )}
                 />
               }
@@ -973,6 +934,8 @@ function LoanTypeChartsCard({
   paymentInterval: PaymentInterval;
   color: "blue" | "green" | "amber" | "red";
 }) {
+  const t = useTranslations("calculators.loan.charts");
+  const paymentChartConfig = usePaymentChartConfig();
   const { formatCurrency, formatCompact } = useMoneyFormat();
   const periodsPerYear = getPaymentsPerYear(paymentInterval);
 
@@ -1036,9 +999,7 @@ function LoanTypeChartsCard({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Payment Breakdown Chart */}
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground mb-2">
-            Payment Breakdown
-          </p>
+          <p className="text-xs text-muted-foreground mb-2">{t("breakdown")}</p>
           <ChartContainer
             config={paymentChartConfig}
             className="h-[160px] w-full"
@@ -1049,7 +1010,7 @@ function LoanTypeChartsCard({
                 dataKey="year"
                 tickLine={false}
                 tickMargin={10}
-                tickFormatter={(value) => `Y${value}`}
+                tickFormatter={(value) => t("yearTick", { year: value })}
                 fontSize={10}
               />
               <YAxis
@@ -1059,19 +1020,24 @@ function LoanTypeChartsCard({
               <ChartTooltip
                 content={
                   <ChartTooltipContent
-                    labelFormatter={() => "Payment"}
+                    labelFormatter={() => t("payment")}
                     formatter={(value, name, item) => (
                       <div className="flex flex-col gap-1">
                         <span>
-                          {name === "principal" ? "Principal" : "Interest"}:{" "}
-                          {formatCurrency(Number(value))}
+                          {t(
+                            name === "principal"
+                              ? "principalValue"
+                              : "interestValue",
+                            { amount: formatCurrency(Number(value)) },
+                          )}
                         </span>
                         {name === "interest" && (
                           <span className="font-semibold border-t pt-1 mt-1">
-                            Total:{" "}
-                            {formatCurrency(
-                              item.payload.principal + item.payload.interest,
-                            )}
+                            {t("totalValue", {
+                              amount: formatCurrency(
+                                item.payload.principal + item.payload.interest,
+                              ),
+                            })}
                           </span>
                         )}
                       </div>
@@ -1097,9 +1063,7 @@ function LoanTypeChartsCard({
 
         {/* Remaining Balance Chart */}
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground mb-2">
-            Remaining Balance
-          </p>
+          <p className="text-xs text-muted-foreground mb-2">{t("balance")}</p>
           <ChartContainer
             config={paymentChartConfig}
             className="h-[160px] w-full"
@@ -1110,7 +1074,7 @@ function LoanTypeChartsCard({
                 dataKey="year"
                 tickLine={false}
                 tickMargin={10}
-                tickFormatter={(value) => `Y${value}`}
+                tickFormatter={(value) => t("yearTick", { year: value })}
                 fontSize={10}
               />
               <YAxis
@@ -1121,7 +1085,11 @@ function LoanTypeChartsCard({
                 content={
                   <ChartTooltipContent
                     formatter={(value) => (
-                      <span>Balance: {formatCurrency(Number(value))}</span>
+                      <span>
+                        {t("balanceValue", {
+                          amount: formatCurrency(Number(value)),
+                        })}
+                      </span>
                     )}
                   />
                 }
@@ -1143,6 +1111,7 @@ function LoanTypeChartsCard({
 }
 
 function AmortizationTable({ schedule }: { schedule: AmortizationRow[] }) {
+  const t = useTranslations("calculators.loan.schedule");
   const { formatCurrencyPrecise } = useMoneyFormat();
   const [showAll, setShowAll] = useState(false);
   const displayRows = showAll ? schedule : schedule.slice(0, 12);
@@ -1152,7 +1121,7 @@ function AmortizationTable({ schedule }: { schedule: AmortizationRow[] }) {
       <CollapsibleTrigger asChild>
         <Button variant="outline" className="w-full mb-4">
           <ChevronDown className="h-4 w-4 mr-2" />
-          View Full Payment Schedule
+          {t("view")}
         </Button>
       </CollapsibleTrigger>
       <CollapsibleContent>
@@ -1160,12 +1129,12 @@ function AmortizationTable({ schedule }: { schedule: AmortizationRow[] }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead className="text-right">Payment</TableHead>
-                <TableHead className="text-right">Principal</TableHead>
-                <TableHead className="text-right">Interest</TableHead>
-                <TableHead className="text-right">Extra</TableHead>
-                <TableHead className="text-right">Balance</TableHead>
+                <TableHead>{t("period")}</TableHead>
+                <TableHead className="text-right">{t("payment")}</TableHead>
+                <TableHead className="text-right">{t("principal")}</TableHead>
+                <TableHead className="text-right">{t("interest")}</TableHead>
+                <TableHead className="text-right">{t("extra")}</TableHead>
+                <TableHead className="text-right">{t("balance")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1196,7 +1165,7 @@ function AmortizationTable({ schedule }: { schedule: AmortizationRow[] }) {
           {!showAll && schedule.length > 12 && (
             <div className="p-4 text-center border-t">
               <Button variant="ghost" onClick={() => setShowAll(true)}>
-                Show all {schedule.length} payments
+                {t("showAll", { count: schedule.length })}
               </Button>
             </div>
           )}
@@ -1274,6 +1243,7 @@ function GenericLoanCalculator({
     termYears: number;
   }) => React.ReactNode;
 }) {
+  const t = useTranslations("calculators.loan");
   const [principal, setPrincipal] = useState(defaultPrincipal);
   const [interestRate, setInterestRate] = useState(6.5);
   const [termYears, setTermYears] = useState(defaultTermYears);
@@ -1329,7 +1299,7 @@ function GenericLoanCalculator({
           {/* Main Inputs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="principal">Loan Amount</Label>
+              <Label htmlFor="principal">{t("fields.loanAmount")}</Label>
               <div className="relative">
                 <CircleDollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -1343,7 +1313,9 @@ function GenericLoanCalculator({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="interest-rate">Annual Interest Rate (%)</Label>
+              <Label htmlFor="interest-rate">
+                {t("fields.annualInterestRate")}
+              </Label>
               <div className="relative">
                 <Percent className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -1358,7 +1330,7 @@ function GenericLoanCalculator({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="term-years">Loan Term (Years)</Label>
+              <Label htmlFor="term-years">{t("fields.termYears")}</Label>
               <div className="relative">
                 <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -1372,12 +1344,12 @@ function GenericLoanCalculator({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="payment-interval">Payment Schedule</Label>
+              <Label htmlFor="payment-interval">
+                {t("fields.paymentSchedule")}
+              </Label>
               <Select
                 value={paymentInterval}
-                onValueChange={(v) =>
-                  setPaymentInterval(v as PaymentInterval)
-                }
+                onValueChange={(v) => setPaymentInterval(v as PaymentInterval)}
               >
                 <SelectTrigger>
                   <Calendar className="h-4 w-4 mr-2" />
@@ -1406,13 +1378,13 @@ function GenericLoanCalculator({
           />
 
           <Button onClick={calculate} size="lg" className="w-full md:w-auto">
-            Calculate My Loan
+            {t("calculate")}
           </Button>
         </div>
 
         {result && (
           <div className="mt-8 space-y-6">
-            <h3 className="text-lg font-semibold">Your Results</h3>
+            <h3 className="text-lg font-semibold">{t("yourResults")}</h3>
 
             {/* Warnings */}
             {renderWarnings?.({
@@ -1458,22 +1430,24 @@ function GenericLoanCalculator({
 // ============================================================================
 
 function AnnuityCalculator() {
+  const t = useTranslations("calculators.loan.types.ANNUITY");
   return (
     <GenericLoanCalculator
       loanType="ANNUITY"
-      title="Fixed Payment Loan Calculator"
-      description="Calculate your periodic payment and see how it breaks down over time."
+      title={t("calculatorTitle")}
+      description={t("calculatorDescription")}
     />
   );
 }
 
 function ConstantPrincipalCalculator() {
+  const t = useTranslations("calculators.loan");
   const { formatCurrencyPrecise } = useMoneyFormat();
   return (
     <GenericLoanCalculator
       loanType="CONSTANT_PRINCIPAL"
-      title="Declining Payment Loan Calculator"
-      description="See how your payments decrease over time as you pay off the principal."
+      title={t("types.CONSTANT_PRINCIPAL.calculatorTitle")}
+      description={t("types.CONSTANT_PRINCIPAL.calculatorDescription")}
       renderAdditionalResults={({ result }) => {
         const firstPayment = result.schedule[0]?.totalPayment ?? 0;
         const lastPayment =
@@ -1482,13 +1456,14 @@ function ConstantPrincipalCalculator() {
         return (
           <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg p-4">
             <h4 className="font-semibold text-green-800 dark:text-green-200 mb-2">
-              💰 Payment Savings
+              {t("warnings.savingsTitle")}
             </h4>
             <p className="text-sm text-green-700 dark:text-green-300">
-              Your payment drops from {formatCurrencyPrecise(firstPayment)} to{" "}
-              {formatCurrencyPrecise(lastPayment)} — that&apos;s{" "}
-              {formatCurrencyPrecise(firstPayment - lastPayment)} less per
-              period by the end!
+              {t("warnings.savingsBody", {
+                first: formatCurrencyPrecise(firstPayment),
+                last: formatCurrencyPrecise(lastPayment),
+                difference: formatCurrencyPrecise(firstPayment - lastPayment),
+              })}
             </p>
           </div>
         );
@@ -1498,12 +1473,13 @@ function ConstantPrincipalCalculator() {
 }
 
 function InterestOnlyCalculator() {
+  const t = useTranslations("calculators.loan");
   const { formatCurrencyPrecise } = useMoneyFormat();
   return (
     <GenericLoanCalculator
       loanType="INTEREST_ONLY_THEN"
-      title="Interest-Only Loan Calculator"
-      description="Pay only interest for a period, then start paying principal."
+      title={t("types.INTEREST_ONLY.calculatorTitle")}
+      description={t("types.INTEREST_ONLY.calculatorDescription")}
       showGracePeriod
       renderAdditionalInputs={({
         gracePeriodYears,
@@ -1512,7 +1488,7 @@ function InterestOnlyCalculator() {
       }) => (
         <div className="space-y-2">
           <Label htmlFor="interest-only-years">
-            Interest-Only Period (Years)
+            {t("fields.interestOnlyYears")}
           </Label>
           <div className="relative max-w-xs">
             <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -1526,7 +1502,7 @@ function InterestOnlyCalculator() {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            How many years before you start paying principal?
+            {t("fields.interestOnlyHint")}
           </p>
         </div>
       )}
@@ -1549,15 +1525,21 @@ function InterestOnlyCalculator() {
         return (
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
             <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
-              ⚠️ Payment Shock Warning
+              {t("warnings.shockTitle")}
             </h4>
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              After {gracePeriodYears} years, your payment will jump from{" "}
-              {formatCurrencyPrecise(interestOnlyPayment)} to{" "}
-              {formatCurrencyPrecise(afterGracePayment)} — an increase of{" "}
-              {formatCurrencyPrecise(afterGracePayment - interestOnlyPayment)} (
-              {((afterGracePayment / interestOnlyPayment - 1) * 100).toFixed(0)}
-              % more). Make sure you can afford this!
+              {t("warnings.shockBody", {
+                years: gracePeriodYears,
+                from: formatCurrencyPrecise(interestOnlyPayment),
+                to: formatCurrencyPrecise(afterGracePayment),
+                difference: formatCurrencyPrecise(
+                  afterGracePayment - interestOnlyPayment,
+                ),
+                percent: (
+                  (afterGracePayment / interestOnlyPayment - 1) *
+                  100
+                ).toFixed(0),
+              })}
             </p>
           </div>
         );
@@ -1567,28 +1549,30 @@ function InterestOnlyCalculator() {
 }
 
 function BulletCalculator() {
+  const t = useTranslations("calculators.loan");
   const { formatCurrency } = useMoneyFormat();
   return (
     <GenericLoanCalculator
       loanType="BULLET"
-      title="Balloon / Bullet Loan Calculator"
-      description="Pay interest only throughout, with the full principal due at the end."
+      title={t("types.BULLET.calculatorTitle")}
+      description={t("types.BULLET.calculatorDescription")}
       defaultTermYears={5}
       defaultPrincipal={100000}
       renderWarnings={({ principal, termYears }) => (
         <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg p-4">
           <h4 className="font-semibold text-red-800 dark:text-red-200 mb-2">
-            🚨 Balloon Payment Warning
+            {t("warnings.balloonTitle")}
           </h4>
           <p className="text-sm text-red-700 dark:text-red-300 mb-2">
-            At the end of {termYears} years, you must pay{" "}
-            {formatCurrency(principal)} in one lump sum. This is called a
-            &quot;balloon payment.&quot;
+            {t("warnings.balloonBody", {
+              years: termYears,
+              amount: formatCurrency(principal),
+            })}
           </p>
           <p className="text-sm text-red-700 dark:text-red-300">
-            <strong>Your options when the balloon is due:</strong> Refinance
-            into a new loan, sell the asset, or pay from savings. If you
-            can&apos;t do any of these, you risk losing the asset.
+            {t.rich("warnings.balloonOptions", {
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
         </div>
       )}
@@ -1601,6 +1585,8 @@ function BulletCalculator() {
 // ============================================================================
 
 function LoanTypeComparison() {
+  const t = useTranslations("calculators.loan");
+  const paymentChartConfig = usePaymentChartConfig();
   const { formatCurrency, formatCurrencyPrecise, formatCompact } =
     useMoneyFormat();
   const [principal, setPrincipal] = useState(250000);
@@ -1645,25 +1631,29 @@ function LoanTypeComparison() {
   const comparisonData = results
     ? [
         {
-          type: "Fixed Payment",
+          id: "ANNUITY",
+          type: t("types.ANNUITY.shortName"),
           payment: results.annuity.typicalPayment,
           interest: results.annuity.totalInterest,
           total: results.annuity.totalPayment,
         },
         {
-          type: "Declining",
+          id: "CONSTANT_PRINCIPAL",
+          type: t("types.CONSTANT_PRINCIPAL.shortName"),
           payment: results.constantPrincipal.schedule[0]?.totalPayment ?? 0,
           interest: results.constantPrincipal.totalInterest,
           total: results.constantPrincipal.totalPayment,
         },
         {
-          type: "Interest-Only",
+          id: "INTEREST_ONLY",
+          type: t("types.INTEREST_ONLY.shortName"),
           payment: results.interestOnly.schedule[0]?.totalPayment ?? 0,
           interest: results.interestOnly.totalInterest,
           total: results.interestOnly.totalPayment,
         },
         {
-          type: "Bullet",
+          id: "BULLET",
+          type: t("types.BULLET.shortName"),
           payment: results.bullet.schedule[0]?.totalPayment ?? 0,
           interest: results.bullet.totalInterest,
           total: results.bullet.totalPayment,
@@ -1674,16 +1664,13 @@ function LoanTypeComparison() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Side-by-Side Comparison</CardTitle>
-        <CardDescription>
-          See how different loan types compare with the same amount, rate, and
-          term.
-        </CardDescription>
+        <CardTitle>{t("compare.title")}</CardTitle>
+        <CardDescription>{t("compare.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="space-y-2">
-            <Label>Loan Amount</Label>
+            <Label>{t("fields.loanAmount")}</Label>
             <Input
               type="number"
               value={principal}
@@ -1691,7 +1678,7 @@ function LoanTypeComparison() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Interest Rate (%)</Label>
+            <Label>{t("fields.interestRate")}</Label>
             <Input
               type="number"
               step="0.1"
@@ -1700,7 +1687,7 @@ function LoanTypeComparison() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Term (Years)</Label>
+            <Label>{t("fields.termYearsShort")}</Label>
             <Input
               type="number"
               value={termYears}
@@ -1708,12 +1695,10 @@ function LoanTypeComparison() {
             />
           </div>
           <div className="space-y-2">
-            <Label>Payment Schedule</Label>
+            <Label>{t("fields.paymentSchedule")}</Label>
             <Select
               value={paymentInterval}
-              onValueChange={(v) =>
-                setPaymentInterval(v as PaymentInterval)
-              }
+              onValueChange={(v) => setPaymentInterval(v as PaymentInterval)}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -1725,7 +1710,7 @@ function LoanTypeComparison() {
           </div>
         </div>
         <Button onClick={calculateAll} className="mb-6">
-          Compare All Loan Types
+          {t("compare.button")}
         </Button>
 
         {results && (
@@ -1735,19 +1720,21 @@ function LoanTypeComparison() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Loan Type</TableHead>
+                      <TableHead>{t("compare.loanType")}</TableHead>
                       <TableHead className="text-right">
-                        First Payment
+                        {t("compare.firstPayment")}
                       </TableHead>
                       <TableHead className="text-right">
-                        Total Interest
+                        {t("compare.totalInterest")}
                       </TableHead>
-                      <TableHead className="text-right">Total Cost</TableHead>
+                      <TableHead className="text-right">
+                        {t("compare.totalCost")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {comparisonData.map((row) => (
-                      <TableRow key={row.type}>
+                      <TableRow key={row.id}>
                         <TableCell className="font-medium">
                           {row.type}
                         </TableCell>
@@ -1768,7 +1755,7 @@ function LoanTypeComparison() {
 
               <div className="pr-4">
                 <h4 className="font-semibold mb-2">
-                  Total Interest Comparison
+                  {t("compare.interestChart")}
                 </h4>
                 <ChartContainer
                   config={paymentChartConfig}
@@ -1780,7 +1767,7 @@ function LoanTypeComparison() {
                       type="number"
                       tickFormatter={(v) => formatCompact(v)}
                     />
-                    <YAxis type="category" dataKey="type" width={100} />
+                    <YAxis type="category" dataKey="type" width={120} />
                     <ChartTooltip
                       content={
                         <ChartTooltipContent
@@ -1800,30 +1787,28 @@ function LoanTypeComparison() {
 
             {/* Charts per Loan Type */}
             <div className="mt-6">
-              <h4 className="font-semibold mb-4">
-                Payment Breakdown & Balance by Loan Type
-              </h4>
+              <h4 className="font-semibold mb-4">{t("compare.byType")}</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <LoanTypeChartsCard
-                  title="Fixed Payment"
+                  title={t("types.ANNUITY.shortName")}
                   schedule={results.annuity.schedule}
                   paymentInterval={paymentInterval}
                   color="blue"
                 />
                 <LoanTypeChartsCard
-                  title="Declining Payment"
+                  title={t("types.CONSTANT_PRINCIPAL.shortName")}
                   schedule={results.constantPrincipal.schedule}
                   paymentInterval={paymentInterval}
                   color="green"
                 />
                 <LoanTypeChartsCard
-                  title="Interest-Only"
+                  title={t("types.INTEREST_ONLY.shortName")}
                   schedule={results.interestOnly.schedule}
                   paymentInterval={paymentInterval}
                   color="amber"
                 />
                 <LoanTypeChartsCard
-                  title="Bullet"
+                  title={t("types.BULLET.shortName")}
                   schedule={results.bullet.schedule}
                   paymentInterval={paymentInterval}
                   color="red"
@@ -1832,21 +1817,21 @@ function LoanTypeComparison() {
             </div>
 
             <div className="mt-6 p-4 bg-muted rounded-lg">
-              <h4 className="font-semibold mb-2">💡 Key Insight</h4>
+              <h4 className="font-semibold mb-2">
+                {t("compare.insightTitle")}
+              </h4>
               <p className="text-sm text-muted-foreground">
-                The <strong>Declining Payment Loan</strong> saves you{" "}
-                {formatCurrency(
-                  results.annuity.totalInterest -
-                    results.constantPrincipal.totalInterest,
-                )}{" "}
-                in interest compared to a Fixed Payment Loan, but your first
-                payment is{" "}
-                {formatCurrency(
-                  (results.constantPrincipal.schedule[0]?.totalPayment ?? 0) -
-                    results.annuity.typicalPayment,
-                )}{" "}
-                higher. Choose based on your current budget and future income
-                expectations.
+                {t.rich("compare.insightBody", {
+                  strong: (chunks) => <strong>{chunks}</strong>,
+                  saved: formatCurrency(
+                    results.annuity.totalInterest -
+                      results.constantPrincipal.totalInterest,
+                  ),
+                  extra: formatCurrency(
+                    (results.constantPrincipal.schedule[0]?.totalPayment ?? 0) -
+                      results.annuity.typicalPayment,
+                  ),
+                })}
               </p>
             </div>
           </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Tabs,
   TabsContent,
@@ -55,31 +56,83 @@ function useFormatAmount() {
   return (value: number) => formatCurrency(value, currency);
 }
 
+const TIME_INTERVALS: TimeInterval[] = [
+  "minute",
+  "hour",
+  "day",
+  "week",
+  "month",
+  "quarter",
+  "year",
+];
+
+/** A count rounded to two decimals, for "12.34 years". */
+function roundCount(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function IntervalSelect({
+  value,
+  onChange,
+}: {
+  value: TimeInterval;
+  onChange: (value: TimeInterval) => void;
+}) {
+  const t = useTranslations("calculators");
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="time-interval">{t("interest.fields.interval")}</Label>
+      <Select
+        value={value}
+        onValueChange={(next) => onChange(next as TimeInterval)}
+      >
+        <SelectTrigger id="time-interval">
+          <SelectValue placeholder={t("interest.fields.intervalPlaceholder")} />
+        </SelectTrigger>
+        <SelectContent>
+          {TIME_INTERVALS.map((interval) => (
+            <SelectItem key={interval} value={interval}>
+              {t(`intervals.label.${interval}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function EmptyResults() {
+  const t = useTranslations("calculators.interest");
+  return (
+    <div className="flex items-center justify-center h-40 border-dashed border-2 rounded-md border-muted">
+      <p className="text-muted-foreground">{t("empty")}</p>
+    </div>
+  );
+}
+
 export default function FinancialCalculatorsPage() {
+  const t = useTranslations("calculators.interest");
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <PageHeader
-        title="Interest Calculators"
-        subtitle="Powerful financial tools to help you make better investment decisions. Calculate compound interest, growth rates, future values, and more."
-      />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <Tabs defaultValue="interest-rate" className="w-full">
         <TabsList className="grid grid-cols-4 mb-8 max-w-2xl">
           <TabsTrigger value="interest-rate">
             <TrendingUp className="w-4 h-4 mr-2" />
-            Interest Rate
+            {t("tabs.rate")}
           </TabsTrigger>
           <TabsTrigger value="time-duration">
             <Clock className="w-4 h-4 mr-2" />
-            Duration
+            {t("tabs.duration")}
           </TabsTrigger>
           <TabsTrigger value="future-value">
             <LineChart className="w-4 h-4 mr-2" />
-            Future Value
+            {t("tabs.futureValue")}
           </TabsTrigger>
           <TabsTrigger value="starting-value">
             <DollarSign className="w-4 h-4 mr-2" />
-            Starting Value
+            {t("tabs.startingValue")}
           </TabsTrigger>
         </TabsList>
 
@@ -104,6 +157,8 @@ export default function FinancialCalculatorsPage() {
 }
 
 function InterestRateCalculator() {
+  const t = useTranslations("calculators.interest");
+  const tIntervals = useTranslations("calculators.intervals");
   const [initialValue, setInitialValue] = useState<number>(1000);
   const [finalValue, setFinalValue] = useState<number>(2000);
   const [startDate, setStartDate] = useState<string>(getTodayMinusOneYear());
@@ -154,17 +209,14 @@ function InterestRateCalculator() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calculate Interest Rate</CardTitle>
-        <CardDescription>
-          Find the average interest rate between two points in time for both
-          compound and simple interest
-        </CardDescription>
+        <CardTitle>{t("rate.title")}</CardTitle>
+        <CardDescription>{t("rate.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="initial-value">Initial Value</Label>
+              <Label htmlFor="initial-value">{t("fields.initialValue")}</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -178,7 +230,7 @@ function InterestRateCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="final-value">Final Value</Label>
+              <Label htmlFor="final-value">{t("fields.finalValue")}</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -192,7 +244,7 @@ function InterestRateCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="start-date">Start Date</Label>
+              <Label htmlFor="start-date">{t("fields.startDate")}</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -205,7 +257,7 @@ function InterestRateCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="end-date">End Date</Label>
+              <Label htmlFor="end-date">{t("fields.endDate")}</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -217,76 +269,49 @@ function InterestRateCalculator() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="time-interval">Interest Interval</Label>
-              <Select
-                value={timeInterval}
-                onValueChange={(value) =>
-                  setTimeInterval(value as TimeInterval)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select interval" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="minute">Minute</SelectItem>
-                  <SelectItem value="hour">Hour</SelectItem>
-                  <SelectItem value="day">Day</SelectItem>
-                  <SelectItem value="week">Week</SelectItem>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="quarter">Quarter</SelectItem>
-                  <SelectItem value="year">Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <IntervalSelect value={timeInterval} onChange={setTimeInterval} />
 
             <Button onClick={calculate} className="w-full">
-              Calculate
+              {t("calculate")}
             </Button>
           </div>
 
           <div className="space-y-6 border-l pl-6">
             <div>
-              <h3 className="text-lg font-medium mb-2">Results</h3>
+              <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Based on your inputs, here are the calculated interest rates
+                {t("rate.resultsHint")}
               </p>
 
               {result && (
                 <div className="space-y-4">
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      Compound Interest
+                      {t("compoundInterest")}
                     </div>
                     <div className="text-2xl font-bold">
                       {result.compound.toFixed(2)}%
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Per {timeInterval}
+                      {tIntervals(`per.${timeInterval}`)}
                     </div>
                   </div>
 
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      Simple Interest
+                      {t("simpleInterest")}
                     </div>
                     <div className="text-2xl font-bold">
                       {result.simple.toFixed(2)}%
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Per {timeInterval}
+                      {tIntervals(`per.${timeInterval}`)}
                     </div>
                   </div>
                 </div>
               )}
 
-              {!result && (
-                <div className="flex items-center justify-center h-40 border-dashed border-2 rounded-md border-muted">
-                  <p className="text-muted-foreground">
-                    Enter values and calculate to see results
-                  </p>
-                </div>
-              )}
+              {!result && <EmptyResults />}
             </div>
           </div>
         </div>
@@ -296,6 +321,8 @@ function InterestRateCalculator() {
 }
 
 function TimeDurationCalculator() {
+  const t = useTranslations("calculators.interest");
+  const tIntervals = useTranslations("calculators.intervals");
   const [startingCapital, setStartingCapital] = useState<number>(1000);
   const [targetCapital, setTargetCapital] = useState<number>(2000);
   const [interestRate, setInterestRate] = useState<number>(5);
@@ -338,17 +365,16 @@ function TimeDurationCalculator() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calculate Time Duration</CardTitle>
-        <CardDescription>
-          Find out how long it will take to reach your target capital based on
-          starting value and interest rate
-        </CardDescription>
+        <CardTitle>{t("duration.title")}</CardTitle>
+        <CardDescription>{t("duration.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="starting-capital">Starting Capital</Label>
+              <Label htmlFor="starting-capital">
+                {t("fields.startingCapital")}
+              </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -362,7 +388,9 @@ function TimeDurationCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="target-capital">Target Capital</Label>
+              <Label htmlFor="target-capital">
+                {t("fields.targetCapital")}
+              </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -376,7 +404,7 @@ function TimeDurationCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="interest-rate">Interest Rate (%)</Label>
+              <Label htmlFor="interest-rate">{t("fields.interestRate")}</Label>
               <div className="relative">
                 <TrendingUp className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -390,70 +418,47 @@ function TimeDurationCalculator() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="time-interval">Interest Interval</Label>
-              <Select
-                value={timeInterval}
-                onValueChange={(value) =>
-                  setTimeInterval(value as TimeInterval)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select interval" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="minute">Minute</SelectItem>
-                  <SelectItem value="hour">Hour</SelectItem>
-                  <SelectItem value="day">Day</SelectItem>
-                  <SelectItem value="week">Week</SelectItem>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="quarter">Quarter</SelectItem>
-                  <SelectItem value="year">Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <IntervalSelect value={timeInterval} onChange={setTimeInterval} />
 
             <Button onClick={calculate} className="w-full">
-              Calculate
+              {t("calculate")}
             </Button>
           </div>
 
           <div className="space-y-6 border-l pl-6">
             <div>
-              <h3 className="text-lg font-medium mb-2">Results</h3>
+              <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Time needed to reach your target capital
+                {t("duration.resultsHint")}
               </p>
 
               {result && (
                 <div className="space-y-4">
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      With Compound Interest
+                      {t("withCompound")}
                     </div>
                     <div className="text-2xl font-bold">
-                      {result.compound.toFixed(2)} {timeInterval}s
+                      {tIntervals(`count.${timeInterval}`, {
+                        count: roundCount(result.compound),
+                      })}
                     </div>
                   </div>
 
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      With Simple Interest
+                      {t("withSimple")}
                     </div>
                     <div className="text-2xl font-bold">
-                      {result.simple.toFixed(2)} {timeInterval}s
+                      {tIntervals(`count.${timeInterval}`, {
+                        count: roundCount(result.simple),
+                      })}
                     </div>
                   </div>
                 </div>
               )}
 
-              {!result && (
-                <div className="flex items-center justify-center h-40 border-dashed border-2 rounded-md border-muted">
-                  <p className="text-muted-foreground">
-                    Enter values and calculate to see results
-                  </p>
-                </div>
-              )}
+              {!result && <EmptyResults />}
             </div>
           </div>
         </div>
@@ -463,6 +468,8 @@ function TimeDurationCalculator() {
 }
 
 function FutureValueCalculator() {
+  const t = useTranslations("calculators.interest");
+  const tIntervals = useTranslations("calculators.intervals");
   const formatAmount = useFormatAmount();
   const [startingCapital, setStartingCapital] = useState<number>(1000);
   const [interestRate, setInterestRate] = useState<number>(5);
@@ -507,17 +514,16 @@ function FutureValueCalculator() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calculate Future Value</CardTitle>
-        <CardDescription>
-          Find out what your investment will be worth in the future based on
-          interest rate and time
-        </CardDescription>
+        <CardTitle>{t("futureValue.title")}</CardTitle>
+        <CardDescription>{t("futureValue.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="starting-capital">Starting Capital</Label>
+              <Label htmlFor="starting-capital">
+                {t("fields.startingCapital")}
+              </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -531,7 +537,7 @@ function FutureValueCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="interest-rate">Interest Rate (%)</Label>
+              <Label htmlFor="interest-rate">{t("fields.interestRate")}</Label>
               <div className="relative">
                 <TrendingUp className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -546,7 +552,11 @@ function FutureValueCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time-period">Time Period ({timeInterval}s)</Label>
+              <Label htmlFor="time-period">
+                {t("fields.timePeriod", {
+                  unit: tIntervals(`unitPlural.${timeInterval}`),
+                })}
+              </Label>
               <div className="relative">
                 <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -559,80 +569,59 @@ function FutureValueCalculator() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="time-interval">Interest Interval</Label>
-              <Select
-                value={timeInterval}
-                onValueChange={(value) =>
-                  setTimeInterval(value as TimeInterval)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select interval" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="minute">Minute</SelectItem>
-                  <SelectItem value="hour">Hour</SelectItem>
-                  <SelectItem value="day">Day</SelectItem>
-                  <SelectItem value="week">Week</SelectItem>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="quarter">Quarter</SelectItem>
-                  <SelectItem value="year">Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <IntervalSelect value={timeInterval} onChange={setTimeInterval} />
 
             <Button onClick={calculate} className="w-full">
-              Calculate
+              {t("calculate")}
             </Button>
           </div>
 
           <div className="space-y-6 border-l pl-6">
             <div>
-              <h3 className="text-lg font-medium mb-2">Results</h3>
+              <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Projected future value of your investment
+                {t("futureValue.resultsHint")}
               </p>
 
               {result && (
                 <div className="space-y-4">
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      With Compound Interest
+                      {t("withCompound")}
                     </div>
                     <div className="text-2xl font-bold">
                       {formatAmount(result.compound)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Gain: {formatAmount(result.compound - startingCapital)}{" "}
-                      after {timePeriod} {timeInterval}
-                      {timePeriod !== 1 ? "s" : ""}
+                      {t("gainAfter", {
+                        amount: formatAmount(result.compound - startingCapital),
+                        duration: tIntervals(`count.${timeInterval}`, {
+                          count: timePeriod,
+                        }),
+                      })}
                     </div>
                   </div>
 
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      With Simple Interest
+                      {t("withSimple")}
                     </div>
                     <div className="text-2xl font-bold">
                       {formatAmount(result.simple)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Gain: {formatAmount(result.simple - startingCapital)}{" "}
-                      after {timePeriod} {timeInterval}
-                      {timePeriod !== 1 ? "s" : ""}
+                      {t("gainAfter", {
+                        amount: formatAmount(result.simple - startingCapital),
+                        duration: tIntervals(`count.${timeInterval}`, {
+                          count: timePeriod,
+                        }),
+                      })}
                     </div>
                   </div>
                 </div>
               )}
 
-              {!result && (
-                <div className="flex items-center justify-center h-40 border-dashed border-2 rounded-md border-muted">
-                  <p className="text-muted-foreground">
-                    Enter values and calculate to see results
-                  </p>
-                </div>
-              )}
+              {!result && <EmptyResults />}
             </div>
           </div>
         </div>
@@ -642,6 +631,8 @@ function FutureValueCalculator() {
 }
 
 function StartingValueCalculator() {
+  const t = useTranslations("calculators.interest");
+  const tIntervals = useTranslations("calculators.intervals");
   const formatAmount = useFormatAmount();
   const [targetCapital, setTargetCapital] = useState<number>(2000);
   const [interestRate, setInterestRate] = useState<number>(5);
@@ -686,17 +677,16 @@ function StartingValueCalculator() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Calculate Starting Value</CardTitle>
-        <CardDescription>
-          Find out how much you need to invest now to reach your target in the
-          future
-        </CardDescription>
+        <CardTitle>{t("startingValue.title")}</CardTitle>
+        <CardDescription>{t("startingValue.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="target-capital">Target Capital</Label>
+              <Label htmlFor="target-capital">
+                {t("fields.targetCapital")}
+              </Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -710,7 +700,7 @@ function StartingValueCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="interest-rate">Interest Rate (%)</Label>
+              <Label htmlFor="interest-rate">{t("fields.interestRate")}</Label>
               <div className="relative">
                 <TrendingUp className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -725,7 +715,11 @@ function StartingValueCalculator() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time-period">Time Period ({timeInterval}s)</Label>
+              <Label htmlFor="time-period">
+                {t("fields.timePeriod", {
+                  unit: tIntervals(`unitPlural.${timeInterval}`),
+                })}
+              </Label>
               <div className="relative">
                 <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -738,80 +732,59 @@ function StartingValueCalculator() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="time-interval">Interest Interval</Label>
-              <Select
-                value={timeInterval}
-                onValueChange={(value) =>
-                  setTimeInterval(value as TimeInterval)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select interval" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="minute">Minute</SelectItem>
-                  <SelectItem value="hour">Hour</SelectItem>
-                  <SelectItem value="day">Day</SelectItem>
-                  <SelectItem value="week">Week</SelectItem>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="quarter">Quarter</SelectItem>
-                  <SelectItem value="year">Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <IntervalSelect value={timeInterval} onChange={setTimeInterval} />
 
             <Button onClick={calculate} className="w-full">
-              Calculate
+              {t("calculate")}
             </Button>
           </div>
 
           <div className="space-y-6 border-l pl-6">
             <div>
-              <h3 className="text-lg font-medium mb-2">Results</h3>
+              <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Required initial investment to reach your target
+                {t("startingValue.resultsHint")}
               </p>
 
               {result && (
                 <div className="space-y-4">
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      With Compound Interest
+                      {t("withCompound")}
                     </div>
                     <div className="text-2xl font-bold">
                       {formatAmount(result.compound)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Growth: {formatAmount(targetCapital - result.compound)}{" "}
-                      after {timePeriod} {timeInterval}
-                      {timePeriod !== 1 ? "s" : ""}
+                      {t("growthAfter", {
+                        amount: formatAmount(targetCapital - result.compound),
+                        duration: tIntervals(`count.${timeInterval}`, {
+                          count: timePeriod,
+                        }),
+                      })}
                     </div>
                   </div>
 
                   <div className="rounded-lg bg-muted p-4">
                     <div className="text-sm font-medium text-muted-foreground mb-1">
-                      With Simple Interest
+                      {t("withSimple")}
                     </div>
                     <div className="text-2xl font-bold">
                       {formatAmount(result.simple)}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      Growth: {formatAmount(targetCapital - result.simple)}{" "}
-                      after {timePeriod} {timeInterval}
-                      {timePeriod !== 1 ? "s" : ""}
+                      {t("growthAfter", {
+                        amount: formatAmount(targetCapital - result.simple),
+                        duration: tIntervals(`count.${timeInterval}`, {
+                          count: timePeriod,
+                        }),
+                      })}
                     </div>
                   </div>
                 </div>
               )}
 
-              {!result && (
-                <div className="flex items-center justify-center h-40 border-dashed border-2 rounded-md border-muted">
-                  <p className="text-muted-foreground">
-                    Enter values and calculate to see results
-                  </p>
-                </div>
-              )}
+              {!result && <EmptyResults />}
             </div>
           </div>
         </div>

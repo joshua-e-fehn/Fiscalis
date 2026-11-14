@@ -1,0 +1,286 @@
+{
+  "index": {
+    "title": "Calculators",
+    "subtitle": "Financial tools to help you make better investment and borrowing decisions.",
+    "interestDescription": "Interest rates, growth duration, future and present values with simple or compound interest.",
+    "loanDescription": "Payments, total interest and amortization for annuity, declining, interest-only and bullet loans, with prepayments."
+  },
+  "intervals": {
+    "label": {
+      "minute": "Minute",
+      "hour": "Hour",
+      "day": "Day",
+      "week": "Week",
+      "month": "Month",
+      "quarter": "Quarter",
+      "year": "Year"
+    },
+    "unitPlural": {
+      "minute": "minutes",
+      "hour": "hours",
+      "day": "days",
+      "week": "weeks",
+      "month": "months",
+      "quarter": "quarters",
+      "year": "years"
+    },
+    "per": {
+      "minute": "Per minute",
+      "hour": "Per hour",
+      "day": "Per day",
+      "week": "Per week",
+      "month": "Per month",
+      "quarter": "Per quarter",
+      "year": "Per year"
+    },
+    "count": {
+      "minute": "{count, plural, one {# minute} other {# minutes}}",
+      "hour": "{count, plural, one {# hour} other {# hours}}",
+      "day": "{count, plural, one {# day} other {# days}}",
+      "week": "{count, plural, one {# week} other {# weeks}}",
+      "month": "{count, plural, one {# month} other {# months}}",
+      "quarter": "{count, plural, one {# quarter} other {# quarters}}",
+      "year": "{count, plural, one {# year} other {# years}}"
+    }
+  },
+  "interest": {
+    "title": "Interest Calculators",
+    "subtitle": "Powerful financial tools to help you make better investment decisions. Calculate compound interest, growth rates, future values, and more.",
+    "tabs": {
+      "rate": "Interest Rate",
+      "duration": "Duration",
+      "futureValue": "Future Value",
+      "startingValue": "Starting Value"
+    },
+    "fields": {
+      "initialValue": "Initial Value",
+      "finalValue": "Final Value",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "interval": "Interest Interval",
+      "intervalPlaceholder": "Select interval",
+      "startingCapital": "Starting Capital",
+      "targetCapital": "Target Capital",
+      "interestRate": "Interest Rate (%)",
+      "timePeriod": "Time Period ({unit})"
+    },
+    "calculate": "Calculate",
+    "results": "Results",
+    "empty": "Enter values and calculate to see results",
+    "compoundInterest": "Compound Interest",
+    "simpleInterest": "Simple Interest",
+    "withCompound": "With Compound Interest",
+    "withSimple": "With Simple Interest",
+    "gainAfter": "Gain: {amount} after {duration}",
+    "growthAfter": "Growth: {amount} after {duration}",
+    "rate": {
+      "title": "Calculate Interest Rate",
+      "description": "Find the average interest rate between two points in time for both compound and simple interest",
+      "resultsHint": "Based on your inputs, here are the calculated interest rates"
+    },
+    "duration": {
+      "title": "Calculate Time Duration",
+      "description": "Find out how long it will take to reach your target capital based on starting value and interest rate",
+      "resultsHint": "Time needed to reach your target capital"
+    },
+    "futureValue": {
+      "title": "Calculate Future Value",
+      "description": "Find out what your investment will be worth in the future based on interest rate and time",
+      "resultsHint": "Projected future value of your investment"
+    },
+    "startingValue": {
+      "title": "Calculate Starting Value",
+      "description": "Find out how much you need to invest now to reach your target in the future",
+      "resultsHint": "Required initial investment to reach your target"
+    }
+  },
+  "loan": {
+    "title": "Loan Calculator",
+    "subtitle": "Understand different loan types, visualize your payments, and find the best option for your situation. We'll show you exactly where your money goes.",
+    "tabs": {
+      "calculate": "Calculate Loan",
+      "compare": "Compare All Types"
+    },
+    "chooseType": "1. Choose Your Loan Type",
+    "calculateSection": "2. Calculate Your Loan",
+    "understanding": "Understanding {name}",
+    "howItWorks": "How It Works",
+    "bestFor": "Best For",
+    "watchOut": "Watch Out For",
+    "intervals": {
+      "MONTHLY": {
+        "label": "Monthly",
+        "payment": "Monthly Payment",
+        "perPeriod": "per month",
+        "recurring": "Additional Principal (every month)"
+      },
+      "QUARTERLY": {
+        "label": "Quarterly",
+        "payment": "Quarterly Payment",
+        "perPeriod": "per quarter",
+        "recurring": "Additional Principal (every quarter)"
+      },
+      "SEMI_ANNUAL": {
+        "label": "Semi-annual",
+        "payment": "Semi-annual Payment",
+        "perPeriod": "per half-year",
+        "recurring": "Additional Principal (every half-year)"
+      },
+      "ANNUAL": {
+        "label": "Yearly",
+        "payment": "Yearly Payment",
+        "perPeriod": "per year",
+        "recurring": "Additional Principal (every year)"
+      }
+    },
+    "types": {
+      "ANNUITY": {
+        "name": "Fixed Payment Loan",
+        "shortName": "Fixed Payment",
+        "shortDescription": "Same payment every period, most common type",
+        "calculatorTitle": "Fixed Payment Loan Calculator",
+        "calculatorDescription": "Calculate your periodic payment and see how it breaks down over time.",
+        "howItWorks1": "You pay the same amount every period for the entire loan term",
+        "howItWorks2": "Early payments are mostly interest, later payments are mostly principal",
+        "howItWorks3": "The total debt decreases steadily over time",
+        "bestFor1": "Homebuyers who want predictable budgets",
+        "bestFor2": "Long-term loans (15-30 years)",
+        "bestFor3": "People who prefer stability over flexibility",
+        "watchOut1": "You pay more interest in the early years",
+        "watchOut2": "Less flexibility if your income changes"
+      },
+      "CONSTANT_PRINCIPAL": {
+        "name": "Declining Payment Loan",
+        "shortName": "Declining Payment",
+        "shortDescription": "Payments start high and decrease over time",
+        "calculatorTitle": "Declining Payment Loan Calculator",
+        "calculatorDescription": "See how your payments decrease over time as you pay off the principal.",
+        "howItWorks1": "You pay a fixed amount of principal each period, plus interest",
+        "howItWorks2": "As the debt decreases, so does the interest, making payments smaller",
+        "howItWorks3": "Total interest paid is less than a fixed payment loan",
+        "bestFor1": "People expecting lower income later (near retirement)",
+        "bestFor2": "Those who can afford higher initial payments",
+        "bestFor3": "Borrowers who want to minimize total interest paid",
+        "watchOut1": "Initial payments can be 20-30% higher than fixed payment loans",
+        "watchOut2": "May not qualify if income barely covers the first payment"
+      },
+      "INTEREST_ONLY": {
+        "name": "Interest-Only Loan",
+        "shortName": "Interest-Only",
+        "shortDescription": "Pay only interest, then principal later",
+        "calculatorTitle": "Interest-Only Loan Calculator",
+        "calculatorDescription": "Pay only interest for a period, then start paying principal.",
+        "howItWorks1": "For a set period, you only pay interest - the debt doesn't decrease",
+        "howItWorks2": "After the interest-only period, you start paying principal too",
+        "howItWorks3": "Payments jump significantly when the principal payments begin",
+        "bestFor1": "Real estate investors expecting to sell before principal payments start",
+        "bestFor2": "People expecting higher income in the future",
+        "bestFor3": "Short-term financing needs",
+        "watchOut1": "You build no equity during the interest-only period",
+        "watchOut2": "Payment shock when regular payments begin",
+        "watchOut3": "Risk of owing more than the asset is worth"
+      },
+      "BULLET": {
+        "name": "Balloon / Bullet Loan",
+        "shortName": "Bullet",
+        "shortDescription": "Pay interest only, entire principal due at end",
+        "calculatorTitle": "Balloon / Bullet Loan Calculator",
+        "calculatorDescription": "Pay interest only throughout, with the full principal due at the end.",
+        "howItWorks1": "You pay only interest throughout the entire loan term",
+        "howItWorks2": "The full principal amount is due as one lump sum at the end",
+        "howItWorks3": "Periodic payments are very low, but you need a plan for the final payment",
+        "bestFor1": "Bridge financing (short-term loans until permanent financing is arranged)",
+        "bestFor2": "Investors planning to sell the asset before the loan matures",
+        "bestFor3": "Construction loans or development projects",
+        "watchOut1": "High risk - you must have a plan to pay off or refinance",
+        "watchOut2": "If you can't pay the balloon, you could lose the asset",
+        "watchOut3": "No equity built during the loan term"
+      }
+    },
+    "fields": {
+      "loanAmount": "Loan Amount",
+      "annualInterestRate": "Annual Interest Rate (%)",
+      "interestRate": "Interest Rate (%)",
+      "termYears": "Loan Term (Years)",
+      "termYearsShort": "Term (Years)",
+      "paymentSchedule": "Payment Schedule",
+      "interestOnlyYears": "Interest-Only Period (Years)",
+      "interestOnlyHint": "How many years before you start paying principal?"
+    },
+    "prepayments": {
+      "title": "Prepayments",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "recurringHint": "This amount will be added to every regular payment.",
+      "oneTime": "One-Time Prepayments",
+      "add": "Add Prepayment",
+      "oneTimeHint": "Schedule specific prepayments in certain years (e.g., yearly bonus, inheritance).",
+      "year": "Year",
+      "amountPlaceholder": "Amount",
+      "fixedAmount": "Fixed amount",
+      "percentOfBalance": "% of Balance",
+      "remove": "Remove prepayment"
+    },
+    "calculate": "Calculate My Loan",
+    "yourResults": "Your Results",
+    "summary": {
+      "totalInterest": "Total Interest",
+      "totalCost": "Total Cost",
+      "interestToPrincipal": "Interest / Principal",
+      "savingsTitle": "Prepayment Savings",
+      "interestSaved": "Interest Saved",
+      "periodsSaved": "Periods Saved",
+      "originalTerm": "Original Term",
+      "newTerm": "New Term",
+      "payments": "{count, plural, one {# payment} other {# payments}}"
+    },
+    "charts": {
+      "principal": "Principal",
+      "interest": "Interest",
+      "balance": "Remaining Balance",
+      "payment": "Payment",
+      "yearTick": "Y{year}",
+      "principalValue": "Principal: {amount}",
+      "interestValue": "Interest: {amount}",
+      "totalValue": "Total: {amount}",
+      "balanceValue": "Balance: {amount}",
+      "breakdownByYear": "Payment Breakdown by Year",
+      "breakdownHint": "Principal (green) vs interest (orange) over time.",
+      "balanceOverTime": "Remaining Balance Over Time",
+      "balanceHint": "Watch your debt decrease as you make payments.",
+      "breakdown": "Payment Breakdown"
+    },
+    "schedule": {
+      "view": "View Full Payment Schedule",
+      "period": "#",
+      "payment": "Payment",
+      "principal": "Principal",
+      "interest": "Interest",
+      "extra": "Extra",
+      "balance": "Balance",
+      "showAll": "{count, plural, one {Show # payment} other {Show all # payments}}"
+    },
+    "warnings": {
+      "savingsTitle": "💰 Payment Savings",
+      "savingsBody": "Your payment drops from {first} to {last} — that's {difference} less per period by the end!",
+      "shockTitle": "⚠️ Payment Shock Warning",
+      "shockBody": "After {years, plural, one {# year} other {# years}}, your payment will jump from {from} to {to} — an increase of {difference} ({percent}% more). Make sure you can afford this!",
+      "balloonTitle": "🚨 Balloon Payment Warning",
+      "balloonBody": "At the end of {years, plural, one {# year} other {# years}}, you must pay {amount} in one lump sum. This is called a \"balloon payment.\"",
+      "balloonOptions": "<strong>Your options when the balloon is due:</strong> Refinance into a new loan, sell the asset, or pay from savings. If you can't do any of these, you risk losing the asset."
+    },
+    "compare": {
+      "title": "Side-by-Side Comparison",
+      "description": "See how different loan types compare with the same amount, rate, and term.",
+      "button": "Compare All Loan Types",
+      "loanType": "Loan Type",
+      "firstPayment": "First Payment",
+      "totalInterest": "Total Interest",
+      "totalCost": "Total Cost",
+      "interestChart": "Total Interest Comparison",
+      "byType": "Payment Breakdown & Balance by Loan Type",
+      "insightTitle": "💡 Key Insight",
+      "insightBody": "The <strong>Declining Payment Loan</strong> saves you {saved} in interest compared to a Fixed Payment Loan, but your first payment is {extra} higher. Choose based on your current budget and future income expectations."
+    }
+  }
+}

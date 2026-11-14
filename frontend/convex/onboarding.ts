@@ -38,13 +38,15 @@ export const getOnboardingProgress = query({
 });
 
 /**
- * Check if user has completed onboarding
+ * Check if user has completed onboarding. Returns null when the request is
+ * not authenticated (yet), so the onboarding gate can wait instead of
+ * treating a signed-in user whose Convex token is still loading as new.
  */
 export const hasCompletedOnboarding = query({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<boolean | null> => {
     const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return false;
+    if (!identity) return null;
 
     const userId = identity.subject;
 

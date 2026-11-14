@@ -747,3 +747,90 @@ export const collapseIntradaySnapshots = internalMutation({
     };
   },
 });
+
+/**
+ * Migration: the app is now gated behind the onboarding funnel (a user sees
+ * the dashboard only once onboardingProgress.onboardingCompleted is true).
+ * Marks every user who already has data as onboarded so the gate does not
+ * send existing users back through the funnel. A user is anyone with a row in
+ * one of the user-owned tables below. Patches an existing progress row
+ * (other fields kept) or inserts a completed one. Idempotent.
+ * NOT RUN. Dry run is the default:
+ *   npx convex run migrations:markExistingUsersOnboarded
+ *   npx convex run migrations:markExistingUsersOnboarded '{"dryRun": false}'
+ */
+export const markExistingUsersOnboarded = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const dryRun = args.dryRun ?? true;
+    const now = Date.now();
+
+    const userIds = new Set<string>();
+    const tables = [
+      "userSettings",
+      "onboardingProgress",
+      "plaidItems",
+      "brokerConnections",
+      "bitpandaConnections",
+      "vaultItems",
+      "loans",
+      "retirementPlans",
+      "portfolioSnapshots",
+      "apiKeys",
+    ] as const;
+    for (const table of tables) {
+      const rows = await ctx.db.query(table).collect();
+      for (const row of rows) userIds.add(row.userId);
+    }
+
+    const patched: string[] = [];
+    const inserted: string[] = [];
+    let alreadyCompleted = 0;
+    for (const userId of userIds) {
+      const progress = await ctx.db
+        .query("onboardingProgress")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      if (progress?.onboardingCompleted) {
+        alreadyCompleted++;
+        continue;
+      }
+      if (progress) {
+        patched.push(userId);
+        if (!dryRun) {
+          await ctx.db.patch(progress._id, {
+            onboardingCompleted: true,
+            completedAt: progress.completedAt ?? now,
+            updatedAt: now,
+          });
+        }
+      } else {
+        inserted.push(userId);
+        if (!dryRun) {
+          await ctx.db.insert("onboardingProgress", {
+            userId,
+            currentStep: 6,
+            completedSteps: [1, 2, 3, 4, 5, 6],
+            skippedSteps: [],
+            profileCompleted: true,
+            bankingConnected: false,
+            brokersConnected: false,
+            cryptoConnected: false,
+            onboardingCompleted: true,
+            completedAt: now,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+      }
+    }
+
+    return {
+      dryRun,
+      users: userIds.size,
+      alreadyCompleted,
+      patched,
+      inserted,
+    };
+  },
+});

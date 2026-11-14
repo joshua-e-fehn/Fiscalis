@@ -2,18 +2,10 @@
 
 import { useState, useMemo } from "react";
 import { useFormatter, useTranslations } from "next-intl";
-import { useUser } from "@clerk/nextjs";
 import { Doc, Id } from "@/convex/_generated/dataModel";
-import {
-  useRecordPayment,
-  useDeletePayment,
-  PaymentType,
-} from "@/hooks/convex/loans";
+import { useDeletePayment } from "@/hooks/convex/loans";
 import {
   buildLoanSchedule,
-  isExtraPaymentType,
-  paymentSplitBasis,
-  splitLoanPayment,
   type LoanKpis,
   type LoanScheduleRow,
 } from "@/../services/finance/loanScheduleService";
@@ -36,21 +28,6 @@ import {
   TableRow,
 } from "@/components/ui/shadcn/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/shadcn/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/shadcn/select";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -66,13 +43,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/shadcn/collapsible";
-import { Input } from "@/components/ui/shadcn/input";
-import { Label } from "@/components/ui/shadcn/label";
 import { Button } from "@/components/ui/shadcn/button";
 import { Badge } from "@/components/ui/shadcn/badge";
-import { Textarea } from "@/components/ui/shadcn/textarea";
+import { LoanPaymentDialog } from "./loan-payment-dialog";
 import {
   Plus,
+  Pencil,
   Trash2,
   Loader2,
   Calendar,
@@ -102,14 +78,6 @@ function formatCurrency(value: number, currency: string = "USD"): string {
   return formatMoney(value, currency);
 }
 
-const PAYMENT_TYPES: PaymentType[] = [
-  "scheduled",
-  "additional_principal",
-  "prepayment",
-  "partial",
-  "late",
-];
-
 function groupByYear(
   schedule: LoanScheduleRow[],
 ): Map<number, LoanScheduleRow[]> {
@@ -135,25 +103,21 @@ export function LoanPaymentsScheduleTab({
   // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
   const formatDate = (date: string) =>
     format.dateTime(new Date(date), "dateOnly");
-  const { user } = useUser();
-  const { recordPayment } = useRecordPayment();
   const { deletePayment } = useDeletePayment();
 
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // The recorded payment being edited, and the due date it covers. Kept
+  // while the dialog closes, so it doesn't turn into the record form.
+  const [editing, setEditing] = useState<{
+    payment: LoanPayment;
+    dueDate: string | null;
+  } | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedYears, setExpandedYears] = useState<Set<number>>(() => {
     const currentYear = Number(todayLocalISO().slice(0, 4));
     return new Set([currentYear]);
   });
-
-  // Form state
-  const [paymentDate, setPaymentDate] = useState(todayLocalISO);
-  const [amount, setAmount] = useState("");
-  const [principalPortion, setPrincipalPortion] = useState("");
-  const [interestPortion, setInterestPortion] = useState("");
-  const [paymentType, setPaymentType] = useState<PaymentType>("scheduled");
-  const [notes, setNotes] = useState("");
 
   // Full schedule combining past payments and future projections
   const fullSchedule = useMemo(
@@ -167,61 +131,11 @@ export function LoanPaymentsScheduleTab({
   );
   const nextScheduledPayment = kpis.nextPayment?.amount ?? 0;
 
-  // Interest is one period on the balance owed on the payment date (a
-  // back-dated payment isn't split on today's balance), less what partial
-  // payments already booked for that due date. Same basis as the server.
-  const splitBasis = () => paymentSplitBasis(loan, payments, paymentDate);
-
-  // Auto-calculate principal/interest split
-  const calculateSplit = () => {
-    const split = splitLoanPayment(
-      splitBasis(),
-      parseFloat(amount) || 0,
-      paymentType,
-    );
-    setPrincipalPortion(split.principalPortion.toFixed(2));
-    setInterestPortion(split.interestPortion.toFixed(2));
-  };
-
-  const resetForm = () => {
-    setPaymentDate(todayLocalISO());
-    setPrincipalPortion("");
-    setInterestPortion("");
-    setPaymentType("scheduled");
-    setNotes("");
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.id) return;
-
-    const totalAmount = parseFloat(amount);
-    // Keeps whichever portion was entered; principal is capped at the balance
-    const split = splitLoanPayment(splitBasis(), totalAmount, paymentType, {
-      principal: parseFloat(principalPortion),
-      interest: parseFloat(interestPortion),
-    });
-
-    setIsSubmitting(true);
-    try {
-      await recordPayment({
-        loanId: loan._id,
-        paymentDate,
-        // Reconciled: amount = principal + interest (an overpayment past the
-        // balance isn't booked)
-        amount: split.amount,
-        principalPortion: split.principalPortion,
-        interestPortion: split.interestPortion,
-        paymentType,
-        notes: notes || undefined,
-      });
-      resetForm();
-      setShowAddDialog(false);
-    } catch (error) {
-      console.error("Failed to record payment:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const openEdit = (paymentId: string, dueDate: string | undefined) => {
+    const payment = payments.find((p) => p._id === paymentId);
+    if (!payment) return;
+    setEditing({ payment, dueDate: dueDate ?? null });
+    setShowEditDialog(true);
   };
 
   const handleDelete = async (paymentId: string) => {
@@ -384,12 +298,7 @@ export function LoanPaymentsScheduleTab({
                 <Download className="h-4 w-4 mr-2" />
                 {t("exportCsv")}
               </Button>
-              <Button
-                onClick={() => {
-                  setAmount(nextScheduledPayment.toString());
-                  setShowAddDialog(true);
-                }}
-              >
+              <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t("recordPayment")}
               </Button>
@@ -588,7 +497,7 @@ export function LoanPaymentsScheduleTab({
                               <TableHead className="text-right">
                                 {t("columns.closingBalance")}
                               </TableHead>
-                              <TableHead className="w-12"></TableHead>
+                              <TableHead className="w-24"></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -662,46 +571,64 @@ export function LoanPaymentsScheduleTab({
                                   {(row.status === "paid" ||
                                     row.status === "extra") &&
                                     row.paymentId && (
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            disabled={
-                                              deletingId === row.paymentId
-                                            }
-                                          >
-                                            {deletingId === row.paymentId ? (
-                                              <Loader2 className="h-4 w-4 animate-spin" />
-                                            ) : (
-                                              <Trash2 className="h-4 w-4 text-red-500" />
-                                            )}
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>
-                                              {t("deleteTitle")}
-                                            </AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              {t("deleteDescription")}
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>
-                                              {tActions("cancel")}
-                                            </AlertDialogCancel>
-                                            <AlertDialogAction
-                                              onClick={() =>
-                                                handleDelete(row.paymentId!)
+                                      <div className="flex justify-end">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          aria-label={t("editPayment")}
+                                          title={t("editPayment")}
+                                          onClick={() =>
+                                            openEdit(
+                                              row.paymentId!,
+                                              row.dueDate,
+                                            )
+                                          }
+                                        >
+                                          <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <AlertDialog>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              aria-label={t("deletePayment")}
+                                              title={t("deletePayment")}
+                                              disabled={
+                                                deletingId === row.paymentId
                                               }
-                                              className="bg-red-600 hover:bg-red-700"
                                             >
-                                              {tActions("delete")}
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
+                                              {deletingId === row.paymentId ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                              ) : (
+                                                <Trash2 className="h-4 w-4 text-red-500" />
+                                              )}
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                          <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                              <AlertDialogTitle>
+                                                {t("deleteTitle")}
+                                              </AlertDialogTitle>
+                                              <AlertDialogDescription>
+                                                {t("deleteDescription")}
+                                              </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                              <AlertDialogCancel>
+                                                {tActions("cancel")}
+                                              </AlertDialogCancel>
+                                              <AlertDialogAction
+                                                onClick={() =>
+                                                  handleDelete(row.paymentId!)
+                                                }
+                                                className="bg-red-600 hover:bg-red-700"
+                                              >
+                                                {tActions("delete")}
+                                              </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                          </AlertDialogContent>
+                                        </AlertDialog>
+                                      </div>
                                     )}
                                 </TableCell>
                               </TableRow>
@@ -718,155 +645,22 @@ export function LoanPaymentsScheduleTab({
         </CardContent>
       </Card>
 
-      {/* Add Payment Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("recordPayment")}</DialogTitle>
-            <DialogDescription>
-              {t("recordDescription", { loan: loan.name })}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="payment-date">{t("paymentDate")}</Label>
-                <Input
-                  id="payment-date"
-                  type="date"
-                  max={todayLocalISO()}
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="payment-type">{t("paymentType")}</Label>
-                <Select
-                  value={paymentType}
-                  onValueChange={(v) => setPaymentType(v as PaymentType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_TYPES.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {t(`paymentTypes.${type}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {nextDueDate && !isExtraPaymentType(paymentType) && (
-              <p className="text-sm text-muted-foreground">
-                {t("covers", { date: formatDate(nextDueDate) })}
-              </p>
-            )}
-
-            <div>
-              <Label htmlFor="payment-amount">{t("totalAmount")}</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    $
-                  </span>
-                  <Input
-                    id="payment-amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="pl-7"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={calculateSplit}
-                >
-                  {t("calculateSplit")}
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="principal-portion">
-                  {t("principalPortion")}
-                </Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    $
-                  </span>
-                  <Input
-                    id="principal-portion"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="pl-7"
-                    placeholder={t("auto")}
-                    value={principalPortion}
-                    onChange={(e) => setPrincipalPortion(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="interest-portion">{t("interestPortion")}</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    $
-                  </span>
-                  <Input
-                    id="interest-portion"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="pl-7"
-                    placeholder={t("auto")}
-                    value={interestPortion}
-                    onChange={(e) => setInterestPortion(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="payment-notes">{t("notes")}</Label>
-              <Textarea
-                id="payment-notes"
-                placeholder={t("notesPlaceholder")}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowAddDialog(false)}
-              >
-                {tActions("cancel")}
-              </Button>
-              <Button
-                type="submit"
-                disabled={!(parseFloat(amount) > 0) || isSubmitting}
-              >
-                {isSubmitting && (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                )}
-                {t("recordPayment")}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <LoanPaymentDialog
+        loan={loan}
+        payments={payments}
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        defaultAmount={nextScheduledPayment}
+        coversDueDate={nextDueDate}
+      />
+      <LoanPaymentDialog
+        loan={loan}
+        payments={payments}
+        open={showEditDialog && editing !== null}
+        onOpenChange={setShowEditDialog}
+        payment={editing?.payment}
+        coversDueDate={editing?.dueDate}
+      />
     </div>
   );
 }

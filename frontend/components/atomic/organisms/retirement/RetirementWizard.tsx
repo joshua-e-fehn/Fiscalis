@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { useSetBirthDate, useUserSettings } from "@/hooks/convex/onboarding";
 import { planToInputs } from "@/../services/finance/retirementService";
 import {
@@ -119,6 +120,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 	const savePlan = useSaveRetirementPlan();
 	const saveProfileBirthDate = useSetBirthDate();
 	const settings = useUserSettings();
+	const display = useDisplayCurrency();
 
 	const [step, setStep] = useState<RetirementStep>(RetirementStep.INTRO);
 	const [furthestStep, setFurthestStep] = useState<RetirementStep>(
@@ -130,14 +132,28 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 	// Editing an ACTIVE plan: nothing is written until "Save my plan".
 	const [editingActive, setEditingActive] = useState(false);
 	const [hydrated, setHydrated] = useState(false);
+	// The currency the form's amounts are in: the one it was filled in. Saves
+	// and the preview use it, so a display currency that changes mid-session
+	// never relabels the amounts (the user reloads the form in the new one).
+	const [formCurrency, setFormCurrency] = useState<string | undefined>();
 	const [isSaving, setIsSaving] = useState(false);
 	const [saved, setSaved] = useState(false);
 	const [saveError, setSaveError] = useState<string | null>(null);
 
-	// Hydrate once from the stored plan (if any) and the profile date of birth.
+	// Hydrate once from the stored plan (if any) and the profile date of birth,
+	// again after "reload" when the display currency changed. The plan only
+	// loads once the display currency has.
 	useEffect(() => {
 		if (hydrated || plan === undefined || settings === undefined) return;
-		if (plan) {
+		setFormCurrency(plan?.currency ?? display.code);
+		if (!plan) {
+			// Nothing stored to read in the new currency: start the amounts over
+			setData((prev) => ({
+				...DEFAULT_RETIREMENT_INPUTS,
+				birthDate: prev.birthDate,
+				currentAge: prev.currentAge,
+			}));
+		} else {
 			const inputs = planToInputs(plan, settings?.birthDate);
 			setData({
 				...inputs,
@@ -158,7 +174,16 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 		}
 		setBirthDate(settings?.birthDate ?? plan?.birthDate ?? "");
 		setHydrated(true);
-	}, [hydrated, plan, settings]);
+	}, [hydrated, plan, settings, display.code]);
+
+	const currencyChanged =
+		hydrated && !display.isLoading && formCurrency !== display.code;
+
+	const reloadInDisplayCurrency = useCallback(() => {
+		setSaved(false);
+		setSaveError(null);
+		setHydrated(false);
+	}, []);
 
 	// The current age (and the exact horizon) follow the date of birth being edited.
 	useEffect(() => {
@@ -235,12 +260,15 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 				if (dob?.ok && dob.value !== settings?.birthDate) {
 					await saveProfileBirthDate({ birthDate: dob.value });
 				}
-				await savePlan({
-					currentStep: nextStep,
-					...(status ? { status } : {}),
-					...(dob?.ok ? { birthDate: dob.value } : {}),
-					...pickFields(values, fields),
-				});
+				await savePlan(
+					{
+						currentStep: nextStep,
+						...(status ? { status } : {}),
+						...(dob?.ok ? { birthDate: dob.value } : {}),
+						...pickFields(values, fields),
+					},
+					formCurrency,
+				);
 				return true;
 			} catch (err) {
 				console.error("Failed to save retirement plan:", err);
@@ -250,7 +278,15 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 				setIsSaving(false);
 			}
 		},
-		[data, dob, dobError, settings?.birthDate, savePlan, saveProfileBirthDate],
+		[
+			data,
+			dob,
+			dobError,
+			settings?.birthDate,
+			savePlan,
+			saveProfileBirthDate,
+			formCurrency,
+		],
 	);
 
 	const goToStep = useCallback(
@@ -291,7 +327,14 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 
 	if (!hydrated) return null;
 
-	const stepProps = { data, update, onNext: goNext, onBack: goBack, isSaving };
+	const stepProps = {
+		data,
+		update,
+		onNext: goNext,
+		onBack: goBack,
+		isSaving,
+		currency: formCurrency,
+	};
 
 	return (
 		<div className="space-y-8 pb-12">
@@ -310,6 +353,28 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 						Discard changes
 					</Button>
 				</div>
+			)}
+
+			{currencyChanged && (
+				<div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm">
+					<span className="text-muted-foreground">
+						{`Your display currency changed to ${display.code}. The amounts in this form are still in ${formCurrency} and save in ${formCurrency}.`}
+					</span>
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={reloadInDisplayCurrency}
+						disabled={isSaving}
+					>
+						{`Reload in ${display.code}`}
+					</Button>
+				</div>
+			)}
+
+			{!currencyChanged && plan && plan.storedCurrency !== plan.currency && (
+				<p className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
+					{`Your plan was entered in ${plan.storedCurrency}. Its amounts are shown in ${plan.currency} at today's exchange rate, and your next save keeps them in ${plan.currency}.`}
+				</p>
 			)}
 
 			{step !== RetirementStep.INTRO && (
@@ -358,6 +423,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 								isSaving={isSaving}
 								saved={saved}
 								blockingError={dobError}
+								currency={formCurrency}
 							/>
 						)}
 					</motion.div>

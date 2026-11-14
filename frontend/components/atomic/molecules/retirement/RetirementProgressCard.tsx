@@ -7,7 +7,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { formatYears, type RetirementResults } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatRate } from "@/lib/utils/currency";
@@ -18,7 +18,7 @@ interface Props {
 }
 
 export function RetirementProgressCard({ results, className }: Props) {
-	const currency = useBaseCurrency();
+	const { currency } = useDisplayCurrency();
 	// Headline progress is the conservative scenario's (the one isOnTrack also
 	// requires). Never negative but may exceed 1 (ahead of the target).
 	const rawPct = results.progressPct;

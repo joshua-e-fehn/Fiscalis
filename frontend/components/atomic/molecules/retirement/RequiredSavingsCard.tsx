@@ -8,7 +8,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { isOnTrack, type RetirementResults } from "@/lib/types/retirement";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,7 @@ function expectedHint(annualReturn: number): string {
 }
 
 export function RequiredSavingsCard({ results, className }: Props) {
-	const currency = useBaseCurrency();
+	const { currency } = useDisplayCurrency();
 	const onTrack = isOnTrack(results);
 
 	return (

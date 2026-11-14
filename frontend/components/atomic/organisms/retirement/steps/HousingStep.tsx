@@ -17,7 +17,7 @@ import {
 	useRetirementMortgageAccounts,
 	useRetirementMortgageCandidates,
 } from "@/hooks/convex/retirement";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { validateRetirementInputs } from "@/lib/types/retirement";
 import { currencySymbols, formatCurrency } from "@/lib/utils/currency";
 import { RetirementStepShell } from "../shared/RetirementStepShell";
@@ -36,7 +36,7 @@ export function HousingStep({
 	onBack,
 	isSaving,
 }: RetirementStepProps) {
-	const currency = useBaseCurrency();
+	const { currency } = useDisplayCurrency();
 	const errors = validateRetirementInputs(data);
 	const equityError = errors.fundableRealEstateEquity;
 	const mortgageError =

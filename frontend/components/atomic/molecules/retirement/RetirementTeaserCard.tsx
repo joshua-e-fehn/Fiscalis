@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/shadcn/button";
 import { Card, CardContent } from "@/components/ui/shadcn/card";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import {
 	useRetirementPlan,
 	useRetirementResults,
@@ -51,7 +51,7 @@ function activePlanSummary(
  * has no plan, a draft in progress, or a saved (active) plan.
  */
 export function RetirementTeaserCard() {
-	const currency = useBaseCurrency();
+	const { currency } = useDisplayCurrency();
 	const plan = useRetirementPlan();
 	const results = useRetirementResults();
 

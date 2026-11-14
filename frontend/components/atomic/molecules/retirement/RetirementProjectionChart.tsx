@@ -18,7 +18,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import type { RetirementResults } from "@/lib/types/retirement";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -38,7 +38,7 @@ interface ChartRow {
 const EMERALD = "#10b981";
 
 export function RetirementProjectionChart({ results, className }: Props) {
-	const currency = useBaseCurrency();
+	const { currency } = useDisplayCurrency();
 	const data = useMemo<ChartRow[]>(() => {
 		const opt = results.optimistic.projectionSeries;
 		const cons = results.conservative.projectionSeries;

@@ -6,7 +6,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/shadcn/card";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { formatYears, type RetirementResults } from "@/lib/types/retirement";
 import { formatCurrency } from "@/lib/utils/currency";
 
@@ -21,7 +21,7 @@ interface Props {
  * entered in today's money and inflated to the retirement date.
  */
 export function PensionCoverageBreakdown({ results, className }: Props) {
-	const currency = useBaseCurrency();
+	const { currency } = useDisplayCurrency();
 	const expense = results.expenseFutureMonthly;
 	const pension = Math.min(results.pensionFutureMonthly, expense);
 	const portfolio = results.gapMonthly;

@@ -6,4 +6,6 @@ export interface RetirementStepProps {
 	onNext: () => void;
 	onBack: () => void;
 	isSaving?: boolean;
+	/** The currency `data`'s amounts are in (the one the wizard was filled in) */
+	currency?: string;
 }

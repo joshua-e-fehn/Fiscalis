@@ -17,6 +17,8 @@ interface ResultsStepProps {
 	saved?: boolean;
 	/** Blocks saving for a reason outside the plan inputs (e.g. date of birth). */
 	blockingError?: string;
+	/** The currency `data`'s amounts are in (the one the wizard was filled in) */
+	currency?: string;
 }
 
 export function ResultsStep({
@@ -26,8 +28,9 @@ export function ResultsStep({
 	isSaving,
 	saved,
 	blockingError,
+	currency,
 }: ResultsStepProps) {
-	const results = useRetirementPreview(data);
+	const results = useRetirementPreview(data, currency);
 	// Only a complete, valid plan (incl. retirement after today's age and a valid
 	// date of birth) can be saved.
 	const invalidReason = blockingError ?? firstRetirementInputError(data);

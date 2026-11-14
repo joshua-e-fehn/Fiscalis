@@ -501,8 +501,14 @@ export default defineSchema({
 		currentAge: v.number(),
 		retirementAge: v.number(),
 
+		// The currency of every amount typed into the plan (expenses,
+		// pensions, property equity, mortgage repayment), a DISPLAY_CURRENCIES
+		// code; absent = EUR (plans saved before display currencies). Saving
+		// in another currency rebases the amounts (retirementCurrency.ts).
+		currency: v.optional(v.string()),
+
 		// Lifestyle
-		monthlyExpensesToday: v.number(), // base currency, "today's money"
+		monthlyExpensesToday: v.number(), // plan currency, "today's money"
 
 		// Housing / real estate
 		ownsPrimaryResidence: v.boolean(),
@@ -513,7 +519,7 @@ export default defineSchema({
 		// funding base, its repayments are a pre-retirement expense.
 		primaryResidenceLoanId: v.optional(v.id("loans")),
 		// Or a linked bank (Plaid) mortgage account instead of a tracked loan,
-		// with its optional annual rate and monthly repayment (base currency)
+		// with its optional annual rate and monthly repayment (plan currency)
 		// to project the balance at retirement; without them the full balance
 		// counts as owed then.
 		primaryResidenceAccountId: v.optional(v.id("plaidAccounts")),

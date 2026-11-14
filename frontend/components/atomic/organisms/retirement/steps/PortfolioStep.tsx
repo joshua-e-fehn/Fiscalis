@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/shadcn/select";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import { useRetirementPreview } from "@/hooks/convex/retirement";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import {
 	FUNDING_TREATMENT_LABELS,
 	type FundingTreatment,
@@ -27,11 +27,12 @@ export function PortfolioStep({
 	onNext,
 	onBack,
 	isSaving,
+	currency: inputsCurrency,
 }: RetirementStepProps) {
-	const currency = useBaseCurrency();
+	const { currency } = useDisplayCurrency();
 	// The funding base exactly as the plan uses it (dashboard assets per
 	// category, liabilities, the residence mortgage taken out).
-	const results = useRetirementPreview(data);
+	const results = useRetirementPreview(data, inputsCurrency);
 	const loading = !results;
 
 	const setTreatment = (category: string, treatment: FundingTreatment) =>

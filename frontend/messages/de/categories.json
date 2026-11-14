@@ -295,7 +295,7 @@
       "description": "Wähle, wo {name} in deinen Summen zählt. Deine Wahl bleibt erhalten, wenn der Anbieter synchronisiert.",
       "category": "Kategorie",
       "subcategory": "Unterkategorie",
-      "bankHint": "Ein Bankkonto kann als Bargeld oder als Verbindlichkeit zählen.",
+      "bankHint": "Ein Bankkonto kann als Liquidität oder als Verbindlichkeit zählen.",
       "saveFailed": "Die Kategorie konnte nicht gespeichert werden. Bitte versuche es erneut.",
       "resetFailed": "Die Kategorie konnte nicht zurückgesetzt werden. Bitte versuche es erneut."
     },

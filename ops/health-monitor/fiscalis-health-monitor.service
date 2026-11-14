@@ -1,0 +1,34 @@
+# Fiscalis uptime monitor (ENG-223): GET /health/deep on production Convex,
+# a Slack post in Mya's home channel when the state changes. Started every
+# five minutes by fiscalis-health-monitor.timer. Installed by
+# ops/health-monitor/install.sh from the Fiscalis repo; see its README.
+[Unit]
+Description=Fiscalis /health/deep monitor (Slack through Mya on state change)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+StateDirectory=fiscalis-health-monitor
+StateDirectoryMode=0700
+Environment=FISCALIS_HEALTH_STATE_DIR=/var/lib/fiscalis-health-monitor
+ExecStart=/usr/bin/python3 -I /usr/local/lib/fiscalis-health-monitor/fiscalis-health-monitor.py
+# SLACK_BOT_TOKEN and SLACK_HOME_CHANNEL from Mya's env file (install.sh);
+# systemd hands the run a read-only copy, the token never enters the env.
+LoadCredential=slack-env:/etc/fiscalis-health-monitor/slack.env
+TimeoutStartSec=90
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=

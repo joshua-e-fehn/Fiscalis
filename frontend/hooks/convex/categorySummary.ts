@@ -142,7 +142,8 @@ export function useCategorySummary(
   const display = useDisplayCurrency();
   const { unitsPerEur } = display;
   const summary = useMemo<CategorySummary | null>(() => {
-    if (data === undefined || data === null) return null;
+    // No figures until the rate is known
+    if (data == null || display.isLoading) return null;
     const { positions, vaultHoldings, summary: total } = data;
     // Provider positions and vault items (commodities) side by side
     const holdings: CategoryHolding[] = [
@@ -170,7 +171,13 @@ export function useCategorySummary(
       }),
     );
     return categorySummaryInCurrency(eur, unitsPerEur);
-  }, [data, subcategories, topHoldingsPerSubcategory, unitsPerEur]);
+  }, [
+    data,
+    subcategories,
+    topHoldingsPerSubcategory,
+    display.isLoading,
+    unitsPerEur,
+  ]);
 
   return {
     summary,

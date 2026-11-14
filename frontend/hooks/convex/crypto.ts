@@ -76,10 +76,11 @@ export function useCryptoData() {
 }
 
 /**
- * EUR fields of a broker position (a Bitpanda holding has only
- * valueInBaseCurrency)
+ * EUR fields of a crypto position. A broker position may have all three; a
+ * Bitpanda holding has valueInBaseCurrency and, when its trades give one,
+ * costBasisInBaseCurrency (convex/lib/netWorth.ts). Absent fields stay absent.
  */
-const BROKER_BASE_FIELDS = [
+const BASE_FIELDS = [
   "valueInBaseCurrency",
   "costBasisInBaseCurrency",
   "unrealizedPLInBaseCurrency",
@@ -97,10 +98,8 @@ export function useCryptoPositions(): CategoryPosition[] | undefined {
   return useMemo(() => {
     if (positions === undefined || display.isLoading) return undefined;
     if (unitsPerEur === 1) return positions;
-    return positions.map((p): CategoryPosition =>
-      p.provider === "bitpanda"
-        ? scaleMoney(p, ["valueInBaseCurrency"] as const, unitsPerEur)
-        : scaleMoney(p, BROKER_BASE_FIELDS, unitsPerEur),
+    return positions.map(
+      (p): CategoryPosition => scaleMoney(p, BASE_FIELDS, unitsPerEur),
     );
   }, [positions, display.isLoading, unitsPerEur]);
 }
@@ -176,7 +175,8 @@ export function useCryptoSummary(): {
   const { unitsPerEur } = display;
 
   const summary = useMemo<CategorySummary | null>(() => {
-    if (data === undefined || data === null) return null;
+    // No figures until the rate is known
+    if (data == null || display.isLoading) return null;
     const { positions, summary: total } = data;
 
     const subcategories = BUCKETS.map(({ id, base }): SubcategoryData => {
@@ -204,7 +204,7 @@ export function useCryptoSummary(): {
       toCategorySummary(total, subcategories),
       unitsPerEur,
     );
-  }, [data, unitsPerEur]);
+  }, [data, display.isLoading, unitsPerEur]);
 
   return {
     summary,
@@ -253,7 +253,8 @@ export function useCryptoPositionAllocations(maxPositions: number = 8): {
   const { unitsPerEur } = display;
 
   const result = useMemo(() => {
-    const positions = data?.positions ?? [];
+    // No figures until the rate is known
+    const positions = display.isLoading ? [] : (data?.positions ?? []);
     if (positions.length === 0) {
       return { allocations: [] as PositionAllocation[], totalValue: 0 };
     }
@@ -294,7 +295,7 @@ export function useCryptoPositionAllocations(maxPositions: number = 8): {
     }));
 
     return { allocations, totalValue: fromEur(total, unitsPerEur) };
-  }, [data, maxPositions, unitsPerEur]);
+  }, [data, display.isLoading, maxPositions, unitsPerEur]);
 
   return {
     allocations: result.allocations,

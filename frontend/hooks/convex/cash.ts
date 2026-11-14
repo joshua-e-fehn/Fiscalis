@@ -45,8 +45,8 @@ export function useCashSummary(): {
   const isLoading = cashData === undefined || display.isLoading;
 
   const summary = useMemo<CategorySummary | null>(() => {
-    // Return null if not authenticated or still loading
-    if (cashData === undefined || cashData === null) return null;
+    // Null if not authenticated, or until the data and the rate are known
+    if (cashData == null || display.isLoading) return null;
 
     const {
       bankAccounts,
@@ -169,7 +169,7 @@ export function useCashSummary(): {
       },
       unitsPerEur,
     );
-  }, [cashData, unitsPerEur]);
+  }, [cashData, display.isLoading, unitsPerEur]);
 
   return {
     summary,

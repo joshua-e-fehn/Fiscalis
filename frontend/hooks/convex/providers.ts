@@ -41,12 +41,15 @@ export function useUnifiedPositions(options?: {
   const display = useDisplayCurrency();
   const { unitsPerEur } = display;
 
+  // No positions until the rate is known
   const positions = useMemo(
     () =>
-      (result ?? []).map((p) =>
-        scaleMoney(p, POSITION_BASE_FIELDS, unitsPerEur),
-      ),
-    [result, unitsPerEur],
+      display.isLoading
+        ? []
+        : (result ?? []).map((p) =>
+            scaleMoney(p, POSITION_BASE_FIELDS, unitsPerEur),
+          ),
+    [result, display.isLoading, unitsPerEur],
   );
 
   return {

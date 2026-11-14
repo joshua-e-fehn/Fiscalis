@@ -152,7 +152,8 @@ export function usePortfolioOverview(): {
   const isLoading = overview === undefined || display.isLoading;
 
   const summary = useMemo<PortfolioSummary | null>(() => {
-    if (!overview) return null;
+    // No figures until the rate is known
+    if (!overview || display.isLoading) return null;
 
     const byId = new Map(overview.categories.map((c) => [c.category, c]));
     const assetCategories: AssetCategoryData[] = CATEGORY_CARDS.flatMap(
@@ -190,7 +191,7 @@ export function usePortfolioOverview(): {
       asOf: overview.asOf,
     };
     return portfolioSummaryInCurrency(eur, unitsPerEur);
-  }, [overview, unitsPerEur]);
+  }, [overview, display.isLoading, unitsPerEur]);
 
   return { summary, currency: display.currency, isLoading };
 }

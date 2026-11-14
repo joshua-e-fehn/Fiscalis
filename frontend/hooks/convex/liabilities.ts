@@ -50,8 +50,8 @@ export function useLiabilitiesSummary(): {
   const isLoading = liabilitiesData === undefined || display.isLoading;
 
   const summary = useMemo<CategorySummary | null>(() => {
-    // Return null if not authenticated or still loading
-    if (liabilitiesData === undefined || liabilitiesData === null) return null;
+    // Null if not authenticated, or until the data and the rate are known
+    if (liabilitiesData == null || display.isLoading) return null;
 
     const { rows, summary: dataSummary } = liabilitiesData;
     const bySubcategory = dataSummary.bySubcategory;
@@ -110,7 +110,7 @@ export function useLiabilitiesSummary(): {
       },
       unitsPerEur,
     );
-  }, [liabilitiesData, unitsPerEur]);
+  }, [liabilitiesData, display.isLoading, unitsPerEur]);
 
   return {
     summary,

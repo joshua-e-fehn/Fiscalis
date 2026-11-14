@@ -121,15 +121,15 @@ function getPaymentFrequencyLabel(frequency: string): string {
 function getStatusColor(status: string): string {
   switch (status) {
     case "active":
-      return "bg-green-100 text-green-700";
+      return "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300";
     case "paid_off":
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300";
     case "defaulted":
-      return "bg-red-100 text-red-700";
+      return "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300";
     case "refinanced":
-      return "bg-purple-100 text-purple-700";
+      return "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300";
     default:
-      return "bg-gray-100 text-gray-700";
+      return "bg-muted text-muted-foreground";
   }
 }
 

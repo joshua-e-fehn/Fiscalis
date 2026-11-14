@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/nextjs";
+import { useTheme } from "next-themes";
 import {
   User,
   Globe,
@@ -32,6 +33,7 @@ import {
   ProfileFormData,
   Currency,
   Language,
+  Theme,
   CURRENCIES,
   LANGUAGES,
   containerVariants,
@@ -53,6 +55,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const saveSettings = useSaveUserSettings();
   const completeProfile = useCompleteProfileStep();
   const existingSettings = useUserSettings();
+  const { setTheme } = useTheme();
 
   const [formData, setFormData] = useState<ProfileFormData>({
     displayName: "",
@@ -90,6 +93,12 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
       }));
     }
   }, [user, existingSettings]);
+
+  // Live preview of the chosen theme; saved with the rest of the profile
+  const selectTheme = (theme: Theme) => {
+    setFormData((prev) => ({ ...prev, theme }));
+    setTheme(theme);
+  };
 
   const handleSubmit = async () => {
     if (birthDateError) return;
@@ -263,25 +272,19 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
               <div className="grid grid-cols-3 gap-3">
                 <ThemeButton
                   selected={formData.theme === "light"}
-                  onClick={() =>
-                    setFormData((prev) => ({ ...prev, theme: "light" }))
-                  }
+                  onClick={() => selectTheme("light")}
                   label="Light"
                   preview="bg-white"
                 />
                 <ThemeButton
                   selected={formData.theme === "dark"}
-                  onClick={() =>
-                    setFormData((prev) => ({ ...prev, theme: "dark" }))
-                  }
+                  onClick={() => selectTheme("dark")}
                   label="Dark"
                   preview="bg-[#0a0a0f]"
                 />
                 <ThemeButton
                   selected={formData.theme === "system"}
-                  onClick={() =>
-                    setFormData((prev) => ({ ...prev, theme: "system" }))
-                  }
+                  onClick={() => selectTheme("system")}
                   label="System"
                   preview="bg-gradient-to-r from-white to-[#0a0a0f]"
                 />

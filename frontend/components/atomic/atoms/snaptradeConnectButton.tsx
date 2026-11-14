@@ -164,7 +164,7 @@ export function SnaptradeConnectButton({
       {isModalOpen && connectUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           {isProcessing ? (
-            <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-3xl shadow-2xl">
+            <div className="flex flex-col items-center justify-center p-8 text-center bg-card rounded-3xl shadow-2xl">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-muted-foreground">
                 Connecting your broker account...

@@ -643,7 +643,7 @@ export default function DashboardPage() {
           viewMode={chartView}
           onViewModeChange={setChartView}
           partial={portfolioChart.partial}
-          currency={currency}
+          currency={portfolioChart.currency}
           isLoading={isLoading || portfolioChart.isLoading}
           title="Portfolio Development"
         />

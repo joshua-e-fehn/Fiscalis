@@ -611,7 +611,7 @@ export function MetalsPage({
             <YTDPerformanceCard
               ytdProfitLoss={ytdPerformance.ytdProfitLoss}
               ytdProfitLossPercent={ytdPerformance.ytdProfitLossPercent}
-              currency={initialCurrency}
+              currency={ytdPerformance.currency}
               isLoading={summaryLoading || ytdPerformance.isLoading}
             />
           </div>
@@ -637,7 +637,7 @@ export function MetalsPage({
               dataPoints={chartPoints}
               timeRange={chartRange}
               onTimeRangeChange={setChartRange}
-              currency={initialCurrency}
+              currency={vaultHistory.currency}
               isLoading={vaultHistory.isLoading}
             />
           </div>

@@ -777,7 +777,7 @@ export function InvestmentDashboardSection({
             timeRange={chartRange}
             onTimeRangeChange={setChartRange}
             partial={chart.partial}
-            currency={currency}
+            currency={chart.currency}
             isLoading={isLoading || chart.isLoading}
             title={performanceChartTitle}
             emptyHint={

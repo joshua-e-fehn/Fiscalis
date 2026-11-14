@@ -21,6 +21,8 @@ interface TransactionListProps {
    */
   displayCurrency?: InvestmentCurrency;
   isLoading?: boolean;
+  /** Shows a delete action on each row (ENG-200) */
+  onDelete?: (transaction: Transaction) => void;
   className?: string;
 }
 
@@ -69,6 +71,7 @@ function groupTransactionsByMonth(
 export function TransactionList({
   transactions,
   isLoading = false,
+  onDelete,
   className,
 }: TransactionListProps) {
   const t = useTranslations("metals.transactions");
@@ -127,7 +130,11 @@ export function TransactionList({
               {/* Transactions for this month */}
               <div className="border rounded-lg divide-y">
                 {group.transactions.map((tx) => (
-                  <TransactionRow key={tx._id} transaction={tx} />
+                  <TransactionRow
+                    key={tx._id}
+                    transaction={tx}
+                    onDelete={onDelete}
+                  />
                 ))}
               </div>
             </FadeIn>

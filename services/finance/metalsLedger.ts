@@ -332,6 +332,49 @@ export function replayLedger(
   };
 }
 
+/**
+ * The first sale or gift a ledger can no longer cover once one of its
+ * transactions is deleted (see deletionConflict).
+ */
+export interface DeletionConflict {
+  /** The uncovered sale or gift */
+  transaction: LedgerTransaction;
+  /** Units it takes beyond what would then be held at its date */
+  shortfall: number;
+}
+
+/**
+ * Whether deleting `txs[index]` leaves a consistent ledger: replays the
+ * remaining quantities in ledger order and returns the first sale or gift
+ * that would take more than is held at its date (e.g. deleting the buy
+ * behind a later sale). Null when the deletion is safe. Deleting a sale or
+ * gift only raises later holdings, so it is always safe.
+ *
+ * The same rule replayLedger enforces, checked before the write so the
+ * caller can say which entry depends on the deleted one.
+ */
+export function deletionConflict(
+  txs: readonly LedgerTransaction[],
+  index: number,
+): DeletionConflict | null {
+  if (index < 0 || index >= txs.length) {
+    throw new RangeError(`No transaction at index ${index}`);
+  }
+  if (!isAcquisition(txs[index].transactionType)) return null;
+  let held = 0;
+  for (const tx of sortLedger(txs.filter((_, i) => i !== index))) {
+    if (isAcquisition(tx.transactionType)) {
+      held += tx.quantity;
+      continue;
+    }
+    if (tx.quantity > held + EPSILON) {
+      return { transaction: tx, shortfall: tx.quantity - Math.max(held, 0) };
+    }
+    held = Math.max(held - tx.quantity, 0);
+  }
+  return null;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Opening balances and the cached item projection
 // ═══════════════════════════════════════════════════════════════

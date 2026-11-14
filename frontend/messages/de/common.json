@@ -53,7 +53,10 @@
   "errors": {
     "generic": "Etwas ist schiefgelaufen. Bitte versuch es erneut.",
     "saveFailed": "Deine Änderungen konnten nicht gespeichert werden. Bitte versuch es erneut.",
-    "rateLimited": "Zu viele Anfragen. Bitte versuch es in {minutes, plural, one {# Minute} other {# Minuten}} erneut."
+    "rateLimited": "Zu viele Anfragen. Bitte versuch es in {minutes, plural, one {# Minute} other {# Minuten}} erneut.",
+    "vaultEntryNotFound": "Diesen Eintrag gibt es nicht mehr. Vielleicht wurde er schon gelöscht.",
+    "vaultDeleteLeavesNegativeHolding": "Dieser Eintrag kann nicht gelöscht werden: Ein späterer Verkauf oder ein Geschenk am {date, date, dateOnly} baut darauf auf und würde dann {quantity, plural, one {# Stück} other {# Stück}} mehr abgeben, als der Bestand hergibt. Lösch zuerst diesen Verkauf oder dieses Geschenk.",
+    "vaultDeleteLeavesNegativeHoldingUndated": "Dieser Eintrag kann nicht gelöscht werden: Ein späterer Verkauf oder ein Geschenk baut darauf auf und würde dann {quantity, plural, one {# Stück} other {# Stück}} mehr abgeben, als der Bestand hergibt. Lösch zuerst diesen Verkauf oder dieses Geschenk."
   },
   "a11y": {
     "toggleSidebar": "Seitenleiste ein-/ausblenden",

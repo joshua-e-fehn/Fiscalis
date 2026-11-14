@@ -96,6 +96,7 @@ import { Checkbox } from "@/components/ui/shadcn/checkbox";
 import { MetalDetailSlideOver } from "./MetalDetailSlideOver";
 import { AddMetalSlideOver } from "./AddMetalSlideOver";
 import { BulkSellDialog } from "./BulkSellDialog";
+import { DeleteTransactionDialog } from "./DeleteTransactionDialog";
 import {
   exportTransactionsToCSV,
   TRANSACTION_CSV_COLUMNS,
@@ -334,6 +335,8 @@ export function MetalsPage({ className }: MetalsPageProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
   // History tab state
+  const [deletingTransaction, setDeletingTransaction] =
+    useState<Transaction | null>(null);
   const [txSearchQuery, setTxSearchQuery] = useState("");
   const [txTypeFilter, setTxTypeFilter] =
     useState<TransactionTypeFilter>("all");
@@ -841,6 +844,11 @@ export function MetalsPage({ className }: MetalsPageProps) {
                 transactions={transactions}
                 displayCurrency={currency}
                 isLoading={transactionsLoading}
+                onDelete={setDeletingTransaction}
+              />
+              <DeleteTransactionDialog
+                transaction={deletingTransaction}
+                onClose={() => setDeletingTransaction(null)}
               />
             </>
           )}

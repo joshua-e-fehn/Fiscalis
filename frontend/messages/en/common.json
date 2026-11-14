@@ -53,7 +53,10 @@
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "saveFailed": "We couldn't save your changes. Please try again.",
-    "rateLimited": "Too many requests. Please try again in {minutes, plural, one {# minute} other {# minutes}}."
+    "rateLimited": "Too many requests. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
+    "vaultEntryNotFound": "This entry no longer exists. It may already have been deleted.",
+    "vaultDeleteLeavesNegativeHolding": "This entry can't be deleted: a later sale or gift on {date, date, dateOnly} relies on it and would then take {quantity, plural, one {# unit} other {# units}} more than the item holds. Delete that sale or gift first.",
+    "vaultDeleteLeavesNegativeHoldingUndated": "This entry can't be deleted: a later sale or gift relies on it and would then take {quantity, plural, one {# unit} other {# units}} more than the item holds. Delete that sale or gift first."
   },
   "a11y": {
     "toggleSidebar": "Toggle sidebar",

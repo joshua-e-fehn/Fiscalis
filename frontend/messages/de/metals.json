@@ -320,5 +320,19 @@
       "noData": "Keine Daten",
       "noHoldings": "Keine Bestände"
     }
+  },
+  "deleteTransaction": {
+    "action": "Eintrag löschen",
+    "title": "Diesen Eintrag löschen?",
+    "type": {
+      "buy": "Kauf",
+      "sell": "Verkauf",
+      "gift_received": "Erhaltenes Geschenk",
+      "gift_given": "Schenkung"
+    },
+    "description": "{type} von {quantity, plural, one {# Stück} other {# Stück}} {item} am {date, date, dateOnly} wird aus deinem Tresor-Verlauf entfernt.",
+    "descriptionUndated": "{type} von {quantity, plural, one {# Stück} other {# Stück}} {item} (Anfangsbestand) wird aus deinem Tresor-Verlauf entfernt.",
+    "consequence": "Bestand, Einstandswert und Tresorwert werden ohne ihn neu berechnet. Das kann nicht rückgängig gemacht werden.",
+    "deleting": "Wird gelöscht…"
   }
 }

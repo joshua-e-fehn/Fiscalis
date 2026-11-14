@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LedgerError,
+  deletionConflict,
   type LedgerTransaction,
   type ToBaseAmount,
   itemProjection,
@@ -655,5 +656,96 @@ describe("nextOpeningQuantity", () => {
     expect(() =>
       nextOpeningQuantity(5, { openingQuantity: 6, quantity: 12, held: 10 }),
     ).toThrow(LedgerError);
+  });
+});
+
+describe("deletionConflict (ENG-200)", () => {
+  const gift = (
+    transactionType: "gift_received" | "gift_given",
+    quantity: number,
+    transactionDate: string,
+  ): LedgerTransaction => ({
+    transactionType,
+    quantity,
+    pricePerUnit: null,
+    currency: "EUR",
+    transactionDate,
+  });
+
+  it("allows deleting a buy nothing later relies on", () => {
+    const txs = [buy(2, 100, "2024-01-01"), buy(1, 110, "2024-02-01")];
+    expect(deletionConflict(txs, 1)).toBeNull();
+    expect(deletionConflict(txs, 0)).toBeNull();
+  });
+
+  it("blocks deleting the buy behind a later sale", () => {
+    const sale = sell(2, 150, "2024-03-01");
+    const txs = [buy(2, 100, "2024-01-01"), sale];
+    expect(deletionConflict(txs, 0)).toEqual({ transaction: sale, shortfall: 2 });
+  });
+
+  it("reports only the units the remaining buys cannot cover", () => {
+    const sale = sell(3, 150, "2024-03-01");
+    const txs = [buy(1, 100, "2024-01-01"), buy(2, 100, "2024-02-01"), sale];
+    expect(deletionConflict(txs, 1)).toEqual({ transaction: sale, shortfall: 2 });
+  });
+
+  it("checks the holding at the sale's date, not the final total", () => {
+    // A later buy restores the total, but the sale was covered by the first
+    const sale = sell(1, 150, "2024-02-01");
+    const txs = [buy(1, 100, "2024-01-01"), sale, buy(1, 100, "2024-03-01")];
+    expect(deletionConflict(txs, 0)).toEqual({ transaction: sale, shortfall: 1 });
+    expect(deletionConflict(txs, 2)).toBeNull();
+  });
+
+  it("always allows deleting a sale or a gift given", () => {
+    const txs = [
+      buy(2, 100, "2024-01-01"),
+      sell(1, 150, "2024-02-01"),
+      gift("gift_given", 1, "2024-03-01"),
+    ];
+    expect(deletionConflict(txs, 1)).toBeNull();
+    expect(deletionConflict(txs, 2)).toBeNull();
+  });
+
+  it("treats a gift received like a buy and a gift given like a sale", () => {
+    const given = gift("gift_given", 1, "2024-02-01");
+    const txs = [gift("gift_received", 1, "2024-01-01"), given];
+    expect(deletionConflict(txs, 0)).toEqual({ transaction: given, shortfall: 1 });
+  });
+
+  it("counts an undated opening balance as held before every date", () => {
+    const sale = sell(1, 150, "2024-02-01");
+    const txs = [sale, buy(1, null, null), buy(1, 100, "2024-03-01")];
+    expect(deletionConflict(txs, 2)).toBeNull();
+    expect(deletionConflict(txs, 1)).toEqual({ transaction: sale, shortfall: 1 });
+  });
+
+  it("agrees with replayLedger on the remaining ledger", () => {
+    const txs = [
+      buy(2, 100, "2024-01-01"),
+      sell(1, 150, "2024-02-01"),
+      buy(1, 100, "2024-03-01"),
+      sell(2, 150, "2024-04-01"),
+    ];
+    txs.forEach((_, i) => {
+      const rest = txs.filter((__, j) => j !== i);
+      const replays = (() => {
+        try {
+          replayLedger(rest, eurOnly);
+          return true;
+        } catch (error) {
+          if (error instanceof LedgerError) return false;
+          throw error;
+        }
+      })();
+      expect(deletionConflict(txs, i) === null).toBe(replays);
+    });
+  });
+
+  it("rejects an index outside the ledger", () => {
+    expect(() => deletionConflict([buy(1, 100, "2024-01-01")], 1)).toThrow(
+      RangeError,
+    );
   });
 });

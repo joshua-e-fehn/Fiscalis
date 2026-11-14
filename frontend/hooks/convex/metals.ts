@@ -3,20 +3,23 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useMetalsPrices } from "@/hooks/metals";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import {
   MetalsPrices,
   MetalItemWithValuation,
   MetalsType,
-  MetalsCurrency,
 } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency, SpotQuotes } from "@/lib/types/metals";
 import {
-  convertAtSpotRates,
   resolvePremiums,
+  spotQuoteIn,
   summarizeMetalItems,
   valueMetalItem,
+  vaultDisplayRates,
   type MetalsPortfolioSummary,
   type SpotExchangeRates,
 } from "@/../services/finance/metals";
+import { convertBetween } from "@/../services/finance/currency";
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -25,12 +28,17 @@ import {
 /** Return type for useMetals hook */
 interface UseMetalsReturn {
   items: MetalItemWithValuation[] | undefined;
+  /** The display currency every amount of `items` and `spotPrices` is in */
+  currency: MetalsDisplayCurrency;
   isLoading: boolean;
   isError: boolean;
   pricesLoading: boolean;
   pricesError: Error | null;
+  /** The raw price feed (quote columns EUR/USD/CHF), for the Prices tab */
   prices: MetalsPrices | undefined;
-  /** The exchange rates a USD or CHF view needs are still loading */
+  /** Spot quotes in the display currency (native columns, else EUR × rate) */
+  spotPrices: SpotQuotes | undefined;
+  /** The display currency's rate is still loading */
   ratesLoading: boolean;
   /** When the oldest spot price an item is valued at was observed (ms) */
   spotAsOf: number | null;
@@ -40,6 +48,8 @@ interface UseMetalsReturn {
 interface UseMetalsSummaryReturn {
   /** Unrealized, realized and total P/L; undefined until prices load */
   summary: MetalsPortfolioSummary | undefined;
+  /** The display currency the summary is in */
+  currency: MetalsDisplayCurrency;
   isLoading: boolean;
   isError: boolean;
   pricesLoading: boolean;
@@ -50,6 +60,8 @@ interface UseMetalsSummaryReturn {
 /** Return type for useMetalItem hook */
 interface UseMetalItemReturn {
   item: MetalItemWithValuation | undefined;
+  /** The display currency the item's amounts are in */
+  currency: MetalsDisplayCurrency;
   transactions:
     | typeof api.vault.getVaultItemTransactions._returnType
     | undefined;
@@ -58,6 +70,8 @@ interface UseMetalItemReturn {
   pricesLoading: boolean;
 }
 
+const METALS: readonly MetalsType[] = ["gold", "silver", "platinum", "palladium"];
+
 // ═══════════════════════════════════════════════════════════════
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
@@ -65,14 +79,16 @@ interface UseMetalItemReturn {
 /**
  * A vault item in the display currency, from its server valuation
  * (vault.getUserVaultItems: EUR at the Convex spot mirror, the valuation
- * net worth uses). Value, cost and realized P/L are converted at the rates
- * the spot prices are served with (convertAtSpotRates); nothing is revalued
- * from the client price feed.
+ * net worth uses). Value, cost and realized P/L are converted through
+ * convertBetween at `unitsPerEur` (vaultDisplayRates: the display rate,
+ * plus the spot payload's USD/CHF rates for legacy costs); nothing is
+ * revalued from the client price feed. The ledger cost is historical EUR
+ * translated at today's rate, like every other display-currency P/L.
  */
 function enrichItemWithValuation(
   item: NonNullable<typeof api.vault.getUserVaultItems._returnType>[number],
-  rates: SpotExchangeRates | undefined,
-  currency: MetalsCurrency = "eur",
+  unitsPerEur: Readonly<Record<string, number>>,
+  currency: MetalsDisplayCurrency,
 ): MetalItemWithValuation {
   const { buyPremium, sellPremium } = resolvePremiums({
     // `premium` is the legacy single-premium field on old documents
@@ -92,14 +108,14 @@ function enrichItemWithValuation(
 
   // Unknown when a rate is missing
   const toDisplay = (amount: number | null, from: string) =>
-    amount === null ? null : convertAtSpotRates(amount, from, currency, rates);
+    amount === null ? null : convertBetween(amount, from, currency, unitsPerEur);
   const unitCost = toDisplay(averageCost, costCurrency);
 
   const valuation = valueMetalItem(
     { fineWeightGrams: item.fineWeightGrams, quantity, buyPremium, sellPremium },
     item.valuation,
     currency,
-    rates,
+    unitsPerEur,
   );
 
   return {
@@ -143,33 +159,68 @@ function enrichItemWithValuation(
   };
 }
 
+/**
+ * The display currency and the rates a vault view converts with
+ * (vaultDisplayRates). While the display rate loads, the currency is EUR
+ * at the identity with `ratesLoading` set (useDisplayCurrency).
+ */
+function useVaultRates(spot: SpotExchangeRates | undefined) {
+  const display = useDisplayCurrency();
+  const { code, unitsPerEur: displayRate } = display;
+  const unitsPerEur = useMemo(
+    () => vaultDisplayRates(spot, { code, unitsPerEur: displayRate }),
+    [spot, code, displayRate],
+  );
+  return {
+    currency: display.currency,
+    displayRate,
+    unitsPerEur,
+    ratesLoading: display.isLoading,
+  };
+}
+
 // ═══════════════════════════════════════════════════════════════
 // HOOKS
 // ═══════════════════════════════════════════════════════════════
 
 /**
  * Main metals hook: the vault items with their server valuation (EUR at the
- * Convex spot mirror) in the display currency. The client price feed only
- * supplies the exchange rates for a USD or CHF view.
+ * Convex spot mirror) in the display currency, and the spot quotes in it.
+ * The client price feed supplies the quotes and the USD/CHF rates of legacy
+ * item costs.
  */
-export function useMetals(currency: MetalsCurrency = "eur"): UseMetalsReturn {
+export function useMetals(): UseMetalsReturn {
   const metalItems = useQuery(api.vault.getUserVaultItems);
 
-  // Prices from the time-series store: their exchange rates convert the
-  // EUR valuation (and the Prices tab shows them)
+  // Prices from the time-series store: the quotes and the Prices tab
   const {
     data: prices,
     isLoading: pricesLoading,
     isError: pricesError,
     error,
   } = useMetalsPrices();
-  const rates = prices?.all?.exchangeRates;
+  const { currency, displayRate, unitsPerEur, ratesLoading } = useVaultRates(
+    prices?.all?.exchangeRates,
+  );
 
   const enrichedItems = useMemo(
     () =>
-      metalItems?.map((item) => enrichItemWithValuation(item, rates, currency)),
-    [metalItems, rates, currency],
+      metalItems?.map((item) =>
+        enrichItemWithValuation(item, unitsPerEur, currency),
+      ),
+    [metalItems, unitsPerEur, currency],
   );
+
+  // Native quote columns for EUR/USD/CHF, the EUR quote × rate otherwise
+  const all = prices?.all;
+  const spotPrices = useMemo((): SpotQuotes | undefined => {
+    if (!all) return undefined;
+    const quotes = {} as SpotQuotes;
+    for (const metal of METALS) {
+      quotes[metal] = spotQuoteIn(all[metal], currency, displayRate);
+    }
+    return quotes;
+  }, [all, currency, displayRate]);
 
   // When the oldest spot price an item is valued at was observed
   const spotAsOf = useMemo(() => {
@@ -183,30 +234,39 @@ export function useMetals(currency: MetalsCurrency = "eur"): UseMetalsReturn {
 
   return {
     items: enrichedItems,
-    isLoading: metalItems === undefined,
+    currency,
+    // Loading until the display rate arrives, so no view shows the
+    // identity (EUR) figures first
+    isLoading: metalItems === undefined || ratesLoading,
     isError: metalItems === undefined && !pricesLoading,
     pricesLoading,
     pricesError: pricesError ? (error as Error) : null,
     prices,
-    // The EUR view needs no rates; another currency waits for them
-    ratesLoading: currency !== "eur" && pricesLoading,
+    spotPrices,
+    ratesLoading,
     spotAsOf,
   };
 }
 
 /**
  * Metals summary hook: per-metal and total value, cost, unrealized and
- * realized P/L and allocation of the server-valued items.
+ * realized P/L and allocation of the server-valued items, in the display
+ * currency.
  */
-export function useMetalsSummary(
-  currency: MetalsCurrency = "eur",
-): UseMetalsSummaryReturn {
-  const { items, isLoading, isError, pricesLoading, ratesLoading, spotAsOf } =
-    useMetals(currency);
+export function useMetalsSummary(): UseMetalsSummaryReturn {
+  const {
+    items,
+    currency,
+    isLoading,
+    isError,
+    pricesLoading,
+    ratesLoading,
+    spotAsOf,
+  } = useMetals();
 
   // Unrealized cost and P/L cover only items with a cost (see
   // summarizeMetalItems), total P/L adds realized sales. Gated on the
-  // rates in a USD or CHF view: before they load no value converts.
+  // display rate: before it loads no value converts.
   const summary = useMemo(
     () => (items && !ratesLoading ? summarizeMetalItems(items) : undefined),
     [items, ratesLoading],
@@ -214,7 +274,8 @@ export function useMetalsSummary(
 
   return {
     summary,
-    isLoading: isLoading || ratesLoading,
+    currency,
+    isLoading,
     isError,
     pricesLoading,
     pricesAsOf: spotAsOf,
@@ -222,12 +283,10 @@ export function useMetalsSummary(
 }
 
 /**
- * Single metal item hook with full details and transactions
+ * Single metal item hook with full details and transactions, the item in
+ * the display currency (transactions keep their own currency)
  */
-export function useMetalItem(
-  itemId: Id<"vaultItems">,
-  currency: MetalsCurrency = "eur",
-): UseMetalItemReturn {
+export function useMetalItem(itemId: Id<"vaultItems">): UseMetalItemReturn {
   // Fetch item details from Convex
   const item = useQuery(api.vault.getVaultItem, { vaultItemId: itemId });
 
@@ -236,18 +295,23 @@ export function useMetalItem(
     vaultItemId: itemId,
   });
 
-  // Exchange rates for a USD or CHF view
+  // USD/CHF rates of a legacy item cost
   const { data: prices, isLoading: pricesLoading } = useMetalsPrices();
+  const { currency, unitsPerEur, ratesLoading } = useVaultRates(
+    prices?.all?.exchangeRates,
+  );
 
   // Enrich item with valuation
   const enrichedItem = item
-    ? enrichItemWithValuation(item, prices?.all?.exchangeRates, currency)
+    ? enrichItemWithValuation(item, unitsPerEur, currency)
     : undefined;
 
   return {
     item: enrichedItem,
+    currency,
     transactions,
-    isLoading: item === undefined || transactions === undefined,
+    isLoading:
+      item === undefined || transactions === undefined || ratesLoading,
     isError: false,
     pricesLoading,
   };

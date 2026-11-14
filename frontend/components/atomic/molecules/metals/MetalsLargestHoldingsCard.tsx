@@ -17,13 +17,13 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import {
   MetalItemWithValuation,
-  MetalsCurrency,
 } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface MetalsLargestHoldingsCardProps {
   items: MetalItemWithValuation[] | undefined;
-  currency: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   maxHoldingsPerMetal?: number;
   isLoading?: boolean;
   className?: string;

@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
-import type { InvestmentCurrency } from "@/lib/types/investments";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { CalendarDays } from "lucide-react";
 import { currencySuffixes } from "@/lib/utils/currency";
@@ -15,7 +15,7 @@ interface YTDPerformanceCardProps {
   ytdProfitLoss: number | null;
   ytdProfitLossPercent: number | null;
   /** The currency of the amounts (useMetalsYTD's `currency`) */
-  currency?: InvestmentCurrency;
+  currency: MetalsDisplayCurrency;
   isLoading?: boolean;
   className?: string;
 }
@@ -24,7 +24,7 @@ interface YTDPerformanceCardProps {
 export function YTDPerformanceCard({
   ytdProfitLoss,
   ytdProfitLossPercent,
-  currency = "eur",
+  currency,
   isLoading = false,
   className,
 }: YTDPerformanceCardProps) {

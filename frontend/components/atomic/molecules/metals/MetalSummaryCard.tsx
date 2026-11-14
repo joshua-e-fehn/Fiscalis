@@ -16,15 +16,15 @@ import {
 import {
   MetalsType,
   MetalSummary,
-  MetalsCurrency,
 } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 interface MetalSummaryCardProps {
   metal: MetalsType;
   summary: MetalSummary;
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   isLoading?: boolean;
   className?: string;
   onClick?: () => void;
@@ -68,7 +68,7 @@ const metalConfig: Record<
 export function MetalSummaryCard({
   metal,
   summary,
-  currency = "eur",
+  currency,
   isLoading = false,
   className,
   onClick,

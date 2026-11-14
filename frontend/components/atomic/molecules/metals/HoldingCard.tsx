@@ -11,8 +11,8 @@ import {
 } from "@/components/atomic/atoms/metals";
 import {
   MetalItemWithValuation,
-  MetalsCurrency,
 } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { MoreVertical, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/shadcn/button";
@@ -26,7 +26,7 @@ import { motion } from "framer-motion";
 
 interface HoldingCardProps {
   item: MetalItemWithValuation;
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   onClick?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -59,7 +59,7 @@ const metalStyles = {
 
 export function HoldingCard({
   item,
-  currency = "eur",
+  currency,
   onClick,
   onEdit,
   onDelete,
@@ -170,6 +170,7 @@ export function HoldingCard({
                 <ChangeIndicator
                   value={item.profitLoss}
                   percentage={item.profitLossPercent}
+                  currency={currency}
                   size="sm"
                   showIcon={false}
                 />
@@ -188,7 +189,7 @@ export function HoldingCard({
 // Compact version for dense layouts
 export function HoldingCardCompact({
   item,
-  currency = "eur",
+  currency,
   onClick,
   className,
 }: Omit<HoldingCardProps, "onEdit" | "onDelete">) {

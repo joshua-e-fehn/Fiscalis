@@ -41,10 +41,14 @@ import { useVaultPerformance } from "@/hooks/performance/useContinuousPerformanc
 import { labelToTimeRange, toChartPoints } from "@/lib/performance";
 import {
   MetalsType,
-  MetalsCurrency,
   MetalItemWithValuation,
 } from "@/lib/types/metals-extended";
-import { MetalChartData, MetalCurrency, MetalType } from "@/lib/types/metals";
+import {
+  MetalChartData,
+  MetalCurrency,
+  MetalType,
+  toMetalCurrency,
+} from "@/lib/types/metals";
 import { TimeRange } from "@/../services/finance/financeService";
 import {
   isRecordedClose,
@@ -83,6 +87,7 @@ import {
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import {
+  Banknote,
   Euro,
   DollarSign,
   TrendingUp,
@@ -283,28 +288,38 @@ const MetalPriceCard = ({
 // ═══════════════════════════════════════════════════════════════
 
 interface MetalsPageProps {
-  currency?: MetalsCurrency;
   className?: string;
 }
 
-export function MetalsPage({
-  currency: initialCurrency = "eur",
-  className,
-}: MetalsPageProps) {
+export function MetalsPage({ className }: MetalsPageProps) {
   // ─────────────────────────────────────────────────────────────
   // DATA HOOKS
   // ─────────────────────────────────────────────────────────────
+  // Holdings, summaries and spot quotes in the display currency
   const {
     items,
+    currency,
     isLoading: itemsLoading,
     prices,
-  } = useMetals(initialCurrency);
-  // Gated on the spot prices: loading until they arrive
+    spotPrices,
+  } = useMetals();
+  // Gated on the display rate: loading until it arrives
   const {
     summary,
     isLoading: summaryLoading,
     pricesAsOf,
-  } = useMetalsSummary(initialCurrency);
+  } = useMetalsSummary();
+  // The display currency as a quote column of the price table; null for
+  // a currency it has none for (GBP). The transaction summary and the
+  // sale dialogs convert at the spot payload's rates and take a quote
+  // currency, so a view in another currency hands them EUR and labels it
+  // EUR. YTD and the vault series come from the performance hooks, already
+  // in the display currency.
+  const quoteCurrency = toMetalCurrency(currency);
+  const ownQuoteCurrency: MetalCurrency = quoteCurrency ?? "eur";
+  // The summary's P/L is in the display currency: shown next to
+  // quote-currency totals only when the two agree
+  const summaryInQuoteCurrency = quoteCurrency === currency;
   const { data: pricesData, isLoading: pricesLoading } = useMetalsPrices();
   const { transactions: rawTransactions, isLoading: transactionsLoading } =
     useVaultTransactions();
@@ -327,9 +342,15 @@ export function MetalsPage({
     useState<TransactionTypeFilter>("all");
   const [txMetalFilter, setTxMetalFilter] = useState<MetalTypeFilter>("all");
 
-  // Slide-over state
-  const [selectedItem, setSelectedItem] =
-    useState<MetalItemWithValuation | null>(null);
+  // Slide-over state: the id only, resolved from the live items, so the
+  // detail view follows valuation and display-currency updates
+  const [selectedItemId, setSelectedItemId] = useState<
+    MetalItemWithValuation["_id"] | null
+  >(null);
+  const selectedItem =
+    items?.find((item) => item._id === selectedItemId) ?? null;
+  const setSelectedItem = (item: MetalItemWithValuation | null) =>
+    setSelectedItemId(item?._id ?? null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<"catalog" | "custom">("catalog");
 
@@ -342,9 +363,11 @@ export function MetalsPage({
   // PRICES TAB STATE
   // ─────────────────────────────────────────────────────────────
   const [timeRange, setTimeRange] = useState<TimeRange>("Month");
-  const [priceCurrency, setPriceCurrency] = useState<MetalCurrency>(
-    initialCurrency as MetalCurrency,
-  );
+  // The quote toggle starts at the display currency when the price table
+  // has a column for it, else EUR; a choice made here overrides that
+  const [priceCurrencyChoice, setPriceCurrency] =
+    useState<MetalCurrency | null>(null);
+  const priceCurrency = priceCurrencyChoice ?? ownQuoteCurrency;
   const [selectedMetal, setSelectedMetal] = useState<MetalType>("gold");
   const [compareMode, setCompareMode] = useState(false);
   const [selectedMetals, setSelectedMetals] = useState<MetalType[]>([
@@ -594,7 +617,7 @@ export function MetalsPage({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <TotalValueCard
               totalValue={summary?.totalMarketValue ?? 0}
-              currency={initialCurrency}
+              currency={currency}
               isLoading={summaryLoading}
             />
             {/* Unrealized + realized; unavailable while not priced at spot */}
@@ -605,7 +628,7 @@ export function MetalsPage({
               profitLossPercent={
                 summary?.pricedAtSpot ? summary.totalProfitLossPercent : null
               }
-              currency={initialCurrency}
+              currency={currency}
               isLoading={summaryLoading}
             />
             <YTDPerformanceCard
@@ -661,8 +684,8 @@ export function MetalsPage({
                       totalItems: 0,
                     }
                   }
-                  prices={prices ?? pricesData}
-                  currency={initialCurrency}
+                  spotPrice={spotPrices?.[metal] ?? null}
+                  currency={currency}
                   isLoading={summaryLoading || pricesLoading}
                   onClick={() => {
                     setMetalFilter(metal);
@@ -677,7 +700,7 @@ export function MetalsPage({
           {!isEmpty && (
             <MetalsLargestHoldingsCard
               items={items}
-              currency={initialCurrency}
+              currency={currency}
               maxHoldingsPerMetal={3}
               isLoading={itemsLoading}
             />
@@ -740,7 +763,7 @@ export function MetalsPage({
               {viewMode === "table" && (
                 <HoldingsTable
                   items={filteredItems}
-                  currency={initialCurrency}
+                  currency={currency}
                   sortField={sortField}
                   sortDirection={sortDirection}
                   onSort={handleSortChange}
@@ -755,7 +778,7 @@ export function MetalsPage({
               {viewMode === "cards" && (
                 <HoldingsCardGrid
                   items={filteredItems}
-                  currency={initialCurrency}
+                  currency={currency}
                   onItemClick={setSelectedItem}
                   isLoading={itemsLoading}
                 />
@@ -764,7 +787,7 @@ export function MetalsPage({
               {viewMode === "grouped" && (
                 <HoldingsGroupedView
                   items={filteredItems}
-                  currency={initialCurrency}
+                  currency={currency}
                   onItemClick={setSelectedItem}
                   isLoading={itemsLoading}
                 />
@@ -786,13 +809,23 @@ export function MetalsPage({
               {transactions.length > 0 && (
                 <TransactionSummary
                   transactions={transactions}
-                  displayCurrency={initialCurrency}
+                  displayCurrency={ownQuoteCurrency}
                   exchangeRates={(prices ?? pricesData)?.all?.exchangeRates}
-                  realizedPL={summary?.realizedProfitLoss ?? null}
-                  unrealizedPL={
-                    summary?.pricedAtSpot ? summary.unrealizedProfitLoss : null
+                  realizedPL={
+                    summaryInQuoteCurrency
+                      ? (summary?.realizedProfitLoss ?? null)
+                      : null
                   }
-                  totalPL={summary?.pricedAtSpot ? summary.totalProfitLoss : null}
+                  unrealizedPL={
+                    summaryInQuoteCurrency && summary?.pricedAtSpot
+                      ? summary.unrealizedProfitLoss
+                      : null
+                  }
+                  totalPL={
+                    summaryInQuoteCurrency && summary?.pricedAtSpot
+                      ? summary.totalProfitLoss
+                      : null
+                  }
                 />
               )}
 
@@ -808,7 +841,7 @@ export function MetalsPage({
 
               <TransactionList
                 transactions={transactions}
-                displayCurrency={initialCurrency}
+                displayCurrency={ownQuoteCurrency}
                 isLoading={transactionsLoading}
               />
             </>
@@ -912,8 +945,10 @@ export function MetalsPage({
                     >
                       {priceCurrency === "eur" ? (
                         <Euro className="h-4 w-4 mr-1" />
-                      ) : (
+                      ) : priceCurrency === "usd" ? (
                         <DollarSign className="h-4 w-4 mr-1" />
+                      ) : (
+                        <Banknote className="h-4 w-4 mr-1" />
                       )}
                       {priceCurrency.toUpperCase()}
                     </Button>
@@ -1063,7 +1098,7 @@ export function MetalsPage({
         item={selectedItem}
         isOpen={!!selectedItem}
         onClose={() => setSelectedItem(null)}
-        currency={initialCurrency}
+        currency={currency}
       />
 
       <AddMetalSlideOver
@@ -1084,7 +1119,7 @@ export function MetalsPage({
           setSelectionMode(false);
           setSelectedIds(new Set());
         }}
-        currency={initialCurrency}
+        currency={ownQuoteCurrency}
       />
     </div>
   );

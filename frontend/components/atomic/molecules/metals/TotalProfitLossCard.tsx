@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/shadcn/card";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { currencySuffixes } from "@/lib/utils/currency";
@@ -18,7 +18,7 @@ interface TotalProfitLossCardProps {
     metal: string;
     percentage: number;
   };
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   isLoading?: boolean;
   className?: string;
 }
@@ -27,7 +27,7 @@ interface TotalProfitLossCardProps {
 export function TotalProfitLossCard({
   profitLoss,
   profitLossPercent,
-  currency = "eur",
+  currency,
   isLoading = false,
   className,
 }: TotalProfitLossCardProps) {

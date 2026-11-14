@@ -2,13 +2,9 @@
 
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
-import {
-  MetalsType,
-  MetalsCurrency,
-  MetalsPrices,
-} from "@/lib/types/metals-extended";
+import { MetalsType } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency, SpotQuotes } from "@/lib/types/metals";
 import { AnimatedNumber, PriceDisplay } from "@/components/atomic/atoms/metals";
-import { getSpotPrice } from "@/hooks/metals";
 import { RefreshCw, Clock } from "lucide-react";
 
 // Simple relative time formatter
@@ -26,8 +22,12 @@ function formatRelativeTime(date: Date): string {
 }
 
 interface SpotPricesTickerProps {
-  prices: MetalsPrices | undefined;
-  currency?: MetalsCurrency;
+  /**
+   * Quotes in `currency` (useMetals spotPrices): the price table's own
+   * column for EUR/USD/CHF, the EUR quote at the latest rate otherwise
+   */
+  spotPrices: SpotQuotes | undefined;
+  currency: MetalsDisplayCurrency;
   isLoading?: boolean;
   lastUpdated?: string;
   onRefresh?: () => void;
@@ -42,8 +42,8 @@ const metalLabels: Record<MetalsType, string> = {
 };
 
 export function SpotPricesTicker({
-  prices,
-  currency = "eur",
+  spotPrices,
+  currency,
   isLoading = false,
   lastUpdated,
   onRefresh,
@@ -97,10 +97,7 @@ export function SpotPricesTicker({
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {metals.map((metal) => {
-          const spotPrice = prices
-            ? getSpotPrice(prices, metal, currency)
-            : null;
-
+          const spotPrice = spotPrices?.[metal] ?? null;
 
           return (
             <div
@@ -137,12 +134,13 @@ export function SpotPricesTicker({
 
 // Compact single-line ticker
 export function SpotPricesTickerCompact({
-  prices,
-  currency = "eur",
+  spotPrices,
+  currency,
   className,
 }: {
-  prices: MetalsPrices | undefined;
-  currency?: MetalsCurrency;
+  /** Quotes in `currency` (useMetals spotPrices) */
+  spotPrices: SpotQuotes | undefined;
+  currency: MetalsDisplayCurrency;
   className?: string;
 }) {
   const metals: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
@@ -150,7 +148,7 @@ export function SpotPricesTickerCompact({
   return (
     <div className={cn("flex items-center gap-4 flex-wrap text-sm", className)}>
       {metals.map((metal) => {
-        const spotPrice = prices ? getSpotPrice(prices, metal, currency) : null;
+        const spotPrice = spotPrices?.[metal] ?? null;
 
         return (
           <div key={metal} className="flex items-center gap-1.5">

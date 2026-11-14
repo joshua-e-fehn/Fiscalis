@@ -1,6 +1,7 @@
 /** Tests for services/finance/metals.ts: vault valuation, spot prices, premiums, summary. */
 import { describe, it, expect } from "vitest";
 
+import { convertBetween } from "./currency";
 import {
   SPOT_PRICE_MAX_AGE_MS,
   SPOT_PRICE_MAX_FUTURE_SKEW_MS,
@@ -10,9 +11,12 @@ import {
   freshSpotPerOunce,
   parseLatestMetalPrices,
   resolvePremiums,
+  spotQuoteIn,
   summarizeMetalItems,
+  unitsPerEurFromSpot,
   valueMetalItem,
   valueVaultItem,
+  vaultDisplayRates,
   vaultItemValuation,
 } from "./metals";
 
@@ -222,7 +226,7 @@ describe("valueMetalItem", () => {
     buyPremium: 0.05,
     sellPremium: -0.02,
   };
-  const rates = { eurToUsd: 1.25, eurToChf: null };
+  const rates = unitsPerEurFromSpot({ eurToUsd: 1.25, eurToChf: null });
   // The server's EUR valuation at a 3000 EUR/oz spot (vaultItemValuation)
   const atSpot = {
     ...valueVaultItem(
@@ -248,13 +252,25 @@ describe("valueMetalItem", () => {
     expect(v.profitLossPercent).toBeCloseTo(17.6, 6);
   });
 
-  it("converts value, cost and spot at the spot rates", () => {
+  it("converts value, cost and spot at the given rates", () => {
     const v = valueMetalItem(item, atSpot, "usd", rates);
     expect(v.marketValue).toBeCloseTo(7350, 6);
     expect(v.totalCost).toBe(6250);
     expect(v.currentSellPrice).toBeCloseTo(3675, 6);
     expect(v.profitLoss).toBeCloseTo(1100, 6);
     expect(v.profitLossPercent).toBeCloseTo(17.6, 6);
+  });
+
+  it("converts into GBP at the display rate", () => {
+    const v = valueMetalItem(item, atSpot, "gbp", { GBP: 0.8 });
+    expect(v.marketValue).toBeCloseTo(4704, 6);
+    expect(v.totalCost).toBeCloseTo(4000, 6);
+    expect(v.currentSellPrice).toBeCloseTo(2352, 6);
+    expect(v.meltValue).toBeCloseTo(4800, 6);
+    expect(v.profitLoss).toBeCloseTo(704, 6);
+    // A percentage does not depend on the currency
+    expect(v.profitLossPercent).toBeCloseTo(17.6, 6);
+    expect(v.pricedAtSpot).toBe(true);
   });
 
   it("has no value without a rate for the display currency", () => {
@@ -396,5 +412,52 @@ describe("convertAtSpotRates", () => {
     expect(convertAtSpotRates(100, "EUR", "USD", { eurToUsd: null, eurToChf: 1 })).toBeNull();
     expect(convertAtSpotRates(100, "EUR", "USD", undefined)).toBeNull();
     expect(convertAtSpotRates(100, "GBP", "EUR", rates)).toBeNull();
+  });
+});
+
+describe("vaultDisplayRates", () => {
+  const spotRates = { eurToUsd: 1.1, eurToChf: 0.95 };
+
+  it("adds the display rate to the spot rates", () => {
+    expect(vaultDisplayRates(spotRates, { code: "GBP", unitsPerEur: 0.85 })).toEqual({
+      USD: 1.1,
+      CHF: 0.95,
+      GBP: 0.85,
+    });
+  });
+
+  it("prefers the display rate over the spot payload's", () => {
+    expect(vaultDisplayRates(spotRates, { code: "usd", unitsPerEur: 1.08 }).USD).toBe(1.08);
+  });
+
+  it("needs no rate for EUR", () => {
+    expect(vaultDisplayRates(null, { code: "EUR", unitsPerEur: 1 })).toEqual({});
+  });
+
+  it("values an item and converts a legacy USD cost into GBP", () => {
+    const rates = vaultDisplayRates(spotRates, { code: "GBP", unitsPerEur: 0.85 });
+    // USD 110 -> EUR 100 (spot rate) -> GBP 85 (display rate)
+    expect(convertBetween(110, "USD", "GBP", rates)).toBeCloseTo(85, 9);
+  });
+});
+
+describe("spotQuoteIn", () => {
+  const quote = { eur: 2500, usd: 2900, chf: 2350 };
+
+  it("reads the native column for EUR, USD and CHF", () => {
+    expect(spotQuoteIn(quote, "eur", 1)).toBe(2500);
+    expect(spotQuoteIn(quote, "USD", 1.08)).toBe(2900);
+    expect(spotQuoteIn(quote, "chf", 0.94)).toBe(2350);
+  });
+
+  it("derives other currencies from the EUR quote at the rate", () => {
+    expect(spotQuoteIn(quote, "gbp", 0.86)).toBeCloseTo(2150, 9);
+  });
+
+  it("is null without a usable quote or rate", () => {
+    expect(spotQuoteIn(undefined, "eur", 1)).toBeNull();
+    expect(spotQuoteIn({ ...quote, chf: null }, "chf", 0.94)).toBeNull();
+    expect(spotQuoteIn({ ...quote, eur: 0 }, "gbp", 0.86)).toBeNull();
+    expect(spotQuoteIn(quote, "gbp", 0)).toBeNull();
   });
 });

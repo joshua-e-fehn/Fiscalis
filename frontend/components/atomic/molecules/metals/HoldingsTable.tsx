@@ -18,8 +18,8 @@ import {
 } from "@/components/atomic/atoms/metals";
 import {
   MetalItemWithValuation,
-  MetalsCurrency,
 } from "@/lib/types/metals-extended";
+import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { cn } from "@/lib/utils";
 import { ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { SortField, SortDirection } from "./HoldingsToolbar";
@@ -28,7 +28,7 @@ import { Checkbox } from "@/components/ui/shadcn/checkbox";
 
 interface HoldingsTableProps {
   items: MetalItemWithValuation[];
-  currency?: MetalsCurrency;
+  currency: MetalsDisplayCurrency;
   sortField?: SortField;
   sortDirection?: SortDirection;
   onSort?: (field: SortField) => void;
@@ -43,7 +43,7 @@ interface HoldingsTableProps {
 
 export function HoldingsTable({
   items,
-  currency = "eur",
+  currency,
   sortField,
   sortDirection,
   onSort,
@@ -281,6 +281,7 @@ export function HoldingsTable({
                   <ChangeIndicator
                     value={item.profitLoss}
                     percentage={item.profitLossPercent}
+                    currency={currency}
                     size="sm"
                     showIcon={false}
                   />

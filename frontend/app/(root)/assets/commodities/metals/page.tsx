@@ -12,13 +12,9 @@
 
 import { useAuth } from "@clerk/nextjs";
 import { MetalsPage } from "@/components/atomic/organisms/metals";
-import { MetalsCurrency } from "@/lib/types/metals-extended";
 
 export default function PreciousMetalsPage() {
   const { userId } = useAuth();
-
-  // TODO: Get user preference for currency
-  const currency: MetalsCurrency = "eur";
 
   if (!userId) {
     return (
@@ -30,5 +26,6 @@ export default function PreciousMetalsPage() {
     );
   }
 
-  return <MetalsPage currency={currency} />;
+  // Holdings and summaries follow the display currency (useMetals)
+  return <MetalsPage />;
 }

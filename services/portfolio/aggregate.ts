@@ -632,6 +632,9 @@ export function netWorthApiCurrency(
   return toDisplayCurrency(param);
 }
 
+const isoOrNull = (ms: number | null) =>
+  ms === null ? null : new Date(ms).toISOString();
+
 /**
  * The data time of a net worth body (epoch ms): the aggregate's asOf (the
  * oldest pricedAt), or, for an amount converted at a dated rate, the end of
@@ -639,9 +642,6 @@ export function netWorthApiCurrency(
  * current). A weekend's Friday ECB rate thus dates the figure to Friday.
  * Null when neither carries a time.
  */
-const isoOrNull = (ms: number | null) =>
-  ms === null ? null : new Date(ms).toISOString();
-
 export function netWorthApiDataAsOf(
   asOf: number | null,
   now: number,

@@ -88,3 +88,10 @@ export function useSaveUserSettings() {
 export function useSetBirthDate() {
   return useMutation(api.onboarding.setBirthDate);
 }
+
+/**
+ * Partially update general settings (Settings > General)
+ */
+export function useUpdateSettings() {
+  return useMutation(api.onboarding.updateSettings);
+}

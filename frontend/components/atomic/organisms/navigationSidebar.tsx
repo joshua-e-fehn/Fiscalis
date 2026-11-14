@@ -183,12 +183,12 @@ const data = {
 		},
 		{
 			title: "Settings",
-			url: "#",
+			url: "/settings/general",
 			icon: Settings2,
 			items: [
 				{
 					title: "General",
-					url: "#",
+					url: "/settings/general",
 				},
 				{
 					title: "API Keys",

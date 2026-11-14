@@ -120,7 +120,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <Card className="border-yellow-200 dark:border-yellow-800 bg-white dark:bg-gray-900">
+          <Card className="border-yellow-200 dark:border-yellow-800 bg-card">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="flex-1">

@@ -102,32 +102,32 @@ function getLoanColor(name: string): string {
     lowerName.includes("home") ||
     lowerName.includes("house")
   ) {
-    return "bg-blue-100 text-blue-600";
+    return "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300";
   }
   if (
     lowerName.includes("car") ||
     lowerName.includes("auto") ||
     lowerName.includes("vehicle")
   ) {
-    return "bg-green-100 text-green-600";
+    return "bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300";
   }
   if (
     lowerName.includes("student") ||
     lowerName.includes("education") ||
     lowerName.includes("school")
   ) {
-    return "bg-purple-100 text-purple-600";
+    return "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-300";
   }
   if (lowerName.includes("business") || lowerName.includes("commercial")) {
-    return "bg-cyan-100 text-cyan-600";
+    return "bg-cyan-100 text-cyan-600 dark:bg-cyan-900/40 dark:text-cyan-300";
   }
   if (lowerName.includes("credit") || lowerName.includes("card")) {
-    return "bg-red-100 text-red-600";
+    return "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300";
   }
   if (lowerName.includes("personal")) {
-    return "bg-orange-100 text-orange-600";
+    return "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300";
   }
-  return "bg-gray-100 text-gray-600";
+  return "bg-muted text-muted-foreground";
 }
 
 // Time to the projected payoff (from the schedule, not the original end date)

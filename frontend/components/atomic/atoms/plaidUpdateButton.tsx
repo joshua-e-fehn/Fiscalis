@@ -128,7 +128,7 @@ export function ReauthAlert({ items }: ReauthAlertProps) {
             {items.map((item) => (
               <div
                 key={item.itemId}
-                className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-md px-3 py-2 border border-yellow-200 dark:border-yellow-800"
+                className="flex items-center gap-2 bg-card rounded-md px-3 py-2 border border-yellow-200 dark:border-yellow-800"
               >
                 <span className="text-sm font-medium">
                   {item.institutionName || "Unknown Bank"}

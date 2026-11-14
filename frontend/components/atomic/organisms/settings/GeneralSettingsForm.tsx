@@ -59,6 +59,16 @@ function toFormData(settings: StoredSettings | null): ProfileFormData {
   };
 }
 
+function sameSettings(a: ProfileFormData, b: ProfileFormData): boolean {
+  return (
+    a.displayName === b.displayName &&
+    a.birthDate === b.birthDate &&
+    a.defaultCurrency === b.defaultCurrency &&
+    a.language === b.language &&
+    a.theme === b.theme
+  );
+}
+
 /**
  * Settings > General: display name, date of birth, display currency, language
  * and theme. Saves through onboarding.updateSettings; the theme previews live
@@ -91,8 +101,21 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // Theme to restore on leaving the page: the preview is not a saved choice.
+  // The persisted settings are reactive: another tab or device may save
+  // while this page is open. Adopt the new values while the form has no
+  // unsaved edits, so saving never writes back stale fields.
+  const [baseline, setBaseline] = useState<ProfileFormData>(initial);
+  if (!sameSettings(initial, baseline)) {
+    setBaseline(initial);
+    if (sameSettings(formData, baseline)) setFormData(initial);
+  }
+
+  // Theme to restore on leaving the page: the preview is not a saved
+  // choice, so the latest persisted theme is restored.
   const savedTheme = useRef<Theme>(initial.theme);
+  useEffect(() => {
+    savedTheme.current = initial.theme;
+  }, [initial.theme]);
   useEffect(() => {
     const restore = savedTheme;
     return () => setTheme(restore.current);

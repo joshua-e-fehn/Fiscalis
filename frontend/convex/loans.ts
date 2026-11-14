@@ -39,6 +39,13 @@ import {
 } from "./schema";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { scheduleSnapshot } from "./portfolioSnapshots";
+import { loadFxRates } from "./fxRates";
+import {
+  BASE_CURRENCY,
+  normalizeCurrency,
+  toBase,
+  type FxRates,
+} from "../../services/finance/currency";
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -280,8 +287,12 @@ export const getLoanScenarios = query({
   },
 });
 
-// Get loan summary statistics. Amounts in different currencies aren't added
-// up: totals are per currency (no FX for loans yet)
+// Get loan summary statistics. Totals are per currency (each loan stays in
+// its own currency), plus `inBase`: the same totals in the base currency
+// (EUR) at the latest mirrored rates, the figure the page shows converted
+// into the display currency. A loan is converted like the net worth does
+// (lib/netWorth.ts loanBalanceInBase), but a missing rate makes `inBase`
+// null rather than counting the loan as 0.
 export const getLoansSummary = query({
   args: { today: todayValidator },
   handler: async (ctx, args) => {
@@ -289,6 +300,17 @@ export const getLoansSummary = query({
     const loans = userId
       ? await getActiveLoansWithKpis(ctx, userId, resolveToday(args.today))
       : [];
+    const foreign = [
+      ...new Set(
+        loans
+          .map((loan) => normalizeCurrency(loan.currency)?.code)
+          .filter((code) => code !== undefined && code !== BASE_CURRENCY),
+      ),
+    ] as string[];
+    const rates: FxRates =
+      foreign.length > 0 ? await loadFxRates(ctx, { currencies: foreign }) : {};
+    const inBase = { totalDebt: 0, totalMonthlyPayments: 0 };
+    let convertible = true;
 
     const byCurrency = new Map<
       string,
@@ -306,14 +328,24 @@ export const getLoansSummary = query({
         totalMonthlyPayments: 0,
         totalOriginalPrincipal: 0,
       };
-      totals.totalDebt += loan.currentBalance;
-      totals.totalOriginalPrincipal += loan.originalPrincipal;
       // Monthly equivalent of the regular payment (never a final settlement)
-      totals.totalMonthlyPayments +=
+      const monthlyPayment =
         (loan.kpis.regularPayment *
           getPaymentsPerYear(loan.paymentFrequency)) /
         12;
+      totals.totalDebt += loan.currentBalance;
+      totals.totalOriginalPrincipal += loan.originalPrincipal;
+      totals.totalMonthlyPayments += monthlyPayment;
       byCurrency.set(loan.currency, totals);
+
+      const debtBase = toBase(loan.currentBalance, loan.currency, rates);
+      const paymentBase = toBase(monthlyPayment, loan.currency, rates);
+      if (debtBase.ok && paymentBase.ok) {
+        inBase.totalDebt += debtBase.value;
+        inBase.totalMonthlyPayments += paymentBase.value;
+      } else {
+        convertible = false;
+      }
     }
     const totals = [...byCurrency.values()].map((t) => ({
       ...t,
@@ -336,6 +368,12 @@ export const getLoansSummary = query({
     return {
       loansCount: loans.length,
       totals,
+      inBase: convertible
+        ? {
+            totalDebt: roundMoney(inBase.totalDebt),
+            totalMonthlyPayments: roundMoney(inBase.totalMonthlyPayments),
+          }
+        : null,
       nextPayment: nextPaymentLoan
         ? {
             loanId: nextPaymentLoan._id,

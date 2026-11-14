@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/shadcn/select";
 import { Input } from "@/components/ui/shadcn/input";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { currencyCodes, formatCurrency } from "@/lib/utils/currency";
 import { Label } from "@/components/ui/shadcn/label";
 import { Button } from "@/components/ui/shadcn/button";
@@ -292,8 +292,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   const [originalPrincipal, setOriginalPrincipal] = useState("");
   const [currentBalance, setCurrentBalance] = useState("");
   const [annualInterestRate, setAnnualInterestRate] = useState("");
-  // New loans default to the user's base currency
-  const defaultCurrency = currencyCodes[useBaseCurrency()];
+  // New loans default to the user's display currency
+  const defaultCurrency = currencyCodes[useDisplayCurrency().currency];
   const [currency, setCurrency] = useState(defaultCurrency);
   const [termPeriods, setTermPeriods] = useState("");
   const [paymentFrequency, setPaymentFrequency] =

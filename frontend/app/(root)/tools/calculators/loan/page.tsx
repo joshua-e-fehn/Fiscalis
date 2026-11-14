@@ -84,6 +84,7 @@ import {
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
 import { formatCurrency as formatMoney } from "@/lib/utils/currency";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 
 // ============================================================================
 // Types
@@ -110,12 +111,19 @@ interface ExtraPaymentConfig {
 // Helper Functions
 // ============================================================================
 
-function formatCurrency(value: number): string {
-  return formatMoney(value, "USD", { fractionDigits: 0 });
-}
-
-function formatCurrencyPrecise(value: number): string {
-  return formatMoney(value, "USD");
+/**
+ * Money formatters in the display currency. The calculator's amounts are
+ * the user's own input, so they are labelled, never converted.
+ */
+function useMoneyFormat() {
+  const { currency } = useDisplayCurrency();
+  return {
+    formatCurrency: (value: number) =>
+      formatMoney(value, currency, { fractionDigits: 0 }),
+    formatCurrencyPrecise: (value: number) => formatMoney(value, currency),
+    formatCompact: (value: number) =>
+      formatMoney(value, currency, { compact: true }),
+  };
 }
 
 const PAYMENT_INTERVALS: Record<
@@ -665,7 +673,7 @@ function ExtraPaymentsSection({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="fixed">$ Fixed</SelectItem>
+                            <SelectItem value="fixed">Fixed amount</SelectItem>
                             <SelectItem value="percent">
                               % of Balance
                             </SelectItem>
@@ -709,6 +717,7 @@ function ResultsSummary({
   paymentInterval: PaymentInterval;
   additionalStats?: { label: string; value: string; color?: string }[];
 }) {
+  const { formatCurrency, formatCurrencyPrecise } = useMoneyFormat();
   const hasExtraPayments =
     resultWithoutExtra &&
     resultWithoutExtra.totalInterest !== result.totalInterest;
@@ -811,6 +820,7 @@ function PaymentBreakdownChart({
   schedule: AmortizationRow[];
   paymentInterval: PaymentInterval;
 }) {
+  const { formatCurrency, formatCompact } = useMoneyFormat();
   const periodsPerYear = getPaymentsPerYear(paymentInterval);
 
   const yearlyData = useMemo(() => {
@@ -870,7 +880,7 @@ function PaymentBreakdownChart({
               tickFormatter={(value) => `Y${value}`}
             />
             <YAxis
-              tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
+              tickFormatter={(value) => formatCompact(value)}
             />
             <ChartTooltip
               content={
@@ -926,7 +936,7 @@ function PaymentBreakdownChart({
               tickFormatter={(value) => `Y${value}`}
             />
             <YAxis
-              tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
+              tickFormatter={(value) => formatCompact(value)}
             />
             <ChartTooltip
               content={
@@ -963,6 +973,7 @@ function LoanTypeChartsCard({
   paymentInterval: PaymentInterval;
   color: "blue" | "green" | "amber" | "red";
 }) {
+  const { formatCurrency, formatCompact } = useMoneyFormat();
   const periodsPerYear = getPaymentsPerYear(paymentInterval);
 
   const yearlyData = useMemo(() => {
@@ -1042,7 +1053,7 @@ function LoanTypeChartsCard({
                 fontSize={10}
               />
               <YAxis
-                tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
+                tickFormatter={(value) => formatCompact(value)}
                 fontSize={10}
               />
               <ChartTooltip
@@ -1103,7 +1114,7 @@ function LoanTypeChartsCard({
                 fontSize={10}
               />
               <YAxis
-                tickFormatter={(value) => formatMoney(value, "USD", { compact: true })}
+                tickFormatter={(value) => formatCompact(value)}
                 fontSize={10}
               />
               <ChartTooltip
@@ -1132,6 +1143,7 @@ function LoanTypeChartsCard({
 }
 
 function AmortizationTable({ schedule }: { schedule: AmortizationRow[] }) {
+  const { formatCurrencyPrecise } = useMoneyFormat();
   const [showAll, setShowAll] = useState(false);
   const displayRows = showAll ? schedule : schedule.slice(0, 12);
 
@@ -1456,6 +1468,7 @@ function AnnuityCalculator() {
 }
 
 function ConstantPrincipalCalculator() {
+  const { formatCurrencyPrecise } = useMoneyFormat();
   return (
     <GenericLoanCalculator
       loanType="CONSTANT_PRINCIPAL"
@@ -1485,6 +1498,7 @@ function ConstantPrincipalCalculator() {
 }
 
 function InterestOnlyCalculator() {
+  const { formatCurrencyPrecise } = useMoneyFormat();
   return (
     <GenericLoanCalculator
       loanType="INTEREST_ONLY_THEN"
@@ -1553,6 +1567,7 @@ function InterestOnlyCalculator() {
 }
 
 function BulletCalculator() {
+  const { formatCurrency } = useMoneyFormat();
   return (
     <GenericLoanCalculator
       loanType="BULLET"
@@ -1586,6 +1601,8 @@ function BulletCalculator() {
 // ============================================================================
 
 function LoanTypeComparison() {
+  const { formatCurrency, formatCurrencyPrecise, formatCompact } =
+    useMoneyFormat();
   const [principal, setPrincipal] = useState(250000);
   const [interestRate, setInterestRate] = useState(6.5);
   const [termYears, setTermYears] = useState(30);
@@ -1761,7 +1778,7 @@ function LoanTypeComparison() {
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                     <XAxis
                       type="number"
-                      tickFormatter={(v) => formatMoney(v, "USD", { compact: true })}
+                      tickFormatter={(v) => formatCompact(v)}
                     />
                     <YAxis type="category" dataKey="type" width={100} />
                     <ChartTooltip

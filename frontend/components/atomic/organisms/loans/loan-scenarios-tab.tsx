@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import { useUser } from "@clerk/nextjs";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useSaveScenario, useDeleteScenario } from "@/hooks/convex/loans";
@@ -138,73 +139,46 @@ interface ScenarioResult {
 }
 
 // Helper functions
-// Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
 function formatCurrency(value: number, currency: string = "USD"): string {
   return formatMoney(value, currency, { fractionDigits: 0 });
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+// Which bounds a recurring extra has (the loans.scenarios.recurringExtra range)
+function rangeKind(extra: RecurringExtra): "both" | "from" | "until" | "none" {
+  if (extra.from && extra.until) return "both";
+  if (extra.from) return "from";
+  if (extra.until) return "until";
+  return "none";
 }
 
-function getPaymentFrequencyLabel(frequency: string): string {
-  switch (frequency) {
-    case "MONTHLY":
-      return "Monthly";
-    case "QUARTERLY":
-      return "Quarterly";
-    case "SEMI_ANNUAL":
-      return "Semi-Annual";
-    case "ANNUAL":
-      return "Annual";
-    default:
-      return "Periodic";
+type BreakdownSeries =
+  | "originalPrincipal"
+  | "originalInterest"
+  | "scenarioPrincipal"
+  | "scenarioInterest"
+  | "extraPayment";
+
+type ScenariosT = ReturnType<typeof useTranslations<"loans.scenarios">>;
+
+// The contract's prepayment limit and penalty, as the simulation applies them
+function contractTerms(loan: Loan, t: ScenariosT): string {
+  const limit = loan.maxAnnualPrepaymentRate;
+  const penalty = loan.prepaymentPenaltyRate
+    ? (loan.prepaymentPenaltyRate * 100).toFixed(2)
+    : undefined;
+  if (limit === undefined) {
+    return penalty ? t("contractPenalty", { penalty }) : "";
   }
-}
-
-function recurringExtraRange(extra: RecurringExtra): string {
-  if (extra.from && extra.until) {
-    return ` (${formatDate(extra.from)} – ${formatDate(extra.until)})`;
+  if (limit > 0) {
+    const rate = (limit * 100).toFixed(1);
+    return penalty
+      ? t("contractLimitAndPenalty", { rate, penalty })
+      : t("contractLimit", { rate });
   }
-  if (extra.from) return ` (from ${formatDate(extra.from)})`;
-  if (extra.until) return ` (until ${formatDate(extra.until)})`;
-  return "";
+  return penalty
+    ? t("contractNoPrepaymentsAndPenalty", { penalty })
+    : t("contractNoPrepayments");
 }
-
-// Chart configs
-const balanceChartConfig: ChartConfig = {
-  originalBalance: {
-    label: "Current Plan",
-    color: "hsl(221, 83%, 53%)",
-  },
-  scenarioBalance: {
-    label: "With Prepayments",
-    color: "hsl(142, 76%, 36%)",
-  },
-};
-
-const paymentChartConfig: ChartConfig = {
-  originalPrincipal: {
-    label: "Original Principal",
-    color: "hsl(221, 83%, 53%)",
-  },
-  originalInterest: {
-    label: "Original Interest",
-    color: "hsl(221, 60%, 70%)",
-  },
-  scenarioPrincipal: {
-    label: "Scenario Principal",
-    color: "hsl(142, 76%, 36%)",
-  },
-  scenarioInterest: {
-    label: "Scenario Interest",
-    color: "hsl(142, 50%, 60%)",
-  },
-};
 
 // Closing balance at the end of each calendar year, starting from today
 function yearlyBalances(
@@ -225,6 +199,7 @@ function calculateScenario(
   loan: Loan,
   payments: LoanPayment[],
   options: ProjectLoanOptions,
+  formatPeriod: (date: string) => string,
 ): ScenarioResult {
   const today = todayLocalISO();
   const original = projectLoan(loan, payments, {}, today);
@@ -251,7 +226,7 @@ function calculateScenario(
     const orig = original.rows[i];
     const scen = scenario.rows[i];
     return {
-      period: formatDate((orig ?? scen).dueDate),
+      period: formatPeriod((orig ?? scen).dueDate),
       originalPrincipal: orig?.principal ?? 0,
       originalInterest: orig?.interest ?? 0,
       scenarioPrincipal: scen?.principal ?? 0,
@@ -285,6 +260,54 @@ export function LoanScenariosTab({
   payments,
   scenarios,
 }: LoanScenariosTabProps) {
+  const t = useTranslations("loans.scenarios");
+  const tLoans = useTranslations("loans");
+  const tActions = useTranslations("common.actions");
+  const format = useFormatter();
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight:
+  // shown as month and year ("Nov 2026")
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "monthYear", {
+      month: "short",
+      timeZone: "UTC",
+    });
+  const duration = (months: number) =>
+    tLoans("duration", { years: Math.floor(months / 12), months: months % 12 });
+  const recurringExtraLabel = (extra: RecurringExtra) =>
+    t("recurringExtra", {
+      amount: formatCurrency(extra.amount, loan.currency),
+      frequency: loan.paymentFrequency,
+      range: rangeKind(extra),
+      from: extra.from ? formatDate(extra.from) : "",
+      until: extra.until ? formatDate(extra.until) : "",
+    });
+
+  const balanceChartConfig: ChartConfig = {
+    originalBalance: { label: t("currentPlan"), color: "hsl(221, 83%, 53%)" },
+    scenarioBalance: {
+      label: t("withPrepayments"),
+      color: "hsl(142, 76%, 36%)",
+    },
+  };
+  const paymentChartConfig: ChartConfig = {
+    originalPrincipal: {
+      label: t("series.originalPrincipal"),
+      color: "hsl(221, 83%, 53%)",
+    },
+    originalInterest: {
+      label: t("series.originalInterest"),
+      color: "hsl(221, 60%, 70%)",
+    },
+    scenarioPrincipal: {
+      label: t("series.scenarioPrincipal"),
+      color: "hsl(142, 76%, 36%)",
+    },
+    scenarioInterest: {
+      label: t("series.scenarioInterest"),
+      color: "hsl(142, 50%, 60%)",
+    },
+  };
+
   const { user } = useUser();
   const { saveScenario } = useSaveScenario();
   const { deleteScenario } = useDeleteScenario();
@@ -312,7 +335,7 @@ export function LoanScenariosTab({
   const [newPrepaymentAmount, setNewPrepaymentAmount] = useState("");
 
   // Payment frequency label
-  const frequencyLabel = getPaymentFrequencyLabel(loan.paymentFrequency);
+  const frequencyLabel = tLoans(`frequency.${loan.paymentFrequency}`);
 
   const newRate =
     newRatePercent === "" ? undefined : parseFloat(newRatePercent) / 100;
@@ -320,12 +343,21 @@ export function LoanScenariosTab({
   // Calculate live scenario
   const liveScenario = useMemo(
     () =>
-      calculateScenario(loan, payments, {
-        recurringExtras: toRecurringExtras(recurringExtras),
-        oneTimePrepayments,
-        newRate,
-        prepaymentEffect,
-      }),
+      calculateScenario(
+        loan,
+        payments,
+        {
+          recurringExtras: toRecurringExtras(recurringExtras),
+          oneTimePrepayments,
+          newRate,
+          prepaymentEffect,
+        },
+        (date) =>
+          format.dateTime(new Date(date), "monthYear", {
+            month: "short",
+            timeZone: "UTC",
+          }),
+      ),
     [
       loan,
       payments,
@@ -333,6 +365,7 @@ export function LoanScenariosTab({
       oneTimePrepayments,
       newRate,
       prepaymentEffect,
+      format,
     ],
   );
 
@@ -450,18 +483,17 @@ export function LoanScenariosTab({
         <CardHeader>
           <div className="flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-yellow-500" />
-            <CardTitle className="text-lg">What-If Simulator</CardTitle>
+            <CardTitle className="text-lg">{t("title")}</CardTitle>
           </div>
-          <CardDescription>
-            See how prepayments can help you save money and pay off your loan
-            faster
-          </CardDescription>
+          <CardDescription>{t("description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Recurring extra payments */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <Label>Additional Principal ({frequencyLabel})</Label>
+              <Label>
+                {t("additionalPrincipal", { frequency: frequencyLabel })}
+              </Label>
               <Button
                 type="button"
                 size="sm"
@@ -469,14 +501,16 @@ export function LoanScenariosTab({
                 onClick={handleAddRecurringExtra}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                Add recurring extra
+                {t("addRecurring")}
               </Button>
             </div>
             {recurringExtras.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No recurring extras. Each one is paid with every{" "}
-                {frequencyLabel.toLowerCase()} payment in its date range; the
-                ones active together add up.
+                {t("noRecurring", {
+                  eachPayment: tLoans("eachPayment", {
+                    frequency: loan.paymentFrequency,
+                  }),
+                })}
               </p>
             ) : (
               <div className="space-y-2">
@@ -493,9 +527,9 @@ export function LoanScenariosTab({
                         type="number"
                         min="0"
                         step="25"
-                        aria-label="Amount per payment"
+                        aria-label={t("amountPerPayment")}
                         value={row.amount || ""}
-                        placeholder="Amount"
+                        placeholder={t("amount")}
                         onChange={(e) =>
                           handleUpdateRecurringExtra(row.id, {
                             amount: Math.max(0, parseFloat(e.target.value) || 0),
@@ -509,7 +543,7 @@ export function LoanScenariosTab({
                         htmlFor={`${row.id}-from`}
                         className="text-xs text-muted-foreground"
                       >
-                        From
+                        {t("from")}
                       </Label>
                       <Input
                         id={`${row.id}-from`}
@@ -528,7 +562,7 @@ export function LoanScenariosTab({
                         htmlFor={`${row.id}-until`}
                         className="text-xs text-muted-foreground"
                       >
-                        Until
+                        {t("until")}
                       </Label>
                       <Input
                         id={`${row.id}-until`}
@@ -546,7 +580,7 @@ export function LoanScenariosTab({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      aria-label="Remove recurring extra"
+                      aria-label={t("removeRecurring")}
                       onClick={() => handleRemoveRecurringExtra(row.id)}
                     >
                       <X className="h-4 w-4 text-red-500" />
@@ -554,7 +588,7 @@ export function LoanScenariosTab({
                   </div>
                 ))}
                 <p className="text-xs text-muted-foreground">
-                  Blank dates: from the next payment, to the end of the loan.
+                  {t("blankDates")}
                 </p>
               </div>
             )}
@@ -563,12 +597,12 @@ export function LoanScenariosTab({
           {/* Prepayment effect & refinancing rate */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
             <div>
-              <Label className="mb-2 block">Prepayments</Label>
+              <Label className="mb-2 block">{t("prepayments")}</Label>
               <div className="flex gap-2">
                 {(
                   [
-                    ["reduce_term", "Shorten the term"],
-                    ["reduce_payment", "Lower the payment"],
+                    ["reduce_term", t("reduceTerm")],
+                    ["reduce_payment", t("reducePayment")],
                   ] as const
                 ).map(([value, label]) => (
                   <Button
@@ -585,7 +619,7 @@ export function LoanScenariosTab({
             </div>
             <div>
               <Label htmlFor="whatif-rate" className="mb-2 block">
-                New interest rate (%), optional
+                {t("newRate")}
               </Label>
               <Input
                 id="whatif-rate"
@@ -601,26 +635,13 @@ export function LoanScenariosTab({
           {(loan.maxAnnualPrepaymentRate !== undefined ||
             !!loan.prepaymentPenaltyRate) && (
             <p className="text-xs text-muted-foreground">
-              Your contract
-              {loan.maxAnnualPrepaymentRate !== undefined
-                ? loan.maxAnnualPrepaymentRate > 0
-                  ? ` allows prepaying ${(loan.maxAnnualPrepaymentRate * 100).toFixed(1)}% of the original principal per year`
-                  : " allows no prepayments"
-                : ""}
-              {loan.maxAnnualPrepaymentRate !== undefined &&
-              loan.prepaymentPenaltyRate
-                ? " and"
-                : ""}
-              {loan.prepaymentPenaltyRate
-                ? ` charges a ${(loan.prepaymentPenaltyRate * 100).toFixed(2)}% prepayment penalty`
-                : ""}
-              ; the simulation applies both.
+              {contractTerms(loan, t)}
             </p>
           )}
 
           {/* One-Time Prepayments */}
           <div className="border-t pt-4">
-            <Label className="mb-3 block">One-Time Prepayments</Label>
+            <Label className="mb-3 block">{t("oneTimePrepayments")}</Label>
             <div className="flex gap-2 mb-3">
               <Input
                 type="date"
@@ -634,7 +655,8 @@ export function LoanScenariosTab({
                 </span>
                 <Input
                   type="number"
-                  placeholder="Amount"
+                  placeholder={t("amount")}
+                  aria-label={t("amount")}
                   value={newPrepaymentAmount}
                   onChange={(e) => setNewPrepaymentAmount(e.target.value)}
                   className="pl-12"
@@ -644,6 +666,7 @@ export function LoanScenariosTab({
                 onClick={handleAddPrepayment}
                 size="icon"
                 variant="outline"
+                aria-label={t("addPrepayment")}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -667,6 +690,7 @@ export function LoanScenariosTab({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={t("removePrepayment")}
                       onClick={() => handleRemovePrepayment(prepayment.id)}
                     >
                       <X className="h-4 w-4 text-red-500" />
@@ -681,12 +705,12 @@ export function LoanScenariosTab({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 border-t pt-6">
             <div className="space-y-4">
               <h4 className="font-semibold text-sm text-muted-foreground uppercase">
-                Current Plan
+                {t("currentPlan")}
               </h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Payoff Date
+                    {t("payoffDate")}
                   </span>
                   <span className="font-medium">
                     {formatDate(liveScenario.originalEndDate)}
@@ -694,7 +718,7 @@ export function LoanScenariosTab({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Total Interest
+                    {t("totalInterest")}
                   </span>
                   <span className="font-medium">
                     {formatCurrency(
@@ -705,11 +729,10 @@ export function LoanScenariosTab({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Time Left
+                    {t("timeLeft")}
                   </span>
                   <span className="font-medium">
-                    {Math.floor(liveScenario.originalMonths / 12)}y{" "}
-                    {liveScenario.originalMonths % 12}m
+                    {duration(liveScenario.originalMonths)}
                   </span>
                 </div>
               </div>
@@ -721,12 +744,12 @@ export function LoanScenariosTab({
 
             <div className="space-y-4 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
               <h4 className="font-semibold text-sm text-green-700 dark:text-green-400 uppercase">
-                With Prepayments
+                {t("withPrepayments")}
               </h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-green-700 dark:text-green-400">
-                    Payoff Date
+                    {t("payoffDate")}
                   </span>
                   <span className="font-medium text-green-700 dark:text-green-400">
                     {formatDate(liveScenario.newEndDate)}
@@ -734,7 +757,7 @@ export function LoanScenariosTab({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-green-700 dark:text-green-400">
-                    Total Interest
+                    {t("totalInterest")}
                   </span>
                   <span className="font-medium text-green-700 dark:text-green-400">
                     {formatCurrency(
@@ -745,11 +768,10 @@ export function LoanScenariosTab({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-green-700 dark:text-green-400">
-                    Time Left
+                    {t("timeLeft")}
                   </span>
                   <span className="font-medium text-green-700 dark:text-green-400">
-                    {Math.floor(liveScenario.newMonths / 12)}y{" "}
-                    {liveScenario.newMonths % 12}m
+                    {duration(liveScenario.newMonths)}
                   </span>
                 </div>
               </div>
@@ -760,15 +782,16 @@ export function LoanScenariosTab({
           {hasChanges && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 rounded-lg bg-muted">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">Time Saved</p>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {t("timeSaved")}
+                </p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {Math.floor(liveScenario.monthsSaved / 12)}y{" "}
-                  {liveScenario.monthsSaved % 12}m
+                  {duration(liveScenario.monthsSaved)}
                 </p>
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">
-                  Interest Saved
+                  {t("interestSaved")}
                 </p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(liveScenario.interestSaved, loan.currency)}
@@ -776,7 +799,7 @@ export function LoanScenariosTab({
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground mb-1">
-                  Total Prepaid
+                  {t("totalPrepaid")}
                 </p>
                 <p className="text-2xl font-bold text-orange-600">
                   {formatCurrency(
@@ -791,12 +814,28 @@ export function LoanScenariosTab({
           {hasChanges &&
             (liveScenario.totalPenalty > 0 ||
               liveScenario.prepaymentsCapped > 0) && (
-              <p className="text-sm text-amber-600">
-                {liveScenario.prepaymentsCapped > 0 &&
-                  `${formatCurrency(liveScenario.prepaymentsCapped, loan.currency)} of prepayments exceed the annual limit and are left out. `}
-                {liveScenario.totalPenalty > 0 &&
-                  `Prepayment penalties: ${formatCurrency(liveScenario.totalPenalty, loan.currency)}.`}
-              </p>
+              <div className="text-sm text-amber-600">
+                {liveScenario.prepaymentsCapped > 0 && (
+                  <p>
+                    {t("capped", {
+                      amount: formatCurrency(
+                        liveScenario.prepaymentsCapped,
+                        loan.currency,
+                      ),
+                    })}
+                  </p>
+                )}
+                {liveScenario.totalPenalty > 0 && (
+                  <p>
+                    {t("penalties", {
+                      amount: formatCurrency(
+                        liveScenario.totalPenalty,
+                        loan.currency,
+                      ),
+                    })}
+                  </p>
+                )}
+              </div>
             )}
 
           {/* Save Button */}
@@ -804,7 +843,7 @@ export function LoanScenariosTab({
             <div className="flex justify-end">
               <Button onClick={() => setShowSaveDialog(true)}>
                 <Save className="h-4 w-4 mr-2" />
-                Save This Scenario
+                {t("saveThis")}
               </Button>
             </div>
           )}
@@ -817,10 +856,8 @@ export function LoanScenariosTab({
           {/* Balance Over Time Comparison */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Balance Over Time</CardTitle>
-              <CardDescription>
-                Compare how your balance decreases with extra payments
-              </CardDescription>
+              <CardTitle className="text-lg">{t("balanceTitle")}</CardTitle>
+              <CardDescription>{t("balanceDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer
@@ -882,8 +919,8 @@ export function LoanScenariosTab({
                           if (value === null) return null;
                           const label =
                             name === "originalBalance"
-                              ? "Current Plan"
-                              : "With Prepayments";
+                              ? t("currentPlan")
+                              : t("withPrepayments");
                           return [
                             formatCurrency(value as number, loan.currency),
                             label,
@@ -913,11 +950,11 @@ export function LoanScenariosTab({
               <div className="flex justify-center gap-6 mt-4 text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-[hsl(221,83%,53%)]" />
-                  <span>Current Plan</span>
+                  <span>{t("currentPlan")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded bg-[hsl(142,76%,36%)]" />
-                  <span>With Prepayments</span>
+                  <span>{t("withPrepayments")}</span>
                 </div>
               </div>
             </CardContent>
@@ -926,10 +963,11 @@ export function LoanScenariosTab({
           {/* Payment Breakdown Comparison */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Payment Breakdown</CardTitle>
+              <CardTitle className="text-lg">{t("breakdownTitle")}</CardTitle>
               <CardDescription>
-                Principal vs interest comparison (next{" "}
-                {liveScenario.paymentBreakdown.length} payments)
+                {t("breakdownDescription", {
+                  count: liveScenario.paymentBreakdown.length,
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -955,19 +993,10 @@ export function LoanScenariosTab({
                   <ChartTooltip
                     content={
                       <ChartTooltipContent
-                        formatter={(value, name) => {
-                          const labels: Record<string, string> = {
-                            originalPrincipal: "Current Plan - Principal",
-                            originalInterest: "Current Plan - Interest",
-                            scenarioPrincipal: "With Extra - Principal",
-                            scenarioInterest: "With Extra - Interest",
-                            extraPayment: "Extra Payment",
-                          };
-                          return [
-                            formatCurrency(value as number, loan.currency),
-                            labels[name as string] || name,
-                          ];
-                        }}
+                        formatter={(value, name) => [
+                          formatCurrency(value as number, loan.currency),
+                          t(`series.${name as BreakdownSeries}`),
+                        ]}
                       />
                     }
                   />
@@ -1008,32 +1037,32 @@ export function LoanScenariosTab({
               <div className="flex flex-wrap justify-center gap-4 mt-4 text-sm">
                 <div className="flex items-center gap-4">
                   <span className="text-xs text-muted-foreground font-medium">
-                    Current:
+                    {t("legendCurrent")}
                   </span>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded bg-[hsl(221,83%,53%)]" />
-                    <span>Principal</span>
+                    <span>{t("principal")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded bg-[hsl(221,60%,75%)]" />
-                    <span>Interest</span>
+                    <span>{t("interest")}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-xs text-muted-foreground font-medium">
-                    Scenario:
+                    {t("legendScenario")}
                   </span>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded bg-[hsl(142,76%,36%)]" />
-                    <span>Principal</span>
+                    <span>{t("principal")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded bg-[hsl(142,50%,60%)]" />
-                    <span>Interest</span>
+                    <span>{t("interest")}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-3 h-3 rounded bg-[hsl(45,93%,47%)]" />
-                    <span>Extra</span>
+                    <span>{t("extra")}</span>
                   </div>
                 </div>
               </div>
@@ -1045,19 +1074,15 @@ export function LoanScenariosTab({
       {/* Saved Scenarios */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Saved Scenarios</CardTitle>
-          <CardDescription>
-            Compare different payment strategies you&apos;ve explored
-          </CardDescription>
+          <CardTitle className="text-lg">{t("savedTitle")}</CardTitle>
+          <CardDescription>{t("savedDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           {scenarios.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No scenarios saved yet</p>
-              <p className="text-sm">
-                Use the simulator above to create and save scenarios
-              </p>
+              <p>{t("savedEmpty")}</p>
+              <p className="text-sm">{t("savedEmptyHint")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1080,19 +1105,20 @@ export function LoanScenariosTab({
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Scenario</AlertDialogTitle>
+                        <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete &quot;{scenario.name}
-                          &quot;?
+                          {t("deleteDescription", { name: scenario.name })}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>
+                          {tActions("cancel")}
+                        </AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => handleDeleteScenario(scenario._id)}
                           className="bg-red-600 hover:bg-red-700"
                         >
-                          Delete
+                          {tActions("delete")}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1104,20 +1130,16 @@ export function LoanScenariosTab({
                       {resolveRecurringExtras(scenario).map((extra, i) => (
                         <div key={i} className="flex items-center gap-2">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            +{formatCurrency(extra.amount, loan.currency)} per{" "}
-                            {frequencyLabel.toLowerCase()} payment
-                            {recurringExtraRange(extra)}
-                          </span>
+                          <span>{recurringExtraLabel(extra)}</span>
                         </div>
                       ))}
                       {(scenario.oneTimePrepayments?.length ?? 0) > 0 && (
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            {scenario.oneTimePrepayments!.length} one-time
-                            prepayment
-                            {scenario.oneTimePrepayments!.length > 1 ? "s" : ""}
+                            {t("oneTimeCount", {
+                              count: scenario.oneTimePrepayments!.length,
+                            })}
                           </span>
                         </div>
                       )}
@@ -1126,8 +1148,9 @@ export function LoanScenariosTab({
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-blue-500" />
                             <span>
-                              {Math.floor(scenario.monthsSaved / 12)}y{" "}
-                              {scenario.monthsSaved % 12}m saved
+                              {t("durationSaved", {
+                                duration: duration(scenario.monthsSaved),
+                              })}
                             </span>
                           </div>
                         )}
@@ -1136,11 +1159,12 @@ export function LoanScenariosTab({
                           <div className="flex items-center gap-2">
                             <TrendingDown className="h-4 w-4 text-green-500" />
                             <span className="text-green-600 font-medium">
-                              {formatCurrency(
-                                scenario.totalInterestSaved,
-                                loan.currency,
-                              )}{" "}
-                              saved
+                              {t("amountSaved", {
+                                amount: formatCurrency(
+                                  scenario.totalInterestSaved,
+                                  loan.currency,
+                                ),
+                              })}
                             </span>
                           </div>
                         )}
@@ -1148,7 +1172,9 @@ export function LoanScenariosTab({
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
                           <span>
-                            Payoff: {formatDate(scenario.projectedEndDate)}
+                            {t("payoff", {
+                              date: formatDate(scenario.projectedEndDate),
+                            })}
                           </span>
                         </div>
                       )}
@@ -1159,7 +1185,7 @@ export function LoanScenariosTab({
                       className="w-full mt-4"
                       onClick={() => handleLoadScenario(scenario)}
                     >
-                      Load Scenario
+                      {t("load")}
                     </Button>
                   </CardContent>
                 </Card>
@@ -1173,28 +1199,32 @@ export function LoanScenariosTab({
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Save Scenario</DialogTitle>
-            <DialogDescription>
-              Give your scenario a name to save it for later comparison
-            </DialogDescription>
+            <DialogTitle>{t("saveTitle")}</DialogTitle>
+            <DialogDescription>{t("saveDescription")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="scenario-name">Scenario Name</Label>
+              <Label htmlFor="scenario-name">{t("scenarioName")}</Label>
               <Input
                 id="scenario-name"
-                placeholder={`e.g., +${formatCurrency(activeRecurringExtras[0]?.amount ?? 0, loan.currency)} ${frequencyLabel.toLowerCase()}`}
+                placeholder={t("scenarioNamePlaceholder", {
+                  amount: formatCurrency(
+                    activeRecurringExtras[0]?.amount ?? 0,
+                    loan.currency,
+                  ),
+                  frequency: frequencyLabel.toLowerCase(),
+                })}
                 value={scenarioName}
                 onChange={(e) => setScenarioName(e.target.value)}
               />
             </div>
 
             <div className="p-4 rounded-lg bg-muted">
-              <h4 className="font-medium mb-2">Scenario Summary</h4>
+              <h4 className="font-medium mb-2">{t("scenarioSummary")}</h4>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  Recurring extras ({frequencyLabel}):
+                  {t("summaryRecurring", { frequency: frequencyLabel })}
                 </span>
                 <span>
                   {activeRecurringExtras.length > 0
@@ -1207,16 +1237,23 @@ export function LoanScenariosTab({
                 </span>
                 {oneTimePrepayments.length > 0 && (
                   <>
-                    <span className="text-muted-foreground">Prepayments:</span>
-                    <span>{oneTimePrepayments.length} payment(s)</span>
+                    <span className="text-muted-foreground">
+                      {t("summaryPrepayments")}
+                    </span>
+                    <span>
+                      {t("summaryPrepaymentCount", {
+                        count: oneTimePrepayments.length,
+                      })}
+                    </span>
                   </>
                 )}
-                <span className="text-muted-foreground">Time Saved:</span>
-                <span>
-                  {Math.floor(liveScenario.monthsSaved / 12)}y{" "}
-                  {liveScenario.monthsSaved % 12}m
+                <span className="text-muted-foreground">
+                  {t("summaryTimeSaved")}
                 </span>
-                <span className="text-muted-foreground">Interest Saved:</span>
+                <span>{duration(liveScenario.monthsSaved)}</span>
+                <span className="text-muted-foreground">
+                  {t("summaryInterestSaved")}
+                </span>
                 <span className="text-green-600 font-medium">
                   {formatCurrency(liveScenario.interestSaved, loan.currency)}
                 </span>
@@ -1226,7 +1263,7 @@ export function LoanScenariosTab({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
-              Cancel
+              {tActions("cancel")}
             </Button>
             <Button
               onClick={handleSaveScenario}
@@ -1235,7 +1272,7 @@ export function LoanScenariosTab({
               {isSubmitting && (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               )}
-              Save Scenario
+              {t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>

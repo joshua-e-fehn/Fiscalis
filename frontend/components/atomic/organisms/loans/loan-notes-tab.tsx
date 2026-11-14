@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useUpdateLoan } from "@/hooks/convex/loans";
 import {
@@ -21,7 +22,23 @@ interface LoanNotesTabProps {
   loan: Loan;
 }
 
+const TIPS = [
+  "reference",
+  "conditions",
+  "contact",
+  "modifications",
+  "reminders",
+] as const;
+
 export function LoanNotesTab({ loan }: LoanNotesTabProps) {
+  const t = useTranslations("loans.notes");
+  const tLoans = useTranslations("loans");
+  const format = useFormatter();
+  // Re-renders the "Saved 5 minutes ago" badge as time passes
+  const now = useNow({ updateInterval: 30_000 });
+  // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), "dateOnly");
   const [notes, setNotes] = useState(loan.notes || "");
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -69,26 +86,20 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
     saveNotes();
   };
 
-  // Format last saved time
-  const formatLastSaved = () => {
-    if (!lastSaved) return null;
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
+  // "Saved just now", "Saved 5 minutes ago", then the time of day
+  const formatLastSaved = (saved: Date) => {
+    const diff = Math.floor((now.getTime() - saved.getTime()) / 1000);
 
-    if (diff < 60) return "Just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-    return lastSaved.toLocaleTimeString();
+    if (diff < 60) return t("savedJustNow");
+    if (diff < 3600) {
+      return t("savedAgo", {
+        when: format.relativeTime(saved, { now, unit: "minute" }),
+      });
+    }
+    return t("savedAt", {
+      time: format.dateTime(saved, { hour: "2-digit", minute: "2-digit" }),
+    });
   };
-
-  // Placeholder suggestions
-  const placeholderSuggestions = [
-    "• Contract reference number: ___",
-    "• Lender contact: ___",
-    "• Early repayment terms: ___",
-    "• Important dates to remember: ___",
-    "• Linked collateral or assets: ___",
-    "• Special conditions: ___",
-  ];
 
   return (
     <div className="space-y-6">
@@ -99,29 +110,26 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Contract Notes
+                {t("title")}
               </CardTitle>
-              <CardDescription>
-                Add any important notes, contract details, or reminders about
-                this loan
-              </CardDescription>
+              <CardDescription>{t("description")}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               {isSaving && (
                 <Badge variant="secondary" className="gap-1">
                   <Clock className="h-3 w-3 animate-spin" />
-                  Saving...
+                  {t("saving")}
                 </Badge>
               )}
               {!isSaving && lastSaved && !hasUnsavedChanges && (
                 <Badge variant="secondary" className="gap-1 text-green-600">
                   <Check className="h-3 w-3" />
-                  Saved {formatLastSaved()}
+                  {formatLastSaved(lastSaved)}
                 </Badge>
               )}
               {hasUnsavedChanges && !isSaving && (
                 <Badge variant="outline" className="gap-1">
-                  Unsaved changes
+                  {t("unsaved")}
                 </Badge>
               )}
             </div>
@@ -131,13 +139,13 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
           <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder={`Add notes about this loan...\n\n${placeholderSuggestions.join("\n")}`}
+            placeholder={t("placeholder")}
             className="min-h-[300px] font-mono text-sm"
           />
 
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Auto-saves 2 seconds after you stop typing
+              {t("autoSaveHint")}
             </p>
             <Button
               onClick={handleManualSave}
@@ -145,7 +153,7 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
               variant="outline"
             >
               <Save className="h-4 w-4 mr-2" />
-              Save Now
+              {t("saveNow")}
             </Button>
           </div>
         </CardContent>
@@ -156,32 +164,30 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Contract Details
+              {t("contractDetails")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Lender</span>
+              <span className="text-muted-foreground">{t("lender")}</span>
               <span className="font-medium">
-                {loan.lender || "Not specified"}
+                {loan.lender || t("notSpecified")}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Loan Type</span>
-              <span className="font-medium capitalize">
-                {loan.loanType.replace("_", " ").toLowerCase()}
+              <span className="text-muted-foreground">{t("loanType")}</span>
+              <span className="font-medium">
+                {tLoans(`loanTypes.${loan.loanType}.label`)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Start Date</span>
-              <span className="font-medium">
-                {new Date(loan.startDate).toLocaleDateString()}
-              </span>
+              <span className="text-muted-foreground">{t("startDate")}</span>
+              <span className="font-medium">{formatDate(loan.startDate)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Expected End</span>
+              <span className="text-muted-foreground">{t("expectedEnd")}</span>
               <span className="font-medium">
-                {new Date(loan.expectedEndDate).toLocaleDateString()}
+                {formatDate(loan.expectedEndDate)}
               </span>
             </div>
           </CardContent>
@@ -190,26 +196,26 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Prepayment Terms
+              {t("prepaymentTerms")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">
-                Max Annual Prepayment
+                {t("maxPrepayment")}
               </span>
               <span className="font-medium">
                 {loan.maxAnnualPrepaymentRate !== undefined
                   ? `${(loan.maxAnnualPrepaymentRate * 100).toFixed(1)}%`
-                  : "No limit"}
+                  : t("noLimit")}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Penalty Rate</span>
+              <span className="text-muted-foreground">{t("penaltyRate")}</span>
               <span className="font-medium">
                 {loan.prepaymentPenaltyRate
                   ? `${(loan.prepaymentPenaltyRate * 100).toFixed(1)}%`
-                  : "None"}
+                  : t("none")}
               </span>
             </div>
           </CardContent>
@@ -224,15 +230,11 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
               <FileText className="h-4 w-4 text-blue-600" />
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-sm">
-                Tips for Organizing Your Notes
-              </p>
+              <p className="font-medium text-sm">{t("tipsTitle")}</p>
               <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Store your contract reference number for quick access</li>
-                <li>• Note any special conditions or verbal agreements</li>
-                <li>• Record contact information for your loan officer</li>
-                <li>• Track any modifications made to the original terms</li>
-                <li>• Set reminders for rate reviews or renegotiation dates</li>
+                {TIPS.map((tip) => (
+                  <li key={tip}>• {t(`tips.${tip}`)}</li>
+                ))}
               </ul>
             </div>
           </div>

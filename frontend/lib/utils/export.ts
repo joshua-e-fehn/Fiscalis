@@ -41,20 +41,33 @@ export function exportTransactionsToCSV(
     tx.notes || "",
   ]);
 
-  // Escape values that contain commas or quotes
-  const escapeCSV = (value: string): string => {
-    if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
+  downloadCSV(headers, rows, filename);
+}
 
+/** Quote a CSV cell when it contains a comma, quote or newline */
+function escapeCSV(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/**
+ * Download rows as a UTF-8 CSV with a byte-order mark, so Excel reads
+ * translated (non-ASCII) headers and values correctly; cells are quoted
+ * when needed
+ */
+export function downloadCSV(
+  headers: readonly string[],
+  rows: readonly (readonly (string | number)[])[],
+  filename: string,
+): void {
   const csvContent = [
     headers.map(escapeCSV).join(","),
-    ...rows.map((row) => row.map(escapeCSV).join(",")),
+    ...rows.map((row) => row.map((cell) => escapeCSV(String(cell))).join(",")),
   ].join("\n");
 
-  downloadFile(csvContent, filename, "text/csv;charset=utf-8;");
+  downloadFile("\uFEFF" + csvContent, filename, "text/csv;charset=utf-8;");
 }
 
 /**

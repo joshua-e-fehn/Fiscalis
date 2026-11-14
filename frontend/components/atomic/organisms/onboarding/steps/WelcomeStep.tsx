@@ -4,7 +4,6 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { PieChart, Wallet, TrendingUp, ArrowRight } from "lucide-react";
 import { OnboardingButton } from "../shared/OnboardingButton";
-import { FeatureItem } from "../shared/FeatureItem";
 import { containerVariants, itemVariants } from "@/lib/types/onboarding";
 
 interface WelcomeStepProps {

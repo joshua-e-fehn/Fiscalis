@@ -16,7 +16,6 @@ import { OnboardingButton } from "../shared/OnboardingButton";
 import {
   OnboardingCard,
   OnboardingCardContent,
-  OnboardingCardHeader,
 } from "../shared/OnboardingCard";
 import { SkipButton } from "../shared/SkipButton";
 import { Input } from "@/components/ui/shadcn/input";
@@ -34,7 +33,6 @@ import {
   ProfileFormData,
   Currency,
   Language,
-  Theme,
   CURRENCIES,
   LANGUAGES,
   containerVariants,

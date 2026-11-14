@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useEffectEvent } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
   useCreateLoan,
@@ -464,9 +464,15 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     setNotes("");
   };
 
+  // Reads the latest resetForm without re-running the effect when it changes,
+  // so the delayed reset still fires only when `open` flips.
+  const scheduleReset = useEffectEvent(() => {
+    setTimeout(resetForm, 300);
+  });
+
   useEffect(() => {
     if (!open) {
-      setTimeout(resetForm, 300);
+      scheduleReset();
     }
   }, [open]);
 

@@ -34,12 +34,9 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
   const connectionSummary = useConnectionSummary();
   const completeOnboarding = useCompleteOnboarding();
   const [isNavigating, setIsNavigating] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
 
-  // Trigger confetti on mount
+  // Mark onboarding as complete on mount
   useEffect(() => {
-    setShowConfetti(true);
-    // Mark onboarding as complete
     completeOnboarding();
   }, [completeOnboarding]);
 
@@ -59,8 +56,8 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
 
   return (
     <div className="flex flex-col items-center px-4 py-8 relative">
-      {/* Confetti Effect */}
-      {showConfetti && <ConfettiEffect />}
+      {/* Confetti Effect (fills its particles after mount) */}
+      <ConfettiEffect />
 
       <motion.div
         className="w-full max-w-lg mx-auto text-center"
@@ -255,30 +252,38 @@ function ConnectionSummaryItem({
   );
 }
 
+interface ConfettiParticle {
+  id: number;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+  color: string;
+  borderRadius: string;
+  delay: number;
+}
+
+function generateConfetti(): ConfettiParticle[] {
+  const colors = ["#D4AF37", "#3B82F6", "#22c55e", "#ffffff"];
+  return Array.from({ length: 50 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    rotation: Math.random() * 360,
+    scale: Math.random() * 0.5 + 0.5,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+    delay: Math.random() * 0.5,
+  }));
+}
+
+// Only mounted on the client (CompletionStep renders after onboarding
+// progress loads), so the random lazy initializer never runs during SSR.
 function ConfettiEffect() {
-  const [particles, setParticles] = useState<
-    Array<{
-      id: number;
-      x: number;
-      y: number;
-      rotation: number;
-      scale: number;
-      color: string;
-    }>
-  >([]);
+  const [particles, setParticles] =
+    useState<ConfettiParticle[]>(generateConfetti);
 
   useEffect(() => {
-    const colors = ["#D4AF37", "#3B82F6", "#22c55e", "#ffffff"];
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      rotation: Math.random() * 360,
-      scale: Math.random() * 0.5 + 0.5,
-      color: colors[Math.floor(Math.random() * colors.length)],
-    }));
-    setParticles(newParticles);
-
     // Clean up confetti after animation
     const timeout = setTimeout(() => setParticles([]), 3000);
     return () => clearTimeout(timeout);
@@ -294,7 +299,7 @@ function ConfettiEffect() {
             left: `${particle.x}%`,
             top: "-10%",
             backgroundColor: particle.color,
-            borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+            borderRadius: particle.borderRadius,
           }}
           initial={{
             y: 0,
@@ -310,7 +315,7 @@ function ConfettiEffect() {
           transition={{
             duration: 3,
             ease: "easeOut",
-            delay: Math.random() * 0.5,
+            delay: particle.delay,
           }}
         />
       ))}

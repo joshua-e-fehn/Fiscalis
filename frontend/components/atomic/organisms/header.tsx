@@ -2,14 +2,6 @@ import { SignInButton, SignUpButton, SignedOut, SignedIn } from "@clerk/nextjs";
 import { Separator } from "@/components/ui/shadcn/separator";
 import { Button } from "@/components/ui/shadcn/button";
 import { SidebarTrigger } from "@/components/ui/shadcn/sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/shadcn/breadcrumb";
 import Link from "next/link";
 import { SyncAllButton } from "@/components/atomic/atoms/syncAllButton";
 

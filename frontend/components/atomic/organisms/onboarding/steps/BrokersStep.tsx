@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -9,7 +9,6 @@ import {
   Shield,
   ArrowRight,
   ArrowLeft,
-  Plus,
   Loader2,
   ExternalLink,
 } from "lucide-react";

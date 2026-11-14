@@ -5,12 +5,16 @@
  *
  * Unified card for displaying integration connections across banking, brokers, and crypto.
  * Shows connection logo, name, status, total value, and nested accounts.
+ * The connection totals are summed in EUR (the stored base values) and
+ * shown in the display currency; the nested accounts keep the provider's
+ * own currency (IntegrationAccountItem).
  */
 
 import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/shadcn/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { Clock } from "lucide-react";
 import {
   IntegrationStatusBadge,
@@ -43,12 +47,10 @@ interface IntegrationConnectionCardProps {
   fallbackIcon?: React.ReactNode;
   /** Connection status */
   status: IntegrationStatus;
-  /** Total value across all accounts */
-  totalValue: number;
-  /** Total cash across all accounts (optional) */
-  totalCash?: number;
-  /** Currency code */
-  currency: string;
+  /** Total value across all accounts, in EUR */
+  totalValueEur: number;
+  /** Total cash across all accounts, in EUR (optional) */
+  totalCashEur?: number;
   /** Last sync timestamp */
   lastSyncAt?: number;
   /** Error message to display */
@@ -76,9 +78,8 @@ export function IntegrationConnectionCard({
   logo,
   fallbackIcon,
   status,
-  totalValue,
-  totalCash,
-  currency,
+  totalValueEur,
+  totalCashEur,
   lastSyncAt,
   errorMessage,
   secondaryInfo,
@@ -90,12 +91,13 @@ export function IntegrationConnectionCard({
   headerExtra,
   className,
 }: IntegrationConnectionCardProps) {
-  const formatAmount = (amount: number) =>
-    formatCurrency(amount, currency, { fractionDigits: 0 });
+  const { currency, fromEur } = useDisplayCurrency();
+  const formatEur = (amountEur: number) =>
+    formatCurrency(fromEur(amountEur), currency, { fractionDigits: 0 });
 
-  const formattedValue = formatAmount(totalValue);
-  // Show cash if it's > 0 (always show, even if equal to totalValue)
-  const hasCash = totalCash !== undefined && totalCash > 0;
+  const formattedValue = formatEur(totalValueEur);
+  // Show cash if it's > 0 (always show, even if equal to the total value)
+  const hasCash = totalCashEur !== undefined && totalCashEur > 0;
 
   // Determine effective status for display (syncing overrides other statuses)
   const effectiveStatus = isSyncing ? "syncing" : status;
@@ -151,7 +153,7 @@ export function IntegrationConnectionCard({
               <p className="text-lg font-semibold">{formattedValue}</p>
               {hasCash && (
                 <p className="text-xs text-muted-foreground">
-                  {formatAmount(totalCash)} cash
+                  {formatEur(totalCashEur)} cash
                 </p>
               )}
             </div>

@@ -17,12 +17,16 @@ import {
 import { useDeletePlaidItem, useRefreshAccounts } from "@/hooks/convex";
 import { useSyncContextSafe } from "@/providers/syncProvider";
 import {
+  bankAccountTotals,
+  type BankAccountTotalsLike,
+} from "@/../services/portfolio/categorySummary";
+import {
   IntegrationConnectionCard,
   IntegrationAccountItem,
 } from "@/components/atomic/molecules/integrations";
 
-// Type for Convex account data
-interface ConvexAccount {
+// Type for Convex account data, with the stored EUR value the totals read
+interface ConvexAccount extends BankAccountTotalsLike {
   _id: string;
   accountId: string;
   itemId: string;
@@ -91,12 +95,10 @@ export function BankAccountsCard({
     await refreshAccounts.mutate(itemId);
   };
 
-  // Calculate total balance
-  const totalBalance = accounts.reduce(
-    (sum, acc) => sum + (acc.currentBalance || acc.availableBalance || 0),
-    0,
-  );
-  const currency = accounts[0]?.currency || "USD";
+  // The institution's net balance in EUR from each account's stored EUR
+  // value, debts subtracted (as on the Bank Accounts page and in net
+  // worth), so accounts in different currencies add up
+  const totalBalanceEur = bankAccountTotals(accounts).net;
 
   // Get the most recent sync time from accounts
   const lastSyncAt =
@@ -128,8 +130,7 @@ export function BankAccountsCard({
       logo={logoUrl}
       fallbackIcon={fallbackIcon}
       status="connected"
-      totalValue={totalBalance}
-      currency={currency}
+      totalValueEur={totalBalanceEur}
       lastSyncAt={lastSyncAt}
       secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
       onSync={handleSync}

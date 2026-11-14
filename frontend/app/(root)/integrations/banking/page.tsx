@@ -6,7 +6,7 @@ import { BanksCard } from "@/components/atomic/organisms/banksCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import { usePlaidAccounts, useRefreshAccounts } from "@/hooks/convex";
-import { useBaseCurrency } from "@/hooks/convex/portfolio";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { useSyncContext } from "@/providers/syncProvider";
 import {
   Card,
@@ -26,7 +26,8 @@ import { bankAccountTotals } from "@/../services/portfolio/categorySummary";
 
 export default function BankingPage() {
   const accounts = usePlaidAccounts();
-  const baseCurrency = useBaseCurrency();
+  // The totals are summed in EUR and shown in the display currency
+  const { currency, fromEur } = useDisplayCurrency();
   const { mutate: refreshAll, isLoading: isLocalSyncing } =
     useRefreshAccounts();
   const { isPlaidSyncing: isGlobalSyncing } = useSyncContext();
@@ -37,7 +38,7 @@ export default function BankingPage() {
   const isLoading = accounts === undefined;
   const hasAccounts = accounts && accounts.length > 0;
 
-  // Totals in the base currency from each account's stored EUR value, with
+  // Totals from each account's stored EUR value, in the display currency, with
   // amounts owed (credit cards, loans) subtracted from the net balance, as
   // in net worth
   const stats = useMemo(() => {
@@ -54,25 +55,25 @@ export default function BankingPage() {
     return [
       {
         label: "Net Balance",
-        value: formatCurrency(totals.net, baseCurrency),
+        value: formatCurrency(fromEur(totals.net), currency),
         icon: Banknote,
         description: `${plural(totals.counts.all, "account")}, after debts${unconvertedNote}`,
       },
       {
         label: "Checking",
-        value: formatCurrency(totals.checking, baseCurrency),
+        value: formatCurrency(fromEur(totals.checking), currency),
         icon: Wallet,
         description: plural(totals.counts.checking, "account"),
       },
       {
         label: "Savings",
-        value: formatCurrency(totals.savings, baseCurrency),
+        value: formatCurrency(fromEur(totals.savings), currency),
         icon: Building2,
         description: plural(totals.counts.savings, "account"),
       },
       {
         label: "Owed",
-        value: formatCurrency(totals.owed, baseCurrency),
+        value: formatCurrency(fromEur(totals.owed), currency),
         icon: CreditCard,
         description:
           totals.counts.loans > 0
@@ -80,7 +81,7 @@ export default function BankingPage() {
             : plural(totals.counts.cards, "card"),
       },
     ];
-  }, [accounts, baseCurrency]);
+  }, [accounts, currency, fromEur]);
 
   return (
     <div className="container mx-auto py-6 space-y-8">

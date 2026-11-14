@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/shadcn/input";
 import { Badge } from "@/components/ui/shadcn/badge";
 import { Button } from "@/components/ui/shadcn/button";
 import { positionPriceIssue, useCryptoPositions } from "@/hooks/convex/crypto";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatDate } from "@/lib/utils/date";
@@ -91,7 +92,10 @@ export function CryptoPositionsTable({
   showFilters = true,
   maxRows,
 }: CryptoPositionsTableProps) {
+  // Position values come from the crypto data hook in the display
+  // currency (converted there, never here)
   const loadedPositions = useCryptoPositions();
+  const { currency } = useDisplayCurrency();
   const isLoading = loadedPositions === undefined;
   const positions = useMemo(() => loadedPositions ?? [], [loadedPositions]);
   const [search, setSearch] = useState("");
@@ -248,7 +252,7 @@ export function CryptoPositionsTable({
                           <span className="font-medium">
                             {priceIssue?.status === "missing"
                               ? "—"
-                              : formatCurrency(posValue(position), "eur")}
+                              : formatCurrency(posValue(position), currency)}
                           </span>
                           {priceIssue?.status === "missing" && (
                             <Badge variant="outline" className="text-xs">

@@ -24,6 +24,7 @@ import {
   useSyncBitpandaConnection,
   useDeleteBitpandaConnection,
 } from "@/hooks/convex/bitpanda";
+import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { formatCurrency } from "@/lib/utils/currency";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -32,10 +33,12 @@ export function BitpandaConnectionsCard() {
   const holdings = useBitpandaHoldings();
   const { sync } = useSyncBitpandaConnection();
   const { deleteConnection } = useDeleteBitpandaConnection();
+  const display = useDisplayCurrency();
 
   const isLoading = connections === undefined;
   const hasConnections = connections && connections.length > 0;
 
+  // In EUR, as stored; shown in the display currency
   const totalValue = useMemo(
     () =>
       holdings?.reduce(
@@ -57,7 +60,7 @@ export function BitpandaConnectionsCard() {
         {hasConnections && (
           <div className="text-right">
             <p className="text-lg font-semibold">
-              {formatCurrency(totalValue, "eur")}
+              {formatCurrency(display.fromEur(totalValue), display.currency)}
             </p>
             <p className="text-xs text-muted-foreground">
               {holdings?.length ?? 0} holdings

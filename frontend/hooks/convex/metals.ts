@@ -235,7 +235,9 @@ export function useMetals(): UseMetalsReturn {
   return {
     items: enrichedItems,
     currency,
-    isLoading: metalItems === undefined,
+    // Loading until the display rate arrives, so no view shows the
+    // identity (EUR) figures first
+    isLoading: metalItems === undefined || ratesLoading,
     isError: metalItems === undefined && !pricesLoading,
     pricesLoading,
     pricesError: pricesError ? (error as Error) : null,
@@ -273,7 +275,7 @@ export function useMetalsSummary(): UseMetalsSummaryReturn {
   return {
     summary,
     currency,
-    isLoading: isLoading || ratesLoading,
+    isLoading,
     isError,
     pricesLoading,
     pricesAsOf: spotAsOf,

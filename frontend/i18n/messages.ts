@@ -36,6 +36,8 @@ import metalsEn from "@/messages/en/metals.json";
 import metalsDe from "@/messages/de/metals.json";
 import assetsEn from "@/messages/en/assets.json";
 import assetsDe from "@/messages/de/assets.json";
+import settingsEn from "@/messages/en/settings.json";
+import settingsDe from "@/messages/de/settings.json";
 
 import type { Language } from "./locales";
 
@@ -54,6 +56,7 @@ const en = {
   loans: loansEn,
   metals: metalsEn,
   assets: assetsEn,
+  settings: settingsEn,
 };
 
 export type Messages = typeof en;
@@ -73,6 +76,7 @@ const de = {
   loans: loansDe,
   metals: metalsDe,
   assets: assetsDe,
+  settings: settingsDe,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = { en, de };

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { Check, Loader2, Monitor, Moon, Sun } from "lucide-react";
 
 import {
@@ -36,10 +37,10 @@ import { useUpdateSettings, useUserSettings } from "@/hooks/convex/onboarding";
 import { MAX_DISPLAY_NAME_LENGTH } from "@/../services/settings/userSettings";
 import { toDisplayCurrency } from "@/../services/finance/displayCurrency";
 
-const THEME_OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
-  { value: "system", label: "System", icon: Monitor },
+const THEME_OPTIONS: { value: Theme; icon: typeof Sun }[] = [
+  { value: "light", icon: Sun },
+  { value: "dark", icon: Moon },
+  { value: "system", icon: Monitor },
 ];
 
 type StoredSettings = NonNullable<ReturnType<typeof useUserSettings>>;
@@ -88,6 +89,11 @@ export function GeneralSettingsForm() {
 }
 
 function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
+  const t = useTranslations("settings.general");
+  // Currency, theme and birth-date wording is shared with onboarding.
+  const tProfile = useTranslations("onboarding.profile");
+  const tLanguage = useTranslations("common.language");
+  const tActions = useTranslations("common.actions");
   const updateSettings = useUpdateSettings();
   const { setTheme } = useTheme();
 
@@ -120,7 +126,9 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
     ? validateBirthDate(formData.birthDate)
     : null;
   const birthDateError =
-    birthDateCheck && !birthDateCheck.ok ? birthDateCheck.error : null;
+    birthDateCheck && !birthDateCheck.ok
+      ? tProfile(`birthDateErrors.${birthDateCheck.code}`)
+      : null;
 
   const update = (patch: Partial<ProfileFormData>) => {
     setSaved(false);
@@ -150,7 +158,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
       // LocaleSync re-renders in the saved language
     } catch (error) {
       console.error("Failed to save settings:", error);
-      setSaveError("We couldn't save your settings. Please try again.");
+      setSaveError(t("saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -160,22 +168,26 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>How Fiscalis addresses you.</CardDescription>
+          <CardTitle>{t("profile.title")}</CardTitle>
+          <CardDescription>{t("profile.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="settings-display-name">Display name</Label>
+            <Label htmlFor="settings-display-name">
+              {t("profile.displayName")}
+            </Label>
             <Input
               id="settings-display-name"
-              placeholder="Your name"
+              placeholder={t("profile.displayNamePlaceholder")}
               value={formData.displayName}
               maxLength={MAX_DISPLAY_NAME_LENGTH}
               onChange={(e) => update({ displayName: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="settings-birth-date">Date of birth</Label>
+            <Label htmlFor="settings-birth-date">
+              {t("profile.birthDate")}
+            </Label>
             <Input
               id="settings-birth-date"
               type="date"
@@ -191,8 +203,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
               </p>
             ) : (
               <p className="text-muted-foreground text-xs">
-                Optional. Used by planning tools such as the retirement
-                planner.
+                {t("profile.birthDateHint")}
               </p>
             )}
           </div>
@@ -201,12 +212,12 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Region</CardTitle>
-          <CardDescription>Currency and language.</CardDescription>
+          <CardTitle>{t("region.title")}</CardTitle>
+          <CardDescription>{t("region.description")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row">
           <div className="flex flex-1 flex-col gap-2">
-            <Label htmlFor="settings-currency">Display currency</Label>
+            <Label htmlFor="settings-currency">{t("region.currency")}</Label>
             <Select
               value={formData.defaultCurrency}
               onValueChange={(value: Currency) =>
@@ -221,20 +232,18 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
                   <SelectItem key={currency.value} value={currency.value}>
                     <span className="flex items-center gap-2">
                       <span>{currency.flag}</span>
-                      <span>{currency.label}</span>
+                      <span>{tProfile(`currencies.${currency.value}`)}</span>
                     </span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">
-              Totals, charts and returns are converted at the latest exchange
-              rate, history at each day&apos;s rate. Loans and account rows
-              keep their own currency.
+              {t("region.currencyHint")}
             </p>
           </div>
           <div className="flex flex-1 flex-col gap-2">
-            <Label htmlFor="settings-language">Language</Label>
+            <Label htmlFor="settings-language">{tLanguage("label")}</Label>
             <Select
               value={formData.language}
               onValueChange={(value: Language) => update({ language: value })}
@@ -256,18 +265,16 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-          <CardDescription>
-            System follows your device setting.
-          </CardDescription>
+          <CardTitle>{t("appearance.title")}</CardTitle>
+          <CardDescription>{t("appearance.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div
             role="radiogroup"
-            aria-label="Theme"
+            aria-label={t("appearance.theme")}
             className="grid grid-cols-3 gap-3 sm:max-w-md"
           >
-            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+            {THEME_OPTIONS.map(({ value, icon: Icon }) => {
               const selected = formData.theme === value;
               return (
                 <button
@@ -284,7 +291,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
                   )}
                 >
                   <Icon className="h-5 w-5" />
-                  <span>{label}</span>
+                  <span>{tProfile(`themes.${value}`)}</span>
                 </button>
               );
             })}
@@ -295,12 +302,12 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={isSaving || !!birthDateError}>
           {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save changes
+          {tActions("saveChanges")}
         </Button>
         {saved && (
           <span className="text-muted-foreground flex items-center gap-1 text-sm">
             <Check className="h-4 w-4" />
-            Saved
+            {tActions("saved")}
           </span>
         )}
         {saveError && (

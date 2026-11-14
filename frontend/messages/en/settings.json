@@ -1,0 +1,83 @@
+{
+  "general": {
+    "title": "General",
+    "subtitle": "Your profile, display currency, language and theme.",
+    "profile": {
+      "title": "Profile",
+      "description": "How Fiscalis addresses you.",
+      "displayName": "Display name",
+      "displayNamePlaceholder": "Your name",
+      "birthDate": "Date of birth",
+      "birthDateHint": "Optional. Used by planning tools such as the retirement planner."
+    },
+    "region": {
+      "title": "Region",
+      "description": "Currency and language.",
+      "currency": "Display currency",
+      "currencyHint": "Totals, charts and returns are converted at the latest exchange rate, history at each day's rate. Loans and account rows keep their own currency."
+    },
+    "appearance": {
+      "title": "Appearance",
+      "description": "System follows your device setting.",
+      "theme": "Theme"
+    },
+    "saveFailed": "We couldn't save your settings. Please try again."
+  },
+  "apiKeys": {
+    "title": "API keys",
+    "subtitle": "Read your net worth programmatically. Keys are private and scoped to your account.",
+    "create": {
+      "title": "Create a key",
+      "description": "A key grants read-only access to your current net worth. Treat it like a password: never commit it or use it in browser code.",
+      "name": "Name",
+      "namePlaceholder": "e.g. Home dashboard",
+      "expires": "Expires",
+      "submit": "Create key"
+    },
+    "expiry": {
+      "30": "30 days",
+      "90": "90 days",
+      "365": "1 year",
+      "never": "Never"
+    },
+    "list": {
+      "title": "Your keys",
+      "empty": "No API keys yet.",
+      "name": "Name",
+      "key": "Key",
+      "status": "Status",
+      "created": "Created",
+      "expires": "Expires",
+      "lastUsed": "Last used",
+      "never": "Never",
+      "none": "—"
+    },
+    "status": {
+      "active": "Active",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    },
+    "revoke": {
+      "button": "Revoke",
+      "title": "Revoke “{name}”?",
+      "description": "Requests using this key will be rejected immediately. This cannot be undone.",
+      "confirm": "Revoke"
+    },
+    "usage": {
+      "title": "Usage",
+      "description": "Send the key in the Authorization header. Keys in URLs are not accepted. Each key is limited to {limit} requests per minute. Amounts are in EUR; add <code>?currency=USD</code>, <code>GBP</code> or <code>CHF</code> to convert them at the latest exchange rate."
+    },
+    "newKey": {
+      "title": "Copy your new API key",
+      "description": "This is the only time the key will be shown. Store it somewhere safe, such as a password manager or secret store.",
+      "copy": "Copy API key",
+      "done": "Done"
+    },
+    "errors": {
+      "apiKeyNameRequired": "Enter a name for the key.",
+      "apiKeyNameTooLong": "The name can be at most {max} characters.",
+      "apiKeyNotFound": "This API key no longer exists. Reload the page and try again.",
+      "apiKeyLimit": "You can have at most {max} active API keys. Revoke one first."
+    }
+  }
+}

@@ -10,17 +10,21 @@
  */
 import commonEn from "@/messages/en/common.json";
 import commonDe from "@/messages/de/common.json";
+import worldMapEn from "@/messages/en/worldMap.json";
+import worldMapDe from "@/messages/de/worldMap.json";
 
 import type { Language } from "./locales";
 
 const en = {
   common: commonEn,
+  worldMap: worldMapEn,
 };
 
 export type Messages = typeof en;
 
 const de = {
   common: commonDe,
+  worldMap: worldMapDe,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = { en, de };

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Slider } from "@/components/ui/shadcn/slider";
 import { Button } from "@/components/ui/shadcn/button";
 import {
@@ -68,6 +69,7 @@ export function TimeSlider({
   isLoading = false,
   className,
 }: TimeSliderProps) {
+  const t = useTranslations("worldMap.timeSlider");
   // Filter decade markers to only show those within range
   const visibleMarkers = decadeMarkers.filter((y) => y > min && y < max);
 
@@ -128,7 +130,8 @@ export function TimeSlider({
             className="h-8 w-8"
             onClick={handleJumpBackward}
             disabled={value === min || isLoading}
-            title="Jump to start"
+            title={t("jumpToStart")}
+            aria-label={t("jumpToStart")}
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -140,7 +143,8 @@ export function TimeSlider({
             className="h-8 w-8"
             onClick={handleStepBackward}
             disabled={value === min || isLoading}
-            title="Step backward"
+            title={t("stepBackward")}
+            aria-label={t("stepBackward")}
           >
             <SkipBack className="h-4 w-4" />
           </Button>
@@ -152,7 +156,8 @@ export function TimeSlider({
             className="h-9 w-9"
             onClick={onPlayToggle}
             disabled={isLoading}
-            title={isPlaying ? "Pause" : "Play"}
+            title={isPlaying ? t("pause") : t("play")}
+            aria-label={isPlaying ? t("pause") : t("play")}
           >
             {isPlaying ? (
               <Pause className="h-4 w-4" />
@@ -168,7 +173,8 @@ export function TimeSlider({
             className="h-8 w-8"
             onClick={handleStepForward}
             disabled={value === max || isLoading}
-            title="Step forward"
+            title={t("stepForward")}
+            aria-label={t("stepForward")}
           >
             <SkipForward className="h-4 w-4" />
           </Button>
@@ -180,7 +186,8 @@ export function TimeSlider({
             className="h-8 w-8"
             onClick={handleJumpForward}
             disabled={value === max || isLoading}
-            title="Jump to end"
+            title={t("jumpToEnd")}
+            aria-label={t("jumpToEnd")}
           >
             <ChevronsRight className="h-4 w-4" />
           </Button>
@@ -279,6 +286,7 @@ export function CompactTimeSlider({
   isLoading = false,
   className,
 }: CompactTimeSliderProps) {
+  const t = useTranslations("worldMap.timeSlider");
   return (
     <div className={cn("flex items-center gap-3", className)}>
       {/* Play/Pause */}
@@ -288,6 +296,8 @@ export function CompactTimeSlider({
         className="h-8 w-8 shrink-0"
         onClick={onPlayToggle}
         disabled={isLoading}
+        title={isPlaying ? t("pause") : t("play")}
+        aria-label={isPlaying ? t("pause") : t("play")}
       >
         {isPlaying ? (
           <Pause className="h-3 w-3" />
@@ -351,13 +361,14 @@ export function SpeedControl({
   onSpeedChange,
   className,
 }: SpeedControlProps) {
+  const t = useTranslations("worldMap.timeSlider");
   // Find which option is selected (compare both interval and step)
   const isSelected = (option: PlaybackSpeed) =>
     speed.interval === option.interval && speed.step === option.step;
 
   return (
     <div className={cn("flex items-center gap-1", className)}>
-      <span className="text-xs text-muted-foreground mr-1">Speed:</span>
+      <span className="text-xs text-muted-foreground mr-1">{t("speed")}</span>
       {SPEED_OPTIONS.map((option) => (
         <Button
           key={option.label}

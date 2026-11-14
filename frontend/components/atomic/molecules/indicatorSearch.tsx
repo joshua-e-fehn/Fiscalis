@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   Search,
   Star,
@@ -37,6 +38,7 @@ import {
   useUserFavorites,
   useToggleFavorite,
 } from "@/hooks/convex";
+import { useIndicatorText } from "@/hooks/worldbank";
 import type {
   IndicatorMetadata,
   IndicatorCategory,
@@ -83,6 +85,9 @@ export function IndicatorSearch({
   featuredIndicators,
   userId,
 }: IndicatorSearchProps) {
+  const t = useTranslations("worldMap");
+  const format = useFormatter();
+  const indicatorText = useIndicatorText();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -191,27 +196,6 @@ export function IndicatorSearch({
     [onSelect],
   );
 
-  const categoryLabels: Record<IndicatorCategory, string> = {
-    economy: "Economy",
-    demographics: "Demographics",
-    finance: "Finance",
-    trade: "Trade",
-    energy: "Energy & Environment",
-    development: "Development",
-    commodities: "Commodities",
-  };
-
-  // Format last sync date
-  const formatLastSync = (timestamp?: number) => {
-    if (!timestamp) return "Never";
-    const date = new Date(timestamp);
-    return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -222,20 +206,20 @@ export function IndicatorSearch({
             ) : (
               <Star className="h-4 w-4 text-yellow-500 flex-shrink-0" />
             )}
-            <span className="truncate">{selectedIndicator.name}</span>
+            <span className="truncate">
+              {indicatorText(selectedIndicator).name}
+            </span>
           </div>
           <Badge variant="secondary" className="ml-2 flex-shrink-0">
-            {selectedIndicator.isDynamic ? "Custom" : "Featured"}
+            {selectedIndicator.isDynamic ? t("search.custom") : t("search.featured")}
           </Badge>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Select Indicator</DialogTitle>
+          <DialogTitle>{t("search.title")}</DialogTitle>
           <DialogDescription>
-            Choose from featured indicators or search{" "}
-            {indicatorCount > 0 ? indicatorCount.toLocaleString() : "all"} World
-            Bank indicators
+            {t("search.description", { count: indicatorCount })}
           </DialogDescription>
         </DialogHeader>
 
@@ -244,8 +228,7 @@ export function IndicatorSearch({
           <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm">
             <Database className="h-4 w-4 text-amber-500" />
             <span className="text-amber-600 dark:text-amber-400">
-              Indicator database needs to be synced. Run sync to enable full
-              search.
+              {t("search.needsSync")}
             </span>
           </div>
         )}
@@ -255,7 +238,7 @@ export function IndicatorSearch({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
-            placeholder="Search all World Bank indicators..."
+            placeholder={t("search.placeholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 pr-10"
@@ -266,6 +249,8 @@ export function IndicatorSearch({
               size="sm"
               className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
               onClick={() => setSearchQuery("")}
+              aria-label={t("search.clear")}
+              title={t("search.clear")}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -280,15 +265,17 @@ export function IndicatorSearch({
               {isSearching ? (
                 <div className="flex items-center justify-center py-8 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Searching...
+                  {t("search.searching")}
                 </div>
               ) : searchResults.length > 0 ? (
                 <div className="space-y-1">
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground sticky top-0 bg-background flex justify-between items-center">
-                    <span>Search Results ({searchResults.length})</span>
+                    <span>
+                      {t("search.results", { count: searchResults.length })}
+                    </span>
                     {totalInDb > 0 && (
                       <span className="text-xs text-muted-foreground/60">
-                        from {totalInDb.toLocaleString()} indicators
+                        {t("search.fromTotal", { count: totalInDb })}
                       </span>
                     )}
                   </div>
@@ -319,16 +306,19 @@ export function IndicatorSearch({
                                       className="flex-shrink-0 gap-1 text-amber-600 border-amber-500/50 bg-amber-500/10 py-0 px-1.5"
                                     >
                                       <AlertTriangle className="h-3 w-3" />
-                                      <span className="text-xs">Slow</span>
+                                      <span className="text-xs">
+                                        {t("search.slow")}
+                                      </span>
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>
-                                      This indicator has experienced timeouts (
-                                      {indicator.timeoutCount}x).
+                                      {t("search.slowTooltip", {
+                                        count: indicator.timeoutCount,
+                                      })}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      May be slow or unreliable.
+                                      {t("search.slowHint")}
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -344,17 +334,18 @@ export function IndicatorSearch({
                                     >
                                       <AlertCircle className="h-3 w-3" />
                                       <span className="text-xs">
-                                        Unreliable
+                                        {t("search.unreliable")}
                                       </span>
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>
-                                      This indicator frequently fails to load (
-                                      {indicator.timeoutCount}x timeouts).
+                                      {t("search.unreliableTooltip", {
+                                        count: indicator.timeoutCount,
+                                      })}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      Data may not be available.
+                                      {t("search.unreliableHint")}
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
@@ -380,6 +371,11 @@ export function IndicatorSearch({
                                     variant="ghost"
                                     size="sm"
                                     className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    aria-label={
+                                      isFavorited(indicator.code)
+                                        ? t("search.removeFavorite")
+                                        : t("search.addFavorite")
+                                    }
                                     onClick={(e) =>
                                       handleToggleFavorite(
                                         e,
@@ -400,8 +396,8 @@ export function IndicatorSearch({
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   {isFavorited(indicator.code)
-                                    ? "Remove from favorites"
-                                    : "Add to favorites"}
+                                    ? t("search.removeFavorite")
+                                    : t("search.addFavorite")}
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -415,16 +411,16 @@ export function IndicatorSearch({
               ) : needsSync ? (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                   <Database className="h-8 w-8 mb-2 opacity-50" />
-                  <p>Indicator database is empty</p>
+                  <p>{t("search.emptyDatabase")}</p>
                   <p className="text-xs mt-1">
-                    Run the sync to populate indicators
+                    {t("search.emptyDatabaseHint")}
                   </p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                   <Search className="h-8 w-8 mb-2 opacity-50" />
-                  <p>No indicators found for &ldquo;{searchQuery}&rdquo;</p>
-                  <p className="text-xs mt-1">Try different keywords</p>
+                  <p>{t("search.noResults", { query: searchQuery })}</p>
+                  <p className="text-xs mt-1">{t("search.noResultsHint")}</p>
                 </div>
               )}
             </div>
@@ -436,7 +432,7 @@ export function IndicatorSearch({
                 <div className="mb-4">
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1 sticky top-0 bg-background">
                     <Heart className="h-3 w-3 text-red-500 fill-red-500" />
-                    Your Favorites
+                    {t("search.favorites")}
                   </div>
                   {favorites.map((favorite) => (
                     <div
@@ -456,7 +452,12 @@ export function IndicatorSearch({
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">
-                            {favorite.name}
+                            {
+                              indicatorText({
+                                id: favorite.code,
+                                name: favorite.name,
+                              }).name
+                            }
                           </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {favorite.code}
@@ -464,7 +465,9 @@ export function IndicatorSearch({
                         </div>
                         <div className="flex items-center gap-2">
                           {selectedIndicator.id === favorite.code && (
-                            <Badge variant="secondary">Selected</Badge>
+                            <Badge variant="secondary">
+                              {t("search.selected")}
+                            </Badge>
                           )}
                           <TooltipProvider>
                             <Tooltip>
@@ -473,6 +476,7 @@ export function IndicatorSearch({
                                   variant="ghost"
                                   size="sm"
                                   className="h-7 w-7 p-0 opacity-60 hover:opacity-100"
+                                  aria-label={t("search.removeFavorite")}
                                   onClick={(e) =>
                                     handleToggleFavorite(
                                       e,
@@ -486,7 +490,7 @@ export function IndicatorSearch({
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Remove from favorites
+                                {t("search.removeFavorite")}
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -500,14 +504,14 @@ export function IndicatorSearch({
               {/* Featured Indicators */}
               <div className="px-2 py-1 text-xs font-medium text-muted-foreground flex items-center gap-1 sticky top-0 bg-background">
                 <Star className="h-3 w-3 text-yellow-500" />
-                Featured Indicators
+                {t("search.featuredIndicators")}
               </div>
               {featuredIndicators &&
                 Object.entries(featuredIndicators).map(
                   ([category, indicators]) => (
                     <div key={category} className="mb-3">
                       <div className="px-2 py-1 text-xs font-semibold text-foreground/70">
-                        {categoryLabels[category as IndicatorCategory]}
+                        {t(`categories.${category as IndicatorCategory}`)}
                       </div>
                       {indicators.map((indicator) => (
                         <button
@@ -523,16 +527,16 @@ export function IndicatorSearch({
                           <div className="flex items-center justify-between">
                             <div>
                               <div className="font-medium">
-                                {indicator.name}
+                                {indicatorText(indicator).name}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {indicator.description}
+                                {indicatorText(indicator).description}
                               </div>
                             </div>
                             {selectedIndicator.id === indicator.id &&
                               !selectedIndicator.isDynamic && (
                                 <Badge variant="secondary" className="ml-2">
-                                  Selected
+                                  {t("search.selected")}
                                 </Badge>
                               )}
                           </div>
@@ -548,20 +552,25 @@ export function IndicatorSearch({
         {/* Footer */}
         <div className="text-xs text-muted-foreground text-center pt-2 border-t flex justify-between items-center">
           <span>
-            Data source:{" "}
-            <a
-              href="https://data.worldbank.org/indicator"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline"
-            >
-              World Bank Open Data
-            </a>
+            {t.rich("search.dataSource", {
+              link: (chunks) => (
+                <a
+                  href="https://data.worldbank.org/indicator"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  {chunks}
+                </a>
+              ),
+            })}
           </span>
           {lastSync && (
             <span className="flex items-center gap-1 text-muted-foreground/60">
               <RefreshCw className="h-3 w-3" />
-              Synced: {formatLastSync(lastSync)}
+              {t("search.synced", {
+                date: format.dateTime(new Date(lastSync), "date"),
+              })}
             </span>
           )}
         </div>

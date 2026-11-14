@@ -1,5 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
+
+import { createRegionNamer } from "@/../services/i18n/regionNames";
 
 import {
   getWorldData,
@@ -8,6 +11,7 @@ import {
   searchWorldBankIndicators,
   getDynamicWorldData,
 } from "@/lib/api/worldbank";
+import { isIndicatorId } from "@/lib/types/worldbank";
 import type {
   IndicatorId,
   IndicatorData,
@@ -588,4 +592,38 @@ export function useInvalidateWorldData() {
     invalidateIndicator,
     invalidateYear,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Display text in the UI language
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * An indicator's name and description for display. Curated indicators are
+ * translated (worldMap.indicators.<id>); the API keeps returning English.
+ * Indicators found through the upstream search stay in English: the World
+ * Bank publishes no German metadata.
+ */
+export function useIndicatorText() {
+  const t = useTranslations("worldMap.indicators");
+
+  return useCallback(
+    (indicator: { id: string; name: string; description?: string }) =>
+      isIndicatorId(indicator.id)
+        ? {
+            name: t(`${indicator.id}.name`),
+            description: t(`${indicator.id}.description`),
+          }
+        : { name: indicator.name, description: indicator.description },
+    [t],
+  );
+}
+
+/**
+ * Country names in the UI language, by ISO alpha-2 code; aggregates and
+ * unknown codes keep the World Bank's English name.
+ */
+export function useCountryName() {
+  const locale = useLocale();
+  return useMemo(() => createRegionNamer(locale), [locale]);
 }

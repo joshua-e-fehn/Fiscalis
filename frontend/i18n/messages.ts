@@ -16,6 +16,8 @@ import calculatorsEn from "@/messages/en/calculators.json";
 import calculatorsDe from "@/messages/de/calculators.json";
 import retirementEn from "@/messages/en/retirement.json";
 import retirementDe from "@/messages/de/retirement.json";
+import integrationsEn from "@/messages/en/integrations.json";
+import integrationsDe from "@/messages/de/integrations.json";
 
 import type { Language } from "./locales";
 
@@ -24,6 +26,7 @@ const en = {
   worldMap: worldMapEn,
   calculators: calculatorsEn,
   retirement: retirementEn,
+  integrations: integrationsEn,
 };
 
 export type Messages = typeof en;
@@ -33,6 +36,7 @@ const de = {
   worldMap: worldMapDe,
   calculators: calculatorsDe,
   retirement: retirementDe,
+  integrations: integrationsDe,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = { en, de };

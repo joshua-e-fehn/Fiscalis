@@ -33,8 +33,9 @@ function assertValidSettings(input: SettingsInput): SettingsPatch {
 }
 
 // One list each (services/settings/userSettings.ts), so adding a language
-// or theme is a change there only
-const languageValidator = v.union(
+// or theme is a change there only. languageValidator is also the Plaid Link
+// language arg (convex/actions/plaid.ts)
+export const languageValidator = v.union(
   ...(LANGUAGES.map((language) => v.literal(language)) as [
     VLiteral<Language>,
     VLiteral<Language>,

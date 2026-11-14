@@ -14,6 +14,7 @@ import {
   PiggyBank,
   Building2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useDeletePlaidItem, useRefreshAccounts } from "@/hooks/convex";
 import { useSyncContextSafe } from "@/providers/syncProvider";
 import {
@@ -50,6 +51,36 @@ interface BankAccountsCardProps {
   accounts: ConvexAccount[];
 }
 
+/** Plaid account types and subtypes with a label under banking.accountTypes */
+const ACCOUNT_TYPE_KEYS = {
+  checking: "checking",
+  savings: "savings",
+  "money market": "moneyMarket",
+  cd: "cd",
+  "cash management": "cashManagement",
+  prepaid: "prepaid",
+  paypal: "paypal",
+  depository: "depository",
+  "credit card": "creditCard",
+  credit: "credit",
+  loan: "loan",
+  mortgage: "mortgage",
+  student: "student",
+  auto: "auto",
+  investment: "investment",
+  brokerage: "brokerage",
+} as const;
+
+type AccountTypeKey = (typeof ACCOUNT_TYPE_KEYS)[keyof typeof ACCOUNT_TYPE_KEYS];
+
+/** The catalogue key for a Plaid type or subtype, if it has one. */
+function accountTypeKey(raw: string): AccountTypeKey | undefined {
+  const normalized = raw.toLowerCase();
+  return Object.hasOwn(ACCOUNT_TYPE_KEYS, normalized)
+    ? ACCOUNT_TYPE_KEYS[normalized as keyof typeof ACCOUNT_TYPE_KEYS]
+    : undefined;
+}
+
 // Get icon for account type
 function getAccountIcon(type: string, subtype?: string) {
   const t = type.toLowerCase();
@@ -74,6 +105,7 @@ export function BankAccountsCard({
   institutionPrimaryColor,
   accounts,
 }: BankAccountsCardProps) {
+  const t = useTranslations("integrations.banking");
   const deleteItem = useDeletePlaidItem();
   const refreshAccounts = useRefreshAccounts();
 
@@ -87,6 +119,12 @@ export function BankAccountsCard({
   if (!accounts || accounts.length === 0) {
     return null;
   }
+
+  // Known Plaid types are translated; others show as Plaid sends them
+  const accountTypeLabel = (raw: string) => {
+    const key = accountTypeKey(raw);
+    return key ? t(`accountTypes.${key}`) : raw;
+  };
 
   // A failed revoke at Plaid keeps the bank (ENG-225); the hook keeps the
   // error, shown on the card, so the user can retry
@@ -136,7 +174,7 @@ export function BankAccountsCard({
       totalValueEur={totalBalanceEur}
       lastSyncAt={lastSyncAt}
       errorMessage={deleteItem.error ? DISCONNECT_FAILED_MESSAGE : undefined}
-      secondaryInfo={`${accounts.length} account${accounts.length !== 1 ? "s" : ""}`}
+      secondaryInfo={t("accounts", { count: accounts.length })}
       onSync={handleSync}
       onDisconnect={handleDisconnect}
       isSyncing={isSyncing}
@@ -153,7 +191,7 @@ export function BankAccountsCard({
             <IntegrationAccountItem
               key={account._id}
               name={account.name}
-              type={account.subtype || account.type}
+              type={accountTypeLabel(account.subtype || account.type)}
               accountNumber={account.mask ? `****${account.mask}` : undefined}
               balance={account.currentBalance || account.availableBalance || 0}
               currency={account.currency}

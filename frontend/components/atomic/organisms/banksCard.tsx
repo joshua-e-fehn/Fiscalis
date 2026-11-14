@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   usePlaidAccounts,
   useItemsNeedingReauth,
@@ -24,6 +25,8 @@ interface BanksCardProps {
 // `isSyncing` is still accepted from callers but no longer read here; the
 // empty pattern keeps the prop contract without an unused binding.
 export function BanksCard({}: BanksCardProps) {
+  const t = useTranslations("integrations.banking");
+  const tConnection = useTranslations("integrations.connection");
   const accounts = usePlaidAccounts();
   const itemsNeedingReauth = useItemsNeedingReauth();
   const items = usePlaidItems();
@@ -86,12 +89,12 @@ export function BanksCard({}: BanksCardProps) {
     return (
       <IntegrationEmptyState
         icon={Building2}
-        title="Failed to Load Accounts"
-        description="We couldn't load your bank accounts. Please try refreshing the page."
+        title={t("empty.loadFailedTitle")}
+        description={t("empty.loadFailedDescription")}
         className="border-destructive/50"
       >
         <Button onClick={() => window.location.reload()} variant="outline">
-          Refresh Page
+          {t("empty.refreshPage")}
         </Button>
       </IntegrationEmptyState>
     );
@@ -104,8 +107,10 @@ export function BanksCard({}: BanksCardProps) {
       return (
         <IntegrationEmptyState
           icon={RefreshCw}
-          title="Sync Your Accounts"
-          description={`You have ${items?.length} bank connection${items?.length !== 1 ? "s" : ""} but no accounts synced yet. Click below to fetch your account data.`}
+          title={t("empty.syncTitle")}
+          description={t("empty.syncDescription", {
+            count: items?.length ?? 0,
+          })}
         >
           <Button
             onClick={() => refreshAccounts.mutate()}
@@ -115,12 +120,12 @@ export function BanksCard({}: BanksCardProps) {
             {refreshAccounts.isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Syncing...
+                {tConnection("syncing")}
               </>
             ) : (
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Sync Accounts
+                {t("empty.syncAccounts")}
               </>
             )}
           </Button>
@@ -131,8 +136,8 @@ export function BanksCard({}: BanksCardProps) {
     return (
       <IntegrationEmptyState
         icon={Building2}
-        title="No Linked Accounts"
-        description="Connect your bank accounts to track your finances, view balances, and monitor transactions all in one place."
+        title={t("empty.noAccountsTitle")}
+        description={t("empty.noAccountsDescription")}
       >
         <PlaidLinkButton />
       </IntegrationEmptyState>
@@ -159,7 +164,7 @@ export function BanksCard({}: BanksCardProps) {
             <BankAccountsCard
               key={item.itemId}
               itemId={item.itemId}
-              institutionName={item.institutionName || "Unknown Bank"}
+              institutionName={item.institutionName || t("unknownBank")}
               institutionLogo={item.institutionLogo}
               institutionPrimaryColor={item.institutionPrimaryColor}
               accounts={itemAccounts}

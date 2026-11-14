@@ -3,6 +3,7 @@
 import { v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
+import { languageValidator } from "../onboarding";
 import {
   Configuration,
   PlaidApi,
@@ -59,6 +60,16 @@ function getProducts(): Products[] {
   return plaidLinkProducts(process.env.PLAID_PRODUCTS) as Products[];
 }
 
+/**
+ * Plaid Link opens in the language the UI is rendered in, which the client
+ * passes (languageForLocale(useLocale()), hooks/convex/banking.ts), else
+ * English. Not the stored userSettings.language: that can be a language the
+ * UI does not render yet (i18n/locales.ts RENDERED_LANGUAGES), and Plaid
+ * should not be German inside an English app. Plaid's language codes match
+ * the app's for every supported language (en, de).
+ */
+const linkLanguageArg = v.optional(languageValidator);
+
 // ═══════════════════════════════════════════════════════════════
 // LINK TOKEN ACTIONS
 // ═══════════════════════════════════════════════════════════════
@@ -67,8 +78,8 @@ function getProducts(): Products[] {
  * Create a link token for Plaid Link initialization
  */
 export const createLinkToken = action({
-  args: {},
-  handler: async (ctx) => {
+  args: { language: linkLanguageArg },
+  handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
@@ -80,7 +91,7 @@ export const createLinkToken = action({
       client_name: "Fiscalis",
       products: getProducts(),
       country_codes: getCountryCodes(),
-      language: "en",
+      language: args.language ?? "en",
     });
 
     return { linkToken: response.data.link_token };
@@ -91,7 +102,7 @@ export const createLinkToken = action({
  * Create an update link token for re-authentication
  */
 export const createUpdateLinkToken = action({
-  args: { itemId: v.string() },
+  args: { itemId: v.string(), language: linkLanguageArg },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
@@ -115,7 +126,7 @@ export const createUpdateLinkToken = action({
       client_name: "Fiscalis",
       access_token: accessToken,
       country_codes: getCountryCodes(),
-      language: "en",
+      language: args.language ?? "en",
     });
 
     return { linkToken: response.data.link_token };

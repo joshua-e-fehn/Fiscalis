@@ -3,6 +3,8 @@
 import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useCallback } from "react";
+import { useLocale } from "next-intl";
+import { languageForLocale } from "@/i18n/locales";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID LINK HOOKS
@@ -13,6 +15,8 @@ import { useState, useCallback } from "react";
  */
 export function useCreateLinkToken() {
   const createLinkToken = useAction(api.actions.plaid.createLinkToken);
+  // The rendered language (not the stored one), so Plaid matches the UI
+  const language = languageForLocale(useLocale());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -20,7 +24,7 @@ export function useCreateLinkToken() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await createLinkToken();
+      const result = await createLinkToken({ language });
       return result;
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -29,7 +33,7 @@ export function useCreateLinkToken() {
     } finally {
       setIsLoading(false);
     }
-  }, [createLinkToken]);
+  }, [createLinkToken, language]);
 
   return { mutate, isLoading, error };
 }
@@ -41,6 +45,7 @@ export function useCreateUpdateLinkToken() {
   const createUpdateLinkToken = useAction(
     api.actions.plaid.createUpdateLinkToken,
   );
+  const language = languageForLocale(useLocale());
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -49,7 +54,7 @@ export function useCreateUpdateLinkToken() {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await createUpdateLinkToken({ itemId });
+        const result = await createUpdateLinkToken({ itemId, language });
         return result;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
@@ -59,7 +64,7 @@ export function useCreateUpdateLinkToken() {
         setIsLoading(false);
       }
     },
-    [createUpdateLinkToken],
+    [createUpdateLinkToken, language],
   );
 
   return { mutate, isLoading, error };

@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,6 +55,8 @@ export function IntegrationConnectionMenu({
   disconnectInfo,
   disconnectDescription,
 }: IntegrationConnectionMenuProps) {
+  const t = useTranslations("integrations.connection");
+  const tActions = useTranslations("common.actions");
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
 
   const handleDisconnect = async () => {
@@ -62,8 +65,8 @@ export function IntegrationConnectionMenu({
   };
 
   const defaultDescription = disconnectInfo
-    ? `This will remove ${disconnectInfo} and their data from your dashboard.`
-    : "This will remove this connection and all associated data from your dashboard.";
+    ? t("disconnectInfo", { info: disconnectInfo })
+    : t("disconnectDefault");
 
   return (
     <>
@@ -71,7 +74,7 @@ export function IntegrationConnectionMenu({
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <MoreHorizontal className="h-4 w-4" />
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">{t("openMenu")}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -83,7 +86,7 @@ export function IntegrationConnectionMenu({
             <RefreshCw
               className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
             />
-            {isSyncing ? "Syncing..." : "Sync"}
+            {isSyncing ? t("syncing") : t("sync")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -92,7 +95,7 @@ export function IntegrationConnectionMenu({
             className="cursor-pointer text-destructive focus:text-destructive"
           >
             <Unlink className="mr-2 h-4 w-4" />
-            Disconnect
+            {t("disconnect")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -105,20 +108,19 @@ export function IntegrationConnectionMenu({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <Unlink className="h-5 w-5 text-destructive" />
-              Disconnect {connectionName}?
+              {t("disconnectTitle", { name: connectionName })}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-left">
               {disconnectDescription || defaultDescription}
               <br />
               <br />
               <span className="text-muted-foreground">
-                Your actual account will not be affected. You can reconnect at
-                any time.
+                {t("notAffected")}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{tActions("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDisconnect}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -126,10 +128,10 @@ export function IntegrationConnectionMenu({
               {isDisconnecting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Disconnecting...
+                  {t("disconnecting")}
                 </>
               ) : (
-                "Disconnect"
+                t("disconnect")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

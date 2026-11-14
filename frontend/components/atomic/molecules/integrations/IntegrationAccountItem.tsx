@@ -7,13 +7,14 @@
  * Used inside IntegrationConnectionCard for nested account lists.
  */
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
 
 interface IntegrationAccountItemProps {
   /** Account name (e.g., "Checking Account", "Individual Brokerage") */
   name: string;
-  /** Account type label (e.g., "checking", "savings", "brokerage") */
+  /** Account type label, already translated, or the provider's raw type */
   type?: string;
   /** Masked account number (e.g., "****1234") */
   accountNumber?: string;
@@ -42,6 +43,7 @@ export function IntegrationAccountItem({
   className,
   onClick,
 }: IntegrationAccountItemProps) {
+  const t = useTranslations("integrations.connection");
   const formatAmount = (amount: number) =>
     formatCurrency(amount, currency, { fractionDigits: 0 });
 
@@ -75,7 +77,7 @@ export function IntegrationAccountItem({
         <p className="font-semibold">{formattedBalance}</p>
         {hasCash && (
           <p className="text-xs text-muted-foreground">
-            {formatAmount(cash)} cash
+            {t("cash", { amount: formatAmount(cash) })}
           </p>
         )}
       </div>

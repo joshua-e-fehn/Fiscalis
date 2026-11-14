@@ -5,7 +5,9 @@ import {
   usePlaidLink,
   type PlaidLinkOnSuccessMetadata,
 } from "react-plaid-link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/shadcn/button";
+import { useErrorMessage } from "@/i18n/errors";
 import { Loader2, CheckCircle2, Plus } from "lucide-react";
 import {
   useCreateLinkToken,
@@ -14,7 +16,7 @@ import {
 } from "@/hooks/convex";
 
 interface PlaidLinkButtonProps {
-  /** Custom button text (overrides default dynamic text) */
+  /** Custom button text, already translated (overrides the default) */
   buttonText?: string;
   /** Whether to show the Plus icon on the left (default: true) */
   showIcon?: boolean;
@@ -31,6 +33,10 @@ export function PlaidLinkButton({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const t = useTranslations("integrations.banking.link");
+  const toErrorMessage = useErrorMessage();
 
   const createLinkToken = useCreateLinkToken();
   const exchangeTokenHook = useExchangeToken();
@@ -41,14 +47,16 @@ export function PlaidLinkButton({
     if (token || linkOpen || isLoading) return;
 
     setIsLoading(true);
+    setErrorMessage(null);
     try {
       const result = await createLinkToken.mutate();
       setToken(result.linkToken);
     } catch (error) {
       console.error("Failed to get link token", error);
+      setErrorMessage(toErrorMessage(error));
       setIsLoading(false);
     }
-  }, [token, linkOpen, isLoading, createLinkToken]);
+  }, [token, linkOpen, isLoading, createLinkToken, toErrorMessage]);
 
   // Reset all states
   const resetStates = useCallback(() => {
@@ -72,11 +80,12 @@ export function PlaidLinkButton({
         setTimeout(() => setShowSuccess(false), 3000);
       } catch (error) {
         console.error("Error linking account", error);
+        setErrorMessage(toErrorMessage(error));
       } finally {
         resetStates();
       }
     },
-    [exchangeTokenHook, resetStates],
+    [exchangeTokenHook, resetStates, toErrorMessage],
   );
 
   // Initialize Plaid Link
@@ -97,10 +106,10 @@ export function PlaidLinkButton({
   const isDisabled =
     isLoading || accountsLoading || linkOpen || (!!token && !ready);
   const defaultText = linkOpen
-    ? "Connecting..."
+    ? t("connecting")
     : accounts && accounts.length > 0
-      ? "Connect Another Bank"
-      : "Connect Your Bank";
+      ? t("connectAnother")
+      : t("connectFirst");
   const displayText = buttonText ?? defaultText;
 
   // Show success state if needed
@@ -111,12 +120,12 @@ export function PlaidLinkButton({
         className="flex items-center gap-2 text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
       >
         <CheckCircle2 className="h-4 w-4" />
-        Bank Connected Successfully
+        {t("connected")}
       </Button>
     );
   }
 
-  return (
+  const button = (
     <Button
       onClick={handleConnectBank}
       disabled={isDisabled}
@@ -127,5 +136,17 @@ export function PlaidLinkButton({
       {!isLoading && showIcon && <Plus className="h-4 w-4" />}
       {displayText}
     </Button>
+  );
+
+  // The layout only changes while there is an error to show
+  if (!errorMessage) return button;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      {button}
+      <p role="alert" className="max-w-xs text-xs text-destructive">
+        {errorMessage}
+      </p>
+    </div>
   );
 }

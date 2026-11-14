@@ -73,4 +73,11 @@ describe("redactSecrets", () => {
     expect(redactSecrets("Authorization: Bearer abc.def.ghi")).toBe("Authorization: Bearer [redacted]");
     expect(redactSecrets("api_key=XYZ other")).toBe("api_key=[redacted] other");
   });
+
+  it("masks a whole quoted value, including spaces, commas and escaped quotes", () => {
+    expect(redactSecrets('password="alpha beta"')).toBe('password="[redacted]"');
+    expect(redactSecrets('{"secret":"a,b&c","x":1}')).toBe('{"secret":"[redacted]","x":1}');
+    expect(redactSecrets('{"token":"ab\\"cd ef","y":2}')).toBe('{"token":"[redacted]","y":2}');
+    expect(redactSecrets("userSecret='one two'")).toBe("userSecret='[redacted]'");
+  });
 });

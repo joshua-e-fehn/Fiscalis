@@ -53,8 +53,16 @@ export function redactSecrets(text: string): string {
       )
       // key=value pairs in URLs, query strings and bodies
       .replace(
-        /\b(userSecret|user_secret|secret|client_secret|access_token|clientSecret|api[_-]?key|signature|password|token)(["']?\s*[:=]\s*["']?)[^\s"'&,}]+/gi,
-        "$1$2[redacted]",
+        /\b(userSecret|user_secret|secret|client_secret|access_token|clientSecret|api[_-]?key|signature|password|token)(["']?\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'&,}]+)/gi,
+        (_match: string, key: string, separator: string, value: string) => {
+          // A quoted value is masked whole, spaces and commas included
+          const quote = value.startsWith('"')
+            ? '"'
+            : value.startsWith("'")
+              ? "'"
+              : "";
+          return `${key}${separator}${quote}[redacted]${quote}`;
+        },
       )
       // Authorization headers
       .replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/g, "$1 [redacted]")

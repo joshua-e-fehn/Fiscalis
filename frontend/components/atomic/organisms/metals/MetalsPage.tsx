@@ -342,9 +342,15 @@ export function MetalsPage({ className }: MetalsPageProps) {
     useState<TransactionTypeFilter>("all");
   const [txMetalFilter, setTxMetalFilter] = useState<MetalTypeFilter>("all");
 
-  // Slide-over state
-  const [selectedItem, setSelectedItem] =
-    useState<MetalItemWithValuation | null>(null);
+  // Slide-over state: the id only, resolved from the live items, so the
+  // detail view follows valuation and display-currency updates
+  const [selectedItemId, setSelectedItemId] = useState<
+    MetalItemWithValuation["_id"] | null
+  >(null);
+  const selectedItem =
+    items?.find((item) => item._id === selectedItemId) ?? null;
+  const setSelectedItem = (item: MetalItemWithValuation | null) =>
+    setSelectedItemId(item?._id ?? null);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<"catalog" | "custom">("catalog");
 

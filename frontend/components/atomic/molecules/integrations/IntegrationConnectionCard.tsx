@@ -174,11 +174,20 @@ export function IntegrationConnectionCard({
           </div>
         </div>
 
-        {/* Error message */}
-        {errorMessage && (
-          <div className="mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-            <p className="text-sm text-destructive">{errorMessage}</p>
+        {/* Error message; a transient failure is a notice, not an error */}
+        {status === "transient_error" ? (
+          <div className="mt-3 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+            <p className="text-sm text-yellow-700 dark:text-yellow-400">
+              Temporary problem at the provider. Your connection is fine; it
+              will retry automatically.
+            </p>
           </div>
+        ) : (
+          errorMessage && (
+            <div className="mt-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <p className="text-sm text-destructive">{errorMessage}</p>
+            </div>
+          )
         )}
       </CardHeader>
 

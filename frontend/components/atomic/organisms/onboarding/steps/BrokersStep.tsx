@@ -139,7 +139,9 @@ export function BrokersStep({ onNext, onSkip, onBack }: BrokersStepProps) {
                       ? "connected"
                       : connection.status === "syncing"
                         ? "syncing"
-                        : "error"
+                        : connection.status === "transient_error"
+                          ? "retrying"
+                          : "error"
                   }
                   icon={<LineChart className="w-5 h-5 text-[#3B82F6]" />}
                 />

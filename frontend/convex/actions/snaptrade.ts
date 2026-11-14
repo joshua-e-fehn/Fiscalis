@@ -11,6 +11,7 @@ import {
   parseSnapTradeError,
   formatErrorForUser,
   requiresReauthentication,
+  withSnaptradeRetry,
 } from "../lib/snaptrade";
 import { Doc, Id } from "../_generated/dataModel";
 import {
@@ -26,6 +27,7 @@ import {
 } from "../../../services/brokers/snaptradeActivity";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
+import { snaptradeFailureStatus } from "../../../services/security/connectionStatus";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -637,7 +639,9 @@ async function syncSnaptrade(
   let listedAccounts;
   try {
     listedAccounts = (
-      await snaptrade.accountInformation.listUserAccounts(credentials)
+      await withSnaptradeRetry(() =>
+        snaptrade.accountInformation.listUserAccounts(credentials),
+      )
     ).data;
   } catch (listError) {
     // Nothing was fetched, so nothing is written; the connections show why
@@ -649,7 +653,7 @@ async function syncSnaptrade(
       }
       await ctx.runMutation(internal.brokers.updateConnectionStatus, {
         connectionId: connection._id,
-        status: parsedError.requiresReauth ? "reauth_required" : "error",
+        status: snaptradeFailureStatus(parsedError),
         errorMessage: parsedError.userMessage,
       });
     }
@@ -719,6 +723,7 @@ async function syncSnaptrade(
       let accountsFailed = 0;
       let reauthError: string | undefined;
       let lastAccountError: string | undefined;
+      let lastAccountRetryable = false;
       for (const apiAccount of apiAccounts) {
         if (!belongsTo(apiAccount, connection)) continue;
         accountsAttempted++;
@@ -726,10 +731,12 @@ async function syncSnaptrade(
         try {
           // Fetch first: nothing is stored unless the holdings arrived
           const holdings = (
-            await snaptrade.accountInformation.getUserHoldings({
-              ...credentials,
-              accountId: apiAccount.id,
-            })
+            await withSnaptradeRetry(() =>
+              snaptrade.accountInformation.getUserHoldings({
+                ...credentials,
+                accountId: apiAccount.id,
+              }),
+            )
           ).data;
 
           const stored: { accountId: Id<"brokerAccounts">; currency: string } =
@@ -785,6 +792,7 @@ async function syncSnaptrade(
           const parsed = parseSnapTradeError(accountError);
           accountsFailed++;
           lastAccountError = parsed.userMessage;
+          lastAccountRetryable = parsed.isRetryable;
           if (parsed.requiresReauth) reauthError = parsed.userMessage;
           result.errors.push(`Account ${accountName}: ${parsed.userMessage}`);
         }
@@ -801,7 +809,7 @@ async function syncSnaptrade(
       } else if (accountsAttempted > 0 && accountsFailed === accountsAttempted) {
         await ctx.runMutation(internal.brokers.updateConnectionStatus, {
           connectionId: connection._id,
-          status: "error",
+          status: lastAccountRetryable ? "transient_error" : "error",
           errorMessage: lastAccountError,
         });
       } else if (accountsAttempted === 0 && unplacedAccounts.length > 0) {
@@ -827,7 +835,7 @@ async function syncSnaptrade(
       );
       await ctx.runMutation(internal.brokers.updateConnectionStatus, {
         connectionId: connection._id,
-        status: parsedError.requiresReauth ? "reauth_required" : "error",
+        status: snaptradeFailureStatus(parsedError),
         errorMessage: parsedError.userMessage,
       });
     }
@@ -861,13 +869,15 @@ async function syncAccountActivities(
   const startDate = activitiesStartDate(newest);
   const pages = await fetchActivityPagesOldestFirst(async (offset) => {
     const page = (
-      await snaptrade.accountInformation.getAccountActivities({
-        ...credentials,
-        accountId: snaptradeAccountId,
-        ...(startDate ? { startDate } : {}),
-        offset,
-        limit: ACTIVITY_PAGE_SIZE,
-      })
+      await withSnaptradeRetry(() =>
+        snaptrade.accountInformation.getAccountActivities({
+          ...credentials,
+          accountId: snaptradeAccountId,
+          ...(startDate ? { startDate } : {}),
+          offset,
+          limit: ACTIVITY_PAGE_SIZE,
+        }),
+      )
     ).data;
     return { rows: page.data ?? [], total: page.pagination?.total };
   });

@@ -406,6 +406,7 @@ export const updateConnectionStatus = internalMutation({
       v.literal("connected"),
       v.literal("error"),
       v.literal("reauth_required"),
+      v.literal("transient_error"),
       v.literal("syncing"),
       v.literal("disconnected"),
     ),

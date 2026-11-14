@@ -23,6 +23,8 @@ export type IntegrationStatus =
   | "syncing"
   | "error"
   | "reauth_required"
+  | "needs_reauth" // Alias for reauth_required (Bitpanda uses this)
+  | "transient_error" // Provider hiccup; the next sync retries
   | "pending"
   | "disconnected";
 
@@ -71,6 +73,18 @@ const statusConfig: Record<
     icon: AlertTriangle,
     variant: "outline",
     className: "text-orange-600 border-orange-600",
+  },
+  needs_reauth: {
+    label: "Re-auth Required",
+    icon: AlertTriangle,
+    variant: "outline",
+    className: "text-orange-600 border-orange-600",
+  },
+  transient_error: {
+    label: "Retrying",
+    icon: Clock,
+    variant: "outline",
+    className: "text-yellow-600 border-yellow-600",
   },
   pending: {
     label: "Pending",

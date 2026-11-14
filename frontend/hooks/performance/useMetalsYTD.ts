@@ -3,10 +3,11 @@
  * category): the one entry point (useCategoryPerformance) measuring the
  * vault source alone, which the continuous strategy values, ending at live
  * spot. Net of purchases made this year (D2): a coin bought in March is a
- * flow at its cost, not a gain. Null without a value at 1 Jan.
+ * flow at its cost, not a gain. Null without a value at 1 Jan. In the
+ * display currency, like every performance figure.
  */
 
-import type { MetalsCurrency } from "@/lib/types/metals-extended";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance";
 
 const VAULT = { kind: "source", source: "vault" } as const;
@@ -21,15 +22,13 @@ export interface MetalsYTDResult {
   flowAdjusted: boolean;
   /** A purchase without a price had no spot on its date */
   flowsEstimated: boolean;
+  /** The display currency the amounts are in */
+  currency: InvestmentCurrency;
   isLoading: boolean;
 }
 
-export function useMetalsYTD(
-  currency: MetalsCurrency = "eur",
-  options?: { enabled?: boolean },
-): MetalsYTDResult {
-  const { metrics, isLoading } = useCategoryPerformance(VAULT, "YTD", {
-    currency,
+export function useMetalsYTD(options?: { enabled?: boolean }): MetalsYTDResult {
+  const { metrics, currency, isLoading } = useCategoryPerformance(VAULT, "YTD", {
     enabled: options?.enabled ?? true,
   });
   const ytd = toPeriodChange(metrics);
@@ -39,6 +38,7 @@ export function useMetalsYTD(
     valueAtStartOfYear: ytd.valueAtStart,
     flowAdjusted: ytd.flowAdjusted,
     flowsEstimated: ytd.flowsEstimated,
+    currency,
     isLoading,
   };
 }

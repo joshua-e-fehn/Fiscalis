@@ -434,10 +434,9 @@ export function MetalsPage({
 
   // YTD and the value history from the one vault engine: ledger
   // quantities at historical spot, purchases and sales as flows
-  const ytdPerformance = useMetalsYTD(initialCurrency);
+  const ytdPerformance = useMetalsYTD();
   const [chartRange, setChartRange] = useState<ChartTimeRange>("3M");
   const vaultHistory = useVaultPerformance(labelToTimeRange(chartRange), {
-    currency: initialCurrency,
     includeDataPoints: true,
   });
   const chartPoints = useMemo(

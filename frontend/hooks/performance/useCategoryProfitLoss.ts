@@ -11,9 +11,13 @@
  *    The first snapshot is never taken as a cost basis.
  *
  * The chart's cost line is the engine series' own (useCategoryChartData).
+ *
+ * `currentValue` and `holdings` come from the category summary, in the
+ * display currency; the performance since tracking is in it too.
  */
 
 import { useMemo } from "react";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 import {
   resolveCategoryProfitLoss,
   type ResolvedProfitLoss,
@@ -26,6 +30,8 @@ import { toPeriodChange, useCategoryPerformance } from "./useCategoryPerformance
 // ═══════════════════════════════════════════════════════════════
 
 export interface CategoryProfitLossResult extends ResolvedProfitLoss {
+  /** The display currency the amounts are in */
+  currency: InvestmentCurrency;
   /** Loading state (history, only needed without a holdings cost basis) */
   isLoading: boolean;
 }
@@ -33,9 +39,9 @@ export interface CategoryProfitLossResult extends ResolvedProfitLoss {
 export interface UseCategoryProfitLossOptions {
   /** The category to calculate P/L for */
   category: string;
-  /** Current value of the category (from live data) */
+  /** Current value of the category (from live data), in the display currency */
   currentValue: number;
-  /** Cost basis and P/L of the holdings, from the category summary */
+  /** Cost basis and P/L of the holdings, from the category summary (display currency) */
   holdings: {
     costBasis: number | null;
     profitLoss: number | null;
@@ -79,7 +85,7 @@ export function useCategoryProfitLoss(
     () => ({ kind: "category" as const, category }),
     [category],
   );
-  const { metrics, isLoading } = useCategoryPerformance(measure, "ALL", {
+  const { metrics, currency, isLoading } = useCategoryPerformance(measure, "ALL", {
     baseline: "firstPoint",
     enabled: needsHistory,
   });
@@ -102,5 +108,5 @@ export function useCategoryProfitLoss(
     [currentValue, holdings, sinceTracking],
   );
 
-  return { ...resolved, isLoading: needsHistory && isLoading };
+  return { ...resolved, currency, isLoading: needsHistory && isLoading };
 }

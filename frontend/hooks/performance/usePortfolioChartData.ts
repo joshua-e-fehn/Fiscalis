@@ -7,6 +7,7 @@
  */
 
 import { useMemo } from "react";
+import type { InvestmentCurrency } from "@/lib/types/investments";
 
 import {
   toChartPoints,
@@ -36,6 +37,8 @@ export interface UsePortfolioChartDataResult {
   dataPoints: ChartPoint[];
   /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
+  /** The display currency the values are in */
+  currency: InvestmentCurrency;
   isLoading: boolean;
 }
 
@@ -49,7 +52,7 @@ export function usePortfolioChartData(
 ): UsePortfolioChartDataResult {
   const { timeRange, metric = "totalAssets", live, enabled = true } = options;
   const liveEnd = live && portfolioLiveEnd(metric, live);
-  const { dataPoints, metrics, isLoading } = useCategoryPerformance(
+  const { dataPoints, metrics, currency, isLoading } = useCategoryPerformance(
     MEASURES[metric],
     timeRange,
     { includeDataPoints: true, enabled, liveEnd },
@@ -59,9 +62,10 @@ export function usePortfolioChartData(
     () => ({
       dataPoints: toChartPoints(dataPoints),
       partial: metrics?.partial ?? false,
+      currency,
       isLoading,
     }),
-    [dataPoints, metrics, isLoading],
+    [dataPoints, metrics, currency, isLoading],
   );
 }
 
@@ -69,6 +73,8 @@ export interface CategoryChartDataResult {
   dataPoints: ChartPoint[];
   /** Some values are incomplete (a missing price, a partly failed sync) */
   partial: boolean;
+  /** The display currency the values are in */
+  currency: InvestmentCurrency;
   isLoading: boolean;
 }
 
@@ -86,7 +92,7 @@ export function useCategoryChartData(
     () => ({ kind: "category" as const, category }),
     [category],
   );
-  const { dataPoints, metrics, isLoading } = useCategoryPerformance(
+  const { dataPoints, metrics, currency, isLoading } = useCategoryPerformance(
     measure,
     timeRange,
     { includeDataPoints: true, enabled: options?.enabled ?? true },
@@ -95,8 +101,9 @@ export function useCategoryChartData(
     () => ({
       dataPoints: toChartPoints(dataPoints),
       partial: metrics?.partial ?? false,
+      currency,
       isLoading,
     }),
-    [dataPoints, metrics, isLoading],
+    [dataPoints, metrics, currency, isLoading],
   );
 }

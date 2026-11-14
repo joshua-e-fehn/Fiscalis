@@ -587,10 +587,13 @@ describe("ContinuousPerformanceStrategy - ledger lots in USD (PF-13)", () => {
       price: 3000,
     })),
   };
-  const run = (rates: { eurToUsd: number | null; eurToChf: number | null }) =>
+  const run = (rates: { eurToUsd: number | null }) =>
     calculateContinuousPerformance(
       {
-        holdings: ledgerHoldings(item, ledger.lots, { currency: "usd", rates }),
+        holdings: ledgerHoldings(item, ledger.lots, {
+          currency: "usd",
+          unitsPerEurOn: () => rates.eurToUsd,
+        }),
         prices,
         currency: "usd",
       },
@@ -598,7 +601,7 @@ describe("ContinuousPerformanceStrategy - ledger lots in USD (PF-13)", () => {
     );
 
   it("puts the EUR cost on the cost line in dollars", () => {
-    const result = run({ eurToUsd: 1.5, eurToChf: null });
+    const result = run({ eurToUsd: 1.5 });
     const last = result.dataPoints[result.dataPoints.length - 1];
     expect(last.value).toBe(6000);
     // 2 × 1000 € × 1.5 $/€, not 2000 € added to dollar values
@@ -608,7 +611,7 @@ describe("ContinuousPerformanceStrategy - ledger lots in USD (PF-13)", () => {
   });
 
   it("has no cost line without a rate", () => {
-    const result = run({ eurToUsd: null, eurToChf: null });
+    const result = run({ eurToUsd: null });
     const last = result.dataPoints[result.dataPoints.length - 1];
     expect(last.value).toBe(6000);
     expect(last.costBasis).toBeNull();

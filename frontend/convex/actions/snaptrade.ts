@@ -771,7 +771,7 @@ async function syncSnaptrade(
           } catch (activityError) {
             console.warn(
               `[SNAPTRADE SYNC] Activities of account ${apiAccount.id} not synced:`,
-              parseSnapTradeError(activityError).userMessage,
+              describeError(activityError),
             );
           }
 

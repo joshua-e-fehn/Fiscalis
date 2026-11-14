@@ -182,7 +182,7 @@ export function AssumptionsStep({
 							Raise my savings with inflation
 						</Label>
 						<p className="text-xs text-muted-foreground">
-							Off: one flat amount in today&apos;s euros, worth less every year.
+							Off: one flat amount in today&apos;s money, worth less every year.
 							On: a lower first amount that grows with inflation.
 						</p>
 					</div>

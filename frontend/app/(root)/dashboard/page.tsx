@@ -177,7 +177,16 @@ function YTDNetWorthCard({
               {formatCurrency(ytdChange, currency)}
             </div>
             {ytdChangePercent !== null && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p
+                className="text-xs text-muted-foreground mt-1"
+                // Converted per day, so the change includes the currency's
+                // move against the euro (amounts are stored in EUR)
+                title={
+                  currency === "eur"
+                    ? undefined
+                    : `Measured in ${currency.toUpperCase()}: includes the change in the euro exchange rate since Jan 1.`
+                }
+              >
                 {formatPercent(ytdChangePercent)} change since Jan 1
               </p>
             )}

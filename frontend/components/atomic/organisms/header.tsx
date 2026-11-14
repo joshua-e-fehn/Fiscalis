@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/shadcn/button";
 import { SidebarTrigger } from "@/components/ui/shadcn/sidebar";
 import Link from "next/link";
 import { SyncAllButton } from "@/components/atomic/atoms/syncAllButton";
+import { FxRateNotice } from "@/components/atomic/atoms/fxRateNotice";
 
 export function Header({
   hasSidebarTrigger,
@@ -37,6 +38,8 @@ export function Header({
         </Breadcrumb> */}
         <div className="ml-auto flex items-center gap-2">
           <SignedIn>
+            {/* Only for a stale or fallback display-currency rate */}
+            <FxRateNotice />
             <SyncAllButton />
           </SignedIn>
           <SignedOut>

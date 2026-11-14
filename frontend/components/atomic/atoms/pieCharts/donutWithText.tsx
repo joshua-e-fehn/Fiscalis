@@ -18,6 +18,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
+import type { InvestmentCurrency } from "@/lib/types/investments";
+import { formatCurrency } from "@/lib/utils/currency";
 
 /** One slice row: the value under `dataKey`, the name under `nameKey`, plus any extra fields (e.g. `fill`). */
 export type PieChartDatum = Record<string, string | number | undefined>;
@@ -33,7 +35,12 @@ interface PieChartDonutWithTextProps {
   subTitle?: string;
   subDescription?: string;
   isFinancial?: boolean;
-  currencyChar?: string;
+  /**
+   * The currency of the values (a hook's `currency`); a financial total is
+   * written with its suffix, "84'998€". Without it the total is a plain
+   * number.
+   */
+  currency?: InvestmentCurrency;
   size?: "sm" | "md" | "lg" | "xl";
   customSize?: {
     width: number;
@@ -117,7 +124,7 @@ export function PieChartDonutWithText({
   subTitle,
   subDescription,
   isFinancial = false,
-  currencyChar = "€",
+  currency,
   size = "md",
   customSize,
 }: PieChartDonutWithTextProps) {
@@ -178,8 +185,11 @@ export function PieChartDonutWithText({
                           y={viewBox.cy}
                           className={`fill-foreground ${chartSize.fontSizeTotalTitle} font-bold`}
                         >
-                          {(isFinancial ? currencyChar : "") +
-                            totalQuantity.toLocaleString()}
+                          {isFinancial && currency
+                            ? formatCurrency(totalQuantity, currency, {
+                                fractionDigits: 0,
+                              })
+                            : totalQuantity.toLocaleString("de-CH")}
                         </tspan>
                         <tspan
                           x={viewBox.cx}

@@ -13,7 +13,8 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface TopHoldingsListProps {
   subcategories: SubcategoryData[];
-  currency?: InvestmentCurrency;
+  /** The currency of the holdings' values (the summary hook's `currency`) */
+  currency: InvestmentCurrency;
   maxHoldingsPerSubcategory?: number;
   isLoading?: boolean;
   className?: string;
@@ -21,7 +22,7 @@ interface TopHoldingsListProps {
 
 export function TopHoldingsList({
   subcategories,
-  currency = "eur",
+  currency,
   maxHoldingsPerSubcategory = 3,
   isLoading = false,
   className,

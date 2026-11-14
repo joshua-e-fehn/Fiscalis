@@ -702,12 +702,15 @@ export const syncItemTransactions = internalAction({
 
       return { upserted: upserts.length, removed: removed.length, complete };
     } catch (error: unknown) {
-      const errorCode = plaidErrorCode(error);
-      if (errorCode) {
+      // Only a login problem flags the item: the balance sync
+      // (syncAccountsInternal) owns item health, and a transactions-only
+      // failure (e.g. a bank without the product) must not show a working
+      // connection as broken
+      if (plaidErrorCode(error) === "ITEM_LOGIN_REQUIRED") {
         await ctx.runMutation(internal.banking.updateItemStatus, {
           itemId: item.itemId,
           status: "error",
-          errorCode,
+          errorCode: "ITEM_LOGIN_REQUIRED",
         });
       }
       throw error;

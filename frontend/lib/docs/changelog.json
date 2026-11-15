@@ -4,6 +4,42 @@
       "month": "2026-11",
       "entries": [
         {
+          "type": "feature",
+          "title": "\"Set price\" on positions, pricing gaps doc",
+          "pr": 160,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Per-asset valuation overrides: manual price and mark-to-model",
+          "pr": 159,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Live provider prices between syncs",
+          "pr": 158,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Pies: /strategies/pies page, editor and sidebar entry (ENG-189, 2/2)",
+          "pr": 140,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Pies: table, CRUD and drift math (ENG-189, 1/2)",
+          "pr": 139,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "In-app docs: introduction, get started, tutorials, changelog",
+          "pr": 138,
+          "date": "2026-11-15"
+        },
+        {
           "type": "fix",
           "title": "Unify the German waitlist button label",
           "pr": 135,

@@ -102,6 +102,7 @@ import billingIt from "@/messages/it/billing.json";
 import ptPT from "@/messages/pt-PT";
 import { ru } from "@/messages/ru";
 import { zhHans } from "@/messages/zh-Hans";
+import { hi } from "@/messages/hi";
 import type { Language } from "./locales";
 
 const en = {
@@ -220,6 +221,7 @@ const MESSAGES: Record<Language, Messages> = {
   "pt-PT": ptPT,
   ru,
   "zh-Hans": zhHans,
+  hi,
 };
 
 export function messagesFor(language: Language): Messages {

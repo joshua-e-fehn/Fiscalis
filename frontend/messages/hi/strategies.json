@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "Pies",
+    "subtitle": "तुम्हारे पोर्टफोलियो के लिए लक्ष्य आवंटन: हर स्लाइस का वेट तय करो और देखो कि तुम्हारी होल्डिंग्स कितनी भटक गई हैं।",
+    "newPie": "नया pie",
+    "empty": {
+      "title": "अभी कोई pie नहीं",
+      "description": "एक pie तुम्हारे पोर्टफोलियो को स्लाइस में बाँटता है, हर स्लाइस एक श्रेणी, उपश्रेणी या ख़ास होल्डिंग्स होती है, जिसका एक लक्ष्य वेट होता है। फिर Fiscalis दिखाता है कि तुम्हारा असली आवंटन उससे कितना भटका है।",
+      "action": "अपना पहला pie बनाओ"
+    },
+    "card": {
+      "totalValue": "pie में मूल्य",
+      "maxDrift": "सबसे बड़ा विचलन",
+      "noHoldings": "तुम्हारी कोई भी होल्डिंग अभी इस pie के स्लाइस से मेल नहीं खाती।",
+      "edit": "pie संपादित करो",
+      "delete": "pie हटाओ",
+      "threshold": "लक्ष्य से {threshold} प्रतिशत अंक से ज़्यादा दूर वाले स्लाइस को रीबैलेंस करने की ज़रूरत है।",
+      "columns": {
+        "slice": "स्लाइस",
+        "target": "लक्ष्य",
+        "actual": "वास्तविक",
+        "drift": "विचलन",
+        "rebalance": "रीबैलेंस के लिए"
+      },
+      "drift": "{value} pp",
+      "status": {
+        "onTarget": "लक्ष्य पर",
+        "over": "ज़्यादा वेट",
+        "under": "कम वेट"
+      },
+      "buy": "{amount} ख़रीदो",
+      "sell": "{amount} बेचो",
+      "balanced": "—",
+      "allOf": "सभी {category}",
+      "holdingsCount": "{count, plural, one {# होल्डिंग} other {# होल्डिंग्स}}",
+      "missingHoldings": "{count, plural, one {# होल्डिंग अब तुम्हारे पोर्टफोलियो में नहीं है} other {# होल्डिंग्स अब तुम्हारे पोर्टफोलियो में नहीं हैं}}"
+    },
+    "delete": {
+      "title": "यह pie हटाना है?",
+      "description": "“{name}” और उसके लक्ष्य वेट हटा दिए जाएँगे। तुम्हारी होल्डिंग्स पर कोई असर नहीं पड़ेगा।",
+      "confirm": "pie हटाओ"
+    },
+    "toast": {
+      "created": "pie “{name}” बनाया गया",
+      "updated": "pie “{name}” अपडेट किया गया",
+      "deleted": "pie “{name}” हटाया गया"
+    },
+    "editor": {
+      "addTitle": "नया pie",
+      "editTitle": "“{name}” संपादित करो",
+      "description": "हर स्लाइस को एक लक्ष्य वेट दो। वेट का कुल योग 100% होना चाहिए।",
+      "name": "नाम",
+      "namePlaceholder": "जैसे Core & Satellite",
+      "descriptionLabel": "विवरण",
+      "optional": "वैकल्पिक",
+      "slices": "स्लाइस",
+      "slice": "स्लाइस {number}",
+      "addSlice": "स्लाइस जोड़ो",
+      "removeSlice": "स्लाइस हटाओ",
+      "splitEvenly": "बराबर बाँटो",
+      "kind": "लक्ष्य",
+      "kinds": {
+        "category": "श्रेणी",
+        "holdings": "ख़ास होल्डिंग्स"
+      },
+      "category": "श्रेणी",
+      "subcategory": "उपश्रेणी",
+      "allSubcategories": "सभी उपश्रेणियाँ",
+      "holdings": "होल्डिंग्स",
+      "noHoldings": "तुम्हारे पास अभी चुनने के लिए कोई होल्डिंग नहीं है।",
+      "holdingGone": "अब तुम्हारे पोर्टफोलियो में नहीं",
+      "label": "लेबल",
+      "weight": "लक्ष्य वेट (%)",
+      "total": "कुल: {total}%",
+      "totalOff": "कुल: {total}%। वेट का कुल योग 100% होना चाहिए।"
+    }
+  }
+}

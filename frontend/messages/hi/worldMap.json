@@ -1,0 +1,274 @@
+{
+  "page": {
+    "title": "विश्व डेटा एक्सप्लोरर",
+    "subtitle": "World Bank के आर्थिक, जनसांख्यिकीय और विकास संकेतकों को एक इंटरैक्टिव मानचित्र पर देखो।"
+  },
+  "controls": {
+    "title": "संकेतक चुनो",
+    "description": "विश्व मानचित्र पर दिखाने के लिए एक डेटा मीट्रिक चुनो",
+    "addFavorite": "पसंदीदा में जोड़ो",
+    "removeFavorite": "पसंदीदा से हटाओ",
+    "timePeriod": "समयावधि"
+  },
+  "export": {
+    "button": "CSV एक्सपोर्ट करो",
+    "exporting": "एक्सपोर्ट हो रहा है…",
+    "currentYear": "मौजूदा वर्ष ({year})",
+    "allYears": "सभी वर्ष ({min}–{max})",
+    "comparison": "तुलना ({start}–{end})"
+  },
+  "csv": {
+    "countryCode": "देश कोड",
+    "countryCodeIso3": "देश कोड (ISO3)",
+    "countryName": "देश का नाम",
+    "year": "वर्ष",
+    "value": "{indicator} ({unit})",
+    "yearValue": "{indicator} {year} ({unit})",
+    "absoluteChange": "बदलाव {start}–{end} ({unit})",
+    "percentChange": "बदलाव {start}–{end} (%)"
+  },
+  "prefetch": {
+    "loading": "डेटा पहले से लोड हो रहा है: {loaded}/{total} वर्ष",
+    "complete": "सभी वर्ष कैश हो गए – प्लेबैक तैयार",
+    "partial": "{loaded}/{total} वर्ष कैश हुए",
+    "loadAll": "सब पहले से लोड करो"
+  },
+  "dynamic": {
+    "viewing": "खोजा गया संकेतक देख रहे हो: <strong>{indicator}</strong>",
+    "fetching": "लाया जा रहा है…"
+  },
+  "errors": {
+    "loadTitle": "डेटा लोड करने में त्रुटि",
+    "loadDescription": "हम World Bank का डेटा नहीं ला पाए। कृपया फिर से कोशिश करो।",
+    "retry": "फिर कोशिश करो",
+    "mapTitle": "मानचित्र त्रुटि",
+    "mapDescription": "मानचित्र डेटा लोड नहीं हो सका।"
+  },
+  "map": {
+    "fallbackTitle": "विश्व मानचित्र",
+    "fallbackDescription": "डेटा देखने के लिए एक संकेतक चुनो",
+    "loading": "लोड हो रहा है…",
+    "loadingIndicator": "{indicator} लोड हो रहा है…",
+    "fetchingUpstream": "World Bank API से लाया जा रहा है",
+    "loadingYear": "{year} का डेटा लोड हो रहा है…",
+    "legendValue": "मान",
+    "low": "कम",
+    "high": "ज़्यादा",
+    "noData": "कोई डेटा नहीं"
+  },
+  "top": {
+    "title": "शीर्ष 5 देश",
+    "description": "{year} में सबसे ऊँचे मान",
+    "empty": "कोई डेटा उपलब्ध नहीं",
+    "titleIncrease": "सबसे बड़ी बढ़त",
+    "titleDecrease": "सबसे बड़ी गिरावट",
+    "changeDescription": "बदलाव {start}–{end}",
+    "sortLabel": "क्रमबद्ध करो",
+    "sortIncrease": "बढ़त",
+    "sortDecrease": "गिरावट",
+    "sortAbsolute": "निरपेक्ष",
+    "sortPercent": "प्रतिशत",
+    "showHistory": "{country} का इतिहास दिखाओ"
+  },
+  "dataset": {
+    "title": "डेटासेट जानकारी",
+    "source": "स्रोत",
+    "year": "वर्ष",
+    "countries": "देश",
+    "countriesWithData": "{count, plural, one {# डेटा के साथ} other {# डेटा के साथ}}",
+    "unit": "इकाई"
+  },
+  "units": {
+    "years": "वर्ष",
+    "yearsValue": "{value} वर्ष",
+    "percentValue": "{value}%",
+    "percentPoints": "{value} प्रतिशत अंक",
+    "tonnesValue": "{value} टन"
+  },
+  "timeSlider": {
+    "jumpToStart": "शुरुआत पर जाओ",
+    "stepBackward": "एक कदम पीछे",
+    "play": "चलाओ",
+    "pause": "रोको",
+    "stepForward": "एक कदम आगे",
+    "jumpToEnd": "अंत पर जाओ",
+    "speed": "गति:"
+  },
+  "search": {
+    "custom": "कस्टम",
+    "featured": "चुनिंदा",
+    "title": "संकेतक चुनो",
+    "description": "चुनिंदा संकेतकों में से चुनो या {count, plural, =0 {सभी World Bank संकेतक} one {# World Bank संकेतक} other {# World Bank संकेतक}} खोजो",
+    "needsSync": "संकेतक डेटाबेस को सिंक करना होगा। पूरी खोज चालू करने के लिए सिंक चलाओ।",
+    "placeholder": "सभी World Bank संकेतक खोजो…",
+    "clear": "खोज साफ़ करो",
+    "searching": "खोज रहे हैं…",
+    "results": "खोज परिणाम ({count})",
+    "fromTotal": "{count, plural, one {# संकेतक में से} other {# संकेतकों में से}}",
+    "slow": "धीमा",
+    "slowTooltip": "{count, plural, one {इस संकेतक का समय एक बार ख़त्म हो चुका है।} other {इस संकेतक का समय # बार ख़त्म हो चुका है।}}",
+    "slowHint": "यह धीमा या अविश्वसनीय हो सकता है।",
+    "unreliable": "अविश्वसनीय",
+    "unreliableTooltip": "{count, plural, one {यह संकेतक अक्सर लोड नहीं हो पाता (# टाइमआउट)।} other {यह संकेतक अक्सर लोड नहीं हो पाता (# टाइमआउट)।}}",
+    "unreliableHint": "हो सकता है डेटा उपलब्ध न हो।",
+    "addFavorite": "पसंदीदा में जोड़ो",
+    "removeFavorite": "पसंदीदा से हटाओ",
+    "emptyDatabase": "संकेतक डेटाबेस ख़ाली है",
+    "emptyDatabaseHint": "संकेतक भरने के लिए सिंक चलाओ",
+    "noResults": "“{query}” के लिए कोई संकेतक नहीं मिला",
+    "noResultsHint": "दूसरे कीवर्ड आज़माओ",
+    "favorites": "तुम्हारे पसंदीदा",
+    "featuredIndicators": "चुनिंदा संकेतक",
+    "selected": "चुना गया",
+    "dataSource": "डेटा स्रोत: <link>World Bank Open Data</link>",
+    "synced": "सिंक हुआ: {date}"
+  },
+  "categories": {
+    "economy": "अर्थव्यवस्था",
+    "demographics": "जनसांख्यिकी",
+    "finance": "वित्त",
+    "trade": "व्यापार",
+    "energy": "ऊर्जा और पर्यावरण",
+    "development": "विकास",
+    "commodities": "कमोडिटी"
+  },
+  "indicators": {
+    "gdp": {
+      "name": "GDP (मौजूदा US$)",
+      "description": "मौजूदा कीमतों पर सकल घरेलू उत्पाद"
+    },
+    "gdpPerCapita": {
+      "name": "प्रति व्यक्ति GDP",
+      "description": "GDP को वर्ष के मध्य की जनसंख्या से भाग देकर"
+    },
+    "gdpGrowth": {
+      "name": "GDP वृद्धि दर",
+      "description": "GDP की वार्षिक प्रतिशत वृद्धि दर"
+    },
+    "gni": {
+      "name": "GNI (मौजूदा US$)",
+      "description": "मौजूदा कीमतों पर सकल राष्ट्रीय आय"
+    },
+    "population": {
+      "name": "जनसंख्या",
+      "description": "कुल जनसंख्या"
+    },
+    "populationGrowth": {
+      "name": "जनसंख्या वृद्धि",
+      "description": "वार्षिक जनसंख्या वृद्धि दर"
+    },
+    "urbanPopulation": {
+      "name": "शहरी जनसंख्या",
+      "description": "शहरी क्षेत्रों में रहने वाली जनसंख्या का प्रतिशत"
+    },
+    "lifeExpectancy": {
+      "name": "जीवन प्रत्याशा",
+      "description": "जन्म के समय जीवन प्रत्याशा, कुल वर्ष"
+    },
+    "inflation": {
+      "name": "मुद्रास्फीति दर",
+      "description": "वार्षिक उपभोक्ता मूल्य मुद्रास्फीति"
+    },
+    "interestRate": {
+      "name": "वास्तविक ब्याज दर",
+      "description": "मुद्रास्फीति के लिए समायोजित वास्तविक ब्याज दर"
+    },
+    "debtToGdp": {
+      "name": "केंद्र सरकार का कर्ज़ (GDP का %)",
+      "description": "GDP के प्रतिशत के रूप में केंद्र सरकार का कर्ज़"
+    },
+    "exports": {
+      "name": "निर्यात (मौजूदा US$)",
+      "description": "वस्तुओं और सेवाओं का निर्यात"
+    },
+    "imports": {
+      "name": "आयात (मौजूदा US$)",
+      "description": "वस्तुओं और सेवाओं का आयात"
+    },
+    "tradeBalance": {
+      "name": "व्यापार संतुलन",
+      "description": "वस्तुओं और सेवाओं पर बाहरी संतुलन"
+    },
+    "fdi": {
+      "name": "प्रत्यक्ष विदेशी निवेश",
+      "description": "प्रत्यक्ष विदेशी निवेश का शुद्ध अंतर्वाह"
+    },
+    "co2PerCapita": {
+      "name": "प्रति व्यक्ति CO₂ उत्सर्जन",
+      "description": "मीट्रिक टन में प्रति व्यक्ति कार्बन डाइऑक्साइड उत्सर्जन"
+    },
+    "renewableEnergy": {
+      "name": "नवीकरणीय ऊर्जा खपत",
+      "description": "कुल अंतिम ऊर्जा खपत का प्रतिशत"
+    },
+    "electricityAccess": {
+      "name": "बिजली तक पहुँच",
+      "description": "बिजली तक पहुँच वाली जनसंख्या का प्रतिशत"
+    },
+    "povertyRate": {
+      "name": "ग़रीबी दर",
+      "description": "$2.15/दिन (2017 PPP) से नीचे रहने वाली जनसंख्या"
+    },
+    "unemployment": {
+      "name": "बेरोज़गारी दर",
+      "description": "कुल श्रमबल के प्रतिशत के रूप में बेरोज़गारी"
+    },
+    "literacy": {
+      "name": "साक्षरता दर",
+      "description": "वयस्क साक्षरता दर (15+ आयु)"
+    },
+    "mineralRents": {
+      "name": "खनिज किराया (GDP का %)",
+      "description": "टिन, सोना, सीसा, जस्ता, लोहा, तांबा, निकल, चाँदी, बॉक्साइट और फ़ॉस्फ़ेट सहित खनिज किराया"
+    },
+    "oresMetalsExports": {
+      "name": "अयस्क और धातु निर्यात",
+      "description": "माल निर्यात के प्रतिशत के रूप में अयस्क और धातुएँ"
+    },
+    "oresMetalsImports": {
+      "name": "अयस्क और धातु आयात",
+      "description": "माल आयात के प्रतिशत के रूप में अयस्क और धातुएँ"
+    },
+    "mineralDepletion": {
+      "name": "खनिज क्षरण (GNI का %)",
+      "description": "खनिज भंडार के मूल्य और शेष भंडार की आयु का अनुपात (टिन, सोना, सीसा, जस्ता, लोहा, तांबा, निकल, चाँदी, बॉक्साइट, फ़ॉस्फ़ेट)"
+    },
+    "oilRents": {
+      "name": "तेल किराया (GDP का %)",
+      "description": "क्षेत्रीय कीमतों पर कच्चे तेल के उत्पादन मूल्य और कुल उत्पादन लागत का अंतर"
+    },
+    "naturalGasRents": {
+      "name": "प्राकृतिक गैस किराया (GDP का %)",
+      "description": "क्षेत्रीय कीमतों पर प्राकृतिक गैस के उत्पादन मूल्य और कुल उत्पादन लागत का अंतर"
+    },
+    "totalResourceRents": {
+      "name": "कुल प्राकृतिक संसाधन किराया (GDP का %)",
+      "description": "तेल, प्राकृतिक गैस, कोयला, खनिज और वन किराये का योग"
+    }
+  },
+  "compare": {
+    "toggle": "वर्षों की तुलना करो",
+    "from": "से",
+    "to": "तक",
+    "featuredOnly": "वर्षों की तुलना चुनिंदा संकेतकों के लिए उपलब्ध है।",
+    "sameYear": "दो अलग-अलग वर्ष चुनो।",
+    "mapDescription": "{start} से {end} तक बदलाव",
+    "legendTitle": "बदलाव {start}–{end}",
+    "decrease": "गिरावट",
+    "increase": "बढ़त",
+    "noChange": "0",
+    "loading": "{start} और {end} लोड हो रहे हैं…",
+    "changeValue": "{absolute} ({percent})",
+    "fromTo": "{start} → {end}"
+  },
+  "country": {
+    "description": "समय के साथ {indicator}",
+    "loading": "इतिहास लोड हो रहा है: {loaded}/{total} वर्ष",
+    "empty": "इस देश का कोई डेटा नहीं।",
+    "gaps": "अंतराल: कोई डेटा दर्ज नहीं",
+    "latest": "नवीनतम ({year})",
+    "first": "पहला ({year})",
+    "change": "{year} से बदलाव",
+    "hint": "किसी देश का इतिहास देखने के लिए उस पर क्लिक करो।"
+  }
+}

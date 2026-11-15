@@ -1,0 +1,109 @@
+{
+  "steps": {
+    "welcome": "स्वागत",
+    "profile": "प्रोफ़ाइल",
+    "banking": "बैंकिंग",
+    "brokers": "ब्रोकर",
+    "crypto": "क्रिप्टो",
+    "completion": "पूरा"
+  },
+  "progress": {
+    "stepOf": "चरण {current} / {total}"
+  },
+  "shared": {
+    "skip": "अभी छोड़ो",
+    "noConnections": "अभी कोई कनेक्शन नहीं",
+    "accounts": "{count, plural, one {# खाता} other {# खाते}}"
+  },
+  "welcome": {
+    "logoAlt": "Fiscalis लोगो",
+    "title": "<brand>Fiscalis</brand> में तुम्हारा स्वागत है",
+    "subtitle": "तुम्हारी पूरी संपत्ति की तस्वीर, एक ही जगह।",
+    "trackTitle": "सब कुछ ट्रैक करो",
+    "trackDescription": "शेयर, क्रिप्टो, अचल संपत्ति, नकद, कीमती धातुएँ — सब एक ही नज़र में",
+    "debtsTitle": "अपने कर्ज़ जानो",
+    "debtsDescription": "ऋण, होम लोन, क्रेडिट कार्ड एक नज़र में",
+    "netWorthTitle": "असली निवल संपत्ति",
+    "netWorthDescription": "परिसंपत्तियाँ घटा देनदारियाँ, रीयल टाइम में अपडेट",
+    "mockupNetWorth": "कुल निवल संपत्ति",
+    "mockupChange": "इस साल {change}",
+    "getStarted": "चलो शुरू करें"
+  },
+  "profile": {
+    "title": "अपना अनुभव निजी बनाओ",
+    "subtitle": "Fiscalis का पूरा फ़ायदा उठाने के लिए अपनी पसंद सेट करो",
+    "displayName": "डिस्प्ले नाम",
+    "displayNamePlaceholder": "तुम्हारा नाम",
+    "birthDate": "जन्म तिथि",
+    "birthDateHint": "तुम्हारे सेवानिवृत्ति पूर्वानुमान जैसे योजना टूल को निजी बनाने के लिए।",
+    "currency": "पसंदीदा मुद्रा",
+    "currencies": {
+      "EUR": "यूरो (€)",
+      "USD": "अमेरिकी डॉलर ($)",
+      "GBP": "ब्रिटिश पाउंड (£)",
+      "CHF": "स्विस फ़्रैंक (CHF)"
+    },
+    "theme": "थीम",
+    "themes": {
+      "light": "लाइट",
+      "dark": "डार्क",
+      "system": "सिस्टम"
+    },
+    "saveFailed": "हम तुम्हारी प्रोफ़ाइल सहेज नहीं पाए। कृपया फिर से कोशिश करो।"
+  },
+  "banking": {
+    "title": "अपने बैंक खाते कनेक्ट करो",
+    "subtitle": "अपने चालू, बचत खाते और क्रेडिट कार्ड एक ही नज़र में देखो",
+    "benefitBalances": "अपने-आप बैलेंस अपडेट",
+    "benefitTransactions": "लेन-देन का इतिहास और वर्गीकरण",
+    "benefitCurrencies": "कई मुद्राओं का समर्थन",
+    "connected": "कनेक्ट किए गए खाते",
+    "connecting": "कनेक्ट हो रहा है…",
+    "addAnother": "एक और बैंक जोड़ो",
+    "connect": "बैंक खाता कनेक्ट करो",
+    "security": "बैंक-स्तरीय एन्क्रिप्शन • केवल-पढ़ने की पहुँच",
+    "continueWithout": "बैंकिंग के बिना आगे बढ़ो"
+  },
+  "brokers": {
+    "title": "अपने निवेश खाते कनेक्ट करो",
+    "subtitle": "अपने शेयर, ETF और बॉन्ड अपने-आप इम्पोर्ट करो",
+    "benefitRealtime": "रीयल-टाइम पोर्टफोलियो अपडेट",
+    "benefitBrokerages": "15+ ब्रोकरेज का समर्थन",
+    "benefitDividends": "लाभांश और प्रदर्शन ट्रैकिंग",
+    "connected": "कनेक्ट किए गए ब्रोकर",
+    "supported": "समर्थित ब्रोकर",
+    "opening": "कनेक्शन खुल रहा है…",
+    "addAnother": "एक और ब्रोकर जोड़ो",
+    "connect": "ब्रोकरेज खाता कनेक्ट करो",
+    "newWindow": "एक नई विंडो खुल जानी चाहिए थी। कनेक्शन वहीं पूरा करो।",
+    "security": "SnapTrade के ज़रिए सुरक्षित कनेक्शन • केवल-पढ़ने की पहुँच",
+    "continueWithout": "ब्रोकर के बिना आगे बढ़ो"
+  },
+  "crypto": {
+    "title": "Bitpanda कनेक्ट करो",
+    "subtitle": "Bitcoin, Ethereum और 100+ अन्य एसेट ट्रैक करो — साथ में धातुएँ, शेयर और नकद भी",
+    "benefitAssets": "क्रिप्टो, कीमती धातुएँ, कमोडिटी और शेयर एक ही जगह",
+    "benefitApiKey": "केवल-पढ़ने वाली API कुंजी से कनेक्ट करो",
+    "benefitValuation": "तुम्हारी आधार मुद्रा में अपने-आप मूल्यांकन",
+    "connected": "कनेक्टेड",
+    "addAnother": "एक और खाता जोड़ो",
+    "connect": "Bitpanda कनेक्ट करो",
+    "security": "केवल-पढ़ने वाली API कुंजी • स्टोरेज में एन्क्रिप्टेड",
+    "continueWithout": "Bitpanda के बिना आगे बढ़ो"
+  },
+  "completion": {
+    "title": "सब तैयार है! 🎉",
+    "subtitle": "तुम्हारा संपत्ति डैशबोर्ड देखने के लिए तैयार है",
+    "summaryConnected": "तुमने क्या कनेक्ट किया है",
+    "summaryEmpty": "सेटअप सारांश",
+    "bankAccounts": "बैंक खाते",
+    "brokerageAccounts": "ब्रोकरेज खाते",
+    "cryptoWallets": "क्रिप्टो वॉलेट",
+    "notConnected": "कनेक्ट नहीं",
+    "connectLater": "तुम कभी भी सेटिंग्स में अपने खाते कनेक्ट कर सकते हो",
+    "syncing": "तुम्हारे खाते सिंक हो रहे हैं। अपनी पूरी संपत्ति की तस्वीर देखने के लिए डैशबोर्ड पर जाओ।",
+    "goToDashboard": "डैशबोर्ड पर जाओ",
+    "goBack": "वापस जाओ",
+    "addAccounts": "खाते जोड़ो"
+  }
+}

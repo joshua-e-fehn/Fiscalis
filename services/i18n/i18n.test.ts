@@ -303,6 +303,10 @@ describe("locale helpers", () => {
     expect(INTL_TAGS["zh-Hans"]).toBe("zh-CN");
   });
 
+  it("formats Hindi as hi-IN", () => {
+    expect(INTL_TAGS.hi).toBe("hi-IN");
+  });
+
   it("maps Intl tags back to app languages", () => {
     expect(languageForLocale("de-DE")).toBe("de");
     expect(languageForLocale("de-CH")).toBe("de");

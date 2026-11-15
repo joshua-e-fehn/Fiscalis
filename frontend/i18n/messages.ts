@@ -5,8 +5,8 @@
  * missing key fails `bunx tsc` and `bun run build`. Extra keys and mismatched
  * ICU arguments are caught by services/i18n/i18n.test.ts.
  *
- * Adding a namespace: add messages/en/<ns>.json and messages/de/<ns>.json and
- * one line to each object below.
+ * Adding a key or a namespace: write it in every language folder (en, de,
+ * zh-Hans); a namespace also needs one line in each object below.
  */
 import commonEn from "@/messages/en/common.json";
 import commonDe from "@/messages/de/common.json";

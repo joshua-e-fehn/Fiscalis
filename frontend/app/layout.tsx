@@ -13,7 +13,20 @@ import { ThemeProvider, ThemeSync } from "@/providers/themeProvider";
 import { Toaster } from "@/components/ui/shadcn/sonner";
 
 import "./globals.css";
-const inter = Inter({ subsets: ["latin"] });
+// Inter has no CJK glyphs. Without a generic family in the stack the browser
+// draws Chinese (zh-Hans) in its default font, often a serif (SimSun,
+// Songti), so name the platform CJK sans-serifs and end on sans-serif.
+const inter = Inter({
+  subsets: ["latin"],
+  fallback: [
+    '"PingFang SC"',
+    '"Hiragino Sans GB"',
+    '"Microsoft YaHei"',
+    '"Noto Sans CJK SC"',
+    '"Noto Sans SC"',
+    "sans-serif",
+  ],
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("common.metadata");

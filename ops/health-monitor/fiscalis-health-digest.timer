@@ -1,0 +1,10 @@
+[Unit]
+Description=Post the Fiscalis daily sync digest at 07:30 UTC
+
+[Timer]
+# After the 06:00 UTC daily provider sync and its 15 min fallback snapshots.
+OnCalendar=*-*-* 07:30:00 UTC
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,6 +1,6 @@
 # Fiscalis health monitor
 
-Runs on the Mya VPS and watches two things:
+Runs on the Mya VPS, watches two things and posts a daily digest:
 
 - **`/health/deep`** on production Convex
   (`https://handsome-gecko-941.convex.site/health/deep`, defined in
@@ -9,6 +9,9 @@ Runs on the Mya VPS and watches two things:
 - **The S3 price archive**, daily at 01:30 UTC
   (`fiscalis-health-audit.timer`, `--audit`). The audit does not rely on
   Convex's own word: it checks every archived day's object in the bucket.
+- **The daily sync digest**, at 07:30 UTC (`fiscalis-health-digest.timer`,
+  `--digest`): the last 24 hours of provider syncs and the stale feeds, to
+  Slack only. See [Daily sync digest](#daily-sync-digest).
 
 Changes go to Mya's Slack home channel. Anything critical is an
 **EMERGENCY** and also goes to WhatsApp. healthchecks.io watches the
@@ -76,6 +79,53 @@ names use the column above.
   (version 2). A state file from the first version loads and is migrated:
   Slack is not told again about what it already knew.
 
+## Daily sync digest
+
+Every provider sync, scheduled or manual, writes a row to the Convex
+`syncRuns` table (`frontend/convex/syncRuns.ts`): provider, user, trigger,
+start and end, status (`running`, `success`, `partial`, `failed`) and a
+short error code such as `ITEM_LOGIN_REQUIRED`, `http_503` or
+`snaptradeSyncFailed`, never a provider message. Rows are pruned after 90
+days (cron `prune-sync-runs`, 04:30 UTC). Providers: `plaid` (balances, per
+item), `plaid-transactions` (per item), `snaptrade` (per user),
+`bitpanda` and `bitpanda-transactions` (per connection).
+
+`GET /health/sync-digest` summarizes the last 24 hours per provider: runs,
+successes, partial, failed (and how many of those were scheduled), runs
+stuck in `running` for over 30 minutes, users affected (a count), the five
+most frequent error codes and the newest success. It also carries the
+`/health/deep` report, so stale feeds show up in the same message. No user
+ids leave Convex.
+
+The endpoint is **not public**. It wants the `FISCALIS_MONITOR_SECRET`
+Convex env var (32+ characters) in the `X-Fiscalis-Monitor-Secret` header,
+and answers `401` without it, and also when the env var is unset. The
+monitor keeps its copy in `monitor.env`.
+
+`--digest` posts one Slack message per UTC day (state key `digest`), so a
+catch-up run or a manual start does not post twice. A digest that cannot be
+fetched (`401`, `503`, no answer) is posted as such, so a broken secret is
+noticed. The digest neither pings healthchecks.io nor goes to WhatsApp.
+`--digest --dry-run` prints the message and sends nothing.
+
+### Set or rotate the secret
+
+Generate it on the MacBook, never print it, and keep the only other copy on
+the VPS:
+
+```bash
+umask 077
+secret="$(openssl rand -hex 32)"
+printf '%s' "$secret" | npx convex env set FISCALIS_MONITOR_SECRET --env-file ~/.config/fiscalis/convex-prod.env
+printf 'FISCALIS_MONITOR_SECRET=%s\n' "$secret" |
+  ssh mya 'umask 077 && cat > /root/fiscalis-digest.env'
+unset secret
+ssh mya 'bash /tmp/fiscalis-health-monitor/install.sh --digest-env /root/fiscalis-digest.env && shred -u /root/fiscalis-digest.env'
+```
+
+(`npx convex env set` reads the value from stdin when it is omitted.) Run
+the `install.sh` line from a fresh copy of this directory (see below).
+
 ## Archive audit
 
 `--audit` does the following:
@@ -129,6 +179,10 @@ Before installing:
    ssh mya 'shred -u /root/fiscalis-audit.env; rm -rf /tmp/fiscalis-health-monitor'
    ```
 
+   For the daily digest, also pass `--digest-env` once (see
+   [Set or rotate the secret](#set-or-rotate-the-secret)); later re-runs keep
+   the secret.
+
    `--test-alert` sends one `[TEST]` message to Slack and WhatsApp through
    the real unit (next section) and fails the install if either does not
    go out. Leave it off to install without sending anything.
@@ -143,7 +197,8 @@ Before installing:
 and `WHATSAPP_ALLOWED_USERS` from Mya's env file
 (`/docker/hermes-agent-vspa/data/.env`) into
 `/etc/fiscalis-health-monitor/monitor.env` (0600 root), together with the ping
-URL. On a later re-run, the ping URL and the audit key are kept, so
+URL and the digest secret. On a later re-run, the ping URL, the digest
+secret and the audit key are kept, so
 `ssh mya 'bash /tmp/fiscalis-health-monitor/install.sh'` is enough to update
 the script or pick up a rotated Mya token. To rotate the audit key, pass
 `--audit-env` again. On an upgrade from the first version, the script moves
@@ -177,7 +232,8 @@ to report the check as down. Then start the timer again.
 
 ```bash
 ssh mya 'systemctl list-timers "fiscalis-health-*" --no-pager'
-ssh mya 'journalctl -u fiscalis-health-monitor.service -u fiscalis-health-audit.service -n 20 --no-pager'
+ssh mya 'journalctl -u fiscalis-health-monitor.service -u fiscalis-health-audit.service -u fiscalis-health-digest.service -n 20 --no-pager'
+ssh mya 'systemctl start fiscalis-health-digest.service'   # post today's digest now (once per UTC day)
 ssh mya 'cat /var/lib/fiscalis-health-monitor/state.json'
 ssh mya '/usr/bin/python3 -I /usr/local/lib/fiscalis-health-monitor/fiscalis-health-monitor.py --dry-run'
 ```
@@ -187,8 +243,8 @@ It needs no credentials and sends, pings and saves nothing.
 
 To remove the monitor:
 
-1. `systemctl disable --now fiscalis-health-monitor.timer fiscalis-health-audit.timer`
-2. Delete the five units (with `fiscalis-health-test.service`), `/usr/local/lib/fiscalis-health-monitor`,
+1. `systemctl disable --now fiscalis-health-monitor.timer fiscalis-health-audit.timer fiscalis-health-digest.timer`
+2. Delete the seven units (with `fiscalis-health-test.service`), `/usr/local/lib/fiscalis-health-monitor`,
    `/etc/fiscalis-health-monitor` and `/var/lib/fiscalis-health-monitor`.
 3. Delete the healthchecks.io check and the audit IAM user.
 

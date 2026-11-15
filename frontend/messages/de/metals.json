@@ -133,7 +133,7 @@
     "unknown": "Unbekannt",
     "currency": "Währung",
     "purchaseDate": "Kaufdatum",
-    "unknownDate": "Unbekannt: gilt als vor jedem Zeitraum gehalten",
+    "unknownDate": "Unbekannt: gilt als schon vor jedem Zeitraum im Bestand",
     "errors": {
       "premiumsNotNumbers": "Das Aufgeld muss eine Zahl sein",
       "quantityNotNumber": "Der Anfangsbestand muss eine Zahl sein",
@@ -292,7 +292,7 @@
     "searchPlaceholder": "Transaktionen durchsuchen…",
     "allTypes": "Alle Arten",
     "allMetals": "Alle Metalle",
-    "exportCsv": "CSV exportieren",
+    "exportCsv": "Als CSV exportieren",
     "empty": "Noch keine Transaktionen",
     "dateUnknown": "Datum unbekannt",
     "unknownDate": "Unbekannt",

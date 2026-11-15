@@ -1,6 +1,6 @@
 {
   "hero": {
-    "subheadline": "Behalte alle deine Investments, Vermögenswerte und Verbindlichkeiten im Blick. Kenne dein echtes Nettovermögen, automatisch aktualisiert über Bankkonten, Aktien, Krypto, Edelmetalle und mehr.",
+    "subheadline": "Behalte alle deine Anlagen, Vermögenswerte und Verbindlichkeiten im Blick. Kenne dein echtes Nettovermögen – automatisch aktualisiert für Bankkonten, Aktien, Krypto, Edelmetalle und mehr.",
     "badge": "Dein Vermögen, ganz einfach",
     "headline": "Dein komplettes <highlight>Vermögen</highlight><br></br>an einem Ort",
     "tagline": "Wie Finanzguru, aber für dein gesamtes Nettovermögen."
@@ -16,7 +16,7 @@
     "metalsDescription": "Verwalte Gold- und Silberbarren und -münzen, bewertet zu aktuellen Händlerpreisen.",
     "liabilitiesDescription": "Behalte deine Kredite und Tilgungspläne im Blick. Sieh dein echtes Nettovermögen.",
     "headline": "Alles, was du brauchst, um <highlight>dein Vermögen zu meistern</highlight>",
-    "subheadline": "Von Bankkonten bis zu Krypto-Wallets: Behalte alle deine Vermögenswerte in einem Dashboard im Blick.",
+    "subheadline": "Von Bankkonten bis zu Krypto-Wallets: Behalte alle deine Vermögenswerte in einer einzigen Übersicht im Blick.",
     "banksTitle": "Bankkonten",
     "banksDescription": "Verbinde deine Bankkonten sicher über Plaid. Behalte Giro-, Spar- und Kreditkartenkonten im Blick.",
     "investmentsTitle": "Anlageportfolios",
@@ -24,7 +24,7 @@
     "cryptoTitle": "Kryptowährungen",
     "liabilitiesTitle": "Schulden & Verbindlichkeiten",
     "netWorthTitle": "Nettovermögen verfolgen",
-    "netWorthDescription": "Sieh zu, wie dein Vermögen wächst, mit übersichtlichen Diagrammen und Auswertungen."
+    "netWorthDescription": "Sieh mit übersichtlichen Diagrammen und Auswertungen, wie dein Vermögen im Lauf der Zeit wächst."
   },
   "steps": {
     "createDescription": "Registriere dich mit deiner E-Mail-Adresse oder einem Social Login. Der Zugang wird schrittweise über eine Warteliste freigegeben. Keine Kreditkarte nötig.",
@@ -41,7 +41,7 @@
     "badge": "Sicherheit von Anfang an",
     "headline": "Deine Daten sind <highlight>bei uns sicher</highlight>",
     "encryption": "AES-256-GCM-Verschlüsselung für alle sensiblen Tokens",
-    "readOnly": "Nur Lesezugriff: Wir können nie Geld bewegen",
+    "readOnly": "Nur Lesezugriff: Wir können nie dein Geld bewegen",
     "credentials": "Deine Bankzugangsdaten erreichen nie unsere Server",
     "providers": "Vertrauenswürdige Anbieter: Plaid, SnapTrade, Bitpanda",
     "ownership": "Deine Daten gehören dir: Wir verkaufen sie nie"
@@ -56,8 +56,8 @@
     "security": "Sicherheit",
     "signIn": "Anmelden",
     "joinWaitlist": "Auf die Warteliste",
-    "dashboard": "Dashboard",
-    "goToDashboard": "Zum Dashboard"
+    "dashboard": "Übersicht",
+    "goToDashboard": "Zur Übersicht"
   },
   "logoAlt": "Fiscalis-Logo",
   "mockup": {

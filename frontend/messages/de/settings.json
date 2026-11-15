@@ -21,14 +21,14 @@
       "description": "System folgt der Einstellung deines Geräts.",
       "theme": "Design"
     },
-    "saveFailed": "Wir konnten deine Einstellungen nicht speichern. Bitte versuche es erneut."
+    "saveFailed": "Deine Einstellungen konnten nicht gespeichert werden. Bitte versuch es erneut."
   },
   "apiKeys": {
     "title": "API-Schlüssel",
     "subtitle": "Lies dein Nettovermögen programmatisch aus. Schlüssel sind privat und auf dein Konto beschränkt.",
     "create": {
       "title": "Schlüssel erstellen",
-      "description": "Ein Schlüssel gewährt Lesezugriff auf dein aktuelles Nettovermögen. Behandle ihn wie ein Passwort: Committe ihn nie und verwende ihn nicht in Browser-Code.",
+      "description": "Ein Schlüssel gewährt nur Lesezugriff auf dein aktuelles Nettovermögen. Behandle ihn wie ein Passwort: Committe ihn nie und verwende ihn nicht in Browser-Code.",
       "name": "Name",
       "namePlaceholder": "z. B. Heim-Dashboard",
       "expires": "Läuft ab",

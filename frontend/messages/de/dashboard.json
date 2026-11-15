@@ -8,7 +8,7 @@
   "netWorth": {
     "title": "Nettovermögen gesamt",
     "unrealized": "({percent}) unrealisiert",
-    "unrealizedCoverage": "({percent}) unrealisiert, auf {covered} % der Vermögenswerte"
+    "unrealizedCoverage": "({percent}) unrealisiert, bezogen auf {covered} % der Vermögenswerte"
   },
   "kpi": {
     "totalAssets": "Vermögenswerte gesamt",
@@ -16,7 +16,7 @@
   },
   "ytdNetWorth": {
     "title": "Nettovermögen seit Jahresbeginn (YTD)",
-    "changeSinceJan1": "{percent} Veränderung seit 1. Januar",
+    "changeSinceJan1": "{percent} Veränderung seit dem 1. Januar",
     "fxEffectHint": "Gemessen in {currency}: enthält die Veränderung des Euro-Wechselkurses seit dem 1. Januar.",
     "partial": "Unvollständig: Eine Synchronisierung ist fehlgeschlagen oder ein Preis fehlt",
     "trackingSince": "Noch zu wenig Verlauf (erfasst seit {date})",
@@ -96,7 +96,7 @@
     "shownOfTotal": "{shown} von {total, plural, one {# Position} other {# Positionen}}",
     "showLess": "Weniger anzeigen",
     "viewAll": "Alle anzeigen",
-    "searchPlaceholder": "Positionen suchen …",
+    "searchPlaceholder": "Positionen suchen…",
     "provider": "Anbieter",
     "allProviders": "Alle Anbieter",
     "category": "Kategorie",
@@ -128,11 +128,11 @@
   "cashHoldings": {
     "bankAccount": "Bankkonto",
     "cashPosition": "Liquiditätsposition",
-    "brokerCash": "{account} – Guthaben"
+    "brokerCash": "{account} – Verrechnungskonto"
   },
   "emptyState": {
     "title": "Verbinde dein erstes Konto",
-    "description": "Dein Dashboard füllt sich, sobald Fiscalis weiß, was du besitzt. Verbinde eine Bank oder einen Broker, importiere Bitpanda oder trag Edelmetalle und Kredite von Hand ein.",
+    "description": "Deine Übersicht füllt sich, sobald Fiscalis weiß, was du besitzt. Verbinde eine Bank oder einen Broker, importiere Bitpanda oder trag Edelmetalle und Kredite von Hand ein.",
     "bank": "Bank verbinden",
     "broker": "Broker verbinden",
     "metals": "Edelmetalle hinzufügen",

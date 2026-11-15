@@ -73,7 +73,7 @@
     "flat": "Ein fester nominaler Betrag pro Monat bis zum Ruhestand; durch die Inflation sind spätere Zahlungen weniger wert.",
     "netDebt": "Diese Beträge starten bei {zero} und enthalten nicht den Abbau deiner aktuellen Schulden.",
     "mortgageNotProjected": "Die volle Restschuld deiner Hypothek von {balance} gilt als beim Ruhestand noch offen und ist Teil deines Ziels: Trage Zinssatz und Monatsrate im Plan ein, um sie fortzuschreiben.",
-    "mortgageOwedAtRetirement": "Zusätzlich zahlst du die Raten deiner Hypothek von {payment}/Monat weiter aus deinem Einkommen; die {balance} Restschuld beim Ruhestand sind Teil deines Ziels.",
+    "mortgageOwedAtRetirement": "Zusätzlich zahlst du die Raten deiner Hypothek von {payment}/Monat weiter aus deinem Einkommen; die beim Ruhestand verbleibende Restschuld von {balance} ist Teil deines Ziels.",
     "mortgageRepaidBefore": "Zusätzlich zahlst du die Raten deiner Hypothek von {payment}/Monat weiter aus deinem Einkommen, bis der Kredit getilgt ist."
   },
   "coverage": {
@@ -122,7 +122,7 @@
     "onTrack": "Du bist auf Kurs für dein Ziel von {target}.",
     "onTrackExpected": "Auf Kurs bei der erwarteten Rendite von {rate}; mit {amount}/Monat Sparrate ist auch das vorsichtige Szenario gedeckt.",
     "progress": "Du hast {pct}% deines Ziels von {target} erreicht.",
-    "draft": "Mach dort weiter, wo du aufgehört hast, und sieh deine Zahl.",
+    "draft": "Mach dort weiter, wo du aufgehört hast, und sieh deine Zielsumme.",
     "new": "Mach aus deinem Ruhestandsziel in wenigen Minuten einen monatlichen Sparplan.",
     "viewPlan": "Plan ansehen",
     "getStarted": "Loslegen"
@@ -145,7 +145,7 @@
       }
     },
     "reviewPlan": "Meinen Plan prüfen",
-    "getStarted": "Los geht's"
+    "getStarted": "Loslegen"
   },
   "personalStep": {
     "title": "Dein Zeitplan",
@@ -221,7 +221,7 @@
       "exclude": "Nicht berücksichtigt (z. B. Notgroschen)"
     },
     "fundable": "Anrechenbares Vermögen",
-    "expectedGrowth": "Erwartetes Wachstum {expected} / Jahr (konservativ {conservative})",
+    "expectedGrowth": "Erwartetes Wachstum {expected} / Jahr (vorsichtig {conservative})",
     "netDebt": "Deine Verbindlichkeiten übersteigen deine Vermögenswerte um <b>{debt}</b>. Dein Plan startet bei {zero} – Schulden wachsen nicht mit der Anlagerendite –, daher kommt ihre Tilgung zu den berechneten Sparbeträgen hinzu.",
     "mortgageWithPayment": "Die Hypothek von <b>{balance}</b> auf dein Zuhause wird hier nicht abgezogen: Ihre Raten von {payment} zahlst du bis zum Ruhestand aus deinem Einkommen.",
     "mortgage": "Die Hypothek von <b>{balance}</b> auf dein Zuhause wird hier nicht abgezogen: Ihre Raten zahlst du bis zum Ruhestand aus deinem Einkommen.",
@@ -238,7 +238,7 @@
         "hint": "Langfristiges Marktwachstum. Der Standardwert von {rate} verdoppelt ein Portfolio alle 10 Jahre."
       },
       "conservativeReturn": {
-        "label": "Konservative jährliche Rendite",
+        "label": "Vorsichtige jährliche Rendite",
         "hint": "Eine vorsichtige Wachstumsannahme für die sicherere Schätzung."
       },
       "inflationRate": {
@@ -263,9 +263,9 @@
   "validation": {
     "ageRange": "{field, select, currentAge {Das aktuelle Alter muss} retirementAge {Das Rentenalter muss} other {Das Alter muss}} eine ganze Zahl zwischen {min} und {max} sein",
     "retirementNotAfterCurrent": "Das Rentenalter muss über deinem aktuellen Alter liegen",
-    "rateRange": "{field, select, optimisticReturn {Die erwartete Rendite muss} conservativeReturn {Die konservative Rendite muss} inflationRate {Die Inflationsrate muss} primaryResidenceMortgageRate {Der Hypothekenzins muss} pensionDeductionRate {Der Satz für Steuern & Krankenversicherung muss} withdrawalTaxRate {Die Steuer auf Entnahmen muss} other {Der Satz muss}} zwischen 0 % und {max} % liegen",
+    "rateRange": "{field, select, optimisticReturn {Die erwartete Rendite muss} conservativeReturn {Die vorsichtige Rendite muss} inflationRate {Die Inflationsrate muss} primaryResidenceMortgageRate {Der Hypothekenzins muss} pensionDeductionRate {Der Satz für Steuern & Krankenversicherung muss} withdrawalTaxRate {Die Steuer auf Entnahmen muss} other {Der Satz muss}} zwischen 0 % und {max} % liegen",
     "withdrawalRateRange": "Die Entnahmerate muss über 0 % und höchstens bei {max} % liegen",
-    "conservativeAboveExpected": "Die konservative Rendite darf nicht höher als die erwartete Rendite sein",
+    "conservativeAboveExpected": "Die vorsichtige Rendite darf nicht höher als die erwartete Rendite sein",
     "amountNegative": "{field, select, monthlyExpensesToday {Die monatlichen Ausgaben dürfen nicht negativ sein} fundableRealEstateEquity {Der Immobilienwert darf nicht negativ sein} primaryResidenceMortgagePayment {Die Monatsrate der Hypothek darf nicht negativ sein} other {Rentenbeträge dürfen nicht negativ sein}}",
     "expensesNotPositive": "Die monatlichen Ausgaben müssen größer als null sein"
   }

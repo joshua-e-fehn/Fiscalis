@@ -123,7 +123,7 @@
         "noBankTitle": "Keine Bank verbunden",
         "noBankDescription": "Verbinde eine Bank, um ihre Transaktionen hier zu sehen.",
         "noTransactionsTitle": "Noch keine Transaktionen",
-        "noTransactionsDescription": "Synchronisiere deine Transaktionen, um sie von deiner Bank abzurufen. Neue kommen außerdem mit der täglichen Synchronisierung.",
+        "noTransactionsDescription": "Synchronisiere deine Transaktionen, um sie von deiner Bank abzurufen. Neue Transaktionen kommen außerdem mit der täglichen Synchronisierung hinzu.",
         "noMatchesTitle": "Keine passenden Transaktionen",
         "noMatchesDescription": "Probier ein anderes Konto, einen anderen Zeitraum oder Suchbegriff."
       }
@@ -179,7 +179,7 @@
       "emptyDescription": "Verbinde dein Depot, um deine Anlagen und die Wertentwicklung deines Portfolios automatisch zu verfolgen."
     },
     "account": {
-      "fallbackType": "Anlage",
+      "fallbackType": "Anlagekonto",
       "accountNumber": "Konto {number}",
       "totalValue": "Gesamtwert",
       "cash": "Liquidität",
@@ -211,10 +211,10 @@
     "holdings": "{count, plural, one {# Bestand} other {# Bestände}}",
     "emptyDescription": "Verbinde dein Bitpanda-Konto mit einem API-Schlüssel mit Lesezugriff, um alle deine Bestände zu verfolgen.",
     "fallbackLabel": "Bitpanda-Konto",
-    "keyRejected": "API-Schlüssel abgelehnt – verbinde dich erneut mit einem neuen Schlüssel mit Lesezugriff",
+    "keyRejected": "API-Schlüssel abgelehnt – verbinde Bitpanda erneut mit einem neuen Schlüssel mit Lesezugriff",
     "syncFailed": "Synchronisierung fehlgeschlagen – versuche es erneut",
     "transient": "Vorübergehendes Problem bei Bitpanda – es wird automatisch erneut versucht",
-    "lastSynced": "zuletzt synchronisiert {date}",
+    "lastSynced": "zuletzt synchronisiert am {date}",
     "syncNow": "Jetzt synchronisieren",
     "addAnother": "Weiteren Bitpanda-Schlüssel hinzufügen",
     "connect": {

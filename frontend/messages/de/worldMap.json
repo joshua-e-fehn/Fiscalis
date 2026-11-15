@@ -57,7 +57,7 @@
     "noData": "Keine Daten"
   },
   "top": {
-    "title": "Top 5 Länder",
+    "title": "Top-5-Länder",
     "description": "Höchste Werte {year}",
     "empty": "Keine Daten verfügbar",
     "titleIncrease": "Größter Anstieg",
@@ -174,7 +174,7 @@
       "description": "Um die Inflation bereinigter Zinssatz"
     },
     "debtToGdp": {
-      "name": "Staatsverschuldung des Zentralstaats (% des BIP)",
+      "name": "Schulden des Zentralstaats (% des BIP)",
       "description": "Schulden des Zentralstaats in Prozent des BIP"
     },
     "exports": {
@@ -250,7 +250,7 @@
     "toggle": "Jahre vergleichen",
     "from": "Von",
     "to": "Bis",
-    "featuredOnly": "Der Jahresvergleich ist für ausgewählte Indikatoren verfügbar.",
+    "featuredOnly": "Der Jahresvergleich ist für empfohlene Indikatoren verfügbar.",
     "sameYear": "Wähle zwei verschiedene Jahre.",
     "mapDescription": "Veränderung von {start} bis {end}",
     "legendTitle": "Veränderung {start}–{end}",
@@ -266,8 +266,8 @@
     "loading": "Verlauf wird geladen: {loaded}/{total} Jahre",
     "empty": "Für dieses Land gibt es keine Daten.",
     "gaps": "Lücken: keine Daten erfasst",
-    "latest": "Zuletzt ({year})",
-    "first": "Erstmals ({year})",
+    "latest": "Neuester Wert ({year})",
+    "first": "Erster Wert ({year})",
     "change": "Veränderung seit {year}",
     "hint": "Klicke auf ein Land, um seinen Verlauf zu sehen."
   }

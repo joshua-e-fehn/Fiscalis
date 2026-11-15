@@ -23,8 +23,8 @@
   },
   "equities": {
     "subtitle": "Behalte dein Aktienportfolio, ETFs, Investmentfonds und Private-Equity-Anlagen im Blick.",
-    "publicMarkets": "Öffentliche Märkte",
-    "privateMarkets": "Private Märkte"
+    "publicMarkets": "Börsennotiert",
+    "privateMarkets": "Außerbörslich"
   },
   "realEstate": {
     "subtitle": "Behalte deine Immobilienanlagen im Blick – Wohnimmobilien, Gewerbeimmobilien, REITs und mehr.",
@@ -90,7 +90,7 @@
     "positions": {
       "title": "Alle Positionen",
       "count": "{shown} von {total, plural, one {# Position} other {# Positionen}}",
-      "search": "Nach Token suchen...",
+      "search": "Nach Token suchen…",
       "loading": "Positionen werden geladen…",
       "noMatch": "Keine Positionen passen zu deiner Suche",
       "empty": "Keine Positionen gefunden",

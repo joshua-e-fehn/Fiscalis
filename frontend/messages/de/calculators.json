@@ -89,7 +89,7 @@
     },
     "duration": {
       "title": "Dauer berechnen",
-      "description": "Finde heraus, wie lange es dauert, bis du dein Zielkapital erreichst, ausgehend von Startwert und Zinssatz",
+      "description": "Finde heraus, wie lange es dauert, bis du dein Zielkapital erreichst, ausgehend von Anfangswert und Zinssatz",
       "resultsHint": "Benötigte Zeit bis zum Zielkapital"
     },
     "futureValue": {

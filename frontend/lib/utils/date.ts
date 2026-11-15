@@ -1,28 +1,3 @@
-type DateFormatType = "short" | "date" | "full";
-
-export function formatDate(date: Date, type: DateFormatType = "full"): string {
-  const options: Intl.DateTimeFormatOptions = {
-    hour12: false,
-    ...(type === "short" && {
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-    ...(type === "date" && {
-      day: "2-digit",
-      month: "2-digit",
-    }),
-    ...(type === "full" && {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }),
-  };
-
-  return new Intl.DateTimeFormat("de-DE", options).format(date);
-}
-
 /** Today's date as a local-time `YYYY-MM-DD` string (not UTC). */
 export function todayLocalISO(): string {
   const d = new Date();
@@ -37,28 +12,21 @@ const MAX_BIRTH_DATE_AGE = 120;
 
 /**
  * Why a date of birth is rejected. The UI renders the code in the user's
- * language (onboarding.profile.birthDateErrors.<code>).
+ * language (common.errors.birthDate.<code>), and the Convex mutations throw it
+ * as userError("birthDate.<code>").
  */
 export type BirthDateError = "format" | "invalid" | "future" | "outOfRange";
 
-const BIRTH_DATE_ERROR_TEXT: Record<BirthDateError, string> = {
-  format: "Date of birth must be in YYYY-MM-DD format",
-  invalid: "Date of birth is not a valid calendar date",
-  future: "Date of birth cannot be in the future",
-  outOfRange: "Date of birth is out of the supported range",
-};
-
 /**
  * Result of {@link validateBirthDate}: the trimmed value and age, or an error
- * code. `error` is the English text of the code, for the Convex mutations and
- * the screens not translated yet.
+ * code.
  */
 export type BirthDateValidation =
   | { ok: true; value: string; age: number }
-  | { ok: false; code: BirthDateError; error: string };
+  | { ok: false; code: BirthDateError };
 
 function birthDateFailure(code: BirthDateError): BirthDateValidation {
-  return { ok: false, code, error: BIRTH_DATE_ERROR_TEXT[code] };
+  return { ok: false, code };
 }
 
 /**
@@ -115,16 +83,4 @@ export function getAgeFromBirthDate(
   if (!birthDate) return null;
   const result = validateBirthDate(birthDate, today);
   return result.ok ? result.age : null;
-}
-
-/** Format an ISO date of birth (YYYY-MM-DD) for display, e.g. "1 May 1990". */
-export function formatBirthDate(birthDate: string): string {
-  const dob = new Date(birthDate);
-  if (Number.isNaN(dob.getTime())) return birthDate;
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(dob);
 }

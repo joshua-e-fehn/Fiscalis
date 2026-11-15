@@ -128,8 +128,8 @@ async function insertTick(
     .first();
   if (existing) return false;
   await ctx.db.insert("metalPriceTicks", snapshot);
-  // A late minute (backfill) reopens an archived day: it is uploaded again
-  // before its ticks can be pruned.
+  // A late minute (backfill) reopens an archived day: archiveTicks merges
+  // it into the stored file (which keeps every row) before it can be pruned.
   const archived = await ctx.db
     .query("metalPriceArchive")
     .withIndex("by_day", (q) => q.eq("day", utcDay(snapshot.timestamp)))
@@ -366,8 +366,8 @@ export const dailyFxRates = internalQuery({
 
 /**
  * The oldest UTC day before today that has ticks and no archive entry, or
- * null. Days before the first tick are covered by the one-off Supabase
- * export (logged with `markArchived`).
+ * null. The one-off Supabase export days are in the bucket but not logged;
+ * archiveTicks merges into such a file rather than replacing it.
  */
 export const nextDayToArchive = internalQuery({
   args: {},
@@ -416,7 +416,14 @@ export const ticksForDay = internalQuery({
   },
 });
 
-/** Log a day as archived (the cron after its upload, or the Supabase export). */
+/**
+ * Log a day as archived after its upload: `rows` is the file's row count,
+ * `ticks` how many of the day's ticks the upload read. Returns false, and
+ * logs nothing, when the day now holds a different number of ticks (one
+ * arrived during the upload): logging it would let pruneTicks delete a tick
+ * the file lacks. Ticks of an unlogged day are only ever added, so an equal
+ * count means the same ticks.
+ */
 export const markArchived = internalMutation({
   args: {
     day: v.string(),
@@ -424,9 +431,16 @@ export const markArchived = internalMutation({
     rows: v.number(),
     bytes: v.number(),
     sha256: v.string(),
+    ticks: v.number(),
   },
-  returns: v.null(),
-  handler: async (ctx, args) => {
+  returns: v.boolean(),
+  handler: async (ctx, { ticks, ...args }) => {
+    const start = Date.parse(`${args.day}T00:00:00Z`);
+    const now = await ctx.db
+      .query("metalPriceTicks")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", start).lt("timestamp", start + 86_400_000))
+      .collect();
+    if (now.length !== ticks) return false;
     const existing = await ctx.db
       .query("metalPriceArchive")
       .withIndex("by_day", (q) => q.eq("day", args.day))
@@ -434,6 +448,6 @@ export const markArchived = internalMutation({
     const entry = { ...args, archivedAt: Date.now() };
     if (existing) await ctx.db.replace(existing._id, entry);
     else await ctx.db.insert("metalPriceArchive", entry);
-    return null;
+    return true;
   },
 });

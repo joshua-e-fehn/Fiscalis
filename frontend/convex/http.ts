@@ -8,7 +8,12 @@ import {
 import { netWorthApiCurrency } from "../../services/portfolio/aggregate";
 import { DISPLAY_CURRENCIES } from "../../services/finance/displayCurrency";
 import { evaluateFreshness } from "../../services/health/freshness";
-import { metalArchiveEnabled, scheduledSyncEnabled } from "./lib/scheduledSync";
+import {
+  metalArchiveEnabled,
+  metalArchivePrefix,
+  metalArchiveRequired,
+  scheduledSyncEnabled,
+} from "./lib/scheduledSync";
 
 // ═══════════════════════════════════════════════════════════════
 // Convex HTTP Router
@@ -59,6 +64,7 @@ http.route({
         inputs,
         {
           archiveEnabled: metalArchiveEnabled(),
+          archiveRequired: metalArchiveRequired(),
           scheduledSyncEnabled: scheduledSyncEnabled(),
         },
         Date.now(),
@@ -69,7 +75,44 @@ http.route({
       });
     } catch {
       console.error("GET /health/deep failed");
-      return new Response(JSON.stringify({ ok: false, checks: [] }), {
+      return new Response(JSON.stringify({ ok: false, critical: true, checks: [] }), {
+        status: 503,
+        headers,
+      });
+    }
+  }),
+});
+
+// The newest ?days=N (default 30, 1..1000) entries of the metal price
+// archive log, newest first, so the off-site monitor can check each S3
+// object's size and checksum. Public price metadata only (day, key, rows,
+// bytes, sha256 plus bucket and prefix), never credentials or user data.
+http.route({
+  path: "/health/metal-archive-ledger",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const headers = {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store, max-age=0",
+    };
+    try {
+      const param = new URL(request.url).searchParams.get("days");
+      const requested = param === null || param === "" ? Number.NaN : Number(param);
+      const days = Number.isFinite(requested) ? requested : undefined;
+      const archiveEnabled = metalArchiveEnabled();
+      const entries = await ctx.runQuery(internal.health.metalArchiveLedger, { days });
+      return new Response(
+        JSON.stringify({
+          archiveEnabled,
+          prefix: archiveEnabled ? metalArchivePrefix() : null,
+          bucket: archiveEnabled ? (process.env.METAL_ARCHIVE_BUCKET ?? null) : null,
+          days: entries,
+        }),
+        { status: 200, headers },
+      );
+    } catch {
+      console.error("GET /health/metal-archive-ledger failed");
+      return new Response(JSON.stringify({ error: "ledger unavailable" }), {
         status: 503,
         headers,
       });

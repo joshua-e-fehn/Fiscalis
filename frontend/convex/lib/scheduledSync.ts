@@ -29,3 +29,17 @@ export function metalArchiveEnabled(): boolean {
     "METAL_ARCHIVE_SECRET_ACCESS_KEY",
   ].every((name) => Boolean(process.env[name]));
 }
+
+/**
+ * Whether this deployment must archive: METAL_ARCHIVE_REQUIRED=true, or a
+ * production deployment (SCHEDULED_SYNC_ENABLED=true). There a missing
+ * METAL_ARCHIVE_* setting fails /health/deep instead of skipping the check.
+ */
+export function metalArchiveRequired(): boolean {
+  return process.env.METAL_ARCHIVE_REQUIRED === "true" || scheduledSyncEnabled();
+}
+
+/** Object key prefix of the metal price archive (METAL_ARCHIVE_PREFIX). */
+export function metalArchivePrefix(): string {
+  return process.env.METAL_ARCHIVE_PREFIX ?? "metal-prices";
+}

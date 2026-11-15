@@ -180,10 +180,44 @@ export function archiveKey(prefix: string, day: string): string {
 
 /** The day's rows as JSON lines, oldest first. */
 export function archiveLines(snapshots: readonly MetalPriceSnapshot[]): string {
-  return [...snapshots]
-    .sort((a, b) => a.timestamp - b.timestamp)
-    .map((s) => JSON.stringify(archiveRow(s)))
-    .join("\n") + "\n";
+  return mergeArchiveLines(null, snapshots).text;
+}
+
+/**
+ * A day file that keeps everything already stored: every line of `existing`
+ * (the stored file's text, or null when there is none) verbatim, plus each
+ * snapshot whose minute it lacks, oldest first. A rewrite can only add rows,
+ * so a re-archive from the few ticks Convex still holds never shrinks a
+ * complete file. Throws on a stored line without a readable timestamp
+ * instead of dropping it.
+ */
+export function mergeArchiveLines(
+  existing: string | null,
+  snapshots: readonly MetalPriceSnapshot[],
+): { text: string; rows: number } {
+  const lines: { at: number; line: string }[] = [];
+  (existing ?? "").split("\n").forEach((line, index) => {
+    if (line.trim() === "") return;
+    let at = Number.NaN;
+    try {
+      const timestamp: unknown = JSON.parse(line)?.timestamp;
+      if (typeof timestamp === "string") at = Date.parse(timestamp);
+    } catch {
+      // handled below
+    }
+    if (!Number.isFinite(at)) {
+      throw new Error(`Stored archive line ${index + 1} has no readable timestamp`);
+    }
+    lines.push({ at, line });
+  });
+  const stored = new Set(lines.map((l) => l.at));
+  for (const snapshot of snapshots) {
+    if (stored.has(snapshot.timestamp)) continue;
+    stored.add(snapshot.timestamp);
+    lines.push({ at: snapshot.timestamp, line: JSON.stringify(archiveRow(snapshot)) });
+  }
+  lines.sort((a, b) => a.at - b.at); // stable: equal stored minutes keep their order
+  return { text: lines.map((l) => l.line).join("\n") + "\n", rows: lines.length };
 }
 
 /** The EUR spot prices of a snapshot, for the `metalSpotPrices` mirror. */

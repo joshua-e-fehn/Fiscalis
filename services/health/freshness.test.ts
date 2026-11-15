@@ -3,6 +3,7 @@ import {
   evaluateFreshness,
   FX_REFRESH_MAX_AGE_MS,
   HEALTH_CHECK_NAMES,
+  METAL_COVERAGE_MIN_ROWS,
   METAL_TICK_MAX_AGE_MS,
   PROVIDER_SYNC_MAX_AGE_MS,
   type FreshnessInputs,
@@ -10,10 +11,11 @@ import {
 import { utcDayEnd } from "../finance/currency";
 
 const now = Date.UTC(2026, 10, 14, 12, 0, 0); // Sat 14 Nov 2026 12:00 UTC
-const allOn = { archiveEnabled: true, scheduledSyncEnabled: true };
+const allOn = { archiveEnabled: true, archiveRequired: true, scheduledSyncEnabled: true };
 const fresh: FreshnessInputs = {
   newestTickAt: now - 60_000,
   newestArchivedDay: "2026-11-13",
+  newestArchivedRows: 1440,
   fxRefreshedAt: now - 30 * 60_000,
   providerSyncedAt: now - 6 * 3_600_000,
 };
@@ -24,10 +26,12 @@ describe("evaluateFreshness", () => {
   it("is ok when every record is within its threshold", () => {
     const report = evaluateFreshness(fresh, allOn, now);
     expect(report.ok).toBe(true);
+    expect(report.critical).toBe(false);
     expect(report.checks.map((c) => c.name)).toEqual([...HEALTH_CHECK_NAMES]);
     expect(check(report, "metal-price-ticks")).toEqual({
       name: "metal-price-ticks",
       ok: true,
+      severity: "critical",
       ageSeconds: 60,
       threshold: 600,
     });
@@ -45,9 +49,11 @@ describe("evaluateFreshness", () => {
   it("fails a check with no record at all, with a null age", () => {
     const report = evaluateFreshness({ ...fresh, fxRefreshedAt: null }, allOn, now);
     expect(report.ok).toBe(false);
+    expect(report.critical).toBe(false);
     expect(check(report, "fx-rates")).toEqual({
       name: "fx-rates",
       ok: false,
+      severity: "warning",
       ageSeconds: null,
       threshold: FX_REFRESH_MAX_AGE_MS / 1000,
     });
@@ -88,10 +94,27 @@ describe("evaluateFreshness", () => {
       expect(at("2026-11-14T12:00:00Z", "13.11.2026")).toMatchObject({ ok: false, ageSeconds: null });
     });
 
-    it("is skipped where the archive is not configured", () => {
+    it("fails critical where the archive is required but not configured", () => {
       const report = evaluateFreshness(
         { ...fresh, newestArchivedDay: null },
         { ...allOn, archiveEnabled: false },
+        now,
+      );
+      expect(report).toMatchObject({ ok: false, critical: true });
+      expect(check(report, "metal-price-archive")).toMatchObject({
+        ok: false,
+        severity: "critical",
+        ageSeconds: null,
+        detail: "archive not configured",
+      });
+      expect(check(report, "metal-price-archive").skipped).toBeUndefined();
+      expect(check(report, "metal-price-coverage")).toMatchObject({ ok: true, skipped: true });
+    });
+
+    it("is skipped where the archive is not configured", () => {
+      const report = evaluateFreshness(
+        { ...fresh, newestArchivedDay: null },
+        { ...allOn, archiveEnabled: false, archiveRequired: false },
         now,
       );
       expect(report.ok).toBe(true);
@@ -100,6 +123,93 @@ describe("evaluateFreshness", () => {
         ageSeconds: null,
         skipped: true,
       });
+    });
+  });
+
+  describe("severity", () => {
+    it("labels the tick and archive checks critical, the rest warnings", () => {
+      const report = evaluateFreshness(fresh, allOn, now);
+      expect(Object.fromEntries(report.checks.map((c) => [c.name, c.severity]))).toEqual({
+        "metal-price-ticks": "critical",
+        "metal-price-archive": "critical",
+        "metal-price-coverage": "warning",
+        "fx-rates": "warning",
+        "provider-sync": "warning",
+      });
+    });
+
+    it("is critical when the tick feed is stale", () => {
+      const report = evaluateFreshness(
+        { ...fresh, newestTickAt: now - METAL_TICK_MAX_AGE_MS - 60_000 },
+        allOn,
+        now,
+      );
+      expect(report).toMatchObject({ ok: false, critical: true });
+    });
+
+    it("is critical when yesterday is not archived by 01:00 UTC", () => {
+      const report = evaluateFreshness(
+        { ...fresh, newestArchivedDay: "2026-11-12" },
+        allOn,
+        Date.parse("2026-11-14T01:30:00Z"),
+      );
+      expect(report).toMatchObject({ ok: false, critical: true });
+    });
+
+    it("is not critical when only warnings fail", () => {
+      const report = evaluateFreshness(
+        { ...fresh, fxRefreshedAt: null, providerSyncedAt: null, newestArchivedRows: 10 },
+        allOn,
+        now,
+      );
+      expect(report).toMatchObject({ ok: false, critical: false });
+    });
+  });
+
+  describe("metal price coverage", () => {
+    const coverage = (overrides: Partial<FreshnessInputs>, config = allOn, at = now) => {
+      const report = evaluateFreshness({ ...fresh, ...overrides }, config, at);
+      return { report, check: check(report, "metal-price-coverage") };
+    };
+
+    it("is ok with a full day of 1440 rows", () => {
+      expect(coverage({ newestArchivedRows: 1440 }).check).toEqual({
+        name: "metal-price-coverage",
+        ok: true,
+        severity: "warning",
+        ageSeconds: null,
+        threshold: 1380,
+        detail: "2026-11-13: 1440 rows",
+      });
+    });
+
+    it("passes at exactly the minimum, fails one row short", () => {
+      expect(METAL_COVERAGE_MIN_ROWS).toBe(1380);
+      expect(coverage({ newestArchivedRows: 1380 }).check.ok).toBe(true);
+      const short = coverage({ newestArchivedRows: 1379 });
+      expect(short.check).toMatchObject({ ok: false, detail: "2026-11-13: 1379 rows" });
+      expect(short.report).toMatchObject({ ok: false, critical: false });
+    });
+
+    it("is skipped when the newest archived day is older than yesterday", () => {
+      // 00:30 UTC: yesterday's upload is still within its grace period
+      const { report, check: c } = coverage(
+        { newestArchivedDay: "2026-11-12", newestArchivedRows: 5 },
+        allOn,
+        Date.parse("2026-11-14T00:30:00Z"),
+      );
+      expect(c).toMatchObject({ ok: true, skipped: true, threshold: 1380 });
+      expect(c.detail).toBeUndefined();
+      expect(report.ok).toBe(true);
+    });
+
+    it("is skipped where the archive is not configured", () => {
+      const { report, check: c } = coverage(
+        { newestArchivedDay: null, newestArchivedRows: null },
+        { ...allOn, archiveEnabled: false, archiveRequired: false },
+      );
+      expect(c).toMatchObject({ ok: true, skipped: true, severity: "warning" });
+      expect(report.ok).toBe(true);
     });
   });
 
@@ -127,6 +237,7 @@ describe("evaluateFreshness", () => {
       expect(check(report, "provider-sync")).toEqual({
         name: "provider-sync",
         ok: true,
+        severity: "warning",
         ageSeconds: null,
         threshold: 26 * 3_600,
         skipped: true,

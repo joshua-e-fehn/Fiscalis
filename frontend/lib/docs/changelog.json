@@ -1,0 +1,680 @@
+{
+  "months": [
+    {
+      "month": "2026-11",
+      "entries": [
+        {
+          "type": "fix",
+          "title": "Unify the German waitlist button label",
+          "pr": 135,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: lint guard against raw JSX text; German on",
+          "pr": 134,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Trust-boundary tests with convex-test, migrations component, dev demo user",
+          "pr": 133,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "fix",
+          "title": "i18n: German proofreading pass",
+          "pr": 132,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "One generic /assets/[category]/[subcategory] route for manual assets",
+          "pr": 130,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Manual assets: add/edit dialog and \"Add Item\" on the overview pages",
+          "pr": 129,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Plaid and SnapTrade webhooks, consent-expiry notice",
+          "pr": 128,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Weekly Convex prod backups to S3, corrected rollback runbook, restore drill",
+          "pr": 127,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Observability v2: syncRuns ledger and daily failure digest",
+          "pr": 126,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "GDPR: export my data and delete my account",
+          "pr": 125,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Manual assets v1: table, CRUD and net-worth source",
+          "pr": 124,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "FX-correct cost basis at trade-date FX",
+          "pr": 123,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Versioned encryption keys + re-encrypt migration",
+          "pr": 120,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "fix",
+          "title": "i18n: one copy of birth-date and API-key error messages; dead code",
+          "pr": 119,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "fix",
+          "title": "i18n: commodities stub pages use the shared ComingSoonPage",
+          "pr": 118,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "fix",
+          "title": "i18n: one translated ComingSoonPage; collectibles stub pages",
+          "pr": 117,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Loss-proof metal price archive + emergency monitoring",
+          "pr": 116,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "fix",
+          "title": "i18n: translate the FX rate notice, drop leftover template text",
+          "pr": 115,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: coded user errors from Convex",
+          "pr": 114,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Bank transaction history page",
+          "pr": 104,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "\"Change category\" on positions and bank accounts, Settings list",
+          "pr": 102,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Category overrides: one hook, Bitpanda reset, overrides list",
+          "pr": 101,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "Incremental transaction sync (Plaid /transactions/sync) and indexed reads",
+          "pr": 100,
+          "date": "2026-11-15"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: landing page, settings and API keys",
+          "pr": 113,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: metals performance and transactions",
+          "pr": 112,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: metals holdings",
+          "pr": 111,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: asset category pages and liabilities overview",
+          "pr": 110,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: app shell and navigation",
+          "pr": 109,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: retirement wizard steps",
+          "pr": 108,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: metals vault dialogs and price chart",
+          "pr": 107,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: loans",
+          "pr": 106,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: brokers and Bitpanda integrations",
+          "pr": 105,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: onboarding",
+          "pr": 103,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Per-country World Bank views: history panel, compare years, delta CSV",
+          "pr": 99,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "/health/deep freshness checks and VPS uptime monitor",
+          "pr": 97,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Show drill-down cards for provider-fed subcategories",
+          "pr": 96,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Delete a single vault ledger entry",
+          "pr": 94,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Edit a recorded loan payment",
+          "pr": 93,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Start over: reset the retirement plan",
+          "pr": 92,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: category taxonomy and dashboard",
+          "pr": 90,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: integrations and bank accounts",
+          "pr": 89,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: retirement dashboard, results and wizard chrome",
+          "pr": 88,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: interest and loan calculators",
+          "pr": 87,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n: world map",
+          "pr": 86,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display currency: switch on USD, GBP and CHF",
+          "pr": 85,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Dashboard empty state for users with no connections",
+          "pr": 84,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Honesty pass: hide unbuilt menu entries, drop false claims",
+          "pr": 83,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Waitlist-only sign-up via Clerk <Waitlist />",
+          "pr": 82,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Public Privacy, Terms and Impressum pages",
+          "pr": 81,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Rate-limit user-triggered paid provider actions",
+          "pr": 80,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Bitpanda/SnapTrade: split transient errors from needs-reauth; retries and timeouts",
+          "pr": 79,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Connection lifecycle: revoke at the provider on disconnect, re-sync after SnapTrade reconnect",
+          "pr": 77,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Display currency: cross-batch consistency",
+          "pr": 75,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display currency: metal forms, integrations, crypto table",
+          "pr": 74,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display currency: metals holdings and summaries",
+          "pr": 73,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display currency: retirement planner",
+          "pr": 72,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display currency: loan totals and loan calculator",
+          "pr": 71,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display currency: charts, YTD and performance",
+          "pr": 70,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display currency: dashboard, categories, liabilities",
+          "pr": 69,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "i18n infrastructure (next-intl), English only for now",
+          "pr": 68,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Read metal prices from Convex, drop the SQL price routes",
+          "pr": 66,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Ingest gold.de prices in a Convex cron, archive minutes to S3",
+          "pr": 65,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Apply the theme; Settings > General page",
+          "pr": 64,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Display-currency foundation (no visible change)",
+          "pr": 63,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Stop logging provider secrets; reconnect SnapTrade by authorization ID",
+          "pr": 62,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "feature",
+          "title": "Gate the app behind onboarding",
+          "pr": 61,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Replace the sample team switcher with the app brand",
+          "pr": 60,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Bank Accounts totals in EUR, debts subtracted",
+          "pr": 59,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Make lint strict: rules back to errors, fail on warnings",
+          "pr": 58,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Clear lint warnings: loans, header, accounts, onboarding",
+          "pr": 57,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Clear lint warnings: metals components and price chart",
+          "pr": 56,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Clear lint warnings: b-components-core",
+          "pr": 55,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Clear lint warnings: a-app-server",
+          "pr": 54,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Restore `bun run lint` with an ESLint flat config",
+          "pr": 53,
+          "date": "2026-11-14"
+        },
+        {
+          "type": "fix",
+          "title": "Currency after the amount everywhere: charts, loans, accounts, metals",
+          "pr": 52,
+          "date": "2026-11-13"
+        },
+        {
+          "type": "fix",
+          "title": "Write the currency symbol after the amount (-15'795.87€)",
+          "pr": 51,
+          "date": "2026-11-13"
+        },
+        {
+          "type": "feature",
+          "title": "Category breakdown and data freshness in GET /api/v1/net-worth",
+          "pr": 32,
+          "date": "2026-11-13"
+        },
+        {
+          "type": "fix",
+          "title": "Address PR-bot review findings on the ENG-174 stack (2/2)",
+          "pr": 50,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Address PR-bot review findings on the ENG-174 stack (1/2)",
+          "pr": 49,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Exact trade flows for snapshots from Bitpanda, vault and SnapTrade logs",
+          "pr": 47,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Retirement results and funding base from the server; link Plaid mortgages",
+          "pr": 46,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "feature",
+          "title": "Loans: optional day-count convention and multiple recurring extras",
+          "pr": 45,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Loans default to base currency; derive balance from payments + adjustment",
+          "pr": 44,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Metals ledger in display currency, opening balances, vault item edit",
+          "pr": 41,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Category charts plot the engine series; drop unused chart history",
+          "pr": 39,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Dashboard chart and YTD card end at live net worth; partial-snapshot flag",
+          "pr": 38,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Commodities from the server aggregate; value the vault once on the server",
+          "pr": 37,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Count client broker cash via the server helper, drop dead broker code",
+          "pr": 36,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Keep stale Bitpanda prices, validate overrides, tag partial syncs",
+          "pr": 34,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Guard the hybrid strategy against a moving clock",
+          "pr": 33,
+          "date": "2026-11-12"
+        },
+        {
+          "type": "fix",
+          "title": "Address PR-bot review findings on the valuation stack (2/2)",
+          "pr": 30,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Address PR-bot review findings on the valuation stack (1/2)",
+          "pr": 29,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "feature",
+          "title": "Retirement methodology revision (RD-2..RD-6)",
+          "pr": 28,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Run the loan tracker on the shared engine, with review fixes",
+          "pr": 27,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Vault ledger: EUR prices at transaction-date FX, dated transactions, local today",
+          "pr": 25,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Metals ledger as source of truth: lots, realized P/L, one vault history engine",
+          "pr": 24,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "feature",
+          "title": "Flow-adjusted investment performance and Bitpanda cost basis (D2)",
+          "pr": 23,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "One performance engine: valuation resolver, shared series, single entry point",
+          "pr": 22,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "feature",
+          "title": "One net-worth aggregator and holdings loader for server and client",
+          "pr": 21,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "One SnapTrade sync, explicit broker cash and safe provider syncs",
+          "pr": 20,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "One FX path: mirrored daily rates and sync-time EUR stamping",
+          "pr": 19,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Address val-03 review: compare partial cost only with the value it covers",
+          "pr": 18,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Fix snapshot window, dashboard chart, unrealised P/L, metals premium, YTD card",
+          "pr": 15,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "feature",
+          "title": "Calibrate metal buy/sell premiums from dealer data",
+          "pr": 14,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Derive Convex user from auth, check doc ownership",
+          "pr": 13,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "fix",
+          "title": "Value vault metals at live spot in server-side net worth",
+          "pr": 12,
+          "date": "2026-11-11"
+        },
+        {
+          "type": "feature",
+          "title": "User-scoped API keys & GET /api/v1/net-worth",
+          "pr": 11,
+          "date": "2026-11-11"
+        }
+      ]
+    },
+    {
+      "month": "2026-10",
+      "entries": [
+        {
+          "type": "fix",
+          "title": "Import Bitpanda fiat earn wallets",
+          "pr": 10,
+          "date": "2026-10-08"
+        },
+        {
+          "type": "fix",
+          "title": "Retirement planner bugs from audit",
+          "pr": 9,
+          "date": "2026-10-06"
+        },
+        {
+          "type": "fix",
+          "title": "Payment schedule drops recorded payments & drifting next payment date",
+          "pr": 8,
+          "date": "2026-10-06"
+        },
+        {
+          "type": "fix",
+          "title": "Broken internal links after route renames",
+          "pr": 7,
+          "date": "2026-10-06"
+        }
+      ]
+    }
+  ]
+}

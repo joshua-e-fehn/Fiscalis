@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "{page} · Fiscalis-Doku"
+  },
+  "nav": {
+    "label": "Dokumentation",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "onThisPage": "Auf dieser Seite"
+  },
+  "introduction": {
+    "subtitle": "Was Fiscalis ist, woher deine Zahlen kommen und wie sie berechnet werden.",
+    "sections": {
+      "whatIs": {
+        "title": "Was Fiscalis ist",
+        "body": "Fiscalis ist ein privater Tracker für dein Nettovermögen. Er bringt deine Bankkonten, Broker, Bitpanda, einen Edelmetall-Tresor, von Hand erfasste Vermögenswerte und deine Kredite an einem Ort zusammen, bewertet alles in einer Währung und zeigt, wie sich dein Vermögen entwickelt.\n\nFiscalis liest deine Daten nur. Es kann kein Geld bewegen, keine Orders aufgeben und nichts bei deiner Bank oder deinem Broker ändern."
+      },
+      "sources": {
+        "title": "Woher deine Zahlen kommen",
+        "body": "- Banken über Plaid: Salden von Giro-, Spar- und Kreditkartenkonten sowie dein Transaktionsverlauf.\n- Broker über SnapTrade: Depots, Positionen, Barbestände und Aktivitäten.\n- Bitpanda über einen API-Schlüssel mit Lesezugriff: Krypto, Metalle, Aktien, ETFs und Fiat-Wallets.\n- Edelmetall-Tresor: Münzen und Barren, die du selbst erfasst, bewertet zum aktuellen Spotpreis.\n- Manuelle Vermögenswerte: Immobilien, Sammlerstücke, Private Equity, Anleihen und alles, was kein verbundenes Konto meldet.\n- Kredite: Hypotheken und andere Kredite, die du einträgst, mit ihrem vollständigen Tilgungsplan.",
+        "linkLabel": "Verbinde dein erstes Konto"
+      },
+      "netWorth": {
+        "title": "Wie dein Nettovermögen berechnet wird",
+        "body": "Dein Nettovermögen ist alles, was du besitzt, abzüglich deiner Verbindlichkeiten. Dieselbe Berechnung speist die Übersicht, die täglichen Snapshots für deinen Verlauf und die API, sodass überall dieselbe Zahl steht.\n\nBestände werden in Kategorien wie Liquidität, Aktien, Anleihen, Krypto, Rohstoffe, Immobilien und Sammlerstücke eingeordnet. Landet ein Bestand in der falschen Kategorie, kannst du ihn unter Einstellungen > Kategorien verschieben.\n\nDie Performance deiner Anlagen ist um Zu- und Abflüsse bereinigt: Geld, das du einzahlst oder investierst, zählt als eingesetztes Kapital und nicht als Gewinn. Eine Einzahlung sieht also nie wie ein guter Börsentag aus.",
+        "linkLabel": "Zur Übersicht"
+      },
+      "metals": {
+        "title": "Wie Edelmetalle bewertet werden",
+        "body": "Gold, Silber, Platin und Palladium in deinem Tresor werden zum aktuellen Spotpreis bewertet, der jede Minute aktualisiert wird. Fiscalis rechnet mit kalibrierten Händleraufschlägen: Der Kaufaufschlag ist, was du über Spot zahlen würdest, der Verkaufsaufschlag, was dir ein Händler zahlen würde. Beides kannst du für jede Position anpassen."
+      },
+      "currency": {
+        "title": "Anzeigewährung und Sprache",
+        "body": "Alles wird in Euro gespeichert. Deine Summen kannst du in EUR, USD, GBP oder CHF anzeigen: Summen werden zum letzten Tageskurs umgerechnet, dein Verlauf zum Kurs des jeweiligen Tages. Kredite und einzelne Kontozeilen behalten ihre eigene Währung.\n\nFiscalis gibt es auf Deutsch und Englisch. Anzeigewährung und Sprache änderst du unter Einstellungen > Allgemein.",
+        "linkLabel": "Einstellungen > Allgemein öffnen"
+      },
+      "sync": {
+        "title": "Wann Daten aktualisiert werden",
+        "body": "- Alle verbundenen Banken und Broker werden einmal täglich am frühen Morgen synchronisiert.\n- Bitpanda wird alle sechs Stunden synchronisiert.\n- Spotpreise für Edelmetalle werden jede Minute aktualisiert, Wechselkurse mehrmals täglich.\n- Mit dem Sync-Button oben auf der Seite kannst du jederzeit selbst alles synchronisieren."
+      },
+      "tools": {
+        "title": "Planungswerkzeuge",
+        "body": "- Ruhestandsplaner: rechnet aus, ob dein aktuelles Nettovermögen, deine Sparrate und deine Renten für den Ruhestand reichen, den du dir wünschst.\n- Zins- und Kreditrechner: Probiere Sparpläne und Tilgungsvarianten aus, ohne etwas zu speichern.\n- Weltkarte: Wirtschafts-, Bevölkerungs- und Entwicklungsindikatoren der Weltbank auf einer interaktiven Karte.\n- API: Lies dein aktuelles Nettovermögen mit einem persönlichen API-Schlüssel aus deinen eigenen Skripten aus."
+      },
+      "privacy": {
+        "title": "Datenschutz und Sicherheit",
+        "body": "Zugangstoken deiner Banken und Broker und dein Bitpanda-Schlüssel werden verschlüsselt gespeichert. API-Schlüssel werden nur als Hash abgelegt, sodass selbst Fiscalis sie nicht mehr auslesen kann. Bei deiner Bank und deinem Broker meldest du dich in deren eigenem Fenster an; Fiscalis sieht diese Passwörter nie.\n\nUnter Einstellungen > Datenschutz kannst du alles herunterladen, was Fiscalis über dich speichert, oder dein Konto löschen.",
+        "linkLabel": "Einstellungen > Datenschutz öffnen"
+      },
+      "access": {
+        "title": "Zugang",
+        "body": "Fiscalis ist derzeit nur auf Einladung nutzbar. Neue Nutzer tragen sich in die Warteliste ein und bekommen Zugang, sobald ihr Platz freigegeben ist."
+      }
+    }
+  },
+  "getStarted": {
+    "subtitle": "Von deiner ersten Anmeldung bis zum vollständigen Bild deines Vermögens.",
+    "sections": {
+      "account": {
+        "title": "1. Dein Konto",
+        "body": "Die Registrierung läuft über die Warteliste. Sobald dein Zugang freigegeben ist, meldest du dich mit deiner E-Mail-Adresse an. Bei der ersten Anmeldung führt dich eine kurze Einrichtung durch dein Profil und deine ersten Verbindungen. Jeden Verbindungsschritt kannst du überspringen und später nachholen."
+      },
+      "profile": {
+        "title": "2. Richte dein Profil ein",
+        "body": "Wähle deinen Anzeigenamen, deine Anzeigewährung und eine Darstellung. Dein Geburtsdatum ist optional; der Ruhestandsplaner nutzt es. All das kannst du später unter Einstellungen > Allgemein ändern, zusammen mit der Sprache.",
+        "linkLabel": "Einstellungen > Allgemein öffnen"
+      },
+      "connect": {
+        "title": "3. Verbinde deine Konten",
+        "body": "- Banken: Integrationen > Banking, dann Bank verbinden.\n- Broker: Integrationen > Broker, dann Broker verbinden.\n- Bitpanda: ebenfalls unter Integrationen > Broker, mit Bitpanda verbinden und einem API-Schlüssel mit Lesezugriff.\n\nDie erste Synchronisierung kann einen Moment dauern. Danach werden deine Konten automatisch aktualisiert.",
+        "linkLabel": "Banking öffnen"
+      },
+      "manual": {
+        "title": "4. Ergänze, was kein Konto meldet",
+        "body": "- Münzen und Barren kommen in den Edelmetall-Tresor unter Anlagen > Rohstoffe.\n- Immobilien, Sammlerstücke, Private Equity, Anleihen und Ähnliches fügst du auf der Seite ihrer Kategorie als manuelle Vermögenswerte hinzu.\n- Hypotheken und andere Kredite gehören unter Verbindlichkeiten > Kredite, damit dein Nettovermögen abzieht, was du noch schuldest.",
+        "linkLabel": "Zu den Anleitungen"
+      },
+      "explore": {
+        "title": "5. Entdecke deine Übersicht",
+        "body": "Die Übersicht zeigt dein Nettovermögen, wie es sich auf die Kategorien verteilt und wie es sich entwickelt hat. Jede Kategorie unter Anlagen hat eine eigene Seite mit den Beständen dahinter. Ab jetzt erstellt Fiscalis jeden Tag einen Snapshot, dein Verlauf wächst also von selbst.",
+        "linkLabel": "Zur Übersicht"
+      },
+      "next": {
+        "title": "Wie es weitergeht",
+        "body": "- Plane deinen Ruhestand mit dem Ruhestandsplaner, ausgehend von deinem echten Nettovermögen.\n- Erstelle einen API-Schlüssel, wenn du dein Nettovermögen aus eigenen Werkzeugen auslesen willst.\n- Im Änderungsprotokoll siehst du, was neu ist."
+      }
+    }
+  },
+  "tutorials": {
+    "subtitle": "Schritt-für-Schritt-Anleitungen für die häufigsten Aufgaben.",
+    "sections": {
+      "connectBank": {
+        "title": "Eine Bank verbinden",
+        "body": "Bankkonten werden über Plaid verbunden. Fiscalis erhält Lesezugriff auf Salden und Transaktionen.",
+        "steps": "- Öffne Integrationen > Banking.\n- Klicke auf Bank verbinden. Das Plaid-Fenster öffnet sich.\n- Wähle deine Bank und melde dich dort an. Deine Zugangsdaten gehen an Plaid und deine Bank, nie an Fiscalis.\n- Wähle die Konten aus, die du teilen möchtest, und bestätige.\n- Deine Salden erscheinen auf der Seite. Unter Transaktionen findest du deinen Transaktionsverlauf.",
+        "note": "Zeigt eine Bank Erneute Anmeldung nötig oder läuft deine Einwilligung bald ab, klicke auf Erneut verbinden und melde dich noch einmal an. Deine Daten bleiben erhalten.",
+        "linkLabel": "Banking öffnen"
+      },
+      "connectBroker": {
+        "title": "Einen Broker oder Bitpanda verbinden",
+        "body": "Broker werden über SnapTrade verbunden. Bitpanda verbindest du direkt mit einem API-Schlüssel mit Lesezugriff.",
+        "steps": "- Öffne Integrationen > Broker.\n- Für einen Broker klickst du auf Broker verbinden, wählst deinen Broker im SnapTrade-Verbindungsportal und meldest dich dort an.\n- Für Bitpanda klickst du auf Bitpanda verbinden. Folge dem Link Schlüssel mit Lesezugriff in Bitpanda erstellen, erstelle einen Schlüssel nur mit Leserechten und kopiere ihn.\n- Füge den Schlüssel ein, gib ihm optional eine Bezeichnung und klicke auf Verbinden.\n- Deine Positionen und Barbestände erscheinen nach der ersten Synchronisierung.",
+        "note": "Bitpanda wird alle sechs Stunden synchronisiert; mit Jetzt synchronisieren aktualisierst du sofort. Gib Fiscalis nie einen Bitpanda-Schlüssel, der handeln oder auszahlen darf.",
+        "linkLabel": "Broker öffnen"
+      },
+      "manualAsset": {
+        "title": "Einen manuellen Vermögenswert hinzufügen",
+        "body": "Manuelle Vermögenswerte decken alles ab, was kein verbundenes Konto meldet, etwa eine Wohnung, eine Uhr, Wein, Private Equity oder Staatsanleihen.",
+        "steps": "- Öffne die passende Kategorie unter Anlagen, zum Beispiel Immobilien oder Sammlerstücke.\n- Klicke auf Position hinzufügen oder öffne eine Unterkategorie und klicke auf Vermögenswert hinzufügen.\n- Wähle Kategorie und Unterkategorie und gib dem Vermögenswert einen Namen.\n- Wähle seine Währung und füge eine Bewertung hinzu: ein Datum und den Wert an diesem Tag. Die neueste Bewertung zählt in deinem Nettovermögen.\n- Trage optional den Kaufpreis ein, um deinen Gewinn oder Verlust zu sehen, und wähle unter Finanziert durch den Kredit, mit dem du ihn finanziert hast.\n- Speichere. Um den Wert später zu aktualisieren, bearbeitest du den Vermögenswert und klickst auf Bewertung hinzufügen.",
+        "linkLabel": "Immobilien öffnen"
+      },
+      "vaultPurchase": {
+        "title": "Einen Kauf im Tresor erfassen",
+        "body": "Der Tresor enthält physisches Gold, Silber, Platin und Palladium. Positionen werden zum aktuellen Spotpreis mit Händleraufschlägen bewertet.",
+        "steps": "- Öffne Anlagen > Rohstoffe > Edelmetalle und wechsle zum Tab Bestände.\n- Klicke auf Position hinzufügen.\n- Wähle eine Münze oder einen Barren Aus dem Katalog oder wähle Eigener Eintrag und gib Name, Metall, Kategorie, Gewicht in Gramm und Feingehalt in ‰ ein.\n- Unter Kaufdetails trägst du Anzahl, Preis pro Stück mit Währung und das Kaufdatum ein.\n- Füge optional einen Lagerort und Notizen hinzu und klicke auf Zum Tresor hinzufügen.",
+        "note": "Das Kaufdatum ist wichtig: Die Performance zählt den Kauf als an diesem Tag eingesetztes Kapital und nicht als Gewinn. Wenn du eine Position verkaufst, nutze Verkaufen statt Löschen, damit der Verkauf und dein realisierter Gewinn erfasst werden.",
+        "linkLabel": "Tresor öffnen"
+      },
+      "loan": {
+        "title": "Einen Kredit anlegen",
+        "body": "Kredite zählen zu deinen Verbindlichkeiten und mindern dein Nettovermögen um die offene Restschuld. Fiscalis berechnet den vollständigen Tilgungsplan.",
+        "steps": "- Öffne Verbindlichkeiten > Kredite und klicke auf Kredit hinzufügen.\n- Name & Art: Gib dem Kredit einen Namen und wähle die Art: Annuitätendarlehen, Abzahlungsdarlehen, Endfälliges Darlehen oder Mit tilgungsfreier Zeit.\n- Betrag & Zinssatz: Trage den ursprünglichen Betrag ein, die aktuelle Restschuld, falls sie abweicht, den Jahreszins und die Währung.\n- Termine & Raten: Lege Zahlungsrhythmus, Laufzeit und Startdatum fest. Übernimm die berechnete Rate oder trage deine tatsächliche Rate ein.\n- Sondertilgungen: Gib an, ob der Kredit Sondertilgungen erlaubt und wie viel pro Jahr.\n- Angaben bestätigen und speichern.",
+        "note": "Öffne einen Kredit, um seinen Tilgungsplan zu sehen, geleistete Zahlungen zu erfassen und Was-wäre-wenn-Szenarien wie eine höhere Rate oder eine einmalige Sondertilgung durchzuspielen.",
+        "linkLabel": "Kredite öffnen"
+      },
+      "apiKey": {
+        "title": "Die API nutzen",
+        "body": "Mit einem persönlichen API-Schlüssel liest du dein aktuelles Nettovermögen aus einem Skript, einer Tabelle oder einem Heim-Dashboard aus. Schlüssel haben nur Lesezugriff und gehören zu deinem Konto.",
+        "steps": "- Öffne Einstellungen > API-Schlüssel.\n- Gib dem Schlüssel einen Namen, wähle, wann er abläuft (30 Tage, 90 Tage, 1 Jahr oder nie), und klicke auf Schlüssel erstellen.\n- Kopiere den Schlüssel sofort und bewahre ihn in einem Passwortmanager oder Secret Store auf. Er wird nur ein einziges Mal angezeigt.\n- Sende ihn im Authorization-Header als Bearer-Token an den Endpunkt, der auf der Seite API-Schlüssel steht, wie im Beispiel unten.\n- Für Beträge in einer anderen Währung hängst du ?currency=USD, GBP oder CHF an die URL. Ohne diesen Parameter sind die Beträge in EUR.",
+        "note": "Du kannst bis zu {maxKeys} aktive Schlüssel haben, und jeder Schlüssel ist auf {rateLimit} Anfragen pro Minute begrenzt. Schlüssel in URLs werden nicht akzeptiert und dürfen nie in Browser-Code stehen. Widerrufe einen Schlüssel auf derselben Seite, falls er in falsche Hände geraten sein könnte.",
+        "linkLabel": "Einstellungen > API-Schlüssel öffnen"
+      }
+    }
+  },
+  "changelog": {
+    "subtitle": "Neue Funktionen und Fehlerbehebungen, die neuesten zuerst.",
+    "empty": "Noch keine Änderungen erfasst.",
+    "entryLanguage": "Jeder Eintrag trägt den englischen Titel, unter dem die Änderung veröffentlicht wurde.",
+    "types": {
+      "feature": "Neu",
+      "fix": "Fehlerbehebung"
+    },
+    "pr": "#{number}",
+    "count": "{count, plural, one {# Änderung} other {# Änderungen}}"
+  }
+}

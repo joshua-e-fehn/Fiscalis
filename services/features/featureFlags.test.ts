@@ -44,7 +44,7 @@ describe("filterMenuByFeature", () => {
       title: "Settings",
       items: [{ title: "General" }, { title: "Team", feature: "teamSettings" as const }],
     },
-    { title: "Docs", feature: "documentation" as const, items: [{ title: "Intro" }] },
+    { title: "Billing", feature: "billing" as const, items: [{ title: "Plans" }] },
   ];
 
   it("drops hidden entries and parents left without children", () => {

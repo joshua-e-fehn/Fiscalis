@@ -104,10 +104,6 @@
       "lastKnownPrice": "Letzter bekannter Preis"
     }
   },
-  "comingSoon": {
-    "inventoryTitle": "{name}: dein Bestand",
-    "notice": "Diese Kategorie kannst du bald hier erfassen."
-  },
   "manualAssets": {
     "add": "Vermögenswert hinzufügen",
     "emptyHint": "Füge einen Vermögenswert hinzu, um ihn hier zu verfolgen. Er zählt mit seiner letzten Bewertung zu deinem Nettovermögen.",

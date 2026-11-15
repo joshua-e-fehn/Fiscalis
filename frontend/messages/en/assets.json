@@ -104,10 +104,6 @@
       "lastKnownPrice": "Last known price"
     }
   },
-  "comingSoon": {
-    "inventoryTitle": "{name}: your holdings",
-    "notice": "Tracking for this category is coming soon."
-  },
   "manualAssets": {
     "add": "Add asset",
     "emptyHint": "Add an asset to track it here. It counts in your net worth at its latest valuation.",

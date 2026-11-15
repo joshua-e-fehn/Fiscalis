@@ -16,8 +16,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useSnapshotsQuery } from "@/hooks/convex/workspace";
 
 import {
   continuousSourcesFor,
@@ -92,8 +91,7 @@ export function useSnapshots(
   if (anchor.timeRange !== timeRange) setAnchor(anchorFor);
   const since = anchor.since;
 
-  const raw = useQuery(
-    api.portfolioSnapshots.getSnapshots,
+  const raw = useSnapshotsQuery(
     enabled
       ? since === undefined
         ? { limit: SNAPSHOT_LIMIT }

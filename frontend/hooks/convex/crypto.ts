@@ -13,9 +13,8 @@
  */
 
 import { useMemo } from "react";
-import { useQuery } from "convex/react";
 import { createElement } from "react";
-import { api } from "@/convex/_generated/api";
+import { useCategoryPositionsQuery, useCryptoTransactionsQuery } from "./workspace";
 import type { CategoryPosition } from "@/convex/categories";
 import {
   CategorySummary,
@@ -72,7 +71,7 @@ function displayBucket(subcategory?: string): CryptoBucket {
 
 /** Raw unified crypto data (positions + summary, EUR) for the current user. */
 export function useCryptoData() {
-  return useQuery(api.categories.getCrypto);
+  return useCategoryPositionsQuery("crypto");
 }
 
 /**
@@ -140,7 +139,7 @@ export function useHasCryptoHoldings(): boolean {
 
 /** Unified crypto transactions across providers. */
 export function useCryptoTransactions(limit?: number) {
-  return useQuery(api.categories.getCryptoTransactions, { limit });
+  return useCryptoTransactionsQuery(limit);
 }
 
 // ═══════════════════════════════════════════════════════════════

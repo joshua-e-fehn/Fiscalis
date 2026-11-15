@@ -7,8 +7,7 @@
  */
 
 import { useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useOverviewQuery } from "./workspace";
 import {
   InvestmentCategory,
   InvestmentCurrency,
@@ -132,7 +131,7 @@ export function usePortfolioOverview(): {
   currency: InvestmentCurrency;
   isLoading: boolean;
 } {
-  const overview = useQuery(api.portfolio.getOverview);
+  const overview = useOverviewQuery();
   const display = useDisplayCurrency();
   const { unitsPerEur } = display;
   const isLoading = overview === undefined || display.isLoading;

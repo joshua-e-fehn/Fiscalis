@@ -3,6 +3,8 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/shadcn/sidebar";
 import QueryProvider from "@/providers/queryProvider";
 import { SyncProvider } from "@/providers/syncProvider";
 import { OnboardingGate } from "@/providers/onboardingGate";
+import { WorkspaceProvider } from "@/providers/workspaceProvider";
+import { WorkspaceBanner } from "@/components/atomic/molecules/workspaceBanner";
 
 import { NavigationSidebarWrapper } from "@/components/atomic/organisms/navigationSidebarWrapper";
 import { Header } from "@/components/atomic/organisms/header";
@@ -20,13 +22,16 @@ export default function RootLayout({
         <main>
           <QueryProvider>
             <SyncProvider>
-              <SidebarProvider>
-                <NavigationSidebarWrapper />
-                <SidebarInset>
-                  <Header hasSidebarTrigger={true} hasDashboardButton={false} />
-                  {children}
-                </SidebarInset>
-              </SidebarProvider>
+              <WorkspaceProvider>
+                <SidebarProvider>
+                  <NavigationSidebarWrapper />
+                  <SidebarInset>
+                    <Header hasSidebarTrigger={true} hasDashboardButton={false} />
+                    <WorkspaceBanner />
+                    {children}
+                  </SidebarInset>
+                </SidebarProvider>
+              </WorkspaceProvider>
             </SyncProvider>
           </QueryProvider>
         </main>

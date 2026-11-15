@@ -9,8 +9,7 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useCashHoldingsQuery } from "./workspace";
 import {
   CategorySummary,
   SubcategoryData,
@@ -40,7 +39,7 @@ export function useCashSummary(): {
   isLoading: boolean;
 } {
   // Fetch real cash data from Convex
-  const cashData = useQuery(api.categories.getCashHoldings);
+  const cashData = useCashHoldingsQuery();
   const display = useDisplayCurrency();
   const { unitsPerEur } = display;
   const t = useTranslations("dashboard.cashHoldings");

@@ -10,8 +10,7 @@
  */
 
 import { useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useLiabilitiesQuery } from "./workspace";
 import {
   CategorySummary,
   SubcategoryData,
@@ -43,7 +42,7 @@ export function useLiabilitiesSummary(): {
   isLoading: boolean;
 } {
   // Fetch real liabilities data from Convex
-  const liabilitiesData = useQuery(api.categories.getLiabilities);
+  const liabilitiesData = useLiabilitiesQuery();
   const display = useDisplayCurrency();
   const { unitsPerEur } = display;
 

@@ -8,7 +8,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { useQuery, useAction, useMutation } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toActionError } from "@/lib/actionError";
 import { Id } from "@/convex/_generated/dataModel";
@@ -147,17 +147,4 @@ export function useDeleteBitpandaConnection() {
   );
 
   return { deleteConnection, isLoading, error };
-}
-
-/** Set or clear a user's manual category override for a Bitpanda holding. */
-export function useSetBitpandaOverride() {
-  const setOverride = useMutation(api.bitpanda.setUserOverride);
-  return useCallback(
-    (params: {
-      holdingId: Id<"bitpandaHoldings">;
-      category?: string;
-      subcategory?: string;
-    }) => setOverride(params),
-    [setOverride],
-  );
 }

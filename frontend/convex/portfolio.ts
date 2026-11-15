@@ -9,6 +9,8 @@ import {
   profitLossCostBase,
 } from "../../services/portfolio/aggregate";
 import { holdingProfitLoss } from "../../services/portfolio/categorySummary";
+import { hasUserOverride } from "../../services/classification";
+import type { ClassificationTarget } from "../lib/types/classification";
 
 /**
  * Portfolio Queries
@@ -100,6 +102,12 @@ export interface UnifiedPosition {
   unrealizedPLPercent?: number;
   lastSyncAt: number;
   metadata?: Record<string, unknown>;
+  /**
+   * Set when the user can change the category (bank accounts, broker
+   * positions, Bitpanda holdings): which override mutation saves it for
+   * `_id`, and whether the category is a manual one
+   */
+  classification?: { target: ClassificationTarget; isManual: boolean };
 }
 
 /**
@@ -184,6 +192,7 @@ export const getUnifiedPositions = query({
           positions.push({
             ...base,
             id: a.accountId,
+            classification: { target: "plaid", isManual: hasUserOverride(a) },
             symbol: a.type.toUpperCase(),
             quantity: 1,
             marketValue: signed(a.currentBalance ?? 0),
@@ -205,6 +214,7 @@ export const getUnifiedPositions = query({
           positions.push({
             ...base,
             id: p.snaptradePositionId || p._id,
+            classification: { target: "broker", isManual: hasUserOverride(p) },
             symbol: p.symbol,
             name: p.name || p.symbol,
             quantity: p.quantity,
@@ -244,6 +254,7 @@ export const getUnifiedPositions = query({
           positions.push({
             ...base,
             id: `${b.connectionId}-${b.assetType}-${b.symbol}`,
+            classification: { target: "bitpanda", isManual: hasUserOverride(b) },
             symbol: b.symbol,
             name: b.name || b.symbol,
             quantity: b.quantity,

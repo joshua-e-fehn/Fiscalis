@@ -35,22 +35,22 @@ interface HoldingCardProps {
 // Metal-specific styling maps
 const metalStyles = {
   gold: {
-    border: "border-l-metal-gold",
+    border: "border-s-metal-gold",
     hoverShadow: "hover:shadow-metal-gold",
     glowBg: "bg-metal-gold-glow/5",
   },
   silver: {
-    border: "border-l-metal-silver",
+    border: "border-s-metal-silver",
     hoverShadow: "hover:shadow-metal-silver",
     glowBg: "bg-metal-silver-glow/5",
   },
   platinum: {
-    border: "border-l-metal-platinum",
+    border: "border-s-metal-platinum",
     hoverShadow: "hover:shadow-metal-platinum",
     glowBg: "bg-metal-platinum-glow/5",
   },
   palladium: {
-    border: "border-l-metal-palladium",
+    border: "border-s-metal-palladium",
     hoverShadow: "hover:shadow-metal-palladium",
     glowBg: "bg-metal-palladium-glow/5",
   },
@@ -76,10 +76,10 @@ export function HoldingCard({
     >
       <Card
         className={cn(
-          "group relative border-l-4 transition-all duration-200 cursor-pointer",
+          "group relative border-s-4 transition-all duration-200 cursor-pointer",
           style.border,
           style.hoverShadow,
-          "hover:border-l-[6px]",
+          "hover:border-s-[6px]",
           className,
         )}
         onClick={onClick}
@@ -88,7 +88,7 @@ export function HoldingCard({
           {/* Header Row */}
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium truncate pr-2">{item.displayName}</h3>
+              <h3 className="font-medium truncate pe-2">{item.displayName}</h3>
               {item.catalogItem?.mint && (
                 <p className="text-sm text-muted-foreground truncate">
                   {item.catalogItem.mint}
@@ -159,7 +159,7 @@ export function HoldingCard({
                 {t("fineWeight")}
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-end">
               {/* No fresh spot and no cost: the value is unknown */}
               {item.marketValue === null ? (
                 <span className="text-lg text-muted-foreground">—</span>
@@ -183,7 +183,7 @@ export function HoldingCard({
           </div>
 
           {/* Hover Arrow */}
-          <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          <ChevronRight className="absolute end-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity rtl:-scale-x-100" />
         </CardContent>
       </Card>
     </motion.div>
@@ -227,7 +227,7 @@ export function HoldingCardCompact({
           </div>
         </div>
       </div>
-      <div className="text-right">
+      <div className="text-end">
         {item.marketValue === null ? (
           <span className="text-muted-foreground">—</span>
         ) : (

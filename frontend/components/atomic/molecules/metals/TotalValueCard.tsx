@@ -74,7 +74,7 @@ export function TotalValueCard({
                 currency={currency}
                 size="sm"
               />
-              <span className="text-xs text-muted-foreground ml-1">
+              <span className="text-xs text-muted-foreground ms-1">
                 {t("today")}
               </span>
             </motion.div>

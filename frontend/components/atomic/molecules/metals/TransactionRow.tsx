@@ -123,7 +123,7 @@ export function TransactionRow({
       </div>
 
       {/* Price per unit */}
-      <div className="w-28 text-right text-sm text-muted-foreground">
+      <div className="w-28 text-end text-sm text-muted-foreground">
         {transaction.pricePerUnit === null
           ? t("costUnknown")
           : t("perUnit", {
@@ -134,7 +134,7 @@ export function TransactionRow({
       {/* Total */}
       <div
         className={cn(
-          "w-28 text-right font-medium",
+          "w-28 text-end font-medium",
           isIncoming ? "text-foreground" : "text-loss",
         )}
       >

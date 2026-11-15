@@ -108,27 +108,27 @@ export function HoldingsGroupedView({
             {/* Group Header */}
             <Button
               variant="ghost"
-              className="flex items-center gap-2 w-full justify-start p-2 -ml-2"
+              className="flex items-center gap-2 w-full justify-start p-2 -ms-2"
               onClick={() => toggleGroup(metal)}
             >
               {isExpanded ? (
                 <ChevronDown className="h-4 w-4" />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 rtl:-scale-x-100" />
               )}
               <MetalIcon metal={metal} />
               <span className="font-semibold">{t(`metal.${metal}`)}</span>
               <span className="text-muted-foreground">
                 {t("holdings.itemCountParen", { count: groupItems.length })}
               </span>
-              <span className="ml-auto text-muted-foreground">
+              <span className="ms-auto text-muted-foreground">
                 {formatCurrency(totalValue, currency)}
               </span>
             </Button>
 
             {/* Group Items */}
             {isExpanded && (
-              <div className="pl-6 border-l-2 border-muted ml-2">
+              <div className="ps-6 border-s-2 border-muted ms-2">
                 <HoldingsCardGrid
                   items={groupItems}
                   currency={currency}

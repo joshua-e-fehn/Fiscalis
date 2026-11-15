@@ -50,7 +50,7 @@ export function WeightDisplay({
     <span className={cn(sizeClasses[size], className)}>
       {formattedValue}
       {showUnit && (
-        <span className="text-muted-foreground ml-0.5">{t(unit)}</span>
+        <span className="text-muted-foreground ms-0.5">{t(unit)}</span>
       )}
     </span>
   );

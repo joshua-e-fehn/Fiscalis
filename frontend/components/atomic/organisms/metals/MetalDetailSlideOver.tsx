@@ -98,7 +98,7 @@ export function MetalDetailSlideOver({
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <div className="flex items-start justify-between">
-            <div className="flex-1 pr-4">
+            <div className="flex-1 pe-4">
               <SheetTitle className="text-xl">{item.displayName}</SheetTitle>
               {item.catalogItem?.mint && (
                 <p className="text-sm text-muted-foreground mt-0.5">
@@ -142,7 +142,7 @@ export function MetalDetailSlideOver({
                     currency={currency}
                     size="md"
                   />
-                  <span className="text-sm text-muted-foreground ml-2">
+                  <span className="text-sm text-muted-foreground ms-2">
                     {t("sincePurchase")}
                   </span>
                 </div>
@@ -340,7 +340,7 @@ export function MetalDetailSlideOver({
                   onClick={() => setIsSellOpen(true)}
                   className="w-full"
                 >
-                  <BadgeDollarSign className="h-4 w-4 mr-2" />
+                  <BadgeDollarSign className="h-4 w-4 me-2" />
                   {t("sell")}
                 </Button>
               )}
@@ -352,7 +352,7 @@ export function MetalDetailSlideOver({
                   onClick={() => setIsEditOpen(true)}
                   className="flex-1"
                 >
-                  <Edit2 className="h-4 w-4 mr-2" />
+                  <Edit2 className="h-4 w-4 me-2" />
                   {tActions("edit")}
                 </Button>
                 <AlertDialog>
@@ -364,7 +364,7 @@ export function MetalDetailSlideOver({
                         "flex-1",
                       )}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 me-2" />
                       {tActions("delete")}
                     </Button>
                   </AlertDialogTrigger>
@@ -388,7 +388,7 @@ export function MetalDetailSlideOver({
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       >
                         {isDeleting && (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-4 w-4 me-2 animate-spin" />
                         )}
                         {tActions("delete")}
                       </AlertDialogAction>

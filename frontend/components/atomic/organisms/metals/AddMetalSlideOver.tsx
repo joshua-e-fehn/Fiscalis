@@ -257,11 +257,11 @@ export function AddMetalSlideOver({
         >
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="catalog">
-              <Package className="h-4 w-4 mr-2" />
+              <Package className="h-4 w-4 me-2" />
               {t("add.fromCatalog")}
             </TabsTrigger>
             <TabsTrigger value="custom">
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 me-2" />
               {t("add.customItem")}
             </TabsTrigger>
           </TabsList>
@@ -271,12 +271,12 @@ export function AddMetalSlideOver({
             {/* Search & Filter */}
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={t("add.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
+                  className="ps-8"
                 />
               </div>
               <Select
@@ -564,7 +564,7 @@ export function AddMetalSlideOver({
             disabled={!canSubmit || isSubmitting}
             className="flex-1"
           >
-            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isSubmitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
             {t("add.submit")}
           </Button>
         </div>

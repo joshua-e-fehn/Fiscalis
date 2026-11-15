@@ -1,0 +1,66 @@
+# Fiscalis weekly backup of Convex production (handsome-gecko-941, ENG-220):
+# `convex export` into the cache directory, read back whole, PUT to
+# s3://fiscalis-convex-backups-<account>/backups/YYYY-MM-DD.zip, local ZIP
+# deleted. A failure posts to Mya's Slack home channel. Started by
+# fiscalis-convex-backup.timer, or by hand:
+# `systemctl start fiscalis-convex-backup.service`. Installed by
+# ops/convex-backup/install.sh from the Fiscalis repo; see its README.
+[Unit]
+Description=Fiscalis weekly backup of Convex production to S3
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Not root: a user of its own. Nothing but this unit can read its cache
+# directory (/var/cache/private is 0700 root), where the export sits for the
+# minutes between download and upload.
+DynamicUser=yes
+User=fiscalis-convex-backup
+CacheDirectory=fiscalis-convex-backup
+CacheDirectoryMode=0700
+UMask=0077
+ExecStart=/usr/bin/python3 -I /usr/local/lib/fiscalis-convex-backup/fiscalis-convex-backup.py
+# CONVEX_DEPLOY_KEY=prod:handsome-gecko-941|… only. The CLI reads it with
+# --env-file: it never enters the environment or a command line.
+LoadCredential=convex-env:/etc/fiscalis-convex-backup/convex.env
+# The write-only IAM key (s3:PutObject on backups/*, s3:ListBucket) and the bucket.
+LoadCredential=writer-env:/etc/fiscalis-convex-backup/writer.env
+# Slack token and channel: the health monitor's file, so alerts use the same bot.
+LoadCredential=monitor-env:/etc/fiscalis-health-monitor/monitor.env
+Environment=PATH=/usr/bin:/bin
+# The Convex CLI keeps a little state under $HOME.
+Environment=HOME=%C/fiscalis-convex-backup
+Environment=CONVEX_TELEMETRY_DISABLED=1
+TimeoutStartSec=90min
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+# --- hardening: it reads its keys, talks to convex.cloud, api.convex.dev, S3 and slack.com
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+InaccessiblePaths=-/docker -/var/lib/docker -/run/docker.sock -/root -/etc/fiscalis-convex-backup -/etc/fiscalis-health-monitor
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# Not MemoryDenyWriteExecute: node's JIT needs it.
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+# No private, CGNAT, link-local or multicast range; only the DNS stub on loopback.
+IPAddressDeny=link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7 localhost
+IPAddressAllow=127.0.0.53

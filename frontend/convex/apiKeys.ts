@@ -26,6 +26,7 @@ import {
 } from "../../services/portfolio/aggregate";
 import { loadDisplayRate } from "./fxRates";
 import { userError } from "./lib/userError";
+import { hasPlanFeature, requirePlanFeature } from "./lib/plan";
 
 /**
  * API keys for the public, user-scoped REST API (see convex/http.ts).
@@ -162,6 +163,8 @@ export const insert = internalMutation({
     expiresInDays: expiresInDaysValidator,
   },
   handler: async (ctx, args) => {
+    // API keys are a Pro feature (ENG-199)
+    await requirePlanFeature(ctx, args.userId, "apiKeys");
     const now = Date.now();
     const existing = await ctx.db
       .query("apiKeys")
@@ -208,6 +211,11 @@ export const readNetWorthWithKey = internalMutation({
 
     if (!key || !isApiKeyUsable(key, "networth:read", now)) {
       return { status: "unauthorized" as const };
+    }
+    // A key outlives the plan it was made on: after a downgrade it stays
+    // listed but answers 403 until the user is on Pro again
+    if (!(await hasPlanFeature(ctx, key.userId, "apiKeys"))) {
+      return { status: "plan_required" as const };
     }
 
     const limit = consumeRateLimit(

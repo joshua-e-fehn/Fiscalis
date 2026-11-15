@@ -9,6 +9,7 @@ import {
   getClassificationFields,
 } from "../../services/classification";
 import { loadFxRates } from "./fxRates";
+import { requireConnectionSlot } from "./lib/plan";
 import { ensureSyncTarget } from "./lib/syncTargets";
 import { deleteOverridesByKeyPrefix } from "./valuationOverrides";
 import { brokerPositionKey } from "../../services/portfolio/flows";
@@ -334,6 +335,9 @@ export const createConnection = internalMutation({
     brokerLogo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Atomic with the insert, so parallel connects cannot pass the limit
+    // together (ENG-199)
+    await requireConnectionSlot(ctx, args.userId);
     const now = Date.now();
     await ensureSyncTarget(ctx, args.userId);
 

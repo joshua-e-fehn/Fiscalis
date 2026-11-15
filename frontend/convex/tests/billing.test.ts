@@ -84,6 +84,74 @@ describe("connection limit", () => {
       await errorCode(canceled.query(internal.billing.assertConnectionSlot, { userId: OWNER })),
     ).toBe("planConnectionLimit");
   });
+
+  it("is checked by Bitpanda connect before the key leaves the server", async () => {
+    const t = await seededFree();
+    const asOwner = t.withIdentity({ subject: OWNER });
+    expect(
+      await errorCode(asOwner.action(api.actions.bitpanda.connect, { apiKey: "demo-key" })),
+    ).toBe("planConnectionLimit");
+  });
+
+  it("is enforced again where each connection is inserted", async () => {
+    const t = await seededFree();
+    expect(
+      await errorCode(
+        t.mutation(internal.brokers.createConnection, {
+          userId: OWNER,
+          snaptradeUserId: "snap",
+          authorizationId: "auth-new",
+          brokerName: "Broker",
+          brokerSlug: "broker",
+        }),
+      ),
+    ).toBe("planConnectionLimit");
+    expect(
+      await errorCode(
+        t.mutation(internal.bitpanda.createConnection, { userId: OWNER, apiKey: "enc" }),
+      ),
+    ).toBe("planConnectionLimit");
+    expect(
+      await errorCode(
+        t.mutation(internal.banking.saveItem, {
+          userId: OWNER,
+          accessToken: "enc",
+          itemId: "item-new",
+        }),
+      ),
+    ).toBe("planConnectionLimit");
+  });
+});
+
+describe("API keys", () => {
+  const insertArgs = {
+    userId: OWNER,
+    name: "Script",
+    keyHash: "f".repeat(64),
+    keyPrefix: "fis_test",
+    expiresInDays: null,
+  } as const;
+
+  it("cannot be created on Free", async () => {
+    const t = await seededFree();
+    expect(await errorCode(t.mutation(internal.apiKeys.insert, insertArgs))).toBe(
+      "planApiKeysRequirePro",
+    );
+  });
+
+  it("can be created on Pro and answer 403 after a downgrade", async () => {
+    const t = await seededFree();
+    await grantPro(t);
+    await t.mutation(internal.apiKeys.insert, insertArgs);
+    const read = () =>
+      t.mutation(internal.apiKeys.readNetWorthWithKey, { keyHash: insertArgs.keyHash });
+    expect((await read()).status).toBe("ok");
+
+    await t.run(async (ctx) => {
+      for (const grant of await ctx.db.query("planGrants").collect()) await ctx.db.delete(grant._id);
+    });
+    expect((await read()).status).toBe("plan_required");
+  });
 });
 
 describe("billing queries", () => {

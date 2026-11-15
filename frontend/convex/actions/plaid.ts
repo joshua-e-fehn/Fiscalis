@@ -104,6 +104,8 @@ export const createLinkToken = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    // A new connection: the plan must have room for it (ENG-199)
+    await ctx.runQuery(internal.billing.assertConnectionSlot, { userId });
     await enforceUserRateLimit(ctx, "providerLink", userId);
     const plaidClient = getPlaidClient();
 
@@ -174,6 +176,8 @@ export const exchangeToken = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    // Checked again before the access token is created (ENG-199)
+    await ctx.runQuery(internal.billing.assertConnectionSlot, { userId });
     const plaidClient = getPlaidClient();
 
     // Exchange public token for access token
@@ -211,16 +215,23 @@ export const exchangeToken = action({
     // Encrypt the access token before storing
     const encryptedToken = encrypt(accessToken);
 
-    // Save to database
-    await ctx.runMutation(internal.banking.saveItem, {
-      userId,
-      accessToken: encryptedToken,
-      itemId,
-      institutionId: args.institutionId,
-      institutionName: args.institutionName,
-      institutionLogo,
-      institutionPrimaryColor,
-    });
+    // Save to database. saveItem checks the plan again, atomically; if a
+    // parallel connect took the last slot, revoke the item at Plaid rather
+    // than leave it live and unseen
+    try {
+      await ctx.runMutation(internal.banking.saveItem, {
+        userId,
+        accessToken: encryptedToken,
+        itemId,
+        institutionId: args.institutionId,
+        institutionName: args.institutionName,
+        institutionLogo,
+        institutionPrimaryColor,
+      });
+    } catch (error) {
+      await removeItemAtPlaid(encryptedToken);
+      throw error;
+    }
 
     // Fetch initial accounts
     await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {

@@ -11,6 +11,7 @@ import {
   getClassificationFields,
 } from "../../services/classification";
 import { getUserId } from "./lib/auth";
+import { requireConnectionSlot } from "./lib/plan";
 import { ensureSyncTarget } from "./lib/syncTargets";
 import { loadFxRates } from "./fxRates";
 import {
@@ -293,6 +294,9 @@ export const saveItem = internalMutation({
       return existing._id;
     }
 
+    // Atomic with the insert, so parallel connects cannot pass the limit
+    // together (ENG-199)
+    await requireConnectionSlot(ctx, args.userId);
     await ensureSyncTarget(ctx, args.userId);
     return await ctx.db.insert("plaidItems", {
       userId: args.userId,

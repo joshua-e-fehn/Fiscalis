@@ -103,5 +103,9 @@
       "priceAsOf": "Preis vom {date}",
       "lastKnownPrice": "Letzter bekannter Preis"
     }
+  },
+  "comingSoon": {
+    "inventoryTitle": "{name}: dein Bestand",
+    "notice": "Diese Kategorie kannst du bald hier erfassen."
   }
 }

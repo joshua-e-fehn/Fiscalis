@@ -103,5 +103,9 @@
       "priceAsOf": "Price as of {date}",
       "lastKnownPrice": "Last known price"
     }
+  },
+  "comingSoon": {
+    "inventoryTitle": "{name}: your holdings",
+    "notice": "Tracking for this category is coming soon."
   }
 }

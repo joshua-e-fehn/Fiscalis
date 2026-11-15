@@ -29,14 +29,14 @@ export const DEFAULT_LANGUAGE: Language = "en";
  * renders as English, so the page language, Clerk, Plaid Link and the
  * catalogue never claim a language the content is not in (browsers would
  * offer to translate the page, screen readers would mispronounce it). English,
- * German, Spanish, French, Italian and European Portuguese are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
+ * German, Spanish, French, Italian, European Portuguese and Russian are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
  * in LANGUAGES, for checking a new catalogue locally (inlined at build time on
  * both server and client).
  */
 export const RENDERED_LANGUAGES: readonly Language[] =
   process.env.NEXT_PUBLIC_I18N_PREVIEW === "1"
     ? LANGUAGES
-    : ["en", "de", "es", "fr", "it", "pt-PT"];
+    : ["en", "de", "es", "fr", "it", "pt-PT", "ru"];
 
 /** The language a stored or requested language is rendered in. */
 export function renderedLanguage(
@@ -63,6 +63,7 @@ export const INTL_TAGS = {
   fr: "fr-FR",
   it: "it-IT",
   "pt-PT": "pt-PT",
+  ru: "ru-RU",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -75,6 +76,7 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   fr: "Français",
   it: "Italiano",
   "pt-PT": "Português (Portugal)",
+  ru: "Русский",
 };
 
 /**
@@ -82,7 +84,6 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
 export const PLANNED_LOCALES = [
-  "ru",
   "zh-Hans",
   "hi",
   "ar",

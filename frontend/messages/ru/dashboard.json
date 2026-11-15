@@ -1,0 +1,143 @@
+{
+  "page": {
+    "title": "Обзор",
+    "subtitle": "Полный обзор твоих финансов",
+    "performanceTitle": "Динамика портфеля",
+    "investmentCategories": "Категории инвестиций"
+  },
+  "netWorth": {
+    "title": "Общий чистый капитал",
+    "unrealized": "({percent}) нереализовано",
+    "unrealizedCoverage": "({percent}) нереализовано по {covered}% активов"
+  },
+  "kpi": {
+    "totalAssets": "Всего активов",
+    "totalLiabilities": "Всего обязательств"
+  },
+  "ytdNetWorth": {
+    "title": "Чистый капитал с начала года",
+    "changeSinceJan1": "{percent} изменение с 1 января",
+    "fxEffectHint": "В {currency}: включает изменение курса евро с 1 января.",
+    "partial": "Неполные данные: синхронизация провайдера не удалась или нет цены",
+    "trackingSince": "Недостаточно истории (учёт с {date})",
+    "noData": "Нет данных за этот год"
+  },
+  "allocation": {
+    "title": "Распределение активов",
+    "description": "Распределение по категориям инвестиций",
+    "empty": "Нет активов для отображения",
+    "emptyHint": "Добавь инвестиции, чтобы увидеть распределение"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, one {# позиция} few {# позиции} many {# позиций} other {# позиции}}",
+    "noHoldings": "Нет позиций",
+    "comingSoon": "Скоро"
+  },
+  "liabilitiesCard": {
+    "title": "Обязательства",
+    "accounts": "{accounts, plural, one {# счёт} few {# счёта} many {# счетов} other {# счёта}}",
+    "loans": "{loans, plural, one {# кредит} few {# кредита} many {# кредитов} other {# кредита}}",
+    "accountsAndLoans": "{accounts, plural, one {# счёт} few {# счёта} many {# счетов} other {# счёта}} · {loans, plural, one {# кредит} few {# кредита} many {# кредитов} other {# кредита}}",
+    "monthlyPayments": "{amount}/мес. платежей по кредитам"
+  },
+  "section": {
+    "totalValue": "Общая стоимость портфеля",
+    "totalCash": "Всего денежных средств",
+    "profitLoss": "Общая прибыль / убыток",
+    "profitLossSinceTracking": "Прибыль / убыток с начала учёта",
+    "changeSinceTracking": "Изменение с начала учёта",
+    "since": "С {date}",
+    "sinceNetOfFlows": "С {date}, без учёта покупок и пополнений",
+    "coverage": "По {percent}% стоимости: позиции без стоимости покупки не учитываются",
+    "addCostData": "Добавь стоимость покупки, чтобы отслеживать доходность",
+    "noHoldings": "Позиций пока нет",
+    "ytdChange": "Изменение с начала года",
+    "ytdReturn": "Доходность с начала года",
+    "ytdReturnEstimated": "Доходность с начала года (оценка)",
+    "sincePartial": "С {date} · неполные данные: синхронизация не удалась или нет цены",
+    "trackedSince": "Недостаточно истории (учёт с {date})",
+    "noDataThisYear": "Данных за этот год пока нет",
+    "portfolioAllocation": "Распределение портфеля",
+    "highCash": "Высокая доля денежных средств (консервативно)",
+    "lowCash": "Низкий денежный резерв",
+    "ofTotalPortfolio": "от всего портфеля",
+    "addAssets": "Добавь активы, чтобы увидеть распределение",
+    "activeAccounts": "Активные счета",
+    "accountsLinked": "{count, plural, one {счёт подключён} few {счёта подключено} many {счетов подключено} other {счёта подключено}}",
+    "historyHint": "История появится после следующего ежедневного снимка"
+  },
+  "allocationChart": {
+    "title": "Распределение",
+    "empty": "Позиций пока нет",
+    "other": "Прочее (<2%)"
+  },
+  "performanceChart": {
+    "portfolioTitle": "Доходность портфеля",
+    "netWorthTitle": "Динамика чистого капитала",
+    "portfolio": "Портфель",
+    "netWorth": "Чистый капитал",
+    "value": "Стоимость",
+    "costBasis": "Стоимость покупки",
+    "empty": "Данных о доходности пока нет",
+    "emptyHint": "Добавь позиции, чтобы отслеживать доходность портфеля",
+    "tooltipRow": "{series}: {amount}",
+    "partial": "Неполные данные: синхронизация провайдера не удалась или нет цены"
+  },
+  "topHoldings": {
+    "title": "Крупнейшие позиции",
+    "empty": "Позиций пока нет",
+    "count": "({count, plural, one {# позиция} few {# позиции} many {# позиций} other {# позиции}})"
+  },
+  "positions": {
+    "title": "Все позиции",
+    "description": "Единый обзор по всем финансовым провайдерам",
+    "empty": "Позиции не найдены",
+    "emptyHint": "Подключи свои счета, чтобы увидеть позиции",
+    "shownOfTotal": "{shown} из {total, plural, one {# позиции} few {# позиций} many {# позиций} other {# позиции}}",
+    "showLess": "Свернуть",
+    "viewAll": "Показать все",
+    "searchPlaceholder": "Поиск позиций...",
+    "provider": "Провайдер",
+    "allProviders": "Все провайдеры",
+    "category": "Категория",
+    "allCategories": "Все категории",
+    "providers": {
+      "plaid": "Банк",
+      "snaptrade": "Брокер",
+      "bitpanda": "Bitpanda",
+      "manual": "Вручную"
+    },
+    "providerFilter": {
+      "plaid": "Банки",
+      "snaptrade": "Брокеры",
+      "bitpanda": "Bitpanda",
+      "manual": "Вручную"
+    },
+    "columns": {
+      "source": "Источник",
+      "position": "Позиция",
+      "category": "Категория",
+      "quantity": "Количество",
+      "value": "Стоимость",
+      "profitLoss": "П/У",
+      "actions": "Действия"
+    },
+    "shown": "{count, plural, one {Показана # позиция} few {Показаны # позиции} many {Показано # позиций} other {Показано # позиции}}",
+    "total": "Итого: {amount}",
+    "costFxEstimated": "(оценка)",
+    "costFxEstimatedHint": "Стоимость покупки пересчитана по сегодняшнему курсу: даты покупок неизвестны"
+  },
+  "cashHoldings": {
+    "bankAccount": "Банковский счёт",
+    "cashPosition": "Денежная позиция",
+    "brokerCash": "{account} — денежные средства"
+  },
+  "emptyState": {
+    "title": "Подключи свой первый счёт",
+    "description": "Обзор заполнится, как только Fiscalis узнает, чем ты владеешь. Подключи банк или брокера, импортируй Bitpanda или добавь драгоценные металлы и кредиты вручную.",
+    "bank": "Подключить банк",
+    "broker": "Подключить брокера",
+    "metals": "Добавить драгоценные металлы",
+    "loan": "Добавить кредит"
+  }
+}

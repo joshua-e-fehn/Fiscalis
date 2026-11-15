@@ -100,6 +100,7 @@ import docsIt from "@/messages/it/docs.json";
 import billingIt from "@/messages/it/billing.json";
 
 import ptPT from "@/messages/pt-PT";
+import { ru } from "@/messages/ru";
 import type { Language } from "./locales";
 
 const en = {
@@ -209,7 +210,7 @@ const it = {
   billing: billingIt,
 } satisfies Messages;
 
-const MESSAGES: Record<Language, Messages> = { en, de, es, fr, it, "pt-PT": ptPT };
+const MESSAGES: Record<Language, Messages> = { en, de, es, fr, it, "pt-PT": ptPT, ru };
 
 export function messagesFor(language: Language): Messages {
   return MESSAGES[language];

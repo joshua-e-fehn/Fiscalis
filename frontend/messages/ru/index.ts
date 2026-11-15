@@ -24,6 +24,7 @@ import settings from "./settings.json";
 import strategies from "./strategies.json";
 import docs from "./docs.json";
 import billing from "./billing.json";
+import notifications from "./notifications.json";
 
 export const ru = {
   common,
@@ -44,4 +45,5 @@ export const ru = {
   strategies,
   docs,
   billing,
+  notifications,
 } satisfies Messages;

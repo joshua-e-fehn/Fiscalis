@@ -43,7 +43,9 @@ import strategiesDe from "@/messages/de/strategies.json";
 import docsEn from "@/messages/en/docs.json";
 import docsDe from "@/messages/de/docs.json";
 import billingEn from "@/messages/en/billing.json";
+import notificationsEn from "@/messages/en/notifications.json";
 import billingDe from "@/messages/de/billing.json";
+import notificationsDe from "@/messages/de/notifications.json";
 import commonEs from "@/messages/es/common.json";
 import worldMapEs from "@/messages/es/worldMap.json";
 import calculatorsEs from "@/messages/es/calculators.json";
@@ -62,6 +64,7 @@ import settingsEs from "@/messages/es/settings.json";
 import strategiesEs from "@/messages/es/strategies.json";
 import docsEs from "@/messages/es/docs.json";
 import billingEs from "@/messages/es/billing.json";
+import notificationsEs from "@/messages/es/notifications.json";
 import commonFr from "@/messages/fr/common.json";
 import worldMapFr from "@/messages/fr/worldMap.json";
 import calculatorsFr from "@/messages/fr/calculators.json";
@@ -80,6 +83,7 @@ import settingsFr from "@/messages/fr/settings.json";
 import strategiesFr from "@/messages/fr/strategies.json";
 import docsFr from "@/messages/fr/docs.json";
 import billingFr from "@/messages/fr/billing.json";
+import notificationsFr from "@/messages/fr/notifications.json";
 import commonIt from "@/messages/it/common.json";
 import worldMapIt from "@/messages/it/worldMap.json";
 import calculatorsIt from "@/messages/it/calculators.json";
@@ -98,6 +102,7 @@ import settingsIt from "@/messages/it/settings.json";
 import strategiesIt from "@/messages/it/strategies.json";
 import docsIt from "@/messages/it/docs.json";
 import billingIt from "@/messages/it/billing.json";
+import notificationsIt from "@/messages/it/notifications.json";
 
 import ptPT from "@/messages/pt-PT";
 import { ru } from "@/messages/ru";
@@ -125,6 +130,7 @@ const en = {
   strategies: strategiesEn,
   docs: docsEn,
   billing: billingEn,
+  notifications: notificationsEn,
 };
 
 export type Messages = typeof en;
@@ -148,6 +154,7 @@ const de = {
   strategies: strategiesDe,
   docs: docsDe,
   billing: billingDe,
+  notifications: notificationsDe,
 } satisfies Messages;
 
 const es = {
@@ -169,6 +176,7 @@ const es = {
   strategies: strategiesEs,
   docs: docsEs,
   billing: billingEs,
+  notifications: notificationsEs,
 } satisfies Messages;
 
 const fr = {
@@ -190,6 +198,7 @@ const fr = {
   strategies: strategiesFr,
   docs: docsFr,
   billing: billingFr,
+  notifications: notificationsFr,
 } satisfies Messages;
 
 const it = {
@@ -211,6 +220,7 @@ const it = {
   strategies: strategiesIt,
   docs: docsIt,
   billing: billingIt,
+  notifications: notificationsIt,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = {

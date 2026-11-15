@@ -1,0 +1,86 @@
+{
+  "bell": {
+    "label": "Notificações",
+    "unread": "Notificações, {count} por ler",
+    "viewAll": "Ver todas as notificações"
+  },
+  "center": {
+    "title": "Notificações",
+    "subtitle": "Alertas sobre as tuas ligações, consentimentos bancários, património líquido e plano.",
+    "markRead": "Marcar como lida",
+    "markAllRead": "Marcar todas como lidas",
+    "empty": "Está tudo em dia.",
+    "loadMore": "Mostrar mais",
+    "open": "Abrir",
+    "settings": "Definições de notificações",
+    "unreadLabel": "Por ler"
+  },
+  "preferences": {
+    "title": "Definições de notificações",
+    "subtitle": "Escolhe que alertas recebes, na app e por email.",
+    "alert": "Alerta",
+    "inApp": "Na app",
+    "email": "Email",
+    "emailUnavailable": "Os alertas por email ainda não estão ativos. A tua escolha fica guardada e aplica-se quando estiverem.",
+    "types": {
+      "syncFailed": {
+        "label": "Sincronização falhada",
+        "description": "Não foi possível atualizar uma ligação bancária, de corretora ou cripto."
+      },
+      "connectionReauth": {
+        "label": "É preciso voltar a ligar",
+        "description": "Uma ligação precisa que voltes a iniciar sessão antes de sincronizar."
+      },
+      "consentExpiring": {
+        "label": "Consentimento bancário a terminar",
+        "description": "O teu consentimento para uma ligação bancária termina nas próximas duas semanas."
+      },
+      "netWorthChange": {
+        "label": "Grande variação do património líquido",
+        "description": "O teu património líquido variou 10% ou mais desde o dia anterior."
+      },
+      "billing": {
+        "label": "Plano e pagamentos",
+        "description": "O teu plano Pro começou ou terminou, ou um pagamento falhou."
+      }
+    }
+  },
+  "messages": {
+    "syncFailed": {
+      "title": "Não foi possível atualizar {connection}",
+      "body": "A última sincronização de {connection} falhou. Será repetida na próxima sincronização; abre a ligação se continuar a acontecer."
+    },
+    "connectionReauth": {
+      "title": "Volta a ligar {connection}",
+      "body": "{connection} precisa que voltes a iniciar sessão. Até lá, os saldos e posições não são atualizados."
+    },
+    "consentExpiring": {
+      "title": "O teu consentimento para {connection} termina em breve",
+      "body": "O teu consentimento para {connection} termina a {at, date, medium}. Renova-o para a ligação continuar a sincronizar."
+    },
+    "netWorthUp": {
+      "title": "O teu património líquido subiu {percent, number, percent}",
+      "body": "O teu património líquido está {percent, number, percent} acima do de {since, date, medium}."
+    },
+    "netWorthDown": {
+      "title": "O teu património líquido desceu {percent, number, percent}",
+      "body": "O teu património líquido está {percent, number, percent} abaixo do de {since, date, medium}. Verifica as tuas contas se não esperavas isto."
+    },
+    "billingPaymentFailed": {
+      "title": "O teu pagamento falhou",
+      "body": "Não conseguimos cobrar o Fiscalis Pro no teu método de pagamento. Atualiza-o em Faturação para manteres o Pro."
+    },
+    "billingSubscriptionStarted": {
+      "title": "Bem-vindo ao Pro",
+      "body": "O teu plano Fiscalis Pro está ativo. Obrigado pelo teu apoio."
+    },
+    "billingSubscriptionEnded": {
+      "title": "O teu plano Pro terminou",
+      "body": "Estás agora no plano Free. Os teus dados ficam como estão; podes voltar ao Pro em Faturação."
+    }
+  },
+  "email": {
+    "footer": "Recebes este email porque os alertas por email estão ativos nas tuas definições de notificações do Fiscalis.",
+    "open": "Abrir o Fiscalis"
+  }
+}

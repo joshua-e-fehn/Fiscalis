@@ -1,0 +1,86 @@
+{
+  "bell": {
+    "label": "Notifiche",
+    "unread": "Notifiche, {count} non lette",
+    "viewAll": "Vedi tutte le notifiche"
+  },
+  "center": {
+    "title": "Notifiche",
+    "subtitle": "Avvisi su connessioni, consensi bancari, patrimonio netto e piano.",
+    "markRead": "Segna come letta",
+    "markAllRead": "Segna tutte come lette",
+    "empty": "Sei in pari.",
+    "loadMore": "Mostra altro",
+    "open": "Apri",
+    "settings": "Impostazioni notifiche",
+    "unreadLabel": "Non letta"
+  },
+  "preferences": {
+    "title": "Impostazioni notifiche",
+    "subtitle": "Scegli quali avvisi ricevere, nell'app e via email.",
+    "alert": "Avviso",
+    "inApp": "Nell'app",
+    "email": "Email",
+    "emailUnavailable": "Gli avvisi via email non sono ancora attivi. La tua scelta viene salvata e varrà quando lo saranno.",
+    "types": {
+      "syncFailed": {
+        "label": "Sincronizzazione non riuscita",
+        "description": "Non è stato possibile aggiornare una connessione bancaria, broker o crypto."
+      },
+      "connectionReauth": {
+        "label": "Serve riconnettersi",
+        "description": "Una connessione richiede un nuovo accesso prima di poter sincronizzare."
+      },
+      "consentExpiring": {
+        "label": "Consenso bancario in scadenza",
+        "description": "Il tuo consenso per una connessione bancaria scade entro due settimane."
+      },
+      "netWorthChange": {
+        "label": "Forte variazione del patrimonio netto",
+        "description": "Il tuo patrimonio netto è cambiato del 10% o più rispetto al giorno prima."
+      },
+      "billing": {
+        "label": "Piano e pagamenti",
+        "description": "Il tuo piano Pro è iniziato o terminato, oppure un pagamento non è riuscito."
+      }
+    }
+  },
+  "messages": {
+    "syncFailed": {
+      "title": "Impossibile aggiornare {connection}",
+      "body": "L'ultima sincronizzazione di {connection} non è riuscita. Verrà ritentata alla prossima sincronizzazione; apri la connessione se continua a succedere."
+    },
+    "connectionReauth": {
+      "title": "Riconnetti {connection}",
+      "body": "{connection} richiede un nuovo accesso. Fino ad allora saldi e posizioni non vengono aggiornati."
+    },
+    "consentExpiring": {
+      "title": "Il tuo consenso per {connection} scade presto",
+      "body": "Il tuo consenso per {connection} scade il {at, date, medium}. Rinnovalo per continuare a sincronizzare la connessione."
+    },
+    "netWorthUp": {
+      "title": "Il tuo patrimonio netto è salito del {percent, number, percent}",
+      "body": "Il tuo patrimonio netto è più alto del {percent, number, percent} rispetto al {since, date, medium}."
+    },
+    "netWorthDown": {
+      "title": "Il tuo patrimonio netto è sceso del {percent, number, percent}",
+      "body": "Il tuo patrimonio netto è più basso del {percent, number, percent} rispetto al {since, date, medium}. Controlla i tuoi conti se non te lo aspettavi."
+    },
+    "billingPaymentFailed": {
+      "title": "Il pagamento non è riuscito",
+      "body": "Non siamo riusciti ad addebitare Fiscalis Pro sul tuo metodo di pagamento. Aggiornalo in Fatturazione per mantenere Pro."
+    },
+    "billingSubscriptionStarted": {
+      "title": "Benvenuto in Pro",
+      "body": "Il tuo piano Fiscalis Pro è attivo. Grazie per il tuo supporto."
+    },
+    "billingSubscriptionEnded": {
+      "title": "Il tuo piano Pro è terminato",
+      "body": "Ora sei sul piano Free. I tuoi dati restano come sono; puoi tornare a Pro in Fatturazione."
+    }
+  },
+  "email": {
+    "footer": "Ricevi questa email perché gli avvisi via email sono attivi nelle impostazioni notifiche di Fiscalis.",
+    "open": "Apri Fiscalis"
+  }
+}

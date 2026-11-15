@@ -1,0 +1,86 @@
+{
+  "bell": {
+    "label": "Notifications",
+    "unread": "Notifications, {count} unread",
+    "viewAll": "View all notifications"
+  },
+  "center": {
+    "title": "Notifications",
+    "subtitle": "Alerts about your connections, bank consents, net worth and plan.",
+    "markRead": "Mark as read",
+    "markAllRead": "Mark all as read",
+    "empty": "You're all caught up.",
+    "loadMore": "Show more",
+    "open": "Open",
+    "settings": "Notification settings",
+    "unreadLabel": "Unread"
+  },
+  "preferences": {
+    "title": "Notification settings",
+    "subtitle": "Choose which alerts you get, in the app and by email.",
+    "alert": "Alert",
+    "inApp": "In the app",
+    "email": "Email",
+    "emailUnavailable": "Email alerts are not switched on yet. Your choice is saved and applies once they are.",
+    "types": {
+      "syncFailed": {
+        "label": "Failed sync",
+        "description": "A bank, broker or crypto connection could not be updated."
+      },
+      "connectionReauth": {
+        "label": "Reconnect needed",
+        "description": "A connection needs you to sign in again before it can sync."
+      },
+      "consentExpiring": {
+        "label": "Bank consent ending",
+        "description": "Your consent for a bank connection ends within two weeks."
+      },
+      "netWorthChange": {
+        "label": "Large net worth change",
+        "description": "Your net worth moved by 10% or more since the previous day."
+      },
+      "billing": {
+        "label": "Plan and payments",
+        "description": "Your Pro plan started or ended, or a payment failed."
+      }
+    }
+  },
+  "messages": {
+    "syncFailed": {
+      "title": "{connection} could not be updated",
+      "body": "The latest sync of {connection} failed. It is retried with the next sync; open the connection if this keeps happening."
+    },
+    "connectionReauth": {
+      "title": "Reconnect {connection}",
+      "body": "{connection} needs you to sign in again. Until then its balances and holdings are not updated."
+    },
+    "consentExpiring": {
+      "title": "Your consent for {connection} ends soon",
+      "body": "Your consent for {connection} ends on {at, date, medium}. Renew it to keep the connection syncing."
+    },
+    "netWorthUp": {
+      "title": "Your net worth rose by {percent, number, percent}",
+      "body": "Your net worth is {percent, number, percent} higher than on {since, date, medium}."
+    },
+    "netWorthDown": {
+      "title": "Your net worth fell by {percent, number, percent}",
+      "body": "Your net worth is {percent, number, percent} lower than on {since, date, medium}. Check your accounts if this is unexpected."
+    },
+    "billingPaymentFailed": {
+      "title": "Your payment failed",
+      "body": "We could not charge your payment method for Fiscalis Pro. Update it in Billing to keep Pro."
+    },
+    "billingSubscriptionStarted": {
+      "title": "Welcome to Pro",
+      "body": "Your Fiscalis Pro plan is active. Thank you for your support."
+    },
+    "billingSubscriptionEnded": {
+      "title": "Your Pro plan has ended",
+      "body": "You are on the Free plan now. Your data stays as it is; you can upgrade again in Billing."
+    }
+  },
+  "email": {
+    "footer": "You get this email because email alerts are on in your Fiscalis notification settings.",
+    "open": "Open Fiscalis"
+  }
+}

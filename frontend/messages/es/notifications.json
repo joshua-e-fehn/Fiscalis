@@ -1,0 +1,86 @@
+{
+  "bell": {
+    "label": "Notificaciones",
+    "unread": "Notificaciones, {count} sin leer",
+    "viewAll": "Ver todas las notificaciones"
+  },
+  "center": {
+    "title": "Notificaciones",
+    "subtitle": "Avisos sobre tus conexiones, consentimientos bancarios, patrimonio neto y plan.",
+    "markRead": "Marcar como leída",
+    "markAllRead": "Marcar todas como leídas",
+    "empty": "Estás al día.",
+    "loadMore": "Mostrar más",
+    "open": "Abrir",
+    "settings": "Ajustes de notificaciones",
+    "unreadLabel": "Sin leer"
+  },
+  "preferences": {
+    "title": "Ajustes de notificaciones",
+    "subtitle": "Elige qué avisos recibes, en la app y por correo.",
+    "alert": "Aviso",
+    "inApp": "En la app",
+    "email": "Correo",
+    "emailUnavailable": "Los avisos por correo aún no están activados. Tu elección se guarda y se aplicará cuando lo estén.",
+    "types": {
+      "syncFailed": {
+        "label": "Sincronización fallida",
+        "description": "No se pudo actualizar una conexión bancaria, de bróker o de cripto."
+      },
+      "connectionReauth": {
+        "label": "Hay que reconectar",
+        "description": "Una conexión necesita que vuelvas a iniciar sesión antes de sincronizar."
+      },
+      "consentExpiring": {
+        "label": "Consentimiento bancario por vencer",
+        "description": "Tu consentimiento para una conexión bancaria vence en las próximas dos semanas."
+      },
+      "netWorthChange": {
+        "label": "Gran cambio del patrimonio neto",
+        "description": "Tu patrimonio neto cambió un 10 % o más desde el día anterior."
+      },
+      "billing": {
+        "label": "Plan y pagos",
+        "description": "Tu plan Pro empezó o terminó, o falló un pago."
+      }
+    }
+  },
+  "messages": {
+    "syncFailed": {
+      "title": "No se pudo actualizar {connection}",
+      "body": "La última sincronización de {connection} falló. Se reintentará en la próxima sincronización; abre la conexión si sigue pasando."
+    },
+    "connectionReauth": {
+      "title": "Reconecta {connection}",
+      "body": "{connection} necesita que vuelvas a iniciar sesión. Hasta entonces sus saldos y posiciones no se actualizan."
+    },
+    "consentExpiring": {
+      "title": "Tu consentimiento para {connection} vence pronto",
+      "body": "Tu consentimiento para {connection} vence el {at, date, medium}. Renuévalo para que la conexión siga sincronizando."
+    },
+    "netWorthUp": {
+      "title": "Tu patrimonio neto subió un {percent, number, percent}",
+      "body": "Tu patrimonio neto es un {percent, number, percent} más alto que el {since, date, medium}."
+    },
+    "netWorthDown": {
+      "title": "Tu patrimonio neto bajó un {percent, number, percent}",
+      "body": "Tu patrimonio neto es un {percent, number, percent} más bajo que el {since, date, medium}. Revisa tus cuentas si no lo esperabas."
+    },
+    "billingPaymentFailed": {
+      "title": "Tu pago falló",
+      "body": "No pudimos cobrar Fiscalis Pro con tu método de pago. Actualízalo en Facturación para mantener Pro."
+    },
+    "billingSubscriptionStarted": {
+      "title": "Bienvenido a Pro",
+      "body": "Tu plan Fiscalis Pro está activo. Gracias por tu apoyo."
+    },
+    "billingSubscriptionEnded": {
+      "title": "Tu plan Pro ha terminado",
+      "body": "Ahora tienes el plan Free. Tus datos se mantienen; puedes volver a mejorar en Facturación."
+    }
+  },
+  "email": {
+    "footer": "Recibes este correo porque los avisos por correo están activados en tus ajustes de notificaciones de Fiscalis.",
+    "open": "Abrir Fiscalis"
+  }
+}

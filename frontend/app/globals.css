@@ -97,6 +97,14 @@
   }
 }
 
+/*
+ * Charts stay left-to-right in RTL languages: SVG text-anchor follows the
+ * inherited direction, so axis tick labels would otherwise flip into the plot.
+ */
+.recharts-wrapper {
+  direction: ltr;
+}
+
 /* Onboarding-specific styles */
 @layer components {
   .onboarding-glow-gold {

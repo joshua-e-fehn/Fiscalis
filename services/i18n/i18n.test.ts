@@ -271,6 +271,12 @@ describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered language
     expect(renderedLanguage("hi")).toBe("hi");
   });
 
+  it("renders Arabic right-to-left for Arabic visitors", () => {
+    expect(RENDERED_LANGUAGES).toContain("ar");
+    expect(resolveLocale({ acceptLanguage: "ar-EG,ar;q=0.9" })).toBe("ar");
+    expect(localeDirection(renderedLanguage("ar"))).toBe("rtl");
+  });
+
   it("renders German for German visitors and users by default", () => {
     expect(resolveLocale({ cookie: "de", acceptLanguage: "en-GB" })).toBe("de");
     expect(resolveLocale({ acceptLanguage: "de-CH,de;q=0.9" })).toBe("de");

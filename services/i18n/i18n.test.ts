@@ -183,6 +183,39 @@ describe("parseAcceptLanguage", () => {
   });
 });
 
+describe("matchLanguage", () => {
+  const candidates = ["en", "de", "pt", "pt-PT", "zh-Hans"] as const;
+
+  it("matches the longest prefix on subtag boundaries", () => {
+    expect(matchLanguage("de-CH", candidates)).toBe("de");
+    expect(matchLanguage("pt-PT", candidates)).toBe("pt-PT");
+    expect(matchLanguage("pt-BR", candidates)).toBe("pt");
+    expect(matchLanguage("zh-Hans-CN", candidates)).toBe("zh-Hans");
+    expect(matchLanguage("ZH-hans", candidates)).toBe("zh-Hans");
+  });
+
+  it("serves Simplified Chinese for region-only Chinese tags", () => {
+    expect(matchLanguage("zh", candidates)).toBe("zh-Hans");
+    expect(matchLanguage("zh-CN", candidates)).toBe("zh-Hans");
+    expect(matchLanguage("zh_SG", candidates)).toBe("zh-Hans");
+    expect(matchLanguage("zh-TW", candidates)).toBe("zh-Hans");
+  });
+
+  it("returns undefined when nothing matches", () => {
+    expect(matchLanguage("fr-FR", candidates)).toBeUndefined();
+    expect(matchLanguage("zh-CN", ["en", "de"])).toBeUndefined();
+    expect(matchLanguage("", candidates)).toBeUndefined();
+  });
+
+  it("ignores ranges named like Object.prototype members", () => {
+    expect(matchLanguage("constructor", candidates)).toBeUndefined();
+    expect(matchLanguage("__proto__", candidates)).toBeUndefined();
+    expect(
+      resolveLocale({ acceptLanguage: "constructor, de", rendered: LANGUAGES }),
+    ).toBe("de");
+  });
+});
+
 describe("resolveLocale", () => {
   // Every supported language rendered, as once the UI is translated.
   const rendered = LANGUAGES;

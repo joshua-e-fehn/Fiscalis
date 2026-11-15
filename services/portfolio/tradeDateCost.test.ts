@@ -126,7 +126,7 @@ describe("tradeDateCostBasis", () => {
       ["when a sale exceeds the book", [sell(5, 600, "2020-01-01"), buy(10, 1_250, "2021-01-04")]],
       ["when a trade is in another currency", [{ ...buy(10, 1_000, "2021-01-04"), currency: "EUR" }]],
       ["when a trade date cannot be read", [buy(10, 1_250, "not a date")]],
-      ["when a trade predates the rate history", [buy(10, 1_250, "2014-12-31")]],
+      ["when a trade day has no rate", [buy(10, 1_250, "2014-12-31")]],
     ];
     it.each(cases)("%s", (_name, trades) => {
       expect(tradeDateCostBasis(position, trades, usdOn, today)).toEqual({
@@ -134,6 +134,29 @@ describe("tradeDateCostBasis", () => {
         estimated: true,
       });
     });
+  });
+
+  it("converts a pence (GBp) holding in pence, not as pounds", () => {
+    // 100 shares bought for 50,000p (£500) at EURGBP 0.8 (€625)
+    const gbpOn: ToBaseOn = (amount, currency) =>
+      currency === "GBp" ? amount / 100 / 0.8 : null;
+    const cost = tradeDateCostBasis(
+      { quantity: 100, totalCostBasis: 50_000, currency: "GBp" },
+      [{ type: "BUY", quantity: 100, amount: 50_000, currency: "GBp", tradeDate: "2021-01-04" }],
+      gbpOn,
+      0,
+    );
+    expect(cost.estimated).toBe(false);
+    expect(cost.base).toBeCloseTo(625, 9);
+    // A trade in pounds does not explain a holding costed in pence
+    expect(
+      tradeDateCostBasis(
+        { quantity: 100, totalCostBasis: 50_000, currency: "GBp" },
+        [{ type: "BUY", quantity: 100, amount: 500, currency: "GBP", tradeDate: "2021-01-04" }],
+        gbpOn,
+        7,
+      ),
+    ).toEqual({ base: 7, estimated: true });
   });
 
   it("ignores cash activities and returns a EUR position as is", () => {

@@ -23,7 +23,18 @@
  * Framework-free: imported by the Convex loader (lib/netWorth.ts) and vitest.
  */
 
+import { normalizeCurrency } from "../finance/currency";
 import type { ToBaseOn } from "./flows";
+
+/**
+ * The same currency, minor units included: "GBp" (pence) is not "GBP"
+ * (pounds), though they upper-case alike (currency.ts normalizeCurrency).
+ */
+function sameCurrency(a: string, b: string): boolean {
+  const x = normalizeCurrency(a);
+  const y = normalizeCurrency(b);
+  return x !== null && y !== null && x.code === y.code && x.divisor === y.divisor;
+}
 
 /** A synced SnapTrade activity (brokerTransactions row), as read here. */
 export interface BrokerTrade {
@@ -69,7 +80,7 @@ function replayCostBook(
   const book = { quantity: 0, native: 0, base: 0 };
   for (const { t, at } of ordered) {
     if (!Number.isFinite(at)) return null;
-    if (t.currency.toUpperCase() !== currency) return null;
+    if (!sameCurrency(t.currency, currency)) return null;
     const quantity = Math.abs(t.quantity ?? 0);
     if (!(quantity > 0)) return null;
     if (t.type.toUpperCase() === "BUY") {
@@ -78,7 +89,8 @@ function replayCostBook(
         t.amount !== 0 ? t.amount : quantity * (t.price ?? 0),
       );
       if (!(total > 0)) return null;
-      const base = toBaseOn(total, currency, t.tradeDate);
+      // The trade's own spelling, so a minor unit (GBp) converts as such
+      const base = toBaseOn(total, t.currency, t.tradeDate);
       if (base === null) return null;
       book.quantity += quantity;
       book.native += total;
@@ -110,9 +122,9 @@ export function tradeDateCostBasis(
   todayBase: number,
   baseCurrency = "EUR",
 ): TradeDateCost {
-  const currency = position.currency.toUpperCase();
+  const currency = position.currency;
   const estimated = { base: todayBase, estimated: true };
-  if (currency === baseCurrency || position.totalCostBasis === 0) {
+  if (sameCurrency(currency, baseCurrency) || position.totalCostBasis === 0) {
     return { base: todayBase, estimated: false };
   }
   const book = replayCostBook(trades, currency, toBaseOn);

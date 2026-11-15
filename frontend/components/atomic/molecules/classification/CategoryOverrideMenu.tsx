@@ -5,13 +5,15 @@
  *
  * The row action for changing which category an account or holding counts
  * under ("Change category", and "Reset to automatic" for a manual one), and
- * the marker shown next to a manual category.
+ * the marker shown next to a manual category. For a priced broker position
+ * or Bitpanda holding it also sets the holding's own price ("Set price",
+ * and "Use provider price" for an overridden one, ENG-239).
  */
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { MoreHorizontal, RotateCcw, Tags } from "lucide-react";
+import { CircleDollarSign, MoreHorizontal, RotateCcw, Tags } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +27,23 @@ import {
   useCategoryOverride,
   type CategoryOverrideItem,
 } from "@/hooks/convex/classification";
+import {
+  useClearValuationOverride,
+  type ValuationHoldingRef,
+} from "@/hooks/convex/valuationOverrides";
+import { useErrorMessage } from "@/i18n/errors";
+import type { ValuationOverride } from "@/../services/pricing/valuationOverride";
+import { ValuationOverrideDialog } from "@/components/atomic/molecules/valuation";
 import { CategoryOverrideDialog } from "./CategoryOverrideDialog";
+
+/** What the price items need: set when the holding can take an override. */
+export interface ValuationMenuItem {
+  holding: ValuationHoldingRef;
+  quantity: number;
+  providerPrice?: number;
+  providerCurrency: string;
+  override?: ValuationOverride;
+}
 
 interface CategoryOverrideMenuProps {
   item: CategoryOverrideItem;
@@ -33,6 +51,8 @@ interface CategoryOverrideMenuProps {
   category?: string;
   subcategory?: string;
   isManual: boolean;
+  /** Offers "Set price" when given */
+  valuation?: ValuationMenuItem;
   className?: string;
 }
 
@@ -42,11 +62,26 @@ export function CategoryOverrideMenu({
   category,
   subcategory,
   isManual,
+  valuation,
   className,
 }: CategoryOverrideMenuProps) {
   const t = useTranslations("categories.override");
+  const tValuation = useTranslations("categories.valuation");
+  const errorMessage = useErrorMessage();
   const [open, setOpen] = useState(false);
+  const [priceOpen, setPriceOpen] = useState(false);
   const { reset, isPending } = useCategoryOverride();
+  const clearValuation = useClearValuationOverride();
+
+  const handleClearValuation = async () => {
+    if (!valuation) return;
+    try {
+      await clearValuation({ holding: valuation.holding });
+      toast.success(tValuation("toast.reset", { name }));
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
+  };
 
   const handleReset = async () => {
     try {
@@ -83,6 +118,18 @@ export function CategoryOverrideMenu({
               {t("reset")}
             </DropdownMenuItem>
           )}
+          {valuation && (
+            <DropdownMenuItem onSelect={() => setPriceOpen(true)}>
+              <CircleDollarSign className="mr-2 h-4 w-4" />
+              {tValuation("action")}
+            </DropdownMenuItem>
+          )}
+          {valuation?.override && (
+            <DropdownMenuItem onSelect={handleClearValuation}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {tValuation("reset")}
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <CategoryOverrideDialog
@@ -94,6 +141,14 @@ export function CategoryOverrideMenu({
         subcategory={subcategory}
         isManual={isManual}
       />
+      {valuation && (
+        <ValuationOverrideDialog
+          open={priceOpen}
+          onOpenChange={setPriceOpen}
+          name={name}
+          {...valuation}
+        />
+      )}
     </>
   );
 }

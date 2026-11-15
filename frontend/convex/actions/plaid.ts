@@ -86,7 +86,7 @@ function getProducts(): Products[] {
  * English. Not the stored userSettings.language: that can be a language the
  * UI does not render yet (i18n/locales.ts RENDERED_LANGUAGES), and Plaid
  * should not be German inside an English app. Plaid's language codes match
- * the app's for every supported language (en, de, fr).
+ * the app's for every supported language (en, de, es, fr, it).
  */
 const linkLanguageArg = v.optional(languageValidator);
 

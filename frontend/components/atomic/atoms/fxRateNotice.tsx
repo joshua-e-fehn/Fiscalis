@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/shadcn/badge";
 import {
   Tooltip,
@@ -10,16 +11,6 @@ import {
 } from "@/components/ui/shadcn/tooltip";
 import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 
-/** The rate's UTC day (YYYY-MM-DD) as a date in the app's format. */
-function formatRateDate(day: string): string {
-  return new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${day}T00:00:00Z`));
-}
-
 /**
  * Flags a degraded exchange rate behind the display-currency figures: a
  * stale market rate (older than a week) or the built-in fallback table.
@@ -27,17 +18,23 @@ function formatRateDate(day: string): string {
  * nothing for EUR, a live market rate or while loading.
  */
 export function FxRateNotice() {
+  const t = useTranslations("common.fxNotice");
+  const format = useFormatter();
   const { code, source, rateDate, isLoading } = useDisplayCurrency();
   if (isLoading || (source !== "stale" && source !== "fallback")) return null;
 
-  // Whole sentences, one per case, so they can be translated as units
-  const stale = source === "stale" && rateDate !== null;
-  const label = stale
-    ? `Rates as of ${formatRateDate(rateDate)}`
-    : "Approximate rate";
-  const detail = stale
-    ? `Amounts in ${code} use the exchange rate of ${formatRateDate(rateDate)}, the latest available.`
-    : `No current exchange rate for ${code} is available, so amounts use an approximate rate.`;
+  // Whole sentences, one per case, so they translate as units. rateDate is
+  // the rate's UTC day (YYYY-MM-DD), so it is formatted as a calendar date.
+  const date =
+    source === "stale" && rateDate !== null
+      ? format.dateTime(new Date(`${rateDate}T00:00:00Z`), "dateOnly")
+      : null;
+  const label =
+    date !== null ? t("staleLabel", { date }) : t("approximateLabel");
+  const detail =
+    date !== null
+      ? t("staleDetail", { currency: code, date })
+      : t("approximateDetail", { currency: code });
 
   return (
     <TooltipProvider>

@@ -86,6 +86,7 @@ import {
   useWorldDataDelta,
   useIndicatorFormat,
 } from "@/hooks/worldbank";
+import { INDICATOR_METADATA } from "@/lib/api/worldbank";
 import { useTimePlayback } from "@/hooks/useTimePlayback";
 import { useIsIndicatorFavorited, useToggleFavorite } from "@/hooks/convex";
 
@@ -143,14 +144,14 @@ type CountryFeatureCollection = GeoJSON.FeatureCollection<
 // Use a marker value for "no data" since null doesn't serialize well in GeoJSON
 const NO_DATA_MARKER = -999999999;
 
-// Default indicator state (the name is the stored English one; the UI shows
-// worldMap.indicators.gdp)
+// Default indicator state: the stored (English) name and description come
+// from the registry; the UI shows worldMap.indicators.gdp
 const DEFAULT_INDICATOR: SelectedIndicator = {
   id: "gdp",
-  name: "GDP (Current US$)",
-  description: "Gross Domestic Product at current prices",
+  name: INDICATOR_METADATA.gdp.name,
+  description: INDICATOR_METADATA.gdp.description,
   isDynamic: false,
-  unit: "$",
+  unit: INDICATOR_METADATA.gdp.unit,
 };
 
 // Default years for "Compare years"

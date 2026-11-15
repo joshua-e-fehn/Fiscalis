@@ -50,6 +50,12 @@
     "exchangeRate": "Wechselkurs",
     "account": "Konto"
   },
+  "fxNotice": {
+    "staleLabel": "Kurse vom {date}",
+    "approximateLabel": "Näherungskurs",
+    "staleDetail": "Beträge in {currency} verwenden den Wechselkurs vom {date}, den neuesten verfügbaren.",
+    "approximateDetail": "Für {currency} ist kein aktueller Wechselkurs verfügbar, daher verwenden die Beträge einen Näherungskurs."
+  },
   "errors": {
     "generic": "Etwas ist schiefgelaufen. Bitte versuch es erneut.",
     "saveFailed": "Deine Änderungen konnten nicht gespeichert werden. Bitte versuch es erneut.",

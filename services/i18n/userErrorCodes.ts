@@ -92,6 +92,24 @@ export const USER_ERROR_CODES = [
   "pieSliceDuplicate",
   "pieHoldingNotFound",
 
+  // Goals (convex/goals.ts, services/goals/input.ts)
+  "goalNotFound",
+  "goalNameRequired",
+  "goalNameTooLong",
+  "goalCurrencyInvalid",
+  "goalPriceInvalid",
+  "goalRuleInvalid",
+  "goalNotActive",
+  "goalBoughtCannotDelete",
+  "goalTrackerNotFound",
+  "goalTrackerNameRequired",
+  "goalTrackerNameTooLong",
+  "goalTrackerInUse",
+  "goalEntryNotFound",
+  "goalEntryValueInvalid",
+  "goalEntryDateInvalid",
+  "goalChecklistItemNotFound",
+
   // Profile and onboarding (frontend/lib/utils/date.ts BirthDateError)
   "birthDate.format",
   "birthDate.invalid",

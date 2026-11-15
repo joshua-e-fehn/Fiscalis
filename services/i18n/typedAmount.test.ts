@@ -84,6 +84,11 @@ describe("typedAmountText", () => {
     expect(typedAmountText(-1.5, "ar-u-nu-latn")).toBe("-1.5");
   });
 
+  it("shows negative zero as 0", () => {
+    expect(typedAmountText(-0, "en-GB")).toBe("0");
+    expect(typedAmountText(-0, "de-DE")).toBe("0");
+  });
+
   it("writes Arabic-Indic digits where the locale uses them", () => {
     expect(typedAmountText(1250.5, "ar-u-nu-arab")).toBe("١٢٥٠٫٥");
   });

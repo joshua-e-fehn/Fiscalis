@@ -57,6 +57,8 @@ function latinDigits(text: string): string {
  */
 export function typedAmountText(value: number, locale: string): string {
   if (!Number.isFinite(value)) return "";
+  // Intl writes negative zero as "-0"; a form field shows it as "0".
+  if (value === 0) value = 0;
   const options = { useGrouping: false, maximumSignificantDigits: 15 };
   let text: string;
   try {

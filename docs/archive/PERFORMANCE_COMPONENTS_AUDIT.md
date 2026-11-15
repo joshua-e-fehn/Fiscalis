@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Historical audit (Feb 2026); the components it lists were consolidated by ENG-160.
+
 # Performance Components Audit
 
 > Last Updated: February 2, 2026
@@ -131,7 +133,7 @@ Performance Service Usage (All Migrated!)
 ## Related Documentation
 
 - [PERFORMANCE_CALCULATION_SERVICE.md](./PERFORMANCE_CALCULATION_SERVICE.md) - Full implementation details
-- [hooks/performance/index.ts](../frontend/hooks/performance/index.ts) - Available hooks and exports
+- [hooks/performance/index.ts](../../frontend/hooks/performance/index.ts) - Available hooks and exports
 
 ---
 

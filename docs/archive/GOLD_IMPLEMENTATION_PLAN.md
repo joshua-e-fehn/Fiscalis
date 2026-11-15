@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (precious-metals vault). Prices now come from the Convex gold.de cron, not Supabase; see docs/METAL_PREMIUMS.md for premiums.
+
 # 🏦 Vault Implementation Plan
 
 ## Overview

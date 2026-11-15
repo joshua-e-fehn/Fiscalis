@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (rule-priority classification engine, EUR base currency, user overrides ENG-195). Vezgo parts never shipped.
+
 # Investment Category Mapping Implementation Plan
 
 ## Overview

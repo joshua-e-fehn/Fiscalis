@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Superseded. The hybrid Convex + Supabase setup ended when Supabase was retired on 2026-11-14 (#67).
+
 # Convex vs Supabase: A Comprehensive Guide
 
 This guide compares Convex and Supabase for the Fiscalis project, including a hybrid architecture approach and migration strategies.

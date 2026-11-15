@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (Feb 2026), then reworked by the ENG-160 valuation overhaul; see docs/adr/0001-valuation-resolution.md and services/performance/.
+
 # Performance Calculation Service Architecture
 
 **Status**: ✅ Implementation Complete  

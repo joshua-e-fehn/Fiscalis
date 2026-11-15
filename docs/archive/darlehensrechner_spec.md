@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented as services/finance/loanScheduleService.ts (all repayment types, special repayments).
+
 # Darlehensrechner – Datenmodell (JSON Schema) & Berechnungslogik
 
 Dieses Dokument ist als **Implementierungs-Blueprint** für Coding Agents gedacht. Es beschreibt:

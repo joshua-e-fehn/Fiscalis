@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Superseded design prompt. Onboarding shipped and is enforced by the gate from #61.
+
 # Fiscalis Onboarding Architecture
 
 ## Creative Prompt for AI-Assisted Development

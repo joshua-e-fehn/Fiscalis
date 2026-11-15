@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented and deployed (methodology D4 from ENG-173, reset in #92). The Phase 7 manual browser walkthrough was never recorded.
+
 # Retirement Planner ("Rentenplaner") — Implementation Plan
 
 > A step-by-step, tickable plan for adding a retirement / pension planning feature to Fiscalis.
@@ -84,22 +86,22 @@ Run steps 7–11 for **two return assumptions**:
 
 ## 2. Reuse audit — what already exists (do NOT reimplement)
 
-**Finance math** — [`services/finance/financeService.ts`](../services/finance/financeService.ts):
+**Finance math** — [`services/finance/financeService.ts`](../../services/finance/financeService.ts):
 - ✅ `calculateEndCapitalValueWithCompoundInterest(start, rate, periods)` — step 7
 - ✅ `calculateStartCapitalValueWithCompoundInterest(end, rate, periods)` — PV for step 10
 - ✅ `calculateAnnuityPayment(principal, periodicRate, n)` — PMT, composes into step 9
 - ✅ `calculateCapitalGainDurationWithCompoundInterest(start, end, rate)` — step 11
 - ❌ inflation adjustment, 4%-rule target, required-contribution-with-existing-portfolio → **add in §5**
 
-**Portfolio value** — [`frontend/hooks/convex/portfolio.ts`](../frontend/hooks/convex/portfolio.ts):
+**Portfolio value** — [`frontend/hooks/convex/portfolio.ts`](../../frontend/hooks/convex/portfolio.ts):
 - ✅ `usePortfolioOverview(currency)` → `{ totalAssets, totalLiabilities, netWorth, … }` — the dashboard's net worth (all categories incl. vault metals and collectibles, minus linked and manual liabilities). The planner reuses it via `useRetirementFundingBase`.
-- ⚠️ [`frontend/convex/portfolio.ts`](../frontend/convex/portfolio.ts) `getTotalNetWorth()` covers only Plaid, SnapTrade and Bitpanda (no vault, no manual loans) — originally planned as the basis, replaced so the planner matches the dashboard.
+- ⚠️ [`frontend/convex/portfolio.ts`](../../frontend/convex/portfolio.ts) `getTotalNetWorth()` covers only Plaid, SnapTrade and Bitpanda (no vault, no manual loans) — originally planned as the basis, replaced so the planner matches the dashboard.
 - ✅ Auth pattern: `const identity = await ctx.auth.getUserIdentity(); const userId = identity.subject;`
 
 **Wizard pattern to mirror** — onboarding:
-- [`frontend/components/atomic/organisms/onboarding/OnboardingFlow.tsx`](../frontend/components/atomic/organisms/onboarding/OnboardingFlow.tsx) (enum steps, master state machine, framer-motion direction)
-- [`frontend/components/atomic/organisms/onboarding/steps/`](../frontend/components/atomic/organisms/onboarding/steps/) (per-step components, `useState` forms)
-- [`frontend/convex/onboarding.ts`](../frontend/convex/onboarding.ts) + [`frontend/hooks/convex/onboarding.ts`](../frontend/hooks/convex/onboarding.ts) (persisted progress)
+- [`frontend/components/atomic/organisms/onboarding/OnboardingFlow.tsx`](../../frontend/components/atomic/organisms/onboarding/OnboardingFlow.tsx) (enum steps, master state machine, framer-motion direction)
+- [`frontend/components/atomic/organisms/onboarding/steps/`](../../frontend/components/atomic/organisms/onboarding/steps/) (per-step components, `useState` forms)
+- [`frontend/convex/onboarding.ts`](../../frontend/convex/onboarding.ts) + [`frontend/hooks/convex/onboarding.ts`](../../frontend/hooks/convex/onboarding.ts) (persisted progress)
 
 **UI kit:** shadcn (`@/components/ui/shadcn/*`), `lucide-react` icons, **recharts** for charts, Tailwind dark-theme classes (`bg-white/[0.03] border-white/[0.1]`), zod available.
 
@@ -155,7 +157,7 @@ frontend/components/atomic/molecules/retirement/
 ## 4. Data model
 
 ### 4.1 Convex schema — `retirementPlans` (single row per user)
-- [x] Add table to [`frontend/convex/schema.ts`](../frontend/convex/schema.ts), indexed `by_user` on `["userId"]` (also added `birthDate` to `userSettings`):
+- [x] Add table to [`frontend/convex/schema.ts`](../../frontend/convex/schema.ts), indexed `by_user` on `["userId"]` (also added `birthDate` to `userSettings`):
 
 ```ts
 retirementPlans: defineTable({
@@ -254,7 +256,7 @@ Retire in 5 years, want €4,000/mo (today's money), €2,000/mo from pensions (
 - [x] `planToInputs(plan, profileBirthDate)` / `currentAgeForPlan(...)` — shared by the hooks and the wizard
 - [x] `useSaveRetirementPlan()` → `useMutation(api.retirement.saveRetirementPlan)`
 - [x] `useResetRetirementPlan()` (`useUpdateRetirementStep()` removed in ENG-205)
-- [x] Re-export from [`frontend/hooks/convex/index.ts`](../frontend/hooks/convex/index.ts)
+- [x] Re-export from [`frontend/hooks/convex/index.ts`](../../frontend/hooks/convex/index.ts)
 - [x] `useRetirementPreview(inputs)` client-only hook for instant in-wizard previews (no round-trip)
 
 ---
@@ -304,7 +306,7 @@ Shown at `/retirement` once a plan exists (edit re-enters the wizard).
 ## 10. Routing & navigation
 
 - [x] `app/(root)/retirement/page.tsx` (`"use client"`) renders `RetirementFlow`, which itself shows the wizard for a draft/new plan and the results dashboard for an active one. **No `layout.tsx`** — the parent `(root)/layout.tsx` already provides sidebar/auth chrome.
-- [x] Nav item added in [`navigationSidebar.tsx`](../frontend/components/atomic/organisms/navigationSidebar.tsx) under `navigationTools`: `{ title: "Retirement Planner", url: "/retirement", icon: PiggyBank }`.
+- [x] Nav item added in [`navigationSidebar.tsx`](../../frontend/components/atomic/organisms/navigationSidebar.tsx) under `navigationTools`: `{ title: "Retirement Planner", url: "/retirement", icon: PiggyBank }`.
 - [x] (Optional) Teaser card on the dashboard — `RetirementTeaserCard` (no plan / draft / active states) in `app/(root)/dashboard/page.tsx`.
 
 ---

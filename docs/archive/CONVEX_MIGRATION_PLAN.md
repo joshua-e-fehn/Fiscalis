@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented. Convex is the only backend since Supabase was retired on 2026-11-14 (#65-#67).
+
 # Convex Migration Plan
 
 This document outlines the step-by-step implementation plan for adding Convex to Fiscalis in a hybrid architecture alongside Supabase/Neon.

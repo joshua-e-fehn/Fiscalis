@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (SnapTrade connections, positions, activities, reconnect by authorization ID since #62).
+
 # SnapTrade Integration Implementation Plan
 
 ## Overview

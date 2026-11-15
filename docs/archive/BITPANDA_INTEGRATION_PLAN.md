@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (Bitpanda API-key connection, holdings, transactions, 6-hourly sync). Mentions of Vezgo are stale: it was removed in favour of Bitpanda.
+
 # Bitpanda Integration
 
 Bitpanda is a first-class provider alongside Plaid (banking), SnapTrade (brokers),
@@ -13,13 +15,13 @@ authenticated with a per-user **read-only API key** (`X-Api-Key` header) the use
 generates in their Bitpanda account. There is **no SDK, no OAuth popup, no token
 refresh**. A connection is simply an encrypted API key.
 
-- The key is encrypted with AES-256-GCM ([convex/lib/encryption.ts](../frontend/convex/lib/encryption.ts))
+- The key is encrypted with AES-256-GCM ([convex/lib/encryption.ts](../../frontend/convex/lib/encryption.ts))
   using the existing `CONVEX_ENCRYPTION_KEY`. **No global Bitpanda secret/env var is
   required** — keys are per-user and stored in `bitpandaConnections.apiKey`.
 - A revoked/expired key surfaces as a `401/403` → the connection is flipped to
   `status: "error"` with a "reconnect" message (there is no refresh path).
 - The API key is never returned by any public query (see `sanitizeConnection` in
-  [convex/bitpanda.ts](../frontend/convex/bitpanda.ts)).
+  [convex/bitpanda.ts](../../frontend/convex/bitpanda.ts)).
 
 ## Data flow
 
@@ -36,16 +38,16 @@ connect(apiKey) → validate → encrypt → bitpandaConnections
 Holdings are valued in **EUR**. The Bitpanda wallet endpoints return balances in
 asset units, so prices come from Bitpanda's public, unauthenticated
 `GET /v1/ticker` (single call, self-consistent with the holdings). Fiat balances
-are converted with [classification/currency.ts](../frontend/convex/lib/classification/currency.ts).
+are converted with [services/finance/currency.ts](../../services/finance/currency.ts).
 
 Key files:
-- REST client + normalizers: [convex/lib/bitpanda.ts](../frontend/convex/lib/bitpanda.ts)
-- Schema: `bitpandaConnections` / `bitpandaHoldings` / `bitpandaTransactions` in [convex/schema.ts](../frontend/convex/schema.ts)
-- Queries/mutations: [convex/bitpanda.ts](../frontend/convex/bitpanda.ts)
-- Actions (connect/sync/delete): [convex/actions/bitpanda.ts](../frontend/convex/actions/bitpanda.ts)
-- Classification: `classifyBitpandaPosition` in [engine.ts](../frontend/convex/lib/classification/engine.ts) + `bitpanda_*` rules in [rules.ts](../frontend/convex/lib/classification/rules.ts)
-- Frontend: [BitpandaConnectButton](../frontend/components/atomic/atoms/BitpandaConnectButton.tsx), [hooks/convex/bitpanda.ts](../frontend/hooks/convex/bitpanda.ts), [integrations/bitpanda page](../frontend/app/(root)/integrations/bitpanda/page.tsx)
-- Cron (6h): `sync-bitpanda-connections` in [crons.ts](../frontend/convex/crons.ts); daily sync wired in [actions/syncAll.ts](../frontend/convex/actions/syncAll.ts)
+- REST client + normalizers: [convex/lib/bitpanda.ts](../../frontend/convex/lib/bitpanda.ts)
+- Schema: `bitpandaConnections` / `bitpandaHoldings` / `bitpandaTransactions` in [convex/schema.ts](../../frontend/convex/schema.ts)
+- Queries/mutations: [convex/bitpanda.ts](../../frontend/convex/bitpanda.ts)
+- Actions (connect/sync/delete): [convex/actions/bitpanda.ts](../../frontend/convex/actions/bitpanda.ts)
+- Classification: `classifyBitpandaPosition` in [engine.ts](../../services/classification/engine.ts) + `bitpanda_*` rules in [rules.ts](../../services/classification/rules.ts)
+- Frontend: [BitpandaConnectButton](../../frontend/components/atomic/atoms/BitpandaConnectButton.tsx), [hooks/convex/bitpanda.ts](../../frontend/hooks/convex/bitpanda.ts), integrations page (`frontend/app/(root)/integrations/brokers/page.tsx`)
+- Cron (6h): `sync-bitpanda-connections` in [crons.ts](../../frontend/convex/crons.ts); daily sync wired in [actions/syncAll.ts](../../frontend/convex/actions/syncAll.ts)
 
 ## Asset-class → category mapping
 

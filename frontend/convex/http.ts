@@ -302,6 +302,8 @@ http.route({
           });
         case "invalid_currency":
           return invalidCurrency();
+        case "plan_required":
+          return apiError(403, "plan_required", "API access requires the Pro plan.");
         case "rate_limited":
           return apiError(429, "rate_limited", "Too many requests.", {
             "Retry-After": String(result.retryAfterSeconds),

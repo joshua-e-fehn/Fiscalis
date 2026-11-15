@@ -63,6 +63,8 @@ export const connect = action({
     const apiKey = args.apiKey.trim();
 
     if (!apiKey) userError("bitpandaKeyRequired");
+    // Before the key is sent anywhere: the plan must have room (ENG-199)
+    await ctx.runQuery(internal.billing.assertConnectionSlot, { userId });
 
     // Validate the key against Bitpanda before persisting anything
     try {

@@ -236,6 +236,10 @@ export const createConnectUrl = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    // A new connection (not a repair): the plan must have room (ENG-199)
+    if (!args.connectionId) {
+      await ctx.runQuery(internal.billing.assertConnectionSlot, { userId });
+    }
     await enforceUserRateLimit(ctx, "providerLink", userId);
 
     // Get SnapTrade user credentials

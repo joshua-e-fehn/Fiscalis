@@ -104,6 +104,8 @@ export const createLinkToken = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    // A new connection: the plan must have room for it (ENG-199)
+    await ctx.runQuery(internal.billing.assertConnectionSlot, { userId });
     await enforceUserRateLimit(ctx, "providerLink", userId);
     const plaidClient = getPlaidClient();
 
@@ -174,6 +176,8 @@ export const exchangeToken = action({
     if (!identity) throw new Error("Not authenticated");
 
     const userId = identity.subject;
+    // Checked again before the item exists at Plaid (ENG-199)
+    await ctx.runQuery(internal.billing.assertConnectionSlot, { userId });
     const plaidClient = getPlaidClient();
 
     // Exchange public token for access token

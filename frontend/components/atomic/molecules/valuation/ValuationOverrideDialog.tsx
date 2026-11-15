@@ -44,6 +44,7 @@ import { parseTypedAmount } from "@/../services/portfolio/manualAssets";
 import {
   BASE_CURRENCY,
   MIRRORED_CURRENCIES,
+  normalizeCurrency,
 } from "@/../services/finance/currency";
 import {
   VALUATION_OVERRIDE_KINDS,
@@ -83,11 +84,35 @@ export function ValuationOverrideDialog(props: ValuationOverrideDialogProps) {
   );
 }
 
-/** A stored amount as the form shows it, with the locale's decimal mark. */
+/**
+ * A stored amount as the form shows it, with the locale's decimal mark.
+ * Twelve significant digits and never an exponent, so a micro-priced token
+ * (0.00001234) keeps its digits and parseTypedAmount reads it back.
+ */
 function amountText(value: number | undefined, locale: string): string {
-  if (value === undefined) return "";
-  const text = String(Math.round(value * 1e6) / 1e6);
+  if (value === undefined || !Number.isFinite(value)) return "";
+  const text = value.toLocaleString("en-US", {
+    useGrouping: false,
+    maximumSignificantDigits: 12,
+  });
   return locale.toLowerCase().startsWith("de") ? text.replace(".", ",") : text;
+}
+
+/**
+ * The provider's price in a currency the form offers, in major units
+ * ("GBp" pence become GBP pounds), or null when its currency is not offered
+ * and the price would be mislabelled as another currency.
+ */
+function providerStart(
+  price: number | undefined,
+  currency: string,
+): { price?: number; currency: string } | null {
+  const normalized = normalizeCurrency(currency);
+  if (!normalized || !CURRENCIES.includes(normalized.code)) return null;
+  return {
+    price: price === undefined ? undefined : price / normalized.divisor,
+    currency: normalized.code,
+  };
 }
 
 function ValuationOverrideForm({
@@ -107,15 +132,15 @@ function ValuationOverrideForm({
   const setOverride = useSetValuationOverride();
   const clearOverride = useClearValuationOverride();
 
-  const startCurrency = override?.currency ?? providerCurrency.toUpperCase();
+  const provider = providerStart(providerPrice, providerCurrency);
   const [kind, setKind] = useState<ValuationOverrideKind>(
     override?.kind ?? "manualPrice",
   );
   const [price, setPrice] = useState(() =>
-    amountText(override?.pricePerUnit ?? providerPrice, locale),
+    amountText(override?.pricePerUnit ?? provider?.price, locale),
   );
   const [currency, setCurrency] = useState(
-    CURRENCIES.includes(startCurrency) ? startCurrency : BASE_CURRENCY,
+    override?.currency ?? provider?.currency ?? BASE_CURRENCY,
   );
   const [asOf, setAsOf] = useState(override?.asOf ?? todayLocalISO());
   const [rate, setRate] = useState(() =>

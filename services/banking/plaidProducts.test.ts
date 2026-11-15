@@ -29,6 +29,7 @@ describe("plaidLinkLanguage", () => {
     expect(plaidLinkLanguage("de")).toBe("de");
     expect(plaidLinkLanguage("pt-PT")).toBe("pt");
     expect(plaidLinkLanguage("es")).toBe("es");
+    expect(plaidLinkLanguage("hi")).toBe("hi");
   });
 
   it("falls back to English for languages Plaid does not offer", () => {

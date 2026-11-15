@@ -28,8 +28,8 @@ export function plaidLinkProducts(envValue: string | undefined): string[] {
 
 /** The languages Plaid Link is offered in (Plaid's `language` parameter). */
 const PLAID_LINK_LANGUAGES: ReadonlySet<string> = new Set([
-  "da", "de", "en", "es", "et", "fr", "it", "lt", "lv", "nl", "no", "pl",
-  "pt", "ro", "sv",
+  "da", "de", "en", "es", "et", "fr", "hi", "it", "lt", "lv", "nl", "no",
+  "pl", "pt", "ro", "sv", "vi",
 ]);
 
 /**

@@ -106,6 +106,11 @@ cd services && bun install --frozen-lockfile && bun run test   # vitest
   codegen only.
 - Provider-syncing crons (daily sync, Bitpanda) run only where
   `SCHEDULED_SYNC_ENABLED=true`, which is set on prod alone.
+- **Rollback and restore:** `docs/ROLLBACK.md`. Roll code back with a Vercel
+  Instant Rollback / promote of an earlier production deployment (or a revert
+  on `main` for Convex functions); never point production at the dev
+  deployment. Prod data is exported weekly to S3 by `ops/convex-backup/` on
+  the Mya VPS; restores download with the `fiscalis` SSO profile.
 - A deploy key in `.env.local` silently overrides `--prod`. To run a command
   against prod, pass the prod key explicitly (for example
   `--env-file <prod env file>`).

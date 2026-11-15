@@ -579,7 +579,8 @@ export const logEntry = mutation({
   handler: async (ctx, { trackerId, ...input }) => {
     const { userId, tracker } = await requireOwnedTracker(ctx, trackerId);
     const now = Date.now();
-    const entry = normalizeEntry(tracker.kind, input, utcDay(now));
+    // Entries are dated by the user's own day, up to UTC+14 ahead of the server's
+    const entry = normalizeEntry(tracker.kind, input, utcDay(now + 14 * 3_600_000));
     if (!entry.ok) userError(entry.error);
     return await ctx.db.insert("goalEntries", {
       userId,

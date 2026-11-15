@@ -74,5 +74,189 @@
       "total": "合计：{total}%",
       "totalOff": "合计：{total}%。所有权重之和必须为 100%。"
     }
+  },
+  "goals": {
+    "title": "目标",
+    "subtitle": "你想买的东西，按你自己设定的规则解锁。只有目标开始后的新资金和活动才会计入。",
+    "newGoal": "新建目标",
+    "debt": "{pool}因一个提前购买的目标欠下 {amount}。新的进度会先偿还这笔欠账，之后才能用于任何目标。",
+    "estimated": "{count, plural, one {有 # 天} other {有 # 天}}转入投资的资金需要估算，因此部分数字是近似值。",
+    "empty": {
+      "title": "还没有目标",
+      "description": "为目标设定价格和规则，例如：在预订旅行之前，投资价格的十倍。",
+      "action": "创建目标"
+    },
+    "toast": {
+      "deleted": "已删除“{name}”",
+      "archived": "已归档“{name}”",
+      "restored": "已恢复“{name}”"
+    },
+    "delete": {
+      "title": "删除这个目标？",
+      "description": "“{name}”及其进度将被删除。此操作无法撤销。",
+      "confirm": "删除目标"
+    },
+    "card": {
+      "status": {
+        "active": "进行中",
+        "eligible": "可以购买",
+        "bought": "已购买",
+        "boughtEarly": "提前购买",
+        "archived": "已归档"
+      },
+      "buy": "标记为已购买",
+      "edit": "编辑目标",
+      "archive": "归档目标",
+      "restore": "恢复目标",
+      "delete": "删除目标",
+      "price": "价格",
+      "started": "开始于",
+      "progress": "已完成 {percent}",
+      "boughtOn": "于 {date} 以 {price} 购买。",
+      "boughtEarlyHint": "当时规则尚未满足，因此差额变成了欠账。",
+      "ruleChanges": "{count, plural, one {规则已修改 # 次} other {规则已修改 # 次}}，最近一次在 {date}。"
+    },
+    "rule": {
+      "all": "以下全部",
+      "any": "以下任意一项",
+      "atLeast": "以下至少 {count} 项",
+      "unknownTracker": "已删除的追踪项",
+      "invested": {
+        "multiple": "投入相当于价格 {multiple}× 的新资金",
+        "amount": "投入 {amount} 新资金"
+      },
+      "gains": {
+        "multiple": "投资收益达到价格的 {multiple}×",
+        "amount": "投资收益达到 {amount}"
+      },
+      "netWorth": "净资产至少 {amount}",
+      "cooldown": "等待 {days, plural, one {# 天} other {# 天}}",
+      "counter": "{tracker}：{count} 次",
+      "streak": {
+        "week": "{tracker}：每周 {perPeriod} 次，连续 {periods, plural, other {# 周}}",
+        "month": "{tracker}：每月 {perPeriod} 次，连续 {periods, plural, other {# 个月}}"
+      },
+      "checklist": "清单",
+      "measurement": {
+        "best": {
+          "atLeast": "{tracker}：最佳记录至少 {value} {unit}",
+          "atMost": "{tracker}：最佳记录最多 {value} {unit}"
+        },
+        "latest": {
+          "atLeast": "{tracker}：最新记录至少 {value} {unit}",
+          "atMost": "{tracker}：最新记录最多 {value} {unit}"
+        }
+      },
+      "standing": "{current} / {target}",
+      "consumed": "购买时消耗"
+    },
+    "editor": {
+      "newTitle": "新建目标",
+      "editTitle": "编辑目标",
+      "description": "设定你想买什么，以及解锁它的规则。只有从今天起的新资金和活动才会计入。",
+      "name": "名称",
+      "namePlaceholder": "例如：里斯本之旅",
+      "notes": "备注",
+      "price": "价格",
+      "currency": "货币",
+      "startDate": "开始于",
+      "startDateHint": "在设置最初几个目标时，你可以把某个目标的开始日期设为你真正开始为它努力的那一天。只有从那天起的资金和活动才会计入。",
+      "rule": "规则",
+      "ruleHint": "Fiscalis 会自动追踪资金、收益、净资产和等待期。次数、连续记录、清单和测量值需要你自己记录。",
+      "nestedRule": "此规则包含嵌套分组，编辑器无法显示。保存时会保持原样。",
+      "startOver": "替换为新规则",
+      "combinator": "条件如何组合",
+      "atLeastN": "以下至少 n 项",
+      "atLeastCount": "需要满足的条件数",
+      "checkKind": "条件类型",
+      "kinds": {
+        "invested": "新投入资金",
+        "gains": "投资收益",
+        "netWorth": "净资产",
+        "cooldown": "等待期",
+        "counter": "次数（例如锻炼）",
+        "streak": "连续记录",
+        "checklist": "清单",
+        "measurement": "测量值"
+      },
+      "removeCheck": "移除条件",
+      "addCheck": "添加条件",
+      "invalid": "请检查高亮的值：每个目标值都必须大于零。",
+      "save": "保存目标",
+      "create": "创建目标",
+      "saved": "已保存“{name}”",
+      "created": "已创建“{name}”",
+      "noTrackers": "请先在目标下方添加此类追踪项。",
+      "tracker": "追踪项",
+      "target": "目标值",
+      "multiple": "价格倍数",
+      "amount": "金额（{currency}）",
+      "days": "天数",
+      "count": "次数",
+      "perPeriod": "每个周期的次数",
+      "period": "周期",
+      "periods": "连续周期数",
+      "comparison": "比较",
+      "value": "数值",
+      "basis": "记录",
+      "options": {
+        "priceMultiple": "价格的倍数",
+        "amount": "固定金额",
+        "week": "周",
+        "month": "月",
+        "atLeast": "至少",
+        "atMost": "至多",
+        "best": "最佳记录",
+        "latest": "最新记录"
+      },
+      "step": "步骤",
+      "stepPlaceholder": "例如：比较三家报价",
+      "removeStep": "移除步骤",
+      "addStep": "添加步骤"
+    },
+    "pools": {
+      "invested": "新投入资金",
+      "gains": "投资收益",
+      "tracker": "已删除的追踪项"
+    },
+    "purchase": {
+      "title": "将“{name}”标记为已购买",
+      "description": "输入你实际支付的金额。规则会按该价格重新检查。",
+      "pricePaid": "实付价格（{currency}）",
+      "earned": "按 {price} 计算，你的规则已满足。购买将消耗：",
+      "early": "按 {price} 计算，你的规则尚未满足。你仍然可以标记为已购买：缺少的部分会变成欠账，由新的进度优先偿还。购买将消耗：",
+      "confirm": "标记为已购买",
+      "confirmEarly": "提前购买",
+      "toastEarned": "已购买“{name}”。尽情享受吧！",
+      "toastEarly": "已将“{name}”标记为提前购买"
+    },
+    "trackers": {
+      "title": "追踪项",
+      "description": "你为目标自己记录的内容，例如锻炼次数或 10 公里用时。Fiscalis 信任这些记录。",
+      "empty": "还没有追踪项。",
+      "name": "追踪项名称",
+      "namePlaceholder": "例如：锻炼",
+      "kind": "类型",
+      "kinds": {
+        "count": "次数",
+        "measurement": "测量值"
+      },
+      "unit": "单位",
+      "unitPlaceholder": "单位",
+      "add": "添加追踪项",
+      "created": "已添加“{name}”",
+      "logged": "已为“{name}”记录",
+      "deleted": "已删除“{name}”",
+      "countSummary": "已记录 {total} {unit}",
+      "measurementSummary": "最新：{value} {unit}",
+      "noEntries": "还没有记录",
+      "date": "日期",
+      "value": "数值",
+      "log": "记录",
+      "showEntries": "显示记录",
+      "hideEntries": "隐藏记录",
+      "delete": "删除追踪项",
+      "deleteEntry": "删除记录"
+    }
   }
 }

@@ -74,5 +74,189 @@
       "total": "Total: {total}%",
       "totalOff": "Total: {total}%. The weights must add up to 100%."
     }
+  },
+  "goals": {
+    "title": "Goals",
+    "subtitle": "Things you want to buy, unlocked by rules you set. Only new money and activity after a goal starts count toward it.",
+    "newGoal": "New goal",
+    "debt": "{pool} owes {amount} from a goal bought before it was earned. New progress repays this first, before any goal can use it.",
+    "estimated": "{count, plural, one {On # day} other {On # days}}, the money moved into investments had to be estimated, so some figures are approximate.",
+    "empty": {
+      "title": "No goals yet",
+      "description": "Give a goal a price and a rule, for example: invest ten times the price before you book the trip.",
+      "action": "Create a goal"
+    },
+    "toast": {
+      "deleted": "{name} deleted",
+      "archived": "{name} archived",
+      "restored": "{name} restored"
+    },
+    "delete": {
+      "title": "Delete this goal?",
+      "description": "{name} and its progress will be deleted. This can't be undone.",
+      "confirm": "Delete goal"
+    },
+    "card": {
+      "status": {
+        "active": "In progress",
+        "eligible": "Ready to buy",
+        "bought": "Bought",
+        "boughtEarly": "Bought before earned",
+        "archived": "Archived"
+      },
+      "buy": "Mark as bought",
+      "edit": "Edit goal",
+      "archive": "Archive goal",
+      "restore": "Restore goal",
+      "delete": "Delete goal",
+      "price": "Price",
+      "started": "Started",
+      "progress": "{percent} of the way there",
+      "boughtOn": "Bought on {date} for {price}.",
+      "boughtEarlyHint": "The rule wasn't met yet, so the shortfall became debt.",
+      "ruleChanges": "{count, plural, one {The rule was changed once} other {The rule was changed # times}}, most recently on {date}."
+    },
+    "rule": {
+      "all": "All of these",
+      "any": "Any one of these",
+      "atLeast": "At least {count} of these",
+      "unknownTracker": "Deleted tracker",
+      "invested": {
+        "multiple": "Invest {multiple}× the price in new money",
+        "amount": "Invest {amount} in new money"
+      },
+      "gains": {
+        "multiple": "Gains of {multiple}× the price on your investments",
+        "amount": "Gains of {amount} on your investments"
+      },
+      "netWorth": "Net worth of at least {amount}",
+      "cooldown": "Wait {days, plural, one {# day} other {# days}}",
+      "counter": "{tracker}: {count} times",
+      "streak": {
+        "week": "{tracker}: {perPeriod} times a week for {periods, plural, one {# week} other {# weeks}} in a row",
+        "month": "{tracker}: {perPeriod} times a month for {periods, plural, one {# month} other {# months}} in a row"
+      },
+      "checklist": "Checklist",
+      "measurement": {
+        "best": {
+          "atLeast": "{tracker}: best reading at least {value} {unit}",
+          "atMost": "{tracker}: best reading at most {value} {unit}"
+        },
+        "latest": {
+          "atLeast": "{tracker}: latest reading at least {value} {unit}",
+          "atMost": "{tracker}: latest reading at most {value} {unit}"
+        }
+      },
+      "standing": "{current} of {target}",
+      "consumed": "used up when bought"
+    },
+    "editor": {
+      "newTitle": "New goal",
+      "editTitle": "Edit goal",
+      "description": "Set what you want to buy and the rule that unlocks it. Only new money and activity from today on count.",
+      "name": "Name",
+      "namePlaceholder": "e.g. Trip to Lisbon",
+      "notes": "Notes",
+      "price": "Price",
+      "currency": "Currency",
+      "startDate": "Started on",
+      "startDateHint": "While you set up your first goals you can date one back to when you really started working toward it. Only money and activity from that day on count.",
+      "rule": "Rule",
+      "ruleHint": "Fiscalis tracks money, gains, net worth and waiting periods itself. Counts, streaks, checklists and measurements are what you log.",
+      "nestedRule": "This rule has groups inside groups, which the builder can't show. Saving keeps it as it is.",
+      "startOver": "Replace with a new rule",
+      "combinator": "How the checks combine",
+      "atLeastN": "At least n of these",
+      "atLeastCount": "How many checks must be met",
+      "checkKind": "Kind of check",
+      "kinds": {
+        "invested": "New money invested",
+        "gains": "Investment gains",
+        "netWorth": "Net worth",
+        "cooldown": "Waiting period",
+        "counter": "Count (e.g. workouts)",
+        "streak": "Streak",
+        "checklist": "Checklist",
+        "measurement": "Measurement"
+      },
+      "removeCheck": "Remove check",
+      "addCheck": "Add check",
+      "invalid": "Check the highlighted values: every target must be above zero.",
+      "save": "Save goal",
+      "create": "Create goal",
+      "saved": "{name} saved",
+      "created": "{name} created",
+      "noTrackers": "Add a tracker of this kind below the goals first.",
+      "tracker": "Tracker",
+      "target": "Target",
+      "multiple": "Times the price",
+      "amount": "Amount in {currency}",
+      "days": "Days",
+      "count": "Times",
+      "perPeriod": "Times per period",
+      "period": "Period",
+      "periods": "Periods in a row",
+      "comparison": "Comparison",
+      "value": "Value",
+      "basis": "Reading",
+      "options": {
+        "priceMultiple": "A multiple of the price",
+        "amount": "A fixed amount",
+        "week": "Week",
+        "month": "Month",
+        "atLeast": "At least",
+        "atMost": "At most",
+        "best": "Best reading",
+        "latest": "Latest reading"
+      },
+      "step": "Step",
+      "stepPlaceholder": "e.g. Compare three offers",
+      "removeStep": "Remove step",
+      "addStep": "Add step"
+    },
+    "pools": {
+      "invested": "New money invested",
+      "gains": "Investment gains",
+      "tracker": "A deleted tracker"
+    },
+    "purchase": {
+      "title": "Mark {name} as bought",
+      "description": "Enter what you actually paid. The rule is checked again at that price.",
+      "pricePaid": "Price paid in {currency}",
+      "earned": "Your rule is met at {price}. Buying it uses:",
+      "early": "Your rule isn't met at {price} yet. You can still mark it as bought: what's missing becomes debt that new progress repays first. Buying it uses:",
+      "confirm": "Mark as bought",
+      "confirmEarly": "Buy before earned",
+      "toastEarned": "{name} bought. Enjoy it!",
+      "toastEarly": "{name} marked as bought before it was earned"
+    },
+    "trackers": {
+      "title": "Trackers",
+      "description": "Things you log yourself for your goals, like workouts or a 10 km time. Fiscalis trusts these entries.",
+      "empty": "No trackers yet.",
+      "name": "Tracker name",
+      "namePlaceholder": "e.g. Workouts",
+      "kind": "Kind",
+      "kinds": {
+        "count": "Count",
+        "measurement": "Measurement"
+      },
+      "unit": "Unit",
+      "unitPlaceholder": "Unit",
+      "add": "Add tracker",
+      "created": "{name} added",
+      "logged": "Logged for {name}",
+      "deleted": "{name} deleted",
+      "countSummary": "{total} {unit} logged",
+      "measurementSummary": "Latest: {value} {unit}",
+      "noEntries": "No entries yet",
+      "date": "Date",
+      "value": "Value",
+      "log": "Log",
+      "showEntries": "Show entries",
+      "hideEntries": "Hide entries",
+      "delete": "Delete tracker",
+      "deleteEntry": "Delete entry"
+    }
   }
 }

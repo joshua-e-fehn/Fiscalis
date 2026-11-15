@@ -74,5 +74,189 @@
       "total": "Total: {total}%",
       "totalOff": "Total: {total}%. Os pesos têm de somar 100%."
     }
+  },
+  "goals": {
+    "title": "Objetivos",
+    "subtitle": "Coisas que queres comprar, desbloqueadas por regras que tu defines. Só contam o dinheiro novo e a atividade depois de um objetivo começar.",
+    "newGoal": "Novo objetivo",
+    "debt": "{pool} deve {amount} por um objetivo comprado antes de ser conquistado. O novo progresso paga isto primeiro, antes de qualquer objetivo o poder usar.",
+    "estimated": "{count, plural, one {Em # dia} other {Em # dias}}, o dinheiro que passou para investimentos teve de ser estimado, por isso alguns valores são aproximados.",
+    "empty": {
+      "title": "Ainda não há objetivos",
+      "description": "Dá a um objetivo um preço e uma regra, por exemplo: investe dez vezes o preço antes de reservar a viagem.",
+      "action": "Criar um objetivo"
+    },
+    "toast": {
+      "deleted": "{name} eliminado",
+      "archived": "{name} arquivado",
+      "restored": "{name} restaurado"
+    },
+    "delete": {
+      "title": "Eliminar este objetivo?",
+      "description": "{name} e o respetivo progresso vão ser eliminados. Não é possível anular.",
+      "confirm": "Eliminar objetivo"
+    },
+    "card": {
+      "status": {
+        "active": "Em curso",
+        "eligible": "Pronto a comprar",
+        "bought": "Comprado",
+        "boughtEarly": "Comprado antes de conquistado",
+        "archived": "Arquivado"
+      },
+      "buy": "Marcar como comprado",
+      "edit": "Editar objetivo",
+      "archive": "Arquivar objetivo",
+      "restore": "Restaurar objetivo",
+      "delete": "Eliminar objetivo",
+      "price": "Preço",
+      "started": "Início",
+      "progress": "{percent} do caminho",
+      "boughtOn": "Comprado a {date} por {price}.",
+      "boughtEarlyHint": "A regra ainda não estava cumprida, por isso o que faltava tornou-se dívida.",
+      "ruleChanges": "{count, plural, one {A regra foi alterada uma vez} other {A regra foi alterada # vezes}}, a última a {date}."
+    },
+    "rule": {
+      "all": "Todas estas",
+      "any": "Qualquer uma destas",
+      "atLeast": "Pelo menos {count} destas",
+      "unknownTracker": "Acompanhamento eliminado",
+      "invested": {
+        "multiple": "Investe {multiple}× o preço em dinheiro novo",
+        "amount": "Investe {amount} em dinheiro novo"
+      },
+      "gains": {
+        "multiple": "Ganhos de {multiple}× o preço nos teus investimentos",
+        "amount": "Ganhos de {amount} nos teus investimentos"
+      },
+      "netWorth": "Património líquido de pelo menos {amount}",
+      "cooldown": "Espera {days, plural, one {# dia} other {# dias}}",
+      "counter": "{tracker}: {count} vezes",
+      "streak": {
+        "week": "{tracker}: {perPeriod} vezes por semana durante {periods, plural, one {# semana} other {# semanas}} seguidas",
+        "month": "{tracker}: {perPeriod} vezes por mês durante {periods, plural, one {# mês} other {# meses}} seguidos"
+      },
+      "checklist": "Lista de verificação",
+      "measurement": {
+        "best": {
+          "atLeast": "{tracker}: melhor registo de pelo menos {value} {unit}",
+          "atMost": "{tracker}: melhor registo de no máximo {value} {unit}"
+        },
+        "latest": {
+          "atLeast": "{tracker}: último registo de pelo menos {value} {unit}",
+          "atMost": "{tracker}: último registo de no máximo {value} {unit}"
+        }
+      },
+      "standing": "{current} de {target}",
+      "consumed": "consumido na compra"
+    },
+    "editor": {
+      "newTitle": "Novo objetivo",
+      "editTitle": "Editar objetivo",
+      "description": "Define o que queres comprar e a regra que o desbloqueia. Só contam o dinheiro novo e a atividade a partir de hoje.",
+      "name": "Nome",
+      "namePlaceholder": "p. ex. Viagem a Lisboa",
+      "notes": "Notas",
+      "price": "Preço",
+      "currency": "Moeda",
+      "startDate": "Começou em",
+      "startDateHint": "Enquanto crias os teus primeiros objetivos, podes datar um no dia em que começaste realmente a trabalhar nele. Só contam o dinheiro e a atividade a partir desse dia.",
+      "rule": "Regra",
+      "ruleHint": "O Fiscalis acompanha sozinho o dinheiro, os ganhos, o património líquido e os períodos de espera. As contagens, sequências, listas e medições registas tu.",
+      "nestedRule": "Esta regra tem grupos dentro de grupos, que o editor não consegue mostrar. Ao guardar, fica tal como está.",
+      "startOver": "Substituir por uma nova regra",
+      "combinator": "Como as condições se combinam",
+      "atLeastN": "Pelo menos n destas",
+      "atLeastCount": "Quantas condições têm de ser cumpridas",
+      "checkKind": "Tipo de condição",
+      "kinds": {
+        "invested": "Dinheiro novo investido",
+        "gains": "Ganhos de investimento",
+        "netWorth": "Património líquido",
+        "cooldown": "Período de espera",
+        "counter": "Contagem (p. ex. treinos)",
+        "streak": "Sequência",
+        "checklist": "Lista de verificação",
+        "measurement": "Medição"
+      },
+      "removeCheck": "Remover condição",
+      "addCheck": "Adicionar condição",
+      "invalid": "Verifica os valores destacados: cada alvo tem de ser superior a zero.",
+      "save": "Guardar objetivo",
+      "create": "Criar objetivo",
+      "saved": "{name} guardado",
+      "created": "{name} criado",
+      "noTrackers": "Primeiro adiciona um acompanhamento deste tipo abaixo dos objetivos.",
+      "tracker": "Acompanhamento",
+      "target": "Alvo",
+      "multiple": "Vezes o preço",
+      "amount": "Montante em {currency}",
+      "days": "Dias",
+      "count": "Vezes",
+      "perPeriod": "Vezes por período",
+      "period": "Período",
+      "periods": "Períodos seguidos",
+      "comparison": "Comparação",
+      "value": "Valor",
+      "basis": "Registo",
+      "options": {
+        "priceMultiple": "Um múltiplo do preço",
+        "amount": "Um montante fixo",
+        "week": "Semana",
+        "month": "Mês",
+        "atLeast": "Pelo menos",
+        "atMost": "No máximo",
+        "best": "Melhor registo",
+        "latest": "Último registo"
+      },
+      "step": "Passo",
+      "stepPlaceholder": "p. ex. Comparar três propostas",
+      "removeStep": "Remover passo",
+      "addStep": "Adicionar passo"
+    },
+    "pools": {
+      "invested": "Dinheiro novo investido",
+      "gains": "Ganhos de investimento",
+      "tracker": "Um acompanhamento eliminado"
+    },
+    "purchase": {
+      "title": "Marcar {name} como comprado",
+      "description": "Introduz o que pagaste realmente. A regra é verificada de novo a esse preço.",
+      "pricePaid": "Preço pago em {currency}",
+      "earned": "A tua regra está cumprida a {price}. Comprar usa:",
+      "early": "A tua regra ainda não está cumprida a {price}. Mesmo assim, podes marcá-lo como comprado: o que falta torna-se dívida que o novo progresso paga primeiro. Comprar usa:",
+      "confirm": "Marcar como comprado",
+      "confirmEarly": "Comprar antes de conquistar",
+      "toastEarned": "{name} comprado. Aproveita!",
+      "toastEarly": "{name} marcado como comprado antes de ser conquistado"
+    },
+    "trackers": {
+      "title": "Acompanhamentos",
+      "description": "Coisas que registas tu para os teus objetivos, como treinos ou o teu tempo nos 10 km. O Fiscalis confia nestes registos.",
+      "empty": "Ainda não há acompanhamentos.",
+      "name": "Nome do acompanhamento",
+      "namePlaceholder": "p. ex. Treinos",
+      "kind": "Tipo",
+      "kinds": {
+        "count": "Contagem",
+        "measurement": "Medição"
+      },
+      "unit": "Unidade",
+      "unitPlaceholder": "Unidade",
+      "add": "Adicionar acompanhamento",
+      "created": "{name} adicionado",
+      "logged": "Registado para {name}",
+      "deleted": "{name} eliminado",
+      "countSummary": "{total} {unit} registados",
+      "measurementSummary": "Último: {value} {unit}",
+      "noEntries": "Ainda não há registos",
+      "date": "Data",
+      "value": "Valor",
+      "log": "Registar",
+      "showEntries": "Mostrar registos",
+      "hideEntries": "Ocultar registos",
+      "delete": "Eliminar acompanhamento",
+      "deleteEntry": "Eliminar registo"
+    }
   }
 }

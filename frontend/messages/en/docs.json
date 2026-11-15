@@ -31,7 +31,7 @@
       },
       "currency": {
         "title": "Display currency and language",
-        "body": "Everything is stored in euros. You can show your totals in EUR, USD, GBP or CHF: totals are converted at the latest daily exchange rate and your history at each day's rate. Loans and individual account rows keep their own currency.\n\nFiscalis is available in English and German. Change the display currency and the language under Settings > General.",
+        "body": "Everything is stored in euros. You can show your totals in EUR, USD, GBP or CHF: totals are converted at the latest daily exchange rate and your history at each day's rate. Loans and individual account rows keep their own currency.\n\nFiscalis is available in English, German and Spanish. Change the display currency and the language under Settings > General.",
         "linkLabel": "Open Settings > General"
       },
       "sync": {

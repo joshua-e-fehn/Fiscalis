@@ -34,7 +34,7 @@ export const DEFAULT_LANGUAGE: Language = "en";
  * both server and client).
  */
 export const RENDERED_LANGUAGES: readonly Language[] =
-  process.env.NEXT_PUBLIC_I18N_PREVIEW === "1" ? LANGUAGES : ["en", "de"];
+  process.env.NEXT_PUBLIC_I18N_PREVIEW === "1" ? LANGUAGES : ["en", "de", "es"];
 
 /** The language a stored or requested language is rendered in. */
 export function renderedLanguage(
@@ -57,6 +57,7 @@ export const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 export const INTL_TAGS = {
   en: "en-GB",
   de: "de-DE",
+  es: "es-ES",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -65,6 +66,7 @@ export type IntlLocale = (typeof INTL_TAGS)[Language];
 export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   en: "English",
   de: "Deutsch",
+  es: "Español",
 };
 
 /**
@@ -72,7 +74,6 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
 export const PLANNED_LOCALES = [
-  "es",
   "fr",
   "it",
   "pt-PT",

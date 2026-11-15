@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "Pies",
+    "subtitle": "Asignaciones objetivo para tu cartera: fija un peso por porción y mira cuánto se han desviado tus posiciones.",
+    "newPie": "Nuevo pie",
+    "empty": {
+      "title": "Aún no tienes pies",
+      "description": "Un pie divide tu cartera en porciones, cada una una categoría, una subcategoría o posiciones concretas, con un peso objetivo. Fiscalis te muestra cuánto se desvía tu asignación real de él.",
+      "action": "Crea tu primer pie"
+    },
+    "card": {
+      "totalValue": "Valor en el pie",
+      "maxDrift": "Mayor desviación",
+      "noHoldings": "Ninguna de tus posiciones coincide todavía con las porciones de este pie.",
+      "edit": "Editar pie",
+      "delete": "Eliminar pie",
+      "threshold": "Las porciones que se desvían más de {threshold} puntos porcentuales del objetivo necesitan reequilibrarse.",
+      "columns": {
+        "slice": "Porción",
+        "target": "Objetivo",
+        "actual": "Real",
+        "drift": "Desviación",
+        "rebalance": "Para reequilibrar"
+      },
+      "drift": "{value} pp",
+      "status": {
+        "onTarget": "En objetivo",
+        "over": "Sobreponderado",
+        "under": "Infraponderado"
+      },
+      "buy": "Comprar {amount}",
+      "sell": "Vender {amount}",
+      "balanced": "—",
+      "allOf": "Todo {category}",
+      "holdingsCount": "{count, plural, one {# posición} other {# posiciones}}",
+      "missingHoldings": "{count, plural, one {# posición ya no está} other {# posiciones ya no están}} en tu cartera"
+    },
+    "delete": {
+      "title": "¿Eliminar este pie?",
+      "description": "Se eliminarán «{name}» y sus pesos objetivo. Tus posiciones no se ven afectadas.",
+      "confirm": "Eliminar pie"
+    },
+    "toast": {
+      "created": "Pie «{name}» creado",
+      "updated": "Pie «{name}» actualizado",
+      "deleted": "Pie «{name}» eliminado"
+    },
+    "editor": {
+      "addTitle": "Nuevo pie",
+      "editTitle": "Editar «{name}»",
+      "description": "Da a cada porción un peso objetivo. Los pesos deben sumar 100 %.",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej., Núcleo y satélite",
+      "descriptionLabel": "Descripción",
+      "optional": "Opcional",
+      "slices": "Porciones",
+      "slice": "Porción {number}",
+      "addSlice": "Añadir porción",
+      "removeSlice": "Quitar porción",
+      "splitEvenly": "Repartir por igual",
+      "kind": "Objetivo",
+      "kinds": {
+        "category": "Categoría",
+        "holdings": "Posiciones concretas"
+      },
+      "category": "Categoría",
+      "subcategory": "Subcategoría",
+      "allSubcategories": "Todas las subcategorías",
+      "holdings": "Posiciones",
+      "noHoldings": "Todavía no tienes posiciones entre las que elegir.",
+      "holdingGone": "Ya no está en tu cartera",
+      "label": "Etiqueta",
+      "weight": "Peso objetivo (%)",
+      "total": "Total: {total} %",
+      "totalOff": "Total: {total} %. Los pesos deben sumar 100 %."
+    }
+  }
+}

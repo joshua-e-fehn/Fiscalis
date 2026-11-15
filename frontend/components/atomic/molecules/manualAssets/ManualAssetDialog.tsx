@@ -46,6 +46,7 @@ import {
   attributesFor,
   MANUAL_ASSET_ATTRIBUTE_KINDS,
   MANUAL_ASSET_SUBCATEGORIES,
+  localeDecimalMark,
   parseTypedAmount,
   validateManualAsset,
   type ManualAssetAttribute,
@@ -98,7 +99,7 @@ interface ValuationRow {
 /** A stored amount as the form shows it, with the locale's decimal mark. */
 function amountText(value: number, locale: string): string {
   const text = String(value);
-  return locale.toLowerCase().startsWith("de") ? text.replace(".", ",") : text;
+  return localeDecimalMark(locale) === "," ? text.replace(".", ",") : text;
 }
 
 function firstSubcategory(category: ManualAssetCategory): string {

@@ -209,14 +209,14 @@ describe("resolveLocale", () => {
 
   it("falls back to English", () => {
     expect(resolveLocale({ rendered })).toBe("en");
-    expect(resolveLocale({ acceptLanguage: "fr, es", rendered })).toBe("en");
+    expect(resolveLocale({ acceptLanguage: "fr, it", rendered })).toBe("en");
   });
 });
 
 // The defaults assume NEXT_PUBLIC_I18N_PREVIEW is unset.
 describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered languages", () => {
-  it("renders English and German", () => {
-    expect(RENDERED_LANGUAGES).toEqual(["en", "de"]);
+  it("renders English, German and Spanish", () => {
+    expect(RENDERED_LANGUAGES).toEqual(["en", "de", "es"]);
   });
 
   it("renders German for German visitors and users by default", () => {
@@ -234,7 +234,7 @@ describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered language
 
 describe("locale helpers", () => {
   it("formats English day-first and German as de-DE", () => {
-    expect(INTL_TAGS).toEqual({ en: "en-GB", de: "de-DE" });
+    expect(INTL_TAGS).toEqual({ en: "en-GB", de: "de-DE", es: "es-ES" });
   });
 
   it("maps Intl tags back to app languages", () => {

@@ -1,0 +1,153 @@
+{
+  "actions": {
+    "connectBroker": "Conectar bróker",
+    "connectBank": "Conectar banco",
+    "connectCrypto": "Conectar cripto",
+    "addItem": "Añadir",
+    "addProperty": "Añadir inmueble",
+    "viewHoldings": "Ver posiciones",
+    "viewAccounts": "Ver cuentas",
+    "viewPortfolio": "Ver cartera",
+    "viewProperties": "Ver inmuebles",
+    "viewCollection": "Ver colección"
+  },
+  "bonds": {
+    "subtitle": "Sigue tus inversiones de renta fija: bonos del Estado, bonos corporativos y fondos de bonos.",
+    "categories": "Categorías de bonos"
+  },
+  "cash": {
+    "title": "Efectivo y mercado monetario",
+    "subtitle": "Sigue tus activos líquidos: cuentas de ahorro, fondos monetarios, depósitos a plazo y posiciones en divisas.",
+    "balanceHistory": "Historial del saldo en efectivo",
+    "categories": "Categorías de efectivo"
+  },
+  "equities": {
+    "subtitle": "Sigue tu cartera de acciones, ETF, fondos de inversión e inversiones de capital privado.",
+    "publicMarkets": "Mercados cotizados",
+    "privateMarkets": "Mercados privados"
+  },
+  "realEstate": {
+    "subtitle": "Sigue tus inversiones inmobiliarias: viviendas, inmuebles comerciales, SOCIMI y más.",
+    "categories": "Categorías de inmuebles"
+  },
+  "collectibles": {
+    "subtitle": "Sigue tus inversiones en coleccionables: arte, vino, relojes, coches clásicos y más.",
+    "categories": "Categorías de coleccionables"
+  },
+  "commodities": {
+    "subtitle": "Sigue los precios en tiempo real y gestiona tus posiciones en distintos tipos de materias primas",
+    "categories": "Categorías de materias primas"
+  },
+  "metals": {
+    "signIn": "Inicia sesión para ver tu cartera de metales."
+  },
+  "crypto": {
+    "title": "Criptoactivos",
+    "subtitle": "Sigue tus inversiones en criptomonedas y la rentabilidad de tu cartera",
+    "tabs": {
+      "overview": "Resumen",
+      "holdings": "Posiciones",
+      "transactions": "Transacciones"
+    },
+    "categories": "Categorías de cripto",
+    "holdings": {
+      "title": "Todas las posiciones cripto",
+      "description": "Lista completa de tus posiciones en criptomonedas en todos los exchanges y monederos conectados",
+      "emptyTitle": "No hay cuentas cripto conectadas",
+      "emptyDescription": "Conecta tus exchanges y monederos cripto para ver todas tus posiciones",
+      "connect": "Conectar cuentas cripto"
+    },
+    "transactions": {
+      "title": "Historial de transacciones",
+      "connectDescription": "Conecta tus cuentas cripto para ver tu historial de transacciones",
+      "notConnected": "Aún no hay cuentas cripto conectadas. Conecta tus exchanges y monederos para ver tu historial de transacciones.",
+      "description": "Todas las transacciones de tus cuentas cripto conectadas",
+      "empty": "No se han encontrado transacciones. Tu historial aparecerá aquí en cuanto se sincronice.",
+      "justNow": "ahora mismo",
+      "unknownDate": "Fecha desconocida",
+      "types": {
+        "buy": "Compra",
+        "sell": "Venta",
+        "deposit": "Depósito",
+        "withdraw": "Retirada",
+        "withdrawal": "Retirada",
+        "receive": "Recepción",
+        "send": "Envío",
+        "transfer": "Transferencia",
+        "reward": "Recompensa",
+        "staking": "Staking",
+        "dividend": "Dividendo",
+        "interest": "Intereses",
+        "fee": "Comisión"
+      }
+    },
+    "allocation": {
+      "title": "Distribución por posición",
+      "empty": "Aún no hay posiciones",
+      "other": "Otros (<2 %)",
+      "otherShort": "Otros"
+    },
+    "positions": {
+      "title": "Todas las posiciones",
+      "count": "{shown} de {total, plural, one {# posición} other {# posiciones}}",
+      "search": "Buscar por token...",
+      "loading": "Cargando posiciones…",
+      "noMatch": "Ninguna posición coincide con tu búsqueda",
+      "empty": "No se han encontrado posiciones",
+      "token": "Token",
+      "quantity": "Cantidad",
+      "value": "Valor",
+      "category": "Categoría",
+      "priceUnavailable": "Precio no disponible",
+      "staleHint": "Bitpanda no tenía un precio actual; se muestra el último precio conocido",
+      "priceAsOf": "Precio a {date}",
+      "lastKnownPrice": "Último precio conocido"
+    }
+  },
+  "manualAssets": {
+    "add": "Añadir activo",
+    "emptyHint": "Añade un activo para seguirlo aquí. Cuenta en tu patrimonio neto por su última valoración.",
+    "addTitle": "Añadir un activo",
+    "editTitle": "Editar {name}",
+    "description": "Registra algo que ninguna cuenta conectada declara. Cuenta en tu patrimonio neto por su última valoración.",
+    "actionsLabel": "Acciones para {name}",
+    "fields": {
+      "category": "Categoría",
+      "subcategory": "Subcategoría",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej., piso en Madrid, Rolex Submariner",
+      "currency": "Moneda",
+      "valuations": "Valoraciones",
+      "valuationsHint": "Lo que valía el activo en cada fecha. Cuenta la más reciente.",
+      "date": "Fecha",
+      "value": "Valor",
+      "addValuation": "Añadir valoración",
+      "removeValuation": "Quitar valoración",
+      "costBasis": "Precio de compra",
+      "optional": "Opcional",
+      "costBasisHint": "Con un precio de compra se muestra la ganancia o pérdida. Vincula el préstamo que financió el activo, si lo hay.",
+      "linkedLoan": "Financiado con",
+      "noLoan": "Sin préstamo"
+    },
+    "attributes": {
+      "artist": "Artista",
+      "brand": "Marca",
+      "model": "Modelo",
+      "referenceNumber": "N.º de referencia",
+      "producer": "Productor",
+      "vintage": "Añada",
+      "year": "Año",
+      "address": "Dirección",
+      "grade": "Grado"
+    },
+    "toast": {
+      "created": "{name} añadido",
+      "updated": "{name} guardado",
+      "deleted": "{name} eliminado"
+    },
+    "deleteDialog": {
+      "title": "¿Eliminar {name}?",
+      "description": "Se eliminan el activo y todas sus valoraciones, y deja de contar en tu patrimonio neto. Esta acción no se puede deshacer."
+    }
+  }
+}

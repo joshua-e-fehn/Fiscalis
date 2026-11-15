@@ -1,0 +1,143 @@
+{
+  "page": {
+    "title": "Panel",
+    "subtitle": "Tu visión financiera completa",
+    "performanceTitle": "Evolución de la cartera",
+    "investmentCategories": "Categorías de inversión"
+  },
+  "netWorth": {
+    "title": "Patrimonio neto total",
+    "unrealized": "({percent}) no realizado",
+    "unrealizedCoverage": "({percent}) no realizado sobre el {covered} % de los activos"
+  },
+  "kpi": {
+    "totalAssets": "Activos totales",
+    "totalLiabilities": "Pasivos totales"
+  },
+  "ytdNetWorth": {
+    "title": "Patrimonio neto en el año",
+    "changeSinceJan1": "{percent} de variación desde el 1 de enero",
+    "fxEffectHint": "Medido en {currency}: incluye la variación del tipo de cambio del euro desde el 1 de enero.",
+    "partial": "Parcial: falló la sincronización de un proveedor o falta un precio",
+    "trackingSince": "No hay suficiente historial (seguimiento desde {date})",
+    "noData": "No hay datos de este año"
+  },
+  "allocation": {
+    "title": "Distribución de activos",
+    "description": "Reparto entre categorías de inversión",
+    "empty": "No hay activos que mostrar",
+    "emptyHint": "Añade inversiones para ver tu distribución"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, one {# posición} other {# posiciones}}",
+    "noHoldings": "Sin posiciones",
+    "comingSoon": "Próximamente"
+  },
+  "liabilitiesCard": {
+    "title": "Pasivos",
+    "accounts": "{accounts, plural, one {# cuenta} other {# cuentas}}",
+    "loans": "{loans, plural, one {# préstamo} other {# préstamos}}",
+    "accountsAndLoans": "{accounts, plural, one {# cuenta} other {# cuentas}} · {loans, plural, one {# préstamo} other {# préstamos}}",
+    "monthlyPayments": "{amount}/mes en cuotas de préstamos"
+  },
+  "section": {
+    "totalValue": "Valor total de la cartera",
+    "totalCash": "Efectivo total",
+    "profitLoss": "Ganancia / pérdida total",
+    "profitLossSinceTracking": "Ganancia / pérdida desde el inicio del seguimiento",
+    "changeSinceTracking": "Variación desde el inicio del seguimiento",
+    "since": "Desde {date}",
+    "sinceNetOfFlows": "Desde {date}, descontando compras y depósitos",
+    "coverage": "Sobre el {percent} % del valor: se excluyen las posiciones sin coste de adquisición",
+    "addCostData": "Añade datos de coste para seguir la rentabilidad",
+    "noHoldings": "Aún no hay posiciones",
+    "ytdChange": "Variación en el año",
+    "ytdReturn": "Rentabilidad en el año",
+    "ytdReturnEstimated": "Rentabilidad en el año (est.)",
+    "sincePartial": "Desde {date} · parcial: falló una sincronización o falta un precio",
+    "trackedSince": "No hay suficiente historial (seguimiento desde {date})",
+    "noDataThisYear": "Aún no hay datos de este año",
+    "portfolioAllocation": "Distribución de la cartera",
+    "highCash": "Posición de efectivo alta (conservadora)",
+    "lowCash": "Reserva de efectivo baja",
+    "ofTotalPortfolio": "de la cartera total",
+    "addAssets": "Añade activos para ver la distribución",
+    "activeAccounts": "Cuentas activas",
+    "accountsLinked": "{count, plural, one {cuenta vinculada} other {cuentas vinculadas}}",
+    "historyHint": "El historial aparecerá tras la próxima instantánea diaria"
+  },
+  "allocationChart": {
+    "title": "Distribución",
+    "empty": "Aún no hay posiciones",
+    "other": "Otros (<2 %)"
+  },
+  "performanceChart": {
+    "portfolioTitle": "Rentabilidad de la cartera",
+    "netWorthTitle": "Evolución del patrimonio neto",
+    "portfolio": "Cartera",
+    "netWorth": "Patrimonio neto",
+    "value": "Valor",
+    "costBasis": "Coste de adquisición",
+    "empty": "Aún no hay datos de rentabilidad",
+    "emptyHint": "Añade posiciones para seguir la rentabilidad de la cartera",
+    "tooltipRow": "{series}: {amount}",
+    "partial": "Parcial: falló la sincronización de un proveedor o falta un precio"
+  },
+  "topHoldings": {
+    "title": "Mayores posiciones",
+    "empty": "Aún no hay posiciones",
+    "count": "({count, plural, one {# posición} other {# posiciones}})"
+  },
+  "positions": {
+    "title": "Todas las posiciones",
+    "description": "Vista unificada de todos los proveedores financieros",
+    "empty": "No se han encontrado posiciones",
+    "emptyHint": "Conecta tus cuentas para ver tus posiciones",
+    "shownOfTotal": "{shown} de {total, plural, one {# posición} other {# posiciones}}",
+    "showLess": "Ver menos",
+    "viewAll": "Ver todo",
+    "searchPlaceholder": "Buscar posiciones...",
+    "provider": "Proveedor",
+    "allProviders": "Todos los proveedores",
+    "category": "Categoría",
+    "allCategories": "Todas las categorías",
+    "providers": {
+      "plaid": "Banca",
+      "snaptrade": "Bróker",
+      "bitpanda": "Bitpanda",
+      "manual": "Manual"
+    },
+    "providerFilter": {
+      "plaid": "Banca",
+      "snaptrade": "Brókers",
+      "bitpanda": "Bitpanda",
+      "manual": "Manual"
+    },
+    "columns": {
+      "source": "Origen",
+      "position": "Posición",
+      "category": "Categoría",
+      "quantity": "Cantidad",
+      "value": "Valor",
+      "profitLoss": "P&G",
+      "actions": "Acciones"
+    },
+    "shown": "{count, plural, one {# posición mostrada} other {# posiciones mostradas}}",
+    "total": "Total: {amount}",
+    "costFxEstimated": "(est.)",
+    "costFxEstimatedHint": "Coste convertido al tipo de cambio de hoy: se desconocen las fechas de compra"
+  },
+  "cashHoldings": {
+    "bankAccount": "Cuenta bancaria",
+    "cashPosition": "Posición de efectivo",
+    "brokerCash": "{account} - Efectivo"
+  },
+  "emptyState": {
+    "title": "Conecta tu primera cuenta",
+    "description": "Tu panel se completa en cuanto Fiscalis sabe lo que tienes. Conecta un banco o un bróker, importa Bitpanda o añade a mano metales preciosos y préstamos.",
+    "bank": "Conectar un banco",
+    "broker": "Conectar un bróker",
+    "metals": "Añadir metales preciosos",
+    "loan": "Añadir un préstamo"
+  }
+}

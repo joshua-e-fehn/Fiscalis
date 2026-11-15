@@ -1,0 +1,274 @@
+{
+  "page": {
+    "title": "Explorador de datos mundiales",
+    "subtitle": "Visualiza indicadores económicos, demográficos y de desarrollo del Banco Mundial en un mapa interactivo."
+  },
+  "controls": {
+    "title": "Elige un indicador",
+    "description": "Elige una métrica para visualizarla en el mapa mundial",
+    "addFavorite": "Añadir a favoritos",
+    "removeFavorite": "Quitar de favoritos",
+    "timePeriod": "Periodo"
+  },
+  "export": {
+    "button": "Exportar CSV",
+    "exporting": "Exportando…",
+    "currentYear": "Año actual ({year})",
+    "allYears": "Todos los años ({min}–{max})",
+    "comparison": "Comparación ({start}–{end})"
+  },
+  "csv": {
+    "countryCode": "Código de país",
+    "countryCodeIso3": "Código de país (ISO3)",
+    "countryName": "Nombre del país",
+    "year": "Año",
+    "value": "{indicator} ({unit})",
+    "yearValue": "{indicator} {year} ({unit})",
+    "absoluteChange": "Variación {start}–{end} ({unit})",
+    "percentChange": "Variación {start}–{end} (%)"
+  },
+  "prefetch": {
+    "loading": "Precargando datos: {loaded}/{total} años",
+    "complete": "Todos los años en caché: listo para reproducir",
+    "partial": "{loaded}/{total} años en caché",
+    "loadAll": "Precargar todo"
+  },
+  "dynamic": {
+    "viewing": "Viendo el indicador buscado: <strong>{indicator}</strong>",
+    "fetching": "Obteniendo…"
+  },
+  "errors": {
+    "loadTitle": "Error al cargar los datos",
+    "loadDescription": "No hemos podido obtener los datos del Banco Mundial. Inténtalo de nuevo.",
+    "retry": "Reintentar",
+    "mapTitle": "Error del mapa",
+    "mapDescription": "No se han podido cargar los datos del mapa."
+  },
+  "map": {
+    "fallbackTitle": "Mapa mundial",
+    "fallbackDescription": "Elige un indicador para ver los datos",
+    "loading": "Cargando…",
+    "loadingIndicator": "Cargando {indicator}…",
+    "fetchingUpstream": "Obteniendo datos de la API del Banco Mundial",
+    "loadingYear": "Cargando datos de {year}…",
+    "legendValue": "Valor",
+    "low": "Bajo",
+    "high": "Alto",
+    "noData": "Sin datos"
+  },
+  "top": {
+    "title": "Los 5 primeros países",
+    "description": "Valores más altos en {year}",
+    "empty": "No hay datos disponibles",
+    "titleIncrease": "Mayor aumento",
+    "titleDecrease": "Mayor descenso",
+    "changeDescription": "Variación {start}–{end}",
+    "sortLabel": "Ordenar por",
+    "sortIncrease": "Aumento",
+    "sortDecrease": "Descenso",
+    "sortAbsolute": "Absoluto",
+    "sortPercent": "Porcentaje",
+    "showHistory": "Ver el historial de {country}"
+  },
+  "dataset": {
+    "title": "Información del conjunto de datos",
+    "source": "Fuente",
+    "year": "Año",
+    "countries": "Países",
+    "countriesWithData": "{count, plural, one {# con datos} other {# con datos}}",
+    "unit": "Unidad"
+  },
+  "units": {
+    "years": "años",
+    "yearsValue": "{value} años",
+    "percentValue": "{value} %",
+    "percentPoints": "{value} p. p.",
+    "tonnesValue": "{value} t"
+  },
+  "timeSlider": {
+    "jumpToStart": "Ir al inicio",
+    "stepBackward": "Retroceder",
+    "play": "Reproducir",
+    "pause": "Pausa",
+    "stepForward": "Avanzar",
+    "jumpToEnd": "Ir al final",
+    "speed": "Velocidad:"
+  },
+  "search": {
+    "custom": "Personalizado",
+    "featured": "Destacado",
+    "title": "Elige un indicador",
+    "description": "Elige entre los indicadores destacados o busca {count, plural, =0 {en todos los indicadores del Banco Mundial} one {en # indicador del Banco Mundial} other {en # indicadores del Banco Mundial}}",
+    "needsSync": "Hay que sincronizar la base de datos de indicadores. Ejecuta la sincronización para activar la búsqueda completa.",
+    "placeholder": "Buscar en todos los indicadores del Banco Mundial…",
+    "clear": "Borrar búsqueda",
+    "searching": "Buscando…",
+    "results": "Resultados de búsqueda ({count})",
+    "fromTotal": "{count, plural, one {de # indicador} other {de # indicadores}}",
+    "slow": "Lento",
+    "slowTooltip": "{count, plural, one {Este indicador ha superado el tiempo de espera una vez.} other {Este indicador ha superado el tiempo de espera # veces.}}",
+    "slowHint": "Puede ser lento o poco fiable.",
+    "unreliable": "Poco fiable",
+    "unreliableTooltip": "{count, plural, one {Este indicador falla a menudo al cargar (# tiempo de espera agotado).} other {Este indicador falla a menudo al cargar (# tiempos de espera agotados).}}",
+    "unreliableHint": "Puede que los datos no estén disponibles.",
+    "addFavorite": "Añadir a favoritos",
+    "removeFavorite": "Quitar de favoritos",
+    "emptyDatabase": "La base de datos de indicadores está vacía",
+    "emptyDatabaseHint": "Ejecuta la sincronización para cargar los indicadores",
+    "noResults": "No se han encontrado indicadores para «{query}»",
+    "noResultsHint": "Prueba con otras palabras clave",
+    "favorites": "Tus favoritos",
+    "featuredIndicators": "Indicadores destacados",
+    "selected": "Seleccionado",
+    "dataSource": "Fuente de datos: <link>World Bank Open Data</link>",
+    "synced": "Sincronizado: {date}"
+  },
+  "categories": {
+    "economy": "Economía",
+    "demographics": "Demografía",
+    "finance": "Finanzas",
+    "trade": "Comercio",
+    "energy": "Energía y medio ambiente",
+    "development": "Desarrollo",
+    "commodities": "Materias primas"
+  },
+  "indicators": {
+    "gdp": {
+      "name": "PIB (US$ corrientes)",
+      "description": "Producto interior bruto a precios corrientes"
+    },
+    "gdpPerCapita": {
+      "name": "PIB per cápita",
+      "description": "PIB dividido por la población a mitad de año"
+    },
+    "gdpGrowth": {
+      "name": "Tasa de crecimiento del PIB",
+      "description": "Tasa de crecimiento anual del PIB en porcentaje"
+    },
+    "gni": {
+      "name": "RNB (US$ corrientes)",
+      "description": "Renta nacional bruta a precios corrientes"
+    },
+    "population": {
+      "name": "Población",
+      "description": "Población total"
+    },
+    "populationGrowth": {
+      "name": "Crecimiento de la población",
+      "description": "Tasa de crecimiento anual de la población"
+    },
+    "urbanPopulation": {
+      "name": "Población urbana",
+      "description": "Porcentaje de la población que vive en zonas urbanas"
+    },
+    "lifeExpectancy": {
+      "name": "Esperanza de vida",
+      "description": "Esperanza de vida al nacer, en años"
+    },
+    "inflation": {
+      "name": "Tasa de inflación",
+      "description": "Inflación anual de los precios de consumo"
+    },
+    "interestRate": {
+      "name": "Tipo de interés real",
+      "description": "Tipo de interés real ajustado por la inflación"
+    },
+    "debtToGdp": {
+      "name": "Deuda de la administración central (% del PIB)",
+      "description": "Deuda de la administración central en porcentaje del PIB"
+    },
+    "exports": {
+      "name": "Exportaciones (US$ corrientes)",
+      "description": "Exportaciones de bienes y servicios"
+    },
+    "imports": {
+      "name": "Importaciones (US$ corrientes)",
+      "description": "Importaciones de bienes y servicios"
+    },
+    "tradeBalance": {
+      "name": "Balanza comercial",
+      "description": "Saldo exterior de bienes y servicios"
+    },
+    "fdi": {
+      "name": "Inversión extranjera directa",
+      "description": "Entradas netas de inversión extranjera directa"
+    },
+    "co2PerCapita": {
+      "name": "Emisiones de CO₂ per cápita",
+      "description": "Emisiones de dióxido de carbono per cápita en toneladas métricas"
+    },
+    "renewableEnergy": {
+      "name": "Consumo de energía renovable",
+      "description": "Porcentaje del consumo total de energía final"
+    },
+    "electricityAccess": {
+      "name": "Acceso a la electricidad",
+      "description": "Porcentaje de la población con acceso a la electricidad"
+    },
+    "povertyRate": {
+      "name": "Tasa de pobreza",
+      "description": "Población que vive con menos de 2,15 $ al día (PPA de 2017)"
+    },
+    "unemployment": {
+      "name": "Tasa de paro",
+      "description": "Paro en porcentaje de la población activa total"
+    },
+    "literacy": {
+      "name": "Tasa de alfabetización",
+      "description": "Tasa de alfabetización de adultos (15 años o más)"
+    },
+    "mineralRents": {
+      "name": "Rentas minerales (% del PIB)",
+      "description": "Rentas minerales, incluidos estaño, oro, plomo, zinc, hierro, cobre, níquel, plata, bauxita y fosfato"
+    },
+    "oresMetalsExports": {
+      "name": "Exportaciones de minerales y metales",
+      "description": "Minerales y metales en porcentaje de las exportaciones de mercancías"
+    },
+    "oresMetalsImports": {
+      "name": "Importaciones de minerales y metales",
+      "description": "Minerales y metales en porcentaje de las importaciones de mercancías"
+    },
+    "mineralDepletion": {
+      "name": "Agotamiento de minerales (% de la RNB)",
+      "description": "Relación entre el valor de las existencias minerales y la vida restante de las reservas (estaño, oro, plomo, zinc, hierro, cobre, níquel, plata, bauxita, fosfato)"
+    },
+    "oilRents": {
+      "name": "Rentas del petróleo (% del PIB)",
+      "description": "Diferencia entre el valor de la producción de crudo a precios regionales y los costes totales de producción"
+    },
+    "naturalGasRents": {
+      "name": "Rentas del gas natural (% del PIB)",
+      "description": "Diferencia entre el valor de la producción de gas natural a precios regionales y los costes totales de producción"
+    },
+    "totalResourceRents": {
+      "name": "Rentas totales de recursos naturales (% del PIB)",
+      "description": "Suma de las rentas del petróleo, el gas natural, el carbón, los minerales y los bosques"
+    }
+  },
+  "compare": {
+    "toggle": "Comparar años",
+    "from": "Desde",
+    "to": "Hasta",
+    "featuredOnly": "La comparación de años está disponible para los indicadores destacados.",
+    "sameYear": "Elige dos años distintos.",
+    "mapDescription": "Variación de {start} a {end}",
+    "legendTitle": "Variación {start}–{end}",
+    "decrease": "Descenso",
+    "increase": "Aumento",
+    "noChange": "0",
+    "loading": "Cargando {start} y {end}…",
+    "changeValue": "{absolute} ({percent})",
+    "fromTo": "{start} → {end}"
+  },
+  "country": {
+    "description": "{indicator} a lo largo del tiempo",
+    "loading": "Cargando historial: {loaded}/{total} años",
+    "empty": "No hay datos para este país.",
+    "gaps": "Huecos: sin datos registrados",
+    "latest": "Último ({year})",
+    "first": "Primero ({year})",
+    "change": "Variación desde {year}",
+    "hint": "Haz clic en un país para ver su historial."
+  }
+}

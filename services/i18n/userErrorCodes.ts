@@ -61,6 +61,15 @@ export const USER_ERROR_CODES = [
   "manualAssetCostInvalid",
   "manualAssetAttributeInvalid",
 
+  // Valuation overrides (convex/valuationOverrides.ts, services/pricing/valuationOverride.ts)
+  "holdingNotFound",
+  "valuationNotSupported",
+  "valuationPriceInvalid",
+  "valuationCurrencyInvalid",
+  "valuationInvalidDate",
+  "valuationDateInFuture",
+  "valuationRateInvalid",
+
   // Profile and onboarding (frontend/lib/utils/date.ts BirthDateError)
   "birthDate.format",
   "birthDate.invalid",

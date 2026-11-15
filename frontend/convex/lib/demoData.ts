@@ -19,6 +19,7 @@ import {
   positionBaseFields,
 } from "../../../services/finance/currency";
 import { loadFxRates } from "../fxRates";
+import { brokerPositionKey } from "../../../services/portfolio/flows";
 
 /**
  * A complete, plausible dataset for one user: a row in every user-owned
@@ -70,6 +71,7 @@ export const DEMO_TABLES = [
   "worldBankFavorites",
   "portfolioSnapshots",
   "apiKeys",
+  "valuationOverrides",
 ] as const satisfies readonly TableNames[];
 
 type DemoTable = (typeof DEMO_TABLES)[number];
@@ -268,6 +270,20 @@ export async function insertDemoData(
       createdAt: now,
     });
   }
+  // A manual price on the ETF at its synced price (ENG-239): the totals
+  // stay as they are, the positions table shows the override
+  await insert("valuationOverrides", {
+    userId,
+    holdingKey: brokerPositionKey(brokerAccountId, positions[0].symbol),
+    source: "brokerPosition",
+    symbol: positions[0].symbol,
+    kind: "manualPrice",
+    pricePerUnit: positions[0].price,
+    currency: "EUR",
+    asOf: isoDay(now),
+    createdAt: now,
+    updatedAt: now,
+  });
 
   // ── Crypto (Bitpanda) ──────────────────────────────────────────
   const bitpandaConnectionId = await insert("bitpandaConnections", {

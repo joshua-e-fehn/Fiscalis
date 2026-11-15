@@ -12,6 +12,49 @@ import { holdingProfitLoss } from "../../services/portfolio/categorySummary";
 import { hasUserOverride } from "../../services/classification";
 import { latestValuation } from "../../services/portfolio/manualAssets";
 import type { ClassificationTarget } from "../lib/types/classification";
+import { priceFeedFor } from "../../services/performance/config";
+import {
+  canOverrideValuation,
+  type ValuationOverride,
+} from "../../services/pricing/valuationOverride";
+
+/**
+ * How a priced provider holding is valued (ENG-239): its provider price,
+ * refreshed between syncs ("live") or only by its sync ("sync"), or the
+ * user's per-asset override.
+ */
+export type PositionValuationKind =
+  | "live"
+  | "sync"
+  | "manualPrice"
+  | "markToModel";
+
+/** How a broker position or Bitpanda holding row is valued. */
+export interface PositionValuation {
+  kind: PositionValuationKind;
+  /** The user can set an override (a priced asset, not cash or a liability) */
+  canOverride: boolean;
+  /** The override as entered, for the edit form */
+  override?: ValuationOverride;
+}
+
+/** The valuation of a broker position or Bitpanda holding row. */
+function positionValuation(
+  h: Extract<LoadedHolding, { source: "brokerPosition" | "bitpanda" }>,
+  category: string,
+  subcategory: string | undefined,
+): PositionValuation {
+  const priced =
+    !(h.source === "bitpanda" && h.doc.assetType === "fiat") &&
+    canOverrideValuation(category);
+  return {
+    kind:
+      h.override?.kind ??
+      (priceFeedFor(h.source, h.category, subcategory) ? "live" : "sync"),
+    canOverride: priced,
+    ...(h.override ? { override: h.override.input } : {}),
+  };
+}
 
 /**
  * Portfolio Queries
@@ -117,6 +160,8 @@ export interface UnifiedPosition {
    * `_id`, and whether the category is a manual one
    */
   classification?: { target: ClassificationTarget; isManual: boolean };
+  /** Set on broker positions and Bitpanda holdings (ENG-239) */
+  valuation?: PositionValuation;
 }
 
 /**
@@ -226,13 +271,14 @@ export const getUnifiedPositions = query({
             ...base,
             id: p.snaptradePositionId || p._id,
             classification: { target: "broker", isManual: hasUserOverride(p) },
+            valuation: positionValuation(h, placed.category, placed.subcategory),
             symbol: p.symbol,
             name: p.name || p.symbol,
             quantity: p.quantity,
-            currentPrice: p.currentPrice,
+            currentPrice: h.override?.pricePerUnit ?? p.currentPrice,
             ...(p.costFxEstimated && pl ? { costFxEstimated: true } : {}),
-            marketValue: signed(p.marketValue ?? 0),
-            currency: p.currency,
+            marketValue: signed(h.override?.marketValue ?? p.marketValue ?? 0),
+            currency: h.override?.currency ?? p.currency,
             lastSyncAt: p.lastSyncAt || p.createdAt,
             metadata: {
               brokerName: accountDoc?.institutionName,
@@ -267,12 +313,13 @@ export const getUnifiedPositions = query({
             ...base,
             id: `${b.connectionId}-${b.assetType}-${b.symbol}`,
             classification: { target: "bitpanda", isManual: hasUserOverride(b) },
+            valuation: positionValuation(h, placed.category, placed.subcategory),
             symbol: b.symbol,
             name: b.name || b.symbol,
             quantity: b.quantity,
-            currentPrice: b.currentPrice,
-            marketValue: signed(b.marketValue ?? 0),
-            currency: b.currency,
+            currentPrice: h.override?.pricePerUnit ?? b.currentPrice,
+            marketValue: signed(h.override?.marketValue ?? b.marketValue ?? 0),
+            currency: h.override?.currency ?? b.currency,
             lastSyncAt: b.lastSyncAt ?? b.createdAt,
             metadata: { assetType: b.assetType },
           });

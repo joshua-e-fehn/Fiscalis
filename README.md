@@ -58,8 +58,8 @@ Next.js 16 app (frontend/)  ──WebSocket──▶  Convex (frontend/convex/)
   minute, tick archive and prune daily, World Bank weekly. Provider-syncing
   crons run only where `SCHEDULED_SYNC_ENABLED=true` (production).
 - **Security:** provider tokens and Bitpanda keys are AES-256-GCM encrypted
-  at rest and API keys are stored only as a SHA-256 hash; every Convex function derives the user from auth and checks document
-  ownership; CSP is nonce-based and set in `frontend/proxy.ts`
+  at rest and API keys are stored only as a SHA-256 hash; every Convex
+  function derives the user from auth and checks document ownership; CSP is nonce-based and set in `frontend/proxy.ts`
   ([docs/SECURITY_CSP_GUIDE.md](./docs/SECURITY_CSP_GUIDE.md)).
 
 ## Repository layout

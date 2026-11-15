@@ -1,0 +1,98 @@
+{
+  "general": {
+    "title": "Geral",
+    "subtitle": "O teu perfil, moeda de apresentação, idioma e tema.",
+    "profile": {
+      "title": "Perfil",
+      "description": "Como o Fiscalis se dirige a ti.",
+      "displayName": "Nome a apresentar",
+      "displayNamePlaceholder": "O teu nome",
+      "birthDate": "Data de nascimento",
+      "birthDateHint": "Opcional. Usada por ferramentas de planeamento, como o planeador de reforma."
+    },
+    "region": {
+      "title": "Região",
+      "description": "Moeda e idioma.",
+      "currency": "Moeda de apresentação",
+      "currencyHint": "Totais, gráficos e rendibilidades são convertidos à taxa de câmbio mais recente, o histórico à taxa de cada dia. Empréstimos e linhas de contas mantêm a sua própria moeda."
+    },
+    "appearance": {
+      "title": "Aspeto",
+      "description": "Sistema segue a definição do teu dispositivo.",
+      "theme": "Tema"
+    },
+    "saveFailed": "Não conseguimos guardar as tuas definições. Tenta novamente."
+  },
+  "apiKeys": {
+    "title": "Chaves de API",
+    "subtitle": "Consulta o teu património líquido de forma programática. As chaves são privadas e limitadas à tua conta.",
+    "create": {
+      "title": "Criar uma chave",
+      "description": "Uma chave dá acesso só de leitura ao teu património líquido atual. Trata-a como uma palavra-passe: nunca a incluas num commit nem a uses em código do navegador.",
+      "name": "Nome",
+      "namePlaceholder": "p. ex. Painel de casa",
+      "expires": "Expira",
+      "submit": "Criar chave"
+    },
+    "expiry": {
+      "30": "30 dias",
+      "90": "90 dias",
+      "365": "1 ano",
+      "never": "Nunca"
+    },
+    "list": {
+      "title": "As tuas chaves",
+      "empty": "Ainda não tens chaves de API.",
+      "name": "Nome",
+      "key": "Chave",
+      "status": "Estado",
+      "created": "Criada",
+      "expires": "Expira",
+      "lastUsed": "Última utilização",
+      "never": "Nunca",
+      "none": "—"
+    },
+    "status": {
+      "active": "Ativa",
+      "revoked": "Revogada",
+      "expired": "Expirada"
+    },
+    "revoke": {
+      "button": "Revogar",
+      "title": "Revogar “{name}”?",
+      "description": "Os pedidos que usem esta chave serão rejeitados de imediato. Esta ação não pode ser anulada.",
+      "confirm": "Revogar"
+    },
+    "usage": {
+      "title": "Utilização",
+      "description": "Envia a chave no cabeçalho Authorization. Chaves em URLs não são aceites. Cada chave está limitada a {limit} pedidos por minuto. Os montantes estão em EUR; acrescenta <code>?currency=USD</code>, <code>GBP</code> ou <code>CHF</code> para os converter à taxa de câmbio mais recente."
+    },
+    "newKey": {
+      "title": "Copia a tua nova chave de API",
+      "description": "Esta é a única vez que a chave será mostrada. Guarda-a num local seguro, como um gestor de palavras-passe ou um cofre de segredos.",
+      "copy": "Copiar chave de API",
+      "done": "Concluído"
+    }
+  },
+  "privacy": {
+    "title": "Privacidade",
+    "subtitle": "Descarrega tudo o que o Fiscalis guarda sobre ti ou elimina a tua conta.",
+    "export": {
+      "title": "Descarregar os meus dados",
+      "description": "Um ficheiro JSON com todos os registos da tua conta, agrupados por tabela. Credenciais de fornecedores encriptadas e hashes de chaves de API ficam de fora.",
+      "button": "Descarregar os meus dados",
+      "preparing": "A preparar…",
+      "failed": "Não conseguimos preparar os teus dados. Tenta novamente."
+    },
+    "delete": {
+      "title": "Eliminar a minha conta",
+      "description": "Desliga os teus bancos e corretoras na Plaid e na SnapTrade, elimina todos os teus dados e depois o teu acesso. Esta ação não pode ser anulada.",
+      "button": "Eliminar a minha conta",
+      "dialogTitle": "Eliminar a tua conta?",
+      "dialogDescription": "Primeiro, as tuas ligações são revogadas. Depois, todas as contas, posições, transações, empréstimos, artigos do cofre, snapshots e definições são eliminados e, por fim, o teu acesso. Descarrega primeiro os teus dados se quiseres uma cópia.",
+      "confirmLabel": "Escreve {phrase} para confirmar",
+      "confirm": "Eliminar conta definitivamente",
+      "deleting": "A eliminar…"
+    }
+  }
+}

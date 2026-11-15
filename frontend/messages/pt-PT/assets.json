@@ -1,0 +1,153 @@
+{
+  "actions": {
+    "connectBroker": "Ligar corretora",
+    "connectBank": "Ligar banco",
+    "connectCrypto": "Ligar cripto",
+    "addItem": "Adicionar artigo",
+    "addProperty": "Adicionar imóvel",
+    "viewHoldings": "Ver posições",
+    "viewAccounts": "Ver contas",
+    "viewPortfolio": "Ver carteira",
+    "viewProperties": "Ver imóveis",
+    "viewCollection": "Ver coleção"
+  },
+  "bonds": {
+    "subtitle": "Acompanha os teus investimentos de rendimento fixo - obrigações do Estado, obrigações de empresas e fundos de obrigações.",
+    "categories": "Categorias de obrigações"
+  },
+  "cash": {
+    "title": "Liquidez e mercado monetário",
+    "subtitle": "Acompanha os teus ativos líquidos - contas poupança, fundos do mercado monetário, depósitos a prazo e posições em moeda estrangeira.",
+    "balanceHistory": "Histórico do saldo de liquidez",
+    "categories": "Categorias de liquidez"
+  },
+  "equities": {
+    "subtitle": "Acompanha a tua carteira de ações, ETFs, fundos de investimento e investimentos em private equity.",
+    "publicMarkets": "Mercados públicos",
+    "privateMarkets": "Mercados privados"
+  },
+  "realEstate": {
+    "subtitle": "Acompanha os teus investimentos imobiliários - imóveis residenciais, imóveis comerciais, REITs e mais.",
+    "categories": "Categorias de imóveis"
+  },
+  "collectibles": {
+    "subtitle": "Acompanha os teus investimentos em colecionáveis - arte, vinho, relógios, carros clássicos e mais.",
+    "categories": "Categorias de colecionáveis"
+  },
+  "commodities": {
+    "subtitle": "Acompanha preços em tempo real e gere as tuas posições em diferentes tipos de matérias-primas",
+    "categories": "Categorias de matérias-primas"
+  },
+  "metals": {
+    "signIn": "Inicia sessão para veres a tua carteira de metais."
+  },
+  "crypto": {
+    "title": "Criptoativos",
+    "subtitle": "Acompanha os teus investimentos em criptomoedas e o desempenho da carteira",
+    "tabs": {
+      "overview": "Resumo",
+      "holdings": "Posições",
+      "transactions": "Transações"
+    },
+    "categories": "Categorias cripto",
+    "holdings": {
+      "title": "Todas as posições cripto",
+      "description": "Lista completa das tuas posições em criptomoedas em todas as plataformas e carteiras ligadas",
+      "emptyTitle": "Nenhuma conta cripto ligada",
+      "emptyDescription": "Liga as tuas plataformas e carteiras cripto para veres todas as tuas posições",
+      "connect": "Ligar contas cripto"
+    },
+    "transactions": {
+      "title": "Histórico de transações",
+      "connectDescription": "Liga as tuas contas cripto para veres o teu histórico de transações",
+      "notConnected": "Ainda não há contas cripto ligadas. Liga as tuas plataformas e carteiras para veres o teu histórico de transações.",
+      "description": "Todas as transações nas tuas contas cripto ligadas",
+      "empty": "Nenhuma transação encontrada. O teu histórico de transações aparece aqui após a sincronização.",
+      "justNow": "agora mesmo",
+      "unknownDate": "Data desconhecida",
+      "types": {
+        "buy": "Compra",
+        "sell": "Venda",
+        "deposit": "Depósito",
+        "withdraw": "Levantamento",
+        "withdrawal": "Levantamento",
+        "receive": "Receção",
+        "send": "Envio",
+        "transfer": "Transferência",
+        "reward": "Recompensa",
+        "staking": "Staking",
+        "dividend": "Dividendo",
+        "interest": "Juros",
+        "fee": "Comissão"
+      }
+    },
+    "allocation": {
+      "title": "Alocação por posição",
+      "empty": "Ainda sem posições",
+      "other": "Outros (<2%)",
+      "otherShort": "Outros"
+    },
+    "positions": {
+      "title": "Todas as posições",
+      "count": "{shown} de {total, plural, one {# posição} other {# posições}}",
+      "search": "Pesquisar por token...",
+      "loading": "A carregar posições…",
+      "noMatch": "Nenhuma posição corresponde à tua pesquisa",
+      "empty": "Nenhuma posição encontrada",
+      "token": "Token",
+      "quantity": "Quantidade",
+      "value": "Valor",
+      "category": "Categoria",
+      "priceUnavailable": "Preço indisponível",
+      "staleHint": "A Bitpanda não tinha um preço atual; é mostrado o último preço conhecido",
+      "priceAsOf": "Preço de {date}",
+      "lastKnownPrice": "Último preço conhecido"
+    }
+  },
+  "manualAssets": {
+    "add": "Adicionar ativo",
+    "emptyHint": "Adiciona um ativo para o acompanhares aqui. Conta para o teu património líquido pela avaliação mais recente.",
+    "addTitle": "Adicionar um ativo",
+    "editTitle": "Editar {name}",
+    "description": "Regista algo que nenhuma conta ligada indica. Conta para o teu património líquido pela avaliação mais recente.",
+    "actionsLabel": "Ações para {name}",
+    "fields": {
+      "category": "Categoria",
+      "subcategory": "Subcategoria",
+      "name": "Nome",
+      "namePlaceholder": "p. ex. Apartamento em Lisboa, Rolex Submariner",
+      "currency": "Moeda",
+      "valuations": "Avaliações",
+      "valuationsHint": "Quanto valia o ativo em cada data. Conta a mais recente.",
+      "date": "Data",
+      "value": "Valor",
+      "addValuation": "Adicionar avaliação",
+      "removeValuation": "Remover avaliação",
+      "costBasis": "Preço de compra",
+      "optional": "Opcional",
+      "costBasisHint": "Com um preço de compra, é mostrado o ganho ou a perda. Associa o empréstimo que financiou o ativo, se houver.",
+      "linkedLoan": "Financiado por",
+      "noLoan": "Sem empréstimo"
+    },
+    "attributes": {
+      "artist": "Artista",
+      "brand": "Marca",
+      "model": "Modelo",
+      "referenceNumber": "N.º de referência",
+      "producer": "Produtor",
+      "vintage": "Colheita",
+      "year": "Ano",
+      "address": "Morada",
+      "grade": "Classificação"
+    },
+    "toast": {
+      "created": "{name} adicionado",
+      "updated": "{name} guardado",
+      "deleted": "{name} eliminado"
+    },
+    "deleteDialog": {
+      "title": "Eliminar {name}?",
+      "description": "O ativo e todas as suas avaliações são removidos e deixam de contar para o teu património líquido. Esta ação não pode ser anulada."
+    }
+  }
+}

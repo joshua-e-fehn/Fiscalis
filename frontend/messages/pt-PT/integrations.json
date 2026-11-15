@@ -1,0 +1,244 @@
+{
+  "status": {
+    "connected": "Ligado",
+    "syncing": "A sincronizar",
+    "error": "Erro",
+    "reauthRequired": "Reautenticação necessária",
+    "pending": "Pendente",
+    "retrying": "A repetir",
+    "disconnected": "Desligado"
+  },
+  "connection": {
+    "openMenu": "Abrir menu",
+    "sync": "Sincronizar",
+    "syncing": "A sincronizar…",
+    "disconnect": "Desligar",
+    "disconnecting": "A desligar…",
+    "disconnectTitle": "Desligar {name}?",
+    "disconnectInfo": "Isto remove {info} e os respetivos dados do teu painel.",
+    "disconnectDefault": "Isto remove esta ligação e todos os dados associados do teu painel.",
+    "notAffected": "A tua conta real não é afetada. Podes voltar a ligar a qualquer momento.",
+    "cash": "{amount} em liquidez",
+    "syncedJustNow": "agora mesmo"
+  },
+  "banking": {
+    "title": "Contas bancárias",
+    "subtitle": "Liga as tuas contas bancárias para acompanhares automaticamente saldos e transações.",
+    "connectBank": "Ligar banco",
+    "unknownBank": "Banco desconhecido",
+    "accounts": "{count, plural, one {# conta} other {# contas}}",
+    "stats": {
+      "netBalance": "Saldo líquido",
+      "netBalanceDescription": "{accounts, plural, one {# conta} other {# contas}}, após dívidas",
+      "netBalanceDescriptionUnconverted": "{accounts, plural, one {# conta} other {# contas}}, após dívidas · {unconverted} sem taxa de câmbio",
+      "checking": "À ordem",
+      "savings": "Poupança",
+      "owed": "Em dívida",
+      "cards": "{cards, plural, one {# cartão} other {# cartões}}",
+      "cardsAndLoans": "{cards, plural, one {# cartão} other {# cartões}}, {loans, plural, one {# empréstimo} other {# empréstimos}}"
+    },
+    "empty": {
+      "loadFailedTitle": "Não foi possível carregar as contas",
+      "loadFailedDescription": "Não conseguimos carregar as tuas contas bancárias. Experimenta atualizar a página.",
+      "refreshPage": "Atualizar página",
+      "syncTitle": "Sincroniza as tuas contas",
+      "syncDescription": "{count, plural, one {Tens # ligação bancária, mas ainda nenhuma conta sincronizada.} other {Tens # ligações bancárias, mas ainda nenhuma conta sincronizada.}} Clica abaixo para obteres os dados das tuas contas.",
+      "syncAccounts": "Sincronizar contas",
+      "noAccountsTitle": "Nenhuma conta associada",
+      "noAccountsDescription": "Liga as tuas contas bancárias para acompanhares as tuas finanças, veres saldos e seguires transações num só lugar."
+    },
+    "accountTypes": {
+      "checking": "Conta à ordem",
+      "savings": "Conta poupança",
+      "moneyMarket": "Mercado monetário",
+      "cd": "Depósito a prazo",
+      "cashManagement": "Gestão de tesouraria",
+      "prepaid": "Pré-pago",
+      "paypal": "PayPal",
+      "depository": "Conta bancária",
+      "creditCard": "Cartão de crédito",
+      "credit": "Crédito",
+      "loan": "Empréstimo",
+      "mortgage": "Crédito à habitação",
+      "student": "Crédito para estudantes",
+      "auto": "Crédito automóvel",
+      "investment": "Investimento",
+      "brokerage": "Conta de corretora"
+    },
+    "account": {
+      "fallbackName": "Conta bancária",
+      "available": "Disponível: {amount}"
+    },
+    "link": {
+      "connecting": "A ligar…",
+      "connectAnother": "Ligar outro banco",
+      "connectFirst": "Liga o teu banco",
+      "connected": "Banco ligado com sucesso"
+    },
+    "reauth": {
+      "needsReauth": "Esta ligação tem de ser reautenticada",
+      "disconnectBank": "Desligar banco",
+      "expiredTitle": "Ligação expirada",
+      "expiredDescription": "Por motivos de segurança, o teu banco pede-te que inicies sessão novamente. Clica em voltar a ligar para restaurares o acesso às tuas contas.",
+      "disconnectDescription": "Isto remove completamente a ligação do teu painel.",
+      "notAffected": "A tua conta bancária real não é afetada. Podes voltar a ligar a qualquer momento.",
+      "reconnect": "Voltar a ligar",
+      "reconnecting": "A voltar a ligar…",
+      "alertTitle": "{count, plural, one {Uma ligação bancária precisa de atenção} other {Ligações bancárias precisam de atenção}}",
+      "alertOne": "A tua ligação a {name} tem de ser reautenticada.",
+      "alertOneUnnamed": "A tua ligação a um banco tem de ser reautenticada.",
+      "alertMany": "{count, plural, one {# ligação bancária tem de ser reautenticada.} other {# ligações bancárias têm de ser reautenticadas.}}"
+    },
+    "transactions": {
+      "title": "Transações",
+      "subtitle": "As tuas transações bancárias em todas as contas ligadas.",
+      "open": "Transações",
+      "sync": "Sincronizar transações",
+      "syncing": "A sincronizar transações…",
+      "syncDone": "{count, plural, =0 {Tudo atualizado: sem transações novas.} one {# transação atualizada.} other {# transações atualizadas.}}",
+      "syncPartial": "{failed, plural, one {Não foi possível sincronizar # banco.} other {Não foi possível sincronizar # bancos.}} Tenta novamente mais tarde.",
+      "syncFailed": "Não foi possível sincronizar as transações. Tenta novamente mais tarde.",
+      "filters": {
+        "account": "Conta",
+        "allAccounts": "Todas as contas",
+        "from": "De",
+        "to": "Até",
+        "search": "Pesquisar",
+        "searchPlaceholder": "Pesquisar descrições…",
+        "clear": "Limpar filtros"
+      },
+      "columns": {
+        "date": "Data",
+        "description": "Descrição",
+        "account": "Conta",
+        "amount": "Montante"
+      },
+      "pending": "Pendente",
+      "moneyIn": "Entradas",
+      "moneyOut": "Saídas",
+      "loadMore": "Carregar mais",
+      "loadingMore": "A carregar…",
+      "searchOrder": "Os resultados da pesquisa estão ordenados por relevância.",
+      "empty": {
+        "noBankTitle": "Nenhum banco ligado",
+        "noBankDescription": "Liga um banco para veres aqui as suas transações.",
+        "noTransactionsTitle": "Ainda sem transações",
+        "noTransactionsDescription": "Sincroniza as tuas transações para as obteres do teu banco. As novas também chegam com a sincronização diária.",
+        "noMatchesTitle": "Nenhuma transação correspondente",
+        "noMatchesDescription": "Experimenta outra conta, outro intervalo de datas ou outro termo de pesquisa."
+      }
+    },
+    "consent": {
+      "expiringTitle": "{days, plural, one {O teu consentimento para este banco termina daqui a # dia} other {O teu consentimento para este banco termina daqui a # dias}}",
+      "expiringDescription": "Renova-o até {date} para que os teus saldos continuem a sincronizar.",
+      "expiredTitle": "O teu consentimento para este banco terminou",
+      "expiredDescription": "Renova-o para voltares a sincronizar os teus saldos."
+    }
+  },
+  "brokers": {
+    "title": "Corretoras",
+    "subtitle": "Liga as tuas corretoras e plataformas. Hoje: corretoras SnapTrade e Bitpanda — mais em breve.",
+    "refresh": "Atualizar",
+    "connectBroker": "Ligar corretora",
+    "stats": {
+      "totalValue": "Valor total",
+      "positions": "{count, plural, one {# posição} other {# posições}}",
+      "brokers": "Corretoras",
+      "connectedBrokers": "Corretoras ligadas",
+      "accounts": "Contas",
+      "tradingAccounts": "Contas de corretora",
+      "cash": "Liquidez",
+      "availableCash": "Liquidez disponível"
+    },
+    "connect": {
+      "connectFirst": "Liga a tua corretora",
+      "connectAnother": "Ligar outra corretora",
+      "add": "Adicionar corretora",
+      "preparing": "A preparar…",
+      "connecting": "A ligar…",
+      "connected": "Corretora ligada",
+      "connectingAccount": "A ligar a tua conta de corretora…",
+      "portalTitle": "Portal de ligação da SnapTrade",
+      "failed": "Não conseguimos ligar a tua corretora. Tenta novamente."
+    },
+    "connection": {
+      "unknownBroker": "Corretora desconhecida",
+      "fallbackName": "Corretora",
+      "accounts": "{count, plural, one {# conta} other {# contas}}",
+      "status": "Estado",
+      "accountId": "ID da conta",
+      "username": "Nome de utilizador",
+      "lastSynced": "Última sincronização",
+      "never": "Nunca",
+      "pendingNotice": "Integração da API pendente. Os dados são sincronizados assim que estiver ligada.",
+      "transientNotice": "Problema temporário na corretora. Vai tentar novamente de forma automática.",
+      "disconnectTitle": "Desligar corretora",
+      "disconnectDescription": "Queres mesmo desligar “{name}”? Isto remove a ligação à corretora e todos os dados das suas posições da tua conta. Esta ação não pode ser anulada."
+    },
+    "connections": {
+      "title": "Ligações a corretoras",
+      "description": "Gere as tuas ligações a corretoras",
+      "loadFailed": "Não foi possível carregar as ligações a corretoras. Tenta novamente mais tarde.",
+      "connectedCount": "{count, plural, one {# corretora ligada} other {# corretoras ligadas}}",
+      "connectPrompt": "Liga as tuas contas de corretora para acompanhares os teus investimentos",
+      "emptyTitle": "Nenhuma corretora ligada",
+      "emptyDescription": "Liga a tua conta de corretora para acompanhares automaticamente os teus investimentos e o desempenho da carteira."
+    },
+    "account": {
+      "fallbackType": "Investimento",
+      "accountNumber": "Conta {number}",
+      "totalValue": "Valor total",
+      "cash": "Liquidez",
+      "invested": "Investido"
+    },
+    "empty": {
+      "syncTitle": "Sincroniza as tuas contas",
+      "syncDescription": "{count, plural, one {Tens # ligação a corretora, mas ainda nenhuma conta sincronizada.} other {Tens # ligações a corretoras, mas ainda nenhuma conta sincronizada.}} Clica abaixo para obteres os dados das tuas contas.",
+      "syncAccounts": "Sincronizar contas",
+      "noBrokersTitle": "Nenhuma corretora ligada",
+      "noBrokersDescription": "Liga as tuas contas de corretora para acompanhares os teus investimentos, posições e o desempenho da carteira num só lugar."
+    },
+    "reauth": {
+      "needsAttention": "A ligação precisa de atenção",
+      "description": "Esta ligação expirou ou tem de ser reautenticada. Volta a ligar para continuares a sincronizar os teus dados.",
+      "reconnect": "Voltar a ligar",
+      "dialogTitle": "Voltar a ligar {name}",
+      "dialogDescription": "Reautentica a tua ligação para continuares a sincronizar dados.",
+      "completing": "A concluir a reautenticação…",
+      "success": "Reautenticação concluída com sucesso!",
+      "failedTitle": "A ligação falhou",
+      "failed": "Não foi possível voltar a ligar. Tenta novamente.",
+      "portalTitle": "Nova ligação SnapTrade"
+    }
+  },
+  "bitpanda": {
+    "title": "Bitpanda",
+    "subtitle": "Cripto, metais, matérias-primas, ações e liquidez através de uma chave de API só de leitura.",
+    "holdings": "{count, plural, one {# posição} other {# posições}}",
+    "emptyDescription": "Liga a tua conta Bitpanda com uma chave de API só de leitura para acompanhares todas as tuas posições.",
+    "fallbackLabel": "Conta Bitpanda",
+    "keyRejected": "Chave de API rejeitada — volta a ligar com uma nova chave só de leitura",
+    "syncFailed": "A sincronização falhou — tenta novamente",
+    "transient": "Problema temporário na Bitpanda — vai tentar novamente de forma automática",
+    "lastSynced": "última sincronização {date}",
+    "syncNow": "Sincronizar agora",
+    "addAnother": "Adicionar outra chave Bitpanda",
+    "connect": {
+      "button": "Ligar a Bitpanda",
+      "title": "Ligar a Bitpanda",
+      "description": "Cola uma chave de API da Bitpanda <strong>só de leitura</strong>. O Fiscalis usa-a para sincronizar as tuas posições em cripto, metais, matérias-primas, ações e liquidez. A chave é encriptada e nunca é partilhada.",
+      "apiKey": "Chave de API",
+      "apiKeyPlaceholder": "A tua chave de API da Bitpanda só de leitura",
+      "createKey": "Cria uma chave só de leitura na Bitpanda",
+      "label": "Etiqueta (opcional)",
+      "labelPlaceholder": "p. ex. A minha Bitpanda",
+      "submit": "Ligar",
+      "connecting": "A ligar…",
+      "keyMissing": "Cola a tua chave de API da Bitpanda."
+    }
+  },
+  "connectionNotices": {
+    "disconnectFailed": "Não foi possível desligar. Nada foi removido; tenta novamente.",
+    "transientError": "Problema temporário no fornecedor. A tua ligação está bem; vai tentar novamente de forma automática."
+  }
+}

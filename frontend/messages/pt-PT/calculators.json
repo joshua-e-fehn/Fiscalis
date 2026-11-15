@@ -1,0 +1,295 @@
+{
+  "index": {
+    "title": "Calculadoras",
+    "subtitle": "Ferramentas financeiras para te ajudar a tomar melhores decisões de investimento e de crédito.",
+    "interestDescription": "Taxas de juro, duração do crescimento, valores futuros e atuais com juros simples ou compostos.",
+    "loanDescription": "Prestações, juros totais e amortização para empréstimos de prestação constante, decrescente, só juros e bullet, com amortizações antecipadas."
+  },
+  "intervals": {
+    "label": {
+      "minute": "Minuto",
+      "hour": "Hora",
+      "day": "Dia",
+      "week": "Semana",
+      "month": "Mês",
+      "quarter": "Trimestre",
+      "year": "Ano"
+    },
+    "unitPlural": {
+      "minute": "minutos",
+      "hour": "horas",
+      "day": "dias",
+      "week": "semanas",
+      "month": "meses",
+      "quarter": "trimestres",
+      "year": "anos"
+    },
+    "per": {
+      "minute": "Por minuto",
+      "hour": "Por hora",
+      "day": "Por dia",
+      "week": "Por semana",
+      "month": "Por mês",
+      "quarter": "Por trimestre",
+      "year": "Por ano"
+    },
+    "count": {
+      "minute": "{count, plural, one {# minuto} other {# minutos}}",
+      "hour": "{count, plural, one {# hora} other {# horas}}",
+      "day": "{count, plural, one {# dia} other {# dias}}",
+      "week": "{count, plural, one {# semana} other {# semanas}}",
+      "month": "{count, plural, one {# mês} other {# meses}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestres}}",
+      "year": "{count, plural, one {# ano} other {# anos}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, one {# minuto} other {# minutos}}",
+      "hour": "{count, plural, one {# hora} other {# horas}}",
+      "day": "{count, plural, one {# dia} other {# dias}}",
+      "week": "{count, plural, one {# semana} other {# semanas}}",
+      "month": "{count, plural, one {# mês} other {# meses}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestres}}",
+      "year": "{count, plural, one {# ano} other {# anos}}"
+    }
+  },
+  "interest": {
+    "title": "Calculadoras de juros",
+    "subtitle": "Ferramentas financeiras poderosas para te ajudar a tomar melhores decisões de investimento. Calcula juros compostos, taxas de crescimento, valores futuros e muito mais.",
+    "tabs": {
+      "rate": "Taxa de juro",
+      "duration": "Duração",
+      "futureValue": "Valor futuro",
+      "startingValue": "Valor inicial"
+    },
+    "fields": {
+      "initialValue": "Valor inicial",
+      "finalValue": "Valor final",
+      "startDate": "Data de início",
+      "endDate": "Data de fim",
+      "interval": "Período de capitalização",
+      "intervalPlaceholder": "Seleciona o período",
+      "startingCapital": "Capital inicial",
+      "targetCapital": "Capital objetivo",
+      "interestRate": "Taxa de juro (%)",
+      "timePeriod": "Prazo ({unit})"
+    },
+    "calculate": "Calcular",
+    "results": "Resultados",
+    "empty": "Introduz valores e calcula para veres os resultados",
+    "compoundInterest": "Juros compostos",
+    "simpleInterest": "Juros simples",
+    "withCompound": "Com juros compostos",
+    "withSimple": "Com juros simples",
+    "gainAfter": "Ganho: {amount} ao fim de {duration}",
+    "growthAfter": "Crescimento: {amount} ao fim de {duration}",
+    "rate": {
+      "title": "Calcular a taxa de juro",
+      "description": "Descobre a taxa de juro média entre dois momentos, com juros compostos e simples",
+      "resultsHint": "Com base nos teus dados, estas são as taxas de juro calculadas"
+    },
+    "duration": {
+      "title": "Calcular a duração",
+      "description": "Descobre quanto tempo demoras a atingir o teu capital objetivo com base no valor inicial e na taxa de juro",
+      "resultsHint": "Tempo necessário para atingires o teu capital objetivo"
+    },
+    "futureValue": {
+      "title": "Calcular o valor futuro",
+      "description": "Descobre quanto vai valer o teu investimento no futuro com base na taxa de juro e no prazo",
+      "resultsHint": "Valor futuro projetado do teu investimento"
+    },
+    "startingValue": {
+      "title": "Calcular o valor inicial",
+      "description": "Descobre quanto precisas de investir agora para atingires o teu objetivo no futuro",
+      "resultsHint": "Investimento inicial necessário para atingires o teu objetivo"
+    }
+  },
+  "loan": {
+    "title": "Calculadora de empréstimos",
+    "subtitle": "Percebe os diferentes tipos de empréstimo, visualiza as tuas prestações e encontra a melhor opção para a tua situação. Mostramos-te exatamente para onde vai o teu dinheiro.",
+    "tabs": {
+      "calculate": "Calcular empréstimo",
+      "compare": "Comparar todos os tipos"
+    },
+    "chooseType": "1. Escolhe o tipo de empréstimo",
+    "calculateSection": "2. Calcula o teu empréstimo",
+    "understanding": "{name} explicado",
+    "howItWorks": "Como funciona",
+    "bestFor": "Ideal para",
+    "watchOut": "Atenção a",
+    "intervals": {
+      "MONTHLY": {
+        "label": "Mensal",
+        "payment": "Prestação mensal",
+        "perPeriod": "por mês",
+        "recurring": "Amortização adicional (todos os meses)"
+      },
+      "QUARTERLY": {
+        "label": "Trimestral",
+        "payment": "Prestação trimestral",
+        "perPeriod": "por trimestre",
+        "recurring": "Amortização adicional (todos os trimestres)"
+      },
+      "SEMI_ANNUAL": {
+        "label": "Semestral",
+        "payment": "Prestação semestral",
+        "perPeriod": "por semestre",
+        "recurring": "Amortização adicional (todos os semestres)"
+      },
+      "ANNUAL": {
+        "label": "Anual",
+        "payment": "Prestação anual",
+        "perPeriod": "por ano",
+        "recurring": "Amortização adicional (todos os anos)"
+      }
+    },
+    "types": {
+      "ANNUITY": {
+        "name": "Empréstimo de prestação constante",
+        "shortName": "Prestação constante",
+        "shortDescription": "A mesma prestação em cada período, o tipo mais comum",
+        "calculatorTitle": "Calculadora de empréstimo de prestação constante",
+        "calculatorDescription": "Calcula a tua prestação periódica e vê como se reparte ao longo do tempo.",
+        "howItWorks1": "Pagas o mesmo montante em cada período durante todo o prazo do empréstimo",
+        "howItWorks2": "As primeiras prestações são sobretudo juros, as últimas sobretudo capital",
+        "howItWorks3": "A dívida total diminui de forma constante ao longo do tempo",
+        "bestFor1": "Compradores de casa que querem um orçamento previsível",
+        "bestFor2": "Empréstimos de longo prazo (15-30 anos)",
+        "bestFor3": "Quem prefere estabilidade a flexibilidade",
+        "watchOut1": "Pagas mais juros nos primeiros anos",
+        "watchOut2": "Menos flexibilidade se o teu rendimento mudar"
+      },
+      "CONSTANT_PRINCIPAL": {
+        "name": "Empréstimo de prestação decrescente",
+        "shortName": "Prestação decrescente",
+        "shortDescription": "As prestações começam altas e diminuem com o tempo",
+        "calculatorTitle": "Calculadora de empréstimo de prestação decrescente",
+        "calculatorDescription": "Vê como as tuas prestações diminuem à medida que amortizas o capital.",
+        "howItWorks1": "Pagas um montante fixo de capital em cada período, mais juros",
+        "howItWorks2": "À medida que a dívida diminui, os juros também diminuem e as prestações ficam mais baixas",
+        "howItWorks3": "Os juros totais pagos são inferiores aos de um empréstimo de prestação constante",
+        "bestFor1": "Quem espera ter um rendimento mais baixo no futuro (perto da reforma)",
+        "bestFor2": "Quem consegue pagar prestações iniciais mais altas",
+        "bestFor3": "Quem quer minimizar os juros totais pagos",
+        "watchOut1": "As prestações iniciais podem ser 20-30% mais altas do que as de prestação constante",
+        "watchOut2": "Podes não ser elegível se o teu rendimento mal cobrir a primeira prestação"
+      },
+      "INTEREST_ONLY": {
+        "name": "Empréstimo só de juros",
+        "shortName": "Só juros",
+        "shortDescription": "Pagas só juros e o capital mais tarde",
+        "calculatorTitle": "Calculadora de empréstimo só de juros",
+        "calculatorDescription": "Paga só juros durante um período e depois começa a pagar capital.",
+        "howItWorks1": "Durante um período definido, pagas apenas juros - a dívida não diminui",
+        "howItWorks2": "Depois do período só de juros, começas também a pagar capital",
+        "howItWorks3": "As prestações sobem bastante quando começam os pagamentos de capital",
+        "bestFor1": "Investidores imobiliários que esperam vender antes de começarem os pagamentos de capital",
+        "bestFor2": "Quem espera ter um rendimento mais alto no futuro",
+        "bestFor3": "Necessidades de financiamento de curto prazo",
+        "watchOut1": "Não acumulas capital próprio durante o período só de juros",
+        "watchOut2": "Choque de prestação quando começam os pagamentos regulares",
+        "watchOut3": "Risco de dever mais do que o ativo vale"
+      },
+      "BULLET": {
+        "name": "Empréstimo balão / bullet",
+        "shortName": "Bullet",
+        "shortDescription": "Pagas só juros, todo o capital vence no fim",
+        "calculatorTitle": "Calculadora de empréstimo balão / bullet",
+        "calculatorDescription": "Paga só juros durante todo o prazo, com o capital total a vencer no fim.",
+        "howItWorks1": "Pagas apenas juros durante todo o prazo do empréstimo",
+        "howItWorks2": "O capital total vence num único pagamento no fim",
+        "howItWorks3": "As prestações periódicas são muito baixas, mas precisas de um plano para o pagamento final",
+        "bestFor1": "Crédito intercalar (empréstimos de curto prazo até haver financiamento definitivo)",
+        "bestFor2": "Investidores que planeiam vender o ativo antes do vencimento do empréstimo",
+        "bestFor3": "Empréstimos para construção ou projetos de promoção imobiliária",
+        "watchOut1": "Risco elevado - tens de ter um plano para pagar ou refinanciar",
+        "watchOut2": "Se não conseguires pagar o balão, podes perder o ativo",
+        "watchOut3": "Não acumulas capital próprio durante o prazo do empréstimo"
+      }
+    },
+    "fields": {
+      "loanAmount": "Montante do empréstimo",
+      "annualInterestRate": "Taxa de juro anual (%)",
+      "interestRate": "Taxa de juro (%)",
+      "termYears": "Prazo do empréstimo (anos)",
+      "termYearsShort": "Prazo (anos)",
+      "paymentSchedule": "Periodicidade",
+      "interestOnlyYears": "Período só de juros (anos)",
+      "interestOnlyHint": "Quantos anos até começares a pagar capital?"
+    },
+    "prepayments": {
+      "title": "Amortizações antecipadas",
+      "enabled": "Ativadas",
+      "disabled": "Desativadas",
+      "recurringHint": "Este montante é somado a cada prestação regular.",
+      "oneTime": "Amortizações pontuais",
+      "add": "Adicionar amortização",
+      "oneTimeHint": "Agenda amortizações específicas em determinados anos (p. ex. prémio anual, herança).",
+      "year": "Ano",
+      "amountPlaceholder": "Montante",
+      "fixedAmount": "Montante fixo",
+      "percentOfBalance": "% do saldo",
+      "remove": "Remover amortização"
+    },
+    "calculate": "Calcular o meu empréstimo",
+    "yourResults": "Os teus resultados",
+    "summary": {
+      "totalInterest": "Juros totais",
+      "totalCost": "Custo total",
+      "interestToPrincipal": "Juros / capital",
+      "savingsTitle": "Poupança com amortizações",
+      "interestSaved": "Juros poupados",
+      "periodsSaved": "Períodos poupados",
+      "originalTerm": "Prazo original",
+      "newTerm": "Novo prazo",
+      "payments": "{count, plural, one {# prestação} other {# prestações}}"
+    },
+    "charts": {
+      "principal": "Capital",
+      "interest": "Juros",
+      "balance": "Capital em dívida",
+      "payment": "Prestação",
+      "yearTick": "A{year}",
+      "principalValue": "Capital: {amount}",
+      "interestValue": "Juros: {amount}",
+      "totalValue": "Total: {amount}",
+      "balanceValue": "Saldo: {amount}",
+      "breakdownByYear": "Repartição das prestações por ano",
+      "breakdownHint": "Capital (verde) vs juros (laranja) ao longo do tempo.",
+      "balanceOverTime": "Capital em dívida ao longo do tempo",
+      "balanceHint": "Vê a tua dívida diminuir à medida que pagas.",
+      "breakdown": "Repartição das prestações"
+    },
+    "schedule": {
+      "view": "Ver plano de pagamentos completo",
+      "period": "N.º",
+      "payment": "Prestação",
+      "principal": "Capital",
+      "interest": "Juros",
+      "extra": "Extra",
+      "balance": "Saldo",
+      "showAll": "{count, plural, one {Mostrar # prestação} other {Mostrar as # prestações}}"
+    },
+    "warnings": {
+      "savingsTitle": "💰 Poupança nas prestações",
+      "savingsBody": "A tua prestação desce de {first} para {last} — são menos {difference} por período no fim!",
+      "shockTitle": "⚠️ Aviso de choque de prestação",
+      "shockBody": "Ao fim de {years, plural, one {# ano} other {# anos}}, a tua prestação sobe de {from} para {to} — um aumento de {difference} ({percent}% mais). Confirma que consegues pagar!",
+      "balloonTitle": "🚨 Aviso de pagamento balão",
+      "balloonBody": "No fim de {years, plural, one {# ano} other {# anos}}, tens de pagar {amount} de uma só vez. Chama-se a isto um \"pagamento balão\".",
+      "balloonOptions": "<strong>As tuas opções quando o balão vence:</strong> refinanciar com um novo empréstimo, vender o ativo ou pagar com poupanças. Se não conseguires nenhuma delas, arriscas perder o ativo."
+    },
+    "compare": {
+      "title": "Comparação lado a lado",
+      "description": "Vê como os diferentes tipos de empréstimo se comparam com o mesmo montante, taxa e prazo.",
+      "button": "Comparar todos os tipos de empréstimo",
+      "loanType": "Tipo de empréstimo",
+      "firstPayment": "Primeira prestação",
+      "totalInterest": "Juros totais",
+      "totalCost": "Custo total",
+      "interestChart": "Comparação dos juros totais",
+      "byType": "Repartição das prestações e saldo por tipo de empréstimo",
+      "insightTitle": "💡 Conclusão principal",
+      "insightBody": "O <strong>empréstimo de prestação decrescente</strong> poupa-te {saved} em juros face a um empréstimo de prestação constante, mas a tua primeira prestação é {extra} mais alta. Escolhe com base no teu orçamento atual e nas tuas expectativas de rendimento futuro."
+    }
+  }
+}

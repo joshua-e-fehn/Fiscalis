@@ -36,7 +36,7 @@ export const DEFAULT_LANGUAGE: Language = "en";
 export const RENDERED_LANGUAGES: readonly Language[] =
   process.env.NEXT_PUBLIC_I18N_PREVIEW === "1"
     ? LANGUAGES
-    : ["en", "de", "es", "fr", "it"];
+    : ["en", "de", "es", "fr", "it", "pt-PT"];
 
 /** The language a stored or requested language is rendered in. */
 export function renderedLanguage(
@@ -62,6 +62,7 @@ export const INTL_TAGS = {
   es: "es-ES",
   fr: "fr-FR",
   it: "it-IT",
+  "pt-PT": "pt-PT",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -73,6 +74,7 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   es: "Español",
   fr: "Français",
   it: "Italiano",
+  "pt-PT": "Português (Portugal)",
 };
 
 /**
@@ -80,7 +82,6 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
 export const PLANNED_LOCALES = [
-  "pt-PT",
   "ru",
   "zh-Hans",
   "hi",

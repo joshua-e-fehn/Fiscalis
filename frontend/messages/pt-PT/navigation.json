@@ -1,0 +1,75 @@
+{
+  "sidebar": {
+    "groups": {
+      "portfolio": "Carteira",
+      "tools": "Ferramentas",
+      "integrations": "Integrações",
+      "others": "Outros"
+    },
+    "items": {
+      "dashboard": "Painel",
+      "investments": "Investimentos",
+      "equities": "Ações",
+      "commodities": "Matérias-primas",
+      "bonds": "Obrigações",
+      "realEstate": "Imobiliário",
+      "cash": "Liquidez e mercado monetário",
+      "crypto": "Cripto",
+      "collectibles": "Colecionáveis",
+      "liabilities": "Passivos",
+      "liabilitiesOverview": "Todos os passivos",
+      "loans": "Empréstimos",
+      "investmentStrategies": "Estratégias de investimento",
+      "pies": "Pies",
+      "banking": "Bancos",
+      "brokers": "Corretoras",
+      "retirementPlanner": "Planeador de reforma",
+      "interestCalculators": "Calculadoras de juros",
+      "loanCalculators": "Calculadoras de empréstimos",
+      "worldMap": "Mapa-mundo",
+      "documentation": "Documentação",
+      "introduction": "Introdução",
+      "getStarted": "Primeiros passos",
+      "tutorials": "Tutoriais",
+      "changelog": "Novidades",
+      "settings": "Definições",
+      "general": "Geral",
+      "apiKeys": "Chaves de API",
+      "categories": "Categorias",
+      "privacy": "Privacidade",
+      "team": "Equipa",
+      "billing": "Faturação",
+      "limits": "Limites"
+    }
+  },
+  "brand": {
+    "logoAlt": "Logótipo do Fiscalis"
+  },
+  "userMenu": {
+    "upgrade": "Mudar para Pro",
+    "account": "Conta",
+    "billing": "Faturação",
+    "notifications": "Notificações",
+    "logOut": "Terminar sessão"
+  },
+  "header": {
+    "signIn": "Iniciar sessão",
+    "joinWaitlist": "Entrar na lista de espera",
+    "dashboard": "Painel"
+  },
+  "sync": {
+    "syncAll": "Sincronizar todas as contas",
+    "syncing": "A sincronizar todas as contas…",
+    "complete": "Sincronização concluída",
+    "failed": "A sincronização falhou",
+    "synced": "Sincronizado: {providers}",
+    "failedProviders": "Falhou: {providers}",
+    "partial": "Sincronizado: {synced}. Falhou: {failed}",
+    "providerCount": "{provider} ({count})",
+    "providers": {
+      "plaid": "Bancos",
+      "snaptrade": "Corretoras",
+      "bitpanda": "Bitpanda"
+    }
+  }
+}

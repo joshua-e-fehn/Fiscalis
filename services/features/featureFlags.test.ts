@@ -44,7 +44,7 @@ describe("filterMenuByFeature", () => {
       title: "Settings",
       items: [{ title: "General" }, { title: "Team", feature: "teamSettings" as const }],
     },
-    { title: "Billing", feature: "billing" as const, items: [{ title: "Plans" }] },
+    { title: "Planned", feature: "plannedCategories" as const, items: [{ title: "Soon" }] },
   ];
 
   it("drops hidden entries and parents left without children", () => {
@@ -65,7 +65,7 @@ describe("filterMenuByFeature", () => {
 
 describe("isFeatureFlag", () => {
   it("recognises known flags only", () => {
-    expect(isFeatureFlag("billing")).toBe(true);
+    expect(isFeatureFlag("teamSettings")).toBe(true);
     expect(isFeatureFlag("nope")).toBe(false);
   });
 });

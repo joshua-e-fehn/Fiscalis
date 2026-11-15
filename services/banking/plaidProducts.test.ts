@@ -36,5 +36,6 @@ describe("plaidLinkLanguage", () => {
     expect(plaidLinkLanguage(undefined)).toBe("en");
     expect(plaidLinkLanguage("zh-Hans")).toBe("en");
     expect(plaidLinkLanguage("ar")).toBe("en");
+    expect(plaidLinkLanguage("ru")).toBe("en");
   });
 });

@@ -149,6 +149,38 @@ describe("invite links", () => {
     );
   });
 
+  it("die with their creator's right to invite, so a removed admin cannot rejoin", async () => {
+    const { owner, partner, intruder, teamId } = await teamWithPartner();
+    const partnerId = await memberIdOf(owner, teamId, "pat");
+    await owner.mutation(api.teams.changeRole, { memberId: partnerId, role: "admin" });
+    const { token: kept } = await partner.action(api.teams.createInvite, { teamId, role: "member" });
+    await owner.mutation(api.teams.removeMember, { memberId: partnerId });
+    await expect(partner.mutation(api.teams.acceptInvite, { token: kept })).rejects.toThrow(
+      /teamInviteInvalid/,
+    );
+
+    // Demotion to member revokes the same way; the owner's own invites stay
+    const { token: ownerToken } = await owner.action(api.teams.createInvite, {
+      teamId,
+      role: "admin",
+    });
+    await partner.mutation(api.teams.acceptInvite, { token: ownerToken });
+    const { token: second } = await partner.action(api.teams.createInvite, {
+      teamId,
+      role: "member",
+    });
+    const { token: ownersOpen } = await owner.action(api.teams.createInvite, {
+      teamId,
+      role: "member",
+    });
+    await owner.mutation(api.teams.changeRole, {
+      memberId: await memberIdOf(owner, teamId, "pat"),
+      role: "member",
+    });
+    expect(await intruder.query(api.teams.previewInvite, { token: second })).toBeNull();
+    expect(await intruder.query(api.teams.previewInvite, { token: ownersOpen })).not.toBeNull();
+  });
+
   it("are refused for a team the caller is not in", async () => {
     const { intruder, teamId } = await teamWithPartner();
     await expect(intruder.action(api.teams.createInvite, { teamId, role: "member" })).rejects.toThrow(

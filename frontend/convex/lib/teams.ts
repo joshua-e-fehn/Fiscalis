@@ -89,6 +89,23 @@ export async function touchTeam(ctx: MutationCtx, teamId: Id<"teams">): Promise<
   await ctx.db.patch(teamId, { updatedAt: Date.now() });
 }
 
+/**
+ * Deletes the open invites `userId` created for `teamId`. Called when they
+ * lose the right to invite (removed, left, demoted to member), so a link
+ * they still hold cannot bring them, or anyone they gave it to, back in.
+ */
+export async function revokeInvitesCreatedBy(
+  ctx: MutationCtx,
+  teamId: Id<"teams">,
+  userId: string,
+): Promise<void> {
+  const invites = await ctx.db
+    .query("teamInvites")
+    .withIndex("by_team", (q) => q.eq("teamId", teamId))
+    .collect();
+  for (const i of invites) if (i.userId === userId) await ctx.db.delete(i._id);
+}
+
 /** Deletes a team with its memberships and invites. */
 export async function deleteTeamCascade(
   ctx: MutationCtx,

@@ -16,6 +16,7 @@ import {
   listTeamMembers,
   requireTeamMember,
   requireTeamPermission,
+  revokeInvitesCreatedBy,
   touchTeam,
   transferOwnership,
 } from "./lib/teams";
@@ -233,6 +234,7 @@ export const leaveTeam = mutation({
     const { membership } = await requireTeamMember(ctx, userId, teamId);
     if (!canLeave(membership.role)) userError("teamOwnerCannotLeave");
     await ctx.db.delete(membership._id);
+    await revokeInvitesCreatedBy(ctx, teamId, userId);
     await touchTeam(ctx, teamId);
   },
 });
@@ -260,6 +262,8 @@ export const removeMember = mutation({
     const { target, membership } = await memberInCallersTeam(ctx, userId, memberId);
     if (!canRemoveMember(membership.role, target.role)) userError("teamPermissionDenied");
     await ctx.db.delete(target._id);
+    // Otherwise a removed admin could rejoin through a link they created
+    await revokeInvitesCreatedBy(ctx, target.teamId, target.userId);
     await touchTeam(ctx, target.teamId);
   },
 });
@@ -275,6 +279,7 @@ export const changeRole = mutation({
       await transferOwnership(ctx, team, target);
     } else {
       await ctx.db.patch(target._id, { role });
+      if (!canInvite(role)) await revokeInvitesCreatedBy(ctx, team._id, target.userId);
       await touchTeam(ctx, team._id);
     }
   },

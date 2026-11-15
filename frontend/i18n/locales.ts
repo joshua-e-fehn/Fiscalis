@@ -8,7 +8,7 @@
  * App codes ("en", "de") are what is stored (userSettings.language), what the
  * locale cookie holds and how the catalogues under messages/ are named.
  * next-intl is given the Intl tag instead, so dates are day-first in English
- * (en-GB) and German formats as de-DE.
+ * (en-GB), German formats as de-DE and French as fr-FR.
  *
  * Pure module (no Next.js imports): services/i18n/i18n.test.ts covers it.
  */
@@ -28,8 +28,8 @@ export const DEFAULT_LANGUAGE: Language = "en";
  * list once its screens are translated; until then a stored choice of it
  * renders as English, so the page language, Clerk, Plaid Link and the
  * catalogue never claim a language the content is not in (browsers would
- * offer to translate the page, screen readers would mispronounce it). English
- * and German are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
+ * offer to translate the page, screen readers would mispronounce it). English,
+ * German and French are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
  * in LANGUAGES, for checking a new catalogue locally (inlined at build time on
  * both server and client).
  */

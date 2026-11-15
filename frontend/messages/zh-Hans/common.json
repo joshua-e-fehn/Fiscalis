@@ -112,6 +112,8 @@
     "goalEntryValueInvalid": "请输入有效的值：计数为 1 到 1000 的整数，备注最多 200 个字符。",
     "goalEntryDateInvalid": "请选择一个不在未来的有效日期。",
     "goalChecklistItemNotFound": "这个清单步骤已不存在。请刷新页面后重试。",
+    "goalStartDateInvalid": "请选择一个不在未来的开始日期。",
+    "goalBackdateClosed": "只有在你开始使用目标的前 14 天内才能把目标的开始日期设在过去。现在新目标都从今天开始。",
     "catalogItemNotFound": "此产品已不在目录中。请选择其他产品。",
     "vaultItemNotFound": "此物品已不在你的保管库中，可能已被删除。",
     "vaultWeightAndPurityRequired": "重量和纯度必须大于 0。",

@@ -112,6 +112,8 @@
     "goalEntryValueInvalid": "Introduz um valor válido: uma contagem é um número inteiro de 1 a 1000 e uma nota tem no máximo 200 caracteres.",
     "goalEntryDateInvalid": "Escolhe uma data válida que não esteja no futuro.",
     "goalChecklistItemNotFound": "Este passo da lista já não existe. Recarrega a página e tenta novamente.",
+    "goalStartDateInvalid": "Escolhe uma data de início que não esteja no futuro.",
+    "goalBackdateClosed": "Só podes antedatar objetivos nos teus primeiros 14 dias com objetivos. Os novos objetivos começam agora hoje.",
     "catalogItemNotFound": "Este produto já não está no catálogo. Escolhe outro.",
     "vaultItemNotFound": "Este artigo já não está no teu cofre. Pode já ter sido eliminado.",
     "vaultWeightAndPurityRequired": "O peso e a pureza têm de ser superiores a 0.",

@@ -8,6 +8,8 @@ import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { INTRUDER, OWNER, newTest, seedUser } from "./setup.helpers";
 
+const TODAY = new Date().toISOString().slice(0, 10);
+
 async function seeded() {
   const t = newTest();
   await seedUser(t, OWNER);
@@ -22,7 +24,7 @@ async function seeded() {
 type Client = Awaited<ReturnType<typeof seeded>>["owner"];
 
 async function listed(client: Client) {
-  const list = await client.query(api.goals.list, {});
+  const list = await client.query(api.goals.list, { today: TODAY });
   if (!list) throw new Error("no list");
   return list;
 }
@@ -131,7 +133,7 @@ describe("goals", () => {
   it("buys a goal early, records the shortfall as debt and keeps it", async () => {
     const { owner } = await seeded();
     const goal = await trip(owner);
-    const preview = await owner.query(api.goals.purchasePreview, { goalId: goal._id, price: 1500 });
+    const preview = await owner.query(api.goals.purchasePreview, { goalId: goal._id, price: 1500, today: TODAY });
     expect(preview?.earned).toBe(false);
     const { earned } = await owner.mutation(api.goals.buy, { goalId: goal._id, price: 1500 });
     expect(earned).toBe(false);
@@ -191,6 +193,32 @@ describe("goals", () => {
 
   it("returns nothing to a signed-out caller", async () => {
     const { t } = await seeded();
-    expect(await t.query(api.goals.list, {})).toBeNull();
+    expect(await t.query(api.goals.list, { today: TODAY })).toBeNull();
+  });
+
+  it("backdates a new goal only during the launch import", async () => {
+    const { owner, t } = await seeded();
+    const rule = { kind: "cooldown", days: 1 };
+    const id = await owner.mutation(api.goals.create, {
+      name: "Old plan",
+      currency: "EUR",
+      price: 100,
+      rule,
+      startDate: "2026-01-01",
+    });
+    const goal = (await listed(owner)).goals.find((g) => g._id === id)!;
+    expect(goal.startDate).toBe("2026-01-01");
+    expect(goal.history[0].after).toEqual({ backdatedTo: "2026-01-01" });
+    await expect(
+      owner.mutation(api.goals.create, { name: "Future", currency: "EUR", price: 1, rule, startDate: "2999-01-01" }),
+    ).rejects.toThrow(/goalStartDateInvalid/);
+    // Close the window: the first goal was created long ago
+    await t.run(async (ctx) => {
+      const first = await ctx.db.get(id);
+      await ctx.db.patch(id, { createdAt: (first?.createdAt ?? 0) - 30 * 86_400_000 });
+    });
+    await expect(
+      owner.mutation(api.goals.create, { name: "Late", currency: "EUR", price: 1, rule, startDate: "2026-01-01" }),
+    ).rejects.toThrow(/goalBackdateClosed/);
   });
 });

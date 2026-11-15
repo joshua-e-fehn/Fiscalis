@@ -112,6 +112,8 @@
     "goalEntryValueInvalid": "Gib einen gültigen Wert ein: Ein Zähler ist eine ganze Zahl von 1 bis 1000, eine Notiz hat höchstens 200 Zeichen.",
     "goalEntryDateInvalid": "Wähle ein gültiges Datum, das nicht in der Zukunft liegt.",
     "goalChecklistItemNotFound": "Diesen Checklistenschritt gibt es nicht mehr. Lade die Seite neu und versuch es erneut.",
+    "goalStartDateInvalid": "Wähle ein Startdatum, das nicht in der Zukunft liegt.",
+    "goalBackdateClosed": "Ziele zurückdatieren geht nur in deinen ersten 14 Tagen mit Zielen. Neue Ziele starten jetzt heute.",
     "catalogItemNotFound": "Dieses Produkt ist nicht mehr im Katalog. Wähl ein anderes aus.",
     "vaultItemNotFound": "Dieser Posten ist nicht mehr in deinem Tresor. Vielleicht wurde er schon gelöscht.",
     "vaultWeightAndPurityRequired": "Gewicht und Feingehalt müssen größer als 0 sein.",

@@ -109,6 +109,8 @@ export const USER_ERROR_CODES = [
   "goalEntryValueInvalid",
   "goalEntryDateInvalid",
   "goalChecklistItemNotFound",
+  "goalStartDateInvalid",
+  "goalBackdateClosed",
 
   // Profile and onboarding (frontend/lib/utils/date.ts BirthDateError)
   "birthDate.format",

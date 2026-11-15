@@ -25,9 +25,12 @@ import { userError } from "./lib/userError";
 import { computeNetWorth } from "./lib/netWorth";
 import { loadFxRates } from "./fxRates";
 import {
+  GOAL_EARLIEST_START,
   normalizeEntry,
   normalizeGoal,
   normalizeTracker,
+  backdateOpenUntil,
+  isDay,
   utcDay,
   validPrice,
   type GoalInput,
@@ -83,6 +86,8 @@ async function loadBaselines(ctx: QueryCtx, userId: string): Promise<LotBaseline
   ];
 }
 
+type SnapshotRow = Pick<Doc<"portfolioSnapshots">, "date" | "timestamp" | "categoryBreakdown">;
+
 interface Loaded {
   input: EvaluationInput;
   goals: Doc<"goals">[];
@@ -117,25 +122,43 @@ function toEvaluationGoal(
   };
 }
 
-/** Everything evaluation needs, with today's figures computed live. */
-async function load(ctx: QueryCtx, userId: string): Promise<Loaded> {
+/** Days of snapshots read before the earliest goal start, to find the row before it. */
+const LOOKBACK_DAYS = 31;
+
+/**
+ * Everything evaluation needs, with today's figures computed live.
+ * `today` is the caller's UTC day (a query passes the client's, so a cached
+ * result does not keep yesterday after midnight; a mutation its own).
+ * Snapshots are read only from shortly before the earliest goal start: no
+ * goal can use a lot dated before its start, so older days never matter.
+ */
+async function load(ctx: QueryCtx, userId: string, today: string): Promise<Loaded> {
   const now = Date.now();
-  const today = utcDay(now);
-  const [goals, trackers, entries, snapshots, baselines] = await Promise.all([
+  const [goals, trackers, entries] = await Promise.all([
     ctx.db.query("goals").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
     ctx.db.query("goalTrackers").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
     ctx.db.query("goalEntries").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
-    ctx.db
-      .query("portfolioSnapshots")
-      .withIndex("by_user_timestamp", (q) => q.eq("userId", userId))
-      .collect(),
-    loadBaselines(ctx, userId),
   ]);
-
+  const earliest = goals.reduce<string | null>(
+    (min, g) => (min === null || g.startDate < min ? g.startDate : min),
+    null,
+  );
   let netWorth: number | null = null;
-  const rows: { date: string; timestamp: number; categoryBreakdown?: Doc<"portfolioSnapshots">["categoryBreakdown"] }[] =
-    [...snapshots];
-  if (snapshots.length > 0) {
+  let rows: SnapshotRow[] = [];
+  let baselines: LotBaseline[] = [];
+  if (earliest !== null) {
+    const from = utcDay(Date.parse(`${earliest}T00:00:00Z`) - LOOKBACK_DAYS * 86_400_000);
+    const [snapshots, owned] = await Promise.all([
+      ctx.db
+        .query("portfolioSnapshots")
+        .withIndex("by_user_date", (q) => q.eq("userId", userId).gte("date", from))
+        .collect(),
+      loadBaselines(ctx, userId),
+    ]);
+    baselines = owned;
+    rows = snapshots
+      .filter((s) => s.date < today)
+      .map((s) => ({ date: s.date, timestamp: s.timestamp, categoryBreakdown: s.categoryBreakdown }));
     // Today's lot from the live portfolio, against the newest earlier day,
     // the way the snapshot writer computes it (portfolioSnapshots.ts)
     const previous = [...snapshots].reverse().find((s) => s.date < today);
@@ -178,16 +201,18 @@ async function load(ctx: QueryCtx, userId: string): Promise<Loaded> {
  * purchase, their trackers with entry totals, and each pool's debt.
  */
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { today: v.string() },
+  handler: async (ctx, args) => {
     const userId = await getUserId(ctx);
     if (!userId) return null;
-    const loaded = await load(ctx, userId);
+    const today = isDay(args.today) ? args.today : utcDay(Date.now());
+    const loaded = await load(ctx, userId, today);
     const result = evaluateGoals(loaded.input);
     const byId = new Map(result.goals.map((g) => [g.id, g]));
     const rateOf = new Map(loaded.input.goals.map((g) => [g.id, g.rate]));
     return {
       today: loaded.input.today,
+      backdateUntil: backdateOpenUntil(loaded.goals),
       estimatedDays: loaded.estimatedDays,
       debts: result.debts,
       goals: [...loaded.goals]
@@ -255,13 +280,13 @@ export const entries = query({
  * caller's goal or not active.
  */
 export const purchasePreview = query({
-  args: { goalId: v.id("goals"), price: v.number() },
-  handler: async (ctx, { goalId, price }) => {
+  args: { goalId: v.id("goals"), price: v.number(), today: v.string() },
+  handler: async (ctx, { goalId, price, today }) => {
     const userId = await getUserId(ctx);
     if (!userId || !validPrice(price)) return null;
     const goal = await getOwnedDoc(ctx, userId, goalId);
     if (!goal || goal.status !== "active") return null;
-    const { input } = await load(ctx, userId);
+    const { input } = await load(ctx, userId, isDay(today) ? today : utcDay(Date.now()));
     if (!input.goals.some((g) => g.id === goalId)) return null;
     const plan = planPurchase(input, goalId, price);
     return { earned: plan.earned, charges: plan.charges, leaves: plan.result.leaves };
@@ -313,19 +338,39 @@ async function toStoredGoal(ctx: MutationCtx, userId: string, input: GoalInput) 
   return goal;
 }
 
+/**
+ * Create a goal. It starts today; during the launch import (the first
+ * GOAL_IMPORT_DAYS after the user's first goal) `startDate` may move it
+ * back to when the user actually began working toward it.
+ */
 export const create = mutation({
-  args: goalFields,
-  handler: async (ctx, args) => {
+  args: { ...goalFields, startDate: v.optional(v.string()) },
+  handler: async (ctx, { startDate, ...args }) => {
     const userId = await requireUserId(ctx);
     const goal = await toStoredGoal(ctx, userId, args);
     const now = Date.now();
+    const today = utcDay(now);
+    let start = today;
+    if (startDate !== undefined && startDate !== today) {
+      if (!isDay(startDate) || startDate > today || startDate < GOAL_EARLIEST_START) {
+        userError("goalStartDateInvalid");
+      }
+      const existing = await ctx.db
+        .query("goals")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
+      if (now >= backdateOpenUntil(existing, now)) userError("goalBackdateClosed");
+      start = startDate;
+    }
     return await ctx.db.insert("goals", {
       userId,
       ...goal,
-      startDate: utcDay(now),
+      startDate: start,
       status: "active",
       checklistDone: [],
-      history: [{ at: now, kind: "created" }],
+      history: [
+        start === today ? { at: now, kind: "created" } : { at: now, kind: "created", after: { backdatedTo: start } },
+      ],
       createdAt: now,
       updatedAt: now,
     });
@@ -398,8 +443,10 @@ export const buy = mutation({
   handler: async (ctx, { goalId, price }) => {
     const { userId, goal } = await requireActiveGoal(ctx, goalId);
     if (!validPrice(price)) userError("goalPriceInvalid");
-    const { input } = await load(ctx, userId);
-    if (!input.goals.some((g) => g.id === goalId)) userError("exchangeRateUnavailable");
+    const { input } = await load(ctx, userId, utcDay(Date.now()));
+    if (!input.goals.some((g) => g.id === goalId)) {
+      userError(parseRule(goal.rule).ok ? "exchangeRateUnavailable" : "goalRuleInvalid");
+    }
     const plan = planPurchase(input, goalId, price);
     const now = Date.now();
     const purchase = {

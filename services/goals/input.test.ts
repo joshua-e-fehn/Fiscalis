@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isDay, normalizeEntry, normalizeGoal, normalizeTracker } from "./input";
+import { backdateOpenUntil, GOAL_IMPORT_DAYS, isDay, normalizeEntry, normalizeGoal, normalizeTracker } from "./input";
 
 const rule = { kind: "cooldown", days: 30 };
 
@@ -61,5 +61,18 @@ describe("isDay", () => {
     expect(isDay("2024-02-29")).toBe(true);
     expect(isDay("2026-13-01")).toBe(false);
     expect(isDay("2026-1-01")).toBe(false);
+  });
+});
+
+describe("backdateOpenUntil", () => {
+  const DAY = 86_400_000;
+  it("opens the launch import for GOAL_IMPORT_DAYS after the first goal", () => {
+    expect(backdateOpenUntil([{ createdAt: 5 * DAY }, { createdAt: 2 * DAY }], 100 * DAY)).toBe(
+      (2 + GOAL_IMPORT_DAYS) * DAY,
+    );
+  });
+
+  it("is open from now for a user without goals", () => {
+    expect(backdateOpenUntil([], 10 * DAY)).toBe((10 + GOAL_IMPORT_DAYS) * DAY);
   });
 });

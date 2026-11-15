@@ -112,6 +112,8 @@
     "goalEntryValueInvalid": "Introduce un valor válido: un recuento es un número entero de 1 a 1000 y una nota tiene como máximo 200 caracteres.",
     "goalEntryDateInvalid": "Elige una fecha válida que no esté en el futuro.",
     "goalChecklistItemNotFound": "Este paso de la lista ya no existe. Recarga la página e inténtalo de nuevo.",
+    "goalStartDateInvalid": "Elige una fecha de inicio que no esté en el futuro.",
+    "goalBackdateClosed": "Solo puedes poner fechas anteriores a tus objetivos en tus primeros 14 días con objetivos. Los nuevos objetivos empiezan hoy.",
     "catalogItemNotFound": "Este producto ya no está en el catálogo. Elige otro.",
     "vaultItemNotFound": "Esta pieza ya no está en tu caja fuerte. Puede que ya se haya eliminado.",
     "vaultWeightAndPurityRequired": "El peso y la pureza deben ser mayores que 0.",

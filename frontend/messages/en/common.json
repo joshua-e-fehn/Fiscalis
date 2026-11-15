@@ -112,6 +112,8 @@
     "goalEntryValueInvalid": "Enter a valid value: a count is a whole number from 1 to 1000, and a note has at most 200 characters.",
     "goalEntryDateInvalid": "Choose a valid date that isn't in the future.",
     "goalChecklistItemNotFound": "This checklist step no longer exists. Reload the page and try again.",
+    "goalStartDateInvalid": "Choose a start date that isn't in the future.",
+    "goalBackdateClosed": "Backdating goals is only possible in your first 14 days with goals. New goals now start today.",
     "catalogItemNotFound": "This product is no longer in the catalogue. Choose another one.",
     "vaultItemNotFound": "This item is no longer in your vault. It may already have been deleted.",
     "vaultWeightAndPurityRequired": "Weight and purity must be greater than 0.",

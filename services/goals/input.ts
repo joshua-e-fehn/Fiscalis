@@ -22,6 +22,23 @@ export const ENTRY_NOTE_MAX = 200;
 /** Most entries one log call may add at once (a counter's +N) */
 export const ENTRY_COUNT_MAX = 1000;
 
+/** Days after the user's first goal during which new goals may be backdated (launch import). */
+export const GOAL_IMPORT_DAYS = 14;
+/** The earliest start a backdated goal may have. */
+export const GOAL_EARLIEST_START = "2000-01-01";
+
+/**
+ * Until when (ms) a new goal may be backdated: GOAL_IMPORT_DAYS after the
+ * user's first goal was created, or from `now` when they have none yet.
+ */
+export function backdateOpenUntil(
+  goals: readonly { createdAt: number }[],
+  now: number = Date.now(),
+): number {
+  const first = goals.reduce((min, g) => Math.min(min, g.createdAt), now);
+  return first + GOAL_IMPORT_DAYS * 86_400_000;
+}
+
 export type GoalStatus = "active" | "bought" | "archived";
 export type TrackerKind = "count" | "measurement";
 

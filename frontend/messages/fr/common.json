@@ -156,6 +156,8 @@
     "goalEntryValueInvalid": "Saisis une valeur valide : un compteur est un nombre entier de 1 à 1000 et une note contient au plus 200 caractères.",
     "goalEntryDateInvalid": "Choisis une date valide qui n’est pas dans le futur.",
     "goalChecklistItemNotFound": "Cette étape de la liste n’existe plus. Recharge la page et réessaie.",
+    "goalStartDateInvalid": "Choisis une date de début qui n’est pas dans le futur.",
+    "goalBackdateClosed": "Antidater un objectif n’est possible que pendant tes 14 premiers jours avec des objectifs. Les nouveaux objectifs commencent désormais aujourd’hui.",
     "holdingNotFound": "Cet avoir n’existe plus. Actualise la page et réessaie.",
     "valuationNotSupported": "Cet avoir ne peut pas être valorisé manuellement : les liquidités et les passifs sont valorisés selon leur solde.",
     "valuationPriceInvalid": "Saisis un prix de 0 ou plus.",

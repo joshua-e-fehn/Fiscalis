@@ -2,7 +2,9 @@
  * Builds the in-app changelog (/docs/changelog) from the squash-merge
  * commits on main. Every merged pull request lands as one commit titled
  * "[Feature] | Title (#123)"; only features and fixes are user-facing, so
- * chores, refactors, dependency bumps and direct commits are left out.
+ * chores, refactors, dependency bumps and direct commits are left out, and
+ * so are features and fixes that are internal (INTERNAL_TITLE,
+ * CHANGELOG_HIDDEN_PRS).
  *
  * frontend/scripts/changelog.ts feeds `git log` into this and commits the
  * result as frontend/lib/docs/changelog.json; the page never calls GitHub.
@@ -41,6 +43,24 @@ const SUBJECT = /^\[(Feature|Fix)\]\s*\|\s*(.+?)\s*\(#(\d+)\)\s*$/;
 /** Ticket references read as noise to users: "(ENG-232)", "(PF-10, CF-15)". */
 const TICKET_REFS = /\s*\((?:[A-Z]+-\d+(?:\s*[,/]\s*)?)+\)/g;
 
+/**
+ * Features and fixes that users never see: build and lint work, review
+ * follow-ups, tests, backups and monitoring. Matched on the cleaned title.
+ */
+const INTERNAL_TITLE =
+  /\blint warnings\b|\bmake lint\b|`bun run lint`|\breview findings\b|\baddress .* review\b|\btests?\b|\bbackups?\b|\brunbook\b|\bmonitor(?:ing)?\b|\bobservability\b|\bno visible change\b/i;
+
+/**
+ * Merged PRs that are internal or security-sensitive although their titles
+ * do not say so (a changelog should not advertise past vulnerabilities).
+ * Add a PR number here when a [Feature]/[Fix] title would mislead users.
+ */
+export const CHANGELOG_HIDDEN_PRS: ReadonlySet<number> = new Set([
+  13, // Derive Convex user from auth, check doc ownership
+  62, // Stop logging provider secrets
+  120, // Versioned encryption keys + re-encrypt migration
+]);
+
 /** The entry a merged PR's commit subject describes, or null if it is not one. */
 export function parseCommitSubject(
   subject: string,
@@ -52,6 +72,7 @@ export function parseCommitSubject(
   const title = rawTitle.replace(TICKET_REFS, "").trim();
   const date = new Date(isoDate);
   if (!title || Number.isNaN(date.getTime())) return null;
+  if (INTERNAL_TITLE.test(title) || CHANGELOG_HIDDEN_PRS.has(Number(pr))) return null;
   return {
     type: kind === "Feature" ? "feature" : "fix",
     title,

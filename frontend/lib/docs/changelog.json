@@ -16,12 +16,6 @@
           "date": "2026-11-15"
         },
         {
-          "type": "feature",
-          "title": "Trust-boundary tests with convex-test, migrations component, dev demo user",
-          "pr": 133,
-          "date": "2026-11-15"
-        },
-        {
           "type": "fix",
           "title": "i18n: German proofreading pass",
           "pr": 132,
@@ -47,18 +41,6 @@
         },
         {
           "type": "feature",
-          "title": "Weekly Convex prod backups to S3, corrected rollback runbook, restore drill",
-          "pr": 127,
-          "date": "2026-11-15"
-        },
-        {
-          "type": "feature",
-          "title": "Observability v2: syncRuns ledger and daily failure digest",
-          "pr": 126,
-          "date": "2026-11-15"
-        },
-        {
-          "type": "feature",
           "title": "GDPR: export my data and delete my account",
           "pr": 125,
           "date": "2026-11-15"
@@ -73,12 +55,6 @@
           "type": "feature",
           "title": "FX-correct cost basis at trade-date FX",
           "pr": 123,
-          "date": "2026-11-15"
-        },
-        {
-          "type": "feature",
-          "title": "Versioned encryption keys + re-encrypt migration",
-          "pr": 120,
           "date": "2026-11-15"
         },
         {
@@ -97,12 +73,6 @@
           "type": "fix",
           "title": "i18n: one translated ComingSoonPage; collectibles stub pages",
           "pr": 117,
-          "date": "2026-11-15"
-        },
-        {
-          "type": "feature",
-          "title": "Loss-proof metal price archive + emergency monitoring",
-          "pr": 116,
           "date": "2026-11-15"
         },
         {
@@ -205,12 +175,6 @@
           "type": "feature",
           "title": "Per-country World Bank views: history panel, compare years, delta CSV",
           "pr": 99,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "feature",
-          "title": "/health/deep freshness checks and VPS uptime monitor",
-          "pr": 97,
           "date": "2026-11-14"
         },
         {
@@ -383,18 +347,6 @@
         },
         {
           "type": "feature",
-          "title": "Display-currency foundation (no visible change)",
-          "pr": 63,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "fix",
-          "title": "Stop logging provider secrets; reconnect SnapTrade by authorization ID",
-          "pr": 62,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "feature",
           "title": "Gate the app behind onboarding",
           "pr": 61,
           "date": "2026-11-14"
@@ -409,42 +361,6 @@
           "type": "fix",
           "title": "Bank Accounts totals in EUR, debts subtracted",
           "pr": 59,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "fix",
-          "title": "Make lint strict: rules back to errors, fail on warnings",
-          "pr": 58,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "fix",
-          "title": "Clear lint warnings: loans, header, accounts, onboarding",
-          "pr": 57,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "fix",
-          "title": "Clear lint warnings: metals components and price chart",
-          "pr": 56,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "fix",
-          "title": "Clear lint warnings: b-components-core",
-          "pr": 55,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "fix",
-          "title": "Clear lint warnings: a-app-server",
-          "pr": 54,
-          "date": "2026-11-14"
-        },
-        {
-          "type": "fix",
-          "title": "Restore `bun run lint` with an ESLint flat config",
-          "pr": 53,
           "date": "2026-11-14"
         },
         {
@@ -464,18 +380,6 @@
           "title": "Category breakdown and data freshness in GET /api/v1/net-worth",
           "pr": 32,
           "date": "2026-11-13"
-        },
-        {
-          "type": "fix",
-          "title": "Address PR-bot review findings on the ENG-174 stack (2/2)",
-          "pr": 50,
-          "date": "2026-11-12"
-        },
-        {
-          "type": "fix",
-          "title": "Address PR-bot review findings on the ENG-174 stack (1/2)",
-          "pr": 49,
-          "date": "2026-11-12"
         },
         {
           "type": "fix",
@@ -544,18 +448,6 @@
           "date": "2026-11-12"
         },
         {
-          "type": "fix",
-          "title": "Address PR-bot review findings on the valuation stack (2/2)",
-          "pr": 30,
-          "date": "2026-11-11"
-        },
-        {
-          "type": "fix",
-          "title": "Address PR-bot review findings on the valuation stack (1/2)",
-          "pr": 29,
-          "date": "2026-11-11"
-        },
-        {
           "type": "feature",
           "title": "Retirement methodology revision (RD-2..RD-6)",
           "pr": 28,
@@ -611,12 +503,6 @@
         },
         {
           "type": "fix",
-          "title": "Address val-03 review: compare partial cost only with the value it covers",
-          "pr": 18,
-          "date": "2026-11-11"
-        },
-        {
-          "type": "fix",
           "title": "Fix snapshot window, dashboard chart, unrealised P/L, metals premium, YTD card",
           "pr": 15,
           "date": "2026-11-11"
@@ -625,12 +511,6 @@
           "type": "feature",
           "title": "Calibrate metal buy/sell premiums from dealer data",
           "pr": 14,
-          "date": "2026-11-11"
-        },
-        {
-          "type": "fix",
-          "title": "Derive Convex user from auth, check doc ownership",
-          "pr": 13,
           "date": "2026-11-11"
         },
         {

@@ -35,6 +35,12 @@ describe("parseCommitSubject", () => {
     "Bump drizzle-orm (#1)",
     "[Feature] | Bitpanda Integration without a PR number",
     "chore: vibe init",
+    "[Fix] | Clear lint warnings: loans, header (#57)",
+    "[Fix] | Address PR-bot review findings on the valuation stack (1/2) (#29)",
+    "[Feature] | Trust-boundary tests with convex-test (#133)",
+    "[Feature] | Weekly Convex prod backups to S3, corrected rollback runbook (#127)",
+    "[Feature] | Display-currency foundation (no visible change) (#63)",
+    "[Fix] | Stop logging provider secrets; reconnect SnapTrade by authorization ID (#62)",
   ])("ignores %s", (subject) => {
     expect(parseCommitSubject(subject, "2026-11-11T10:00:00Z")).toBeNull();
   });

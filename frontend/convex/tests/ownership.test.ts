@@ -109,6 +109,18 @@ const ARG_OVERRIDES: Record<string, (ids: SeedIds) => Args> = {
     asOf: "2026-11-01",
     annualRatePercent: 5,
   }),
+  "pies:create": () => ({
+    name: "Demo pie",
+    slices: [{ weight: 100, target: { kind: "category", category: "equities" } }],
+  }),
+  "pies:update": (ids) => ({
+    pieId: ids.pies[0],
+    name: "Renamed",
+    slices: [
+      { weight: 70, target: { kind: "category", category: "equities" } },
+      { weight: 30, target: { kind: "category", category: "bonds" } },
+    ],
+  }),
   "retirement:saveRetirementPlan": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
   "retirement:getFundingBase": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
 };

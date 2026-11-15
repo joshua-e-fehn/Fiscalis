@@ -66,6 +66,7 @@ export const DEMO_TABLES = [
   "loanScenarios",
   "retirementPlans",
   "manualAssets",
+  "pies",
   "vaultItems",
   "vaultTransactions",
   "worldBankFavorites",
@@ -399,6 +400,20 @@ export async function insertDemoData(
     costBasis: 310000,
     linkedLoanId: loanId,
     attributes: { address: "Musterstraße 1, Berlin" },
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // ── Pies ───────────────────────────────────────────────────────
+  await insert("pies", {
+    userId,
+    name: "Core & Satellite",
+    description: "World ETF core, a little crypto, a cash buffer",
+    slices: [
+      { weight: 60, target: { kind: "category", category: "equities" } },
+      { weight: 20, target: { kind: "category", category: "crypto" } },
+      { weight: 20, label: "Cash buffer", target: { kind: "category", category: "cash" } },
+    ],
     createdAt: now,
     updatedAt: now,
   });

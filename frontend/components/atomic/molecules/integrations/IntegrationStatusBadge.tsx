@@ -124,7 +124,7 @@ export function IntegrationStatusBadge({
     <Badge variant={config.variant} className={cn(config.className, className)}>
       <Icon
         className={cn(
-          "h-3 w-3 mr-1",
+          "h-3 w-3 me-1",
           effectiveStatus === "syncing" && "animate-spin",
         )}
       />

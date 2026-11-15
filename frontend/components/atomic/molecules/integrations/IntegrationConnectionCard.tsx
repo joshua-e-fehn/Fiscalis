@@ -159,10 +159,10 @@ export function IntegrationConnectionCard({
 
           {/* Right side: Value + Menu */}
           <div className="flex items-center gap-4">
-            <div className="text-right hidden sm:block">
+            <div className="text-end hidden sm:block">
               {/* No figure before the display rate arrives */}
               {isRateLoading ? (
-                <Skeleton className="ml-auto h-6 w-24" />
+                <Skeleton className="ms-auto h-6 w-24" />
               ) : (
                 <p className="text-lg font-semibold">{formattedValue}</p>
               )}

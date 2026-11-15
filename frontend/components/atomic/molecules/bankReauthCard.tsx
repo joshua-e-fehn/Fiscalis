@@ -72,7 +72,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
                     loading="eager"
                     className="h-10 w-10 rounded-lg object-contain"
                   />
-                  <div className="absolute -top-1 -right-1 rounded-full bg-yellow-500 p-0.5">
+                  <div className="absolute -top-1 -end-1 rounded-full bg-yellow-500 p-0.5">
                     <AlertCircle className="h-3 w-3 text-white" />
                   </div>
                 </div>
@@ -94,7 +94,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
                       }}
                     />
                   </div>
-                  <div className="absolute -top-1 -right-1 rounded-full bg-yellow-500 p-0.5">
+                  <div className="absolute -top-1 -end-1 rounded-full bg-yellow-500 p-0.5">
                     <AlertCircle className="h-3 w-3 text-white" />
                   </div>
                 </div>
@@ -119,7 +119,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
                   disabled={deleteItem.isLoading}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
-                  <Unlink className="mr-2 h-4 w-4" />
+                  <Unlink className="me-2 h-4 w-4" />
                   {t("reauth.disconnectBank")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -167,7 +167,7 @@ export function BankReauthCard({ item }: BankReauthCardProps) {
               <Unlink className="h-5 w-5 text-destructive" />
               {tConnection("disconnectTitle", { name: institutionName })}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-left">
+            <AlertDialogDescription className="text-start">
               {t("reauth.disconnectDescription")}
               <br />
               <br />

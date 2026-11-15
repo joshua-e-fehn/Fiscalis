@@ -193,7 +193,7 @@ export function BrokerConnectionCard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleSync}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className="me-2 h-4 w-4" />
                   {tConnection("sync")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -201,7 +201,7 @@ export function BrokerConnectionCard({
                   onClick={() => setShowDeleteDialog(true)}
                   className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash2 className="me-2 h-4 w-4" />
                   {tConnection("disconnect")}
                 </DropdownMenuItem>
               </DropdownMenuContent>

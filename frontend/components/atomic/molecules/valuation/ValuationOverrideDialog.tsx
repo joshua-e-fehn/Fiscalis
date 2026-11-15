@@ -297,7 +297,7 @@ function ValuationOverrideForm({
             onClick={handleReset}
             disabled={isPending}
           >
-            <RotateCcw className="mr-2 h-4 w-4" />
+            <RotateCcw className="me-2 h-4 w-4" />
             {t("reset")}
           </Button>
         ) : (
@@ -313,7 +313,7 @@ function ValuationOverrideForm({
             {tActions("cancel")}
           </Button>
           <Button type="button" onClick={handleSave} disabled={isPending}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
             {tActions("save")}
           </Button>
         </div>

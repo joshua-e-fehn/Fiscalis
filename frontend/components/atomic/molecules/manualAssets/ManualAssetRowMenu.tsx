@@ -77,14 +77,14 @@ export function ManualAssetRowMenu({ assetId, name }: ManualAssetRowMenuProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => setEditing(true)}>
-            <Pencil className="mr-2 h-4 w-4" />
+            <Pencil className="me-2 h-4 w-4" />
             {tActions("edit")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onSelect={() => setConfirming(true)}
             className="text-destructive"
           >
-            <Trash2 className="mr-2 h-4 w-4" />
+            <Trash2 className="me-2 h-4 w-4" />
             {tActions("delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -119,12 +119,12 @@ export function BanksCard({}: BanksCardProps) {
           >
             {refreshAccounts.isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 {tConnection("syncing")}
               </>
             ) : (
               <>
-                <RefreshCw className="mr-2 h-4 w-4" />
+                <RefreshCw className="me-2 h-4 w-4" />
                 {t("empty.syncAccounts")}
               </>
             )}

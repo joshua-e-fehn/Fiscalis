@@ -84,7 +84,7 @@ export function IntegrationAccountItem({
           )}
         </div>
       </div>
-      <div className="text-right flex-shrink-0 ml-4">
+      <div className="text-end flex-shrink-0 ms-4">
         <p className="font-semibold">{formattedBalance}</p>
         {hasCash && (
           <p className="text-xs text-muted-foreground">
@@ -92,7 +92,7 @@ export function IntegrationAccountItem({
           </p>
         )}
       </div>
-      {actions && <div className="ml-2 flex-shrink-0">{actions}</div>}
+      {actions && <div className="ms-2 flex-shrink-0">{actions}</div>}
     </div>
   );
 }

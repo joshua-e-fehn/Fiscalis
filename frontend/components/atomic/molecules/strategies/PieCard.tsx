@@ -65,11 +65,12 @@ export function PieCard({ pie, currency, onEdit, onDelete }: PieCardProps) {
 
   const percent = (value: number) =>
     format.number(value / 100, { style: "percent", maximumFractionDigits: 1 });
-  const points = (value: number) =>
+  /** Percentage points; signed for a slice's drift, unsigned for maxDrift (an absolute value). */
+  const points = (value: number, signed = true) =>
     t("drift", {
       value: format.number(value, {
         maximumFractionDigits: 1,
-        signDisplay: "exceptZero",
+        signDisplay: signed ? "exceptZero" : "auto",
       }),
     });
   const money = (value: number) =>
@@ -126,7 +127,7 @@ export function PieCard({ pie, currency, onEdit, onDelete }: PieCardProps) {
                   pie.maxDrift < PIE_DRIFT_THRESHOLD ? STATUS_CLASS.onTarget : STATUS_CLASS.over,
                 )}
               >
-                {points(pie.maxDrift)}
+                {points(pie.maxDrift, false)}
               </div>
             </div>
           )}

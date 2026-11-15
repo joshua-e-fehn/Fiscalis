@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ConvexError } from "convex/values";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useInlineSign } from "@/hooks/useInlineSign";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/shadcn/button";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -108,7 +109,10 @@ function pickFields(values: RetirementInputs, fields: PlanField[]) {
 	};
 }
 
-/** Horizontal slide in the direction of travel (1 = forward, -1 = back). */
+/**
+ * Horizontal slide in the direction of travel (1 = forward, -1 = back),
+ * times useInlineSign() so it mirrors in RTL.
+ */
 const STEP_VARIANTS = {
 	enter: (direction: number) => ({ opacity: 0, x: 50 * direction }),
 	center: { opacity: 1, x: 0 },
@@ -122,6 +126,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 	const settings = useUserSettings();
 	const display = useDisplayCurrency();
 	const t = useTranslations("retirement.wizard");
+	const sign = useInlineSign();
 	const tErrors = useTranslations("common.errors");
 	const toErrorMessage = useErrorMessage();
 	const issueMessage = useRetirementIssueMessage();
@@ -369,7 +374,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 						onClick={onCancel}
 						disabled={isSaving}
 					>
-						<X className="mr-1 h-4 w-4" />
+						<X className="me-1 h-4 w-4" />
 						{t("discardChanges")}
 					</Button>
 				</div>
@@ -412,10 +417,10 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 			)}
 
 			<div>
-				<AnimatePresence mode="wait" custom={direction}>
+				<AnimatePresence mode="wait" custom={direction * sign}>
 					<motion.div
 						key={step}
-						custom={direction}
+						custom={direction * sign}
 						variants={STEP_VARIANTS}
 						initial="enter"
 						animate="center"
@@ -456,7 +461,7 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 				</AnimatePresence>
 
 				{saveError && (
-					<p role="alert" className="mt-3 text-right text-sm text-destructive">
+					<p role="alert" className="mt-3 text-end text-sm text-destructive">
 						{saveError}
 					</p>
 				)}

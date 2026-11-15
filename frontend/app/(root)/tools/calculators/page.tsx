@@ -40,7 +40,7 @@ export default function CalculatorsPage() {
                 <CardTitle className="flex items-center gap-2">
                   <Icon className="h-5 w-5" />
                   {t(title)}
-                  <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground" />
+                  <ArrowRight className="h-4 w-4 ms-auto text-muted-foreground rtl:-scale-x-100" />
                 </CardTitle>
                 <CardDescription>{t(description)}</CardDescription>
               </CardHeader>

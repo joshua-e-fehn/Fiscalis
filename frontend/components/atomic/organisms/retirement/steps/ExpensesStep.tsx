@@ -55,7 +55,7 @@ export function ExpensesStep({
 			<div className="space-y-2">
 				<Label htmlFor="expenses">{t("expensesStep.label")}</Label>
 				<div className="relative">
-					<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+					<span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground">
 						{currencySymbols[currency].trim()}
 					</span>
 					<Input
@@ -63,7 +63,7 @@ export function ExpensesStep({
 						type="number"
 						min={0}
 						step={100}
-						className="pl-7"
+						className="ps-7"
 						value={data.monthlyExpensesToday || ""}
 						onChange={(e) =>
 							update({ monthlyExpensesToday: Number(e.target.value) || 0 })

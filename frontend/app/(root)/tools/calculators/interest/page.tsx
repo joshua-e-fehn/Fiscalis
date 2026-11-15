@@ -119,19 +119,19 @@ export default function FinancialCalculatorsPage() {
       <Tabs defaultValue="interest-rate" className="w-full">
         <TabsList className="grid grid-cols-4 mb-8 max-w-2xl">
           <TabsTrigger value="interest-rate">
-            <TrendingUp className="w-4 h-4 mr-2" />
+            <TrendingUp className="w-4 h-4 me-2" />
             {t("tabs.rate")}
           </TabsTrigger>
           <TabsTrigger value="time-duration">
-            <Clock className="w-4 h-4 mr-2" />
+            <Clock className="w-4 h-4 me-2" />
             {t("tabs.duration")}
           </TabsTrigger>
           <TabsTrigger value="future-value">
-            <LineChart className="w-4 h-4 mr-2" />
+            <LineChart className="w-4 h-4 me-2" />
             {t("tabs.futureValue")}
           </TabsTrigger>
           <TabsTrigger value="starting-value">
-            <DollarSign className="w-4 h-4 mr-2" />
+            <DollarSign className="w-4 h-4 me-2" />
             {t("tabs.startingValue")}
           </TabsTrigger>
         </TabsList>
@@ -218,54 +218,54 @@ function InterestRateCalculator() {
             <div className="space-y-2">
               <Label htmlFor="initial-value">{t("fields.initialValue")}</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="initial-value"
                   type="number"
                   placeholder="1000"
                   value={initialValue}
                   onChange={(e) => setInitialValue(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="final-value">{t("fields.finalValue")}</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="final-value"
                   type="number"
                   placeholder="2000"
                   value={finalValue}
                   onChange={(e) => setFinalValue(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="start-date">{t("fields.startDate")}</Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Calendar className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="start-date"
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="end-date">{t("fields.endDate")}</Label>
               <div className="relative">
-                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Calendar className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="end-date"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -276,7 +276,7 @@ function InterestRateCalculator() {
             </Button>
           </div>
 
-          <div className="space-y-6 border-l pl-6">
+          <div className="space-y-6 border-s ps-6">
             <div>
               <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -376,14 +376,14 @@ function TimeDurationCalculator() {
                 {t("fields.startingCapital")}
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="starting-capital"
                   type="number"
                   placeholder="1000"
                   value={startingCapital}
                   onChange={(e) => setStartingCapital(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -392,21 +392,21 @@ function TimeDurationCalculator() {
                 {t("fields.targetCapital")}
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="target-capital"
                   type="number"
                   placeholder="2000"
                   value={targetCapital}
                   onChange={(e) => setTargetCapital(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="interest-rate">{t("fields.interestRate")}</Label>
               <div className="relative">
-                <TrendingUp className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <TrendingUp className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="interest-rate"
                   type="number"
@@ -414,7 +414,7 @@ function TimeDurationCalculator() {
                   placeholder="5"
                   value={interestRate}
                   onChange={(e) => setInterestRate(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -425,7 +425,7 @@ function TimeDurationCalculator() {
             </Button>
           </div>
 
-          <div className="space-y-6 border-l pl-6">
+          <div className="space-y-6 border-s ps-6">
             <div>
               <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -525,21 +525,21 @@ function FutureValueCalculator() {
                 {t("fields.startingCapital")}
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="starting-capital"
                   type="number"
                   placeholder="1000"
                   value={startingCapital}
                   onChange={(e) => setStartingCapital(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="interest-rate">{t("fields.interestRate")}</Label>
               <div className="relative">
-                <TrendingUp className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <TrendingUp className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="interest-rate"
                   type="number"
@@ -547,7 +547,7 @@ function FutureValueCalculator() {
                   placeholder="5"
                   value={interestRate}
                   onChange={(e) => setInterestRate(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -558,14 +558,14 @@ function FutureValueCalculator() {
                 })}
               </Label>
               <div className="relative">
-                <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Clock className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="time-period"
                   type="number"
                   placeholder="10"
                   value={timePeriod}
                   onChange={(e) => setTimePeriod(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -576,7 +576,7 @@ function FutureValueCalculator() {
             </Button>
           </div>
 
-          <div className="space-y-6 border-l pl-6">
+          <div className="space-y-6 border-s ps-6">
             <div>
               <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -688,21 +688,21 @@ function StartingValueCalculator() {
                 {t("fields.targetCapital")}
               </Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <DollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="target-capital"
                   type="number"
                   placeholder="2000"
                   value={targetCapital}
                   onChange={(e) => setTargetCapital(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="interest-rate">{t("fields.interestRate")}</Label>
               <div className="relative">
-                <TrendingUp className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <TrendingUp className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="interest-rate"
                   type="number"
@@ -710,7 +710,7 @@ function StartingValueCalculator() {
                   placeholder="5"
                   value={interestRate}
                   onChange={(e) => setInterestRate(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -721,14 +721,14 @@ function StartingValueCalculator() {
                 })}
               </Label>
               <div className="relative">
-                <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Clock className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="time-period"
                   type="number"
                   placeholder="10"
                   value={timePeriod}
                   onChange={(e) => setTimePeriod(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -739,7 +739,7 @@ function StartingValueCalculator() {
             </Button>
           </div>
 
-          <div className="space-y-6 border-l pl-6">
+          <div className="space-y-6 border-s ps-6">
             <div>
               <h3 className="text-lg font-medium mb-2">{t("results")}</h3>
               <p className="text-sm text-muted-foreground mb-4">

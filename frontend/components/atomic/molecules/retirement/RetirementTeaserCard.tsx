@@ -121,7 +121,7 @@ export function RetirementTeaserCard() {
 				<Button asChild className="shrink-0">
 					<Link href="/retirement">
 						{cta}
-						<ArrowRight className="ml-1 h-4 w-4" />
+						<ArrowRight className="ms-1 h-4 w-4 rtl:-scale-x-100" />
 					</Link>
 				</Button>
 			</CardContent>

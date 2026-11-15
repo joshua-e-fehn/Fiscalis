@@ -54,7 +54,7 @@ export function RetirementProgressCard({ results, currency, className }: Props) 
 							{hasTarget ? formatCurrency(results.targetPortfolio, currency) : "—"}
 						</p>
 					</div>
-					<div className="text-right">
+					<div className="text-end">
 						<p className="text-sm text-muted-foreground">
 							{t("progressCard.in")}
 						</p>

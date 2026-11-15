@@ -113,9 +113,9 @@ export function AssumptionsStep({
 									value={drafts[field] ?? toPercentInput(data[field])}
 									onChange={(e) => setRate(field, e.target.value)}
 									aria-invalid={!!issue}
-									className="pr-8"
+									className="pe-8"
 								/>
-								<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+								<span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
 									%
 								</span>
 							</div>
@@ -148,9 +148,9 @@ export function AssumptionsStep({
 							}
 							onChange={(e) => setRate("withdrawalTaxRate", e.target.value)}
 							aria-invalid={!!taxIssue}
-							className="pr-8"
+							className="pe-8"
 						/>
-						<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+						<span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
 							%
 						</span>
 					</div>
@@ -184,7 +184,7 @@ export function AssumptionsStep({
 			</div>
 
 			<Button variant="ghost" size="sm" onClick={resetDefaults}>
-				<RotateCcw className="mr-1 h-3.5 w-3.5" />
+				<RotateCcw className="me-1 h-3.5 w-3.5" />
 				{t("reset")}
 			</Button>
 		</RetirementStepShell>

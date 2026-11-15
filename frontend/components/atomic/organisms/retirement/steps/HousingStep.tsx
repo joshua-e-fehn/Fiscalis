@@ -80,7 +80,7 @@ export function HousingStep({
 			isSaving={isSaving}
 		>
 			<div className="flex items-center justify-between rounded-lg border border-border p-4">
-				<div className="space-y-0.5 pr-4">
+				<div className="space-y-0.5 pe-4">
 					<Label htmlFor="ownsHome">{t("ownsHome")}</Label>
 					<p className="text-xs text-muted-foreground">{t("ownsHomeHint")}</p>
 				</div>
@@ -244,7 +244,7 @@ export function HousingStep({
 					{t.rich("equityLabel", { muted })}
 				</Label>
 				<div className="relative">
-					<span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+					<span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground">
 						{currencySymbols[currency].trim()}
 					</span>
 					<Input
@@ -252,7 +252,7 @@ export function HousingStep({
 						type="number"
 						min={0}
 						step={1000}
-						className="pl-7"
+						className="ps-7"
 						value={data.fundableRealEstateEquity || ""}
 						onChange={(e) =>
 							update({

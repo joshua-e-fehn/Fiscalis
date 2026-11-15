@@ -249,11 +249,11 @@ export default function LoanCalculatorPage() {
       <Tabs defaultValue="calculate" className="w-full">
         <TabsList className="grid grid-cols-2 mb-8 max-w-md">
           <TabsTrigger value="calculate">
-            <Calculator className="w-4 h-4 mr-2" />
+            <Calculator className="w-4 h-4 me-2" />
             {t("tabs.calculate")}
           </TabsTrigger>
           <TabsTrigger value="compare">
-            <GitCompareArrows className="w-4 h-4 mr-2" />
+            <GitCompareArrows className="w-4 h-4 me-2" />
             {t("tabs.compare")}
           </TabsTrigger>
         </TabsList>
@@ -396,7 +396,7 @@ function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
                   key={i}
                   className="text-sm text-muted-foreground flex items-start gap-2"
                 >
-                  <ArrowRight className="h-4 w-4 mt-0.5 shrink-0 text-blue-500" />
+                  <ArrowRight className="h-4 w-4 mt-0.5 shrink-0 text-blue-500 rtl:-scale-x-100" />
                   {item}
                 </li>
               ))}
@@ -413,7 +413,7 @@ function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
                   key={i}
                   className="text-sm text-muted-foreground flex items-start gap-2"
                 >
-                  <ArrowRight className="h-4 w-4 mt-0.5 shrink-0 text-green-500" />
+                  <ArrowRight className="h-4 w-4 mt-0.5 shrink-0 text-green-500 rtl:-scale-x-100" />
                   {item}
                 </li>
               ))}
@@ -430,7 +430,7 @@ function LoanTypeExplanation({ loanType }: { loanType: LoanTypeInfo }) {
                   key={i}
                   className="text-sm text-muted-foreground flex items-start gap-2"
                 >
-                  <ArrowRight className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+                  <ArrowRight className="h-4 w-4 mt-0.5 shrink-0 text-amber-500 rtl:-scale-x-100" />
                   {item}
                 </li>
               ))}
@@ -520,7 +520,7 @@ function ExtraPaymentsSection({
             <Label>{t(`intervals.${paymentInterval}.recurring`)}</Label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-                <CircleDollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <CircleDollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="number"
                   value={config.recurringAmount}
@@ -530,7 +530,7 @@ function ExtraPaymentsSection({
                       recurringAmount: Number(e.target.value),
                     })
                   }
-                  className="pl-9"
+                  className="ps-9"
                   placeholder="0"
                 />
               </div>
@@ -548,7 +548,7 @@ function ExtraPaymentsSection({
             <div className="flex items-center justify-between">
               <Label>{t("prepayments.oneTime")}</Label>
               <Button variant="outline" size="sm" onClick={addOneTimePayment}>
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-4 w-4 me-1" />
                 {t("prepayments.add")}
               </Button>
             </div>
@@ -1120,7 +1120,7 @@ function AmortizationTable({ schedule }: { schedule: AmortizationRow[] }) {
     <Collapsible>
       <CollapsibleTrigger asChild>
         <Button variant="outline" className="w-full mb-4">
-          <ChevronDown className="h-4 w-4 mr-2" />
+          <ChevronDown className="h-4 w-4 me-2" />
           {t("view")}
         </Button>
       </CollapsibleTrigger>
@@ -1130,32 +1130,32 @@ function AmortizationTable({ schedule }: { schedule: AmortizationRow[] }) {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("period")}</TableHead>
-                <TableHead className="text-right">{t("payment")}</TableHead>
-                <TableHead className="text-right">{t("principal")}</TableHead>
-                <TableHead className="text-right">{t("interest")}</TableHead>
-                <TableHead className="text-right">{t("extra")}</TableHead>
-                <TableHead className="text-right">{t("balance")}</TableHead>
+                <TableHead className="text-end">{t("payment")}</TableHead>
+                <TableHead className="text-end">{t("principal")}</TableHead>
+                <TableHead className="text-end">{t("interest")}</TableHead>
+                <TableHead className="text-end">{t("extra")}</TableHead>
+                <TableHead className="text-end">{t("balance")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayRows.map((row) => (
                 <TableRow key={row.periodIndex}>
                   <TableCell>{row.periodIndex}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     {formatCurrencyPrecise(row.totalPayment)}
                   </TableCell>
-                  <TableCell className="text-right text-green-600">
+                  <TableCell className="text-end text-green-600">
                     {formatCurrencyPrecise(row.principalPayment)}
                   </TableCell>
-                  <TableCell className="text-right text-orange-600">
+                  <TableCell className="text-end text-orange-600">
                     {formatCurrencyPrecise(row.interestAmount)}
                   </TableCell>
-                  <TableCell className="text-right text-purple-600">
+                  <TableCell className="text-end text-purple-600">
                     {row.prepaymentAmount > 0
                       ? formatCurrencyPrecise(row.prepaymentAmount)
                       : "-"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-end">
                     {formatCurrencyPrecise(row.closingBalance)}
                   </TableCell>
                 </TableRow>
@@ -1301,13 +1301,13 @@ function GenericLoanCalculator({
             <div className="space-y-2">
               <Label htmlFor="principal">{t("fields.loanAmount")}</Label>
               <div className="relative">
-                <CircleDollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <CircleDollarSign className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="principal"
                   type="number"
                   value={principal}
                   onChange={(e) => setPrincipal(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -1317,14 +1317,14 @@ function GenericLoanCalculator({
                 {t("fields.annualInterestRate")}
               </Label>
               <div className="relative">
-                <Percent className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Percent className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="interest-rate"
                   type="number"
                   step="0.1"
                   value={interestRate}
                   onChange={(e) => setInterestRate(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -1332,13 +1332,13 @@ function GenericLoanCalculator({
             <div className="space-y-2">
               <Label htmlFor="term-years">{t("fields.termYears")}</Label>
               <div className="relative">
-                <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Clock className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="term-years"
                   type="number"
                   value={termYears}
                   onChange={(e) => setTermYears(Number(e.target.value))}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
             </div>
@@ -1352,7 +1352,7 @@ function GenericLoanCalculator({
                 onValueChange={(v) => setPaymentInterval(v as PaymentInterval)}
               >
                 <SelectTrigger>
-                  <Calendar className="h-4 w-4 mr-2" />
+                  <Calendar className="h-4 w-4 me-2" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1491,13 +1491,13 @@ function InterestOnlyCalculator() {
             {t("fields.interestOnlyYears")}
           </Label>
           <div className="relative max-w-xs">
-            <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Clock className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               id="interest-only-years"
               type="number"
               value={gracePeriodYears}
               onChange={(e) => setGracePeriodYears(Number(e.target.value))}
-              className="pl-9"
+              className="ps-9"
               max={termYears - 1}
             />
           </div>
@@ -1721,13 +1721,13 @@ function LoanTypeComparison() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t("compare.loanType")}</TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="text-end">
                         {t("compare.firstPayment")}
                       </TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="text-end">
                         {t("compare.totalInterest")}
                       </TableHead>
-                      <TableHead className="text-right">
+                      <TableHead className="text-end">
                         {t("compare.totalCost")}
                       </TableHead>
                     </TableRow>
@@ -1738,13 +1738,13 @@ function LoanTypeComparison() {
                         <TableCell className="font-medium">
                           {row.type}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           {formatCurrencyPrecise(row.payment)}
                         </TableCell>
-                        <TableCell className="text-right text-orange-600">
+                        <TableCell className="text-end text-orange-600">
                           {formatCurrency(row.interest)}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-end">
                           {formatCurrency(row.total)}
                         </TableCell>
                       </TableRow>
@@ -1753,7 +1753,7 @@ function LoanTypeComparison() {
                 </Table>
               </div>
 
-              <div className="pr-4">
+              <div className="pe-4">
                 <h4 className="font-semibold mb-2">
                   {t("compare.interestChart")}
                 </h4>

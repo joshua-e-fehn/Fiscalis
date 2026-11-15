@@ -51,13 +51,13 @@ export function ResultsStep({
 
 			<div className="flex items-center justify-between">
 				<Button variant="ghost" onClick={onBack} disabled={isSaving}>
-					<ArrowLeft className="mr-1 h-4 w-4" />
+					<ArrowLeft className="me-1 h-4 w-4 rtl:-scale-x-100" />
 					{tActions("back")}
 				</Button>
 				<Button onClick={onSave} disabled={isSaving || !!invalidReason}>
 					{saved ? (
 						<>
-							<Check className="mr-1 h-4 w-4" />
+							<Check className="me-1 h-4 w-4" />
 							{tActions("saved")}
 						</>
 					) : isSaving ? (
@@ -68,7 +68,7 @@ export function ResultsStep({
 				</Button>
 			</div>
 			{invalidReason && (
-				<p className="text-right text-sm text-muted-foreground">
+				<p className="text-end text-sm text-muted-foreground">
 					{t("resultsStep.fixToSave", { reason: invalidReason })}
 				</p>
 			)}

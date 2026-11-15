@@ -210,7 +210,7 @@ export function IndicatorSearch({
               {indicatorText(selectedIndicator).name}
             </span>
           </div>
-          <Badge variant="secondary" className="ml-2 flex-shrink-0">
+          <Badge variant="secondary" className="ms-2 flex-shrink-0">
             {selectedIndicator.isDynamic ? t("search.custom") : t("search.featured")}
           </Badge>
         </Button>
@@ -235,19 +235,19 @@ export function IndicatorSearch({
 
         {/* Search Input */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
             placeholder={t("search.placeholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-10"
+            className="ps-10 pe-10"
           />
           {searchQuery && (
             <Button
               variant="ghost"
               size="sm"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
               onClick={() => setSearchQuery("")}
               aria-label={t("search.clear")}
               title={t("search.clear")}
@@ -264,7 +264,7 @@ export function IndicatorSearch({
             <div className="p-2">
               {isSearching ? (
                 <div className="flex items-center justify-center py-8 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                  <Loader2 className="h-5 w-5 animate-spin me-2" />
                   {t("search.searching")}
                 </div>
               ) : searchResults.length > 0 ? (
@@ -288,7 +288,7 @@ export function IndicatorSearch({
                       onKeyDown={(e) =>
                         e.key === "Enter" && handleSelectSearched(indicator)
                       }
-                      className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors group cursor-pointer"
+                      className="w-full text-start px-3 py-2 rounded-md hover:bg-accent transition-colors group cursor-pointer"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -443,7 +443,7 @@ export function IndicatorSearch({
                       onKeyDown={(e) =>
                         e.key === "Enter" && handleSelectFavorite(favorite)
                       }
-                      className={`w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors group cursor-pointer ${
+                      className={`w-full text-start px-3 py-2 rounded-md hover:bg-accent transition-colors group cursor-pointer ${
                         selectedIndicator.id === favorite.code
                           ? "bg-accent"
                           : ""
@@ -517,7 +517,7 @@ export function IndicatorSearch({
                         <button
                           key={indicator.id}
                           onClick={() => handleSelectFeatured(indicator)}
-                          className={`w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors ${
+                          className={`w-full text-start px-3 py-2 rounded-md hover:bg-accent transition-colors ${
                             selectedIndicator.id === indicator.id &&
                             !selectedIndicator.isDynamic
                               ? "bg-accent"
@@ -535,7 +535,7 @@ export function IndicatorSearch({
                             </div>
                             {selectedIndicator.id === indicator.id &&
                               !selectedIndicator.isDynamic && (
-                                <Badge variant="secondary" className="ml-2">
+                                <Badge variant="secondary" className="ms-2">
                                   {t("search.selected")}
                                 </Badge>
                               )}

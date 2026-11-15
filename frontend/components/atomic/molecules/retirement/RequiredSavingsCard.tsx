@@ -158,7 +158,7 @@ function ScenarioBox({
 			</div>
 			<p className="mt-2 text-2xl font-bold">
 				{value}
-				<span className="ml-1 text-sm font-normal text-muted-foreground">
+				<span className="ms-1 text-sm font-normal text-muted-foreground">
 					{t("perMonthUnit")}
 				</span>
 			</p>

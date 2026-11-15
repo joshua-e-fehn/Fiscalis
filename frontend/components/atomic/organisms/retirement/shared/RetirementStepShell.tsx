@@ -73,7 +73,7 @@ export function RetirementStepShell({
 				<div className="mt-6 flex items-center justify-between">
 					{onBack ? (
 						<Button variant="ghost" onClick={onBack} disabled={isSaving}>
-							<ArrowLeft className="mr-1 h-4 w-4" />
+							<ArrowLeft className="me-1 h-4 w-4 rtl:-scale-x-100" />
 							{tActions("back")}
 						</Button>
 					) : (
@@ -82,7 +82,7 @@ export function RetirementStepShell({
 					{onNext && (
 						<Button onClick={onNext} disabled={nextDisabled || isSaving}>
 							{isSaving ? t("saving") : (nextLabel ?? tActions("continue"))}
-							{!isSaving && <ArrowRight className="ml-1 h-4 w-4" />}
+							{!isSaving && <ArrowRight className="ms-1 h-4 w-4 rtl:-scale-x-100" />}
 						</Button>
 					)}
 				</div>

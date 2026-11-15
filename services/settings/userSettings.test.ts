@@ -56,7 +56,7 @@ describe("validateSettings", () => {
       ok: true,
       value: { language: "de", theme: "system" },
     });
-    expect(validateSettings({ language: "fr" }).ok).toBe(false);
+    expect(validateSettings({ language: "xx" }).ok).toBe(false);
     expect(validateSettings({ theme: "sepia" }).ok).toBe(false);
   });
 });

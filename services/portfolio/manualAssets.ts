@@ -336,14 +336,19 @@ export function validateManualAsset(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * The decimal mark a locale writes ("," for de and es, "." for en), from
- * Intl so every UI language gets its own convention.
+ * The decimal mark a locale writes ("," for de, es and fr, "." for en),
+ * from Intl so every UI language gets its own convention. Falls back to "."
+ * for a tag Intl rejects.
  */
 export function localeDecimalMark(locale: string): "." | "," {
-  const part = new Intl.NumberFormat(locale)
-    .formatToParts(1.5)
-    .find((p) => p.type === "decimal");
-  return part?.value === "," ? "," : ".";
+  try {
+    const part = new Intl.NumberFormat(locale)
+      .formatToParts(1.5)
+      .find((p) => p.type === "decimal");
+    return part?.value === "," ? "," : ".";
+  } catch {
+    return ".";
+  }
 }
 
 /**
@@ -352,8 +357,9 @@ export function localeDecimalMark(locale: string): "." | "," {
  * "." and "," in it, the last one is the decimal mark ("1.250,50",
  * "1,250.50"). With one of them only, repeated it groups ("1.250.000"),
  * and once it is the decimal mark, except the locale's grouping mark
- * before exactly three digits: in German or Spanish "250.000" is 250000, in English
- * "1,500" is 1500. So a typed "250.000" is never read as 250.
+ * before exactly three digits: in German, Spanish or French "250.000" is
+ * 250000, in English "1,500" is 1500. So a typed "250.000" is never read as
+ * 250.
  */
 export function parseTypedAmount(
   text: string,

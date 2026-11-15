@@ -80,15 +80,7 @@ export function BitpandaConnectButton({
         onSuccess?.(result.connectionId);
       } catch (err) {
         // Codes thrown by convex/actions/bitpanda.ts connect.
-        // TODO(i18n batch 16-convex-user-error-codes): move bitpandaKeyRejected
-        // and bitpandaUnavailable into common.errors + convex/lib/userError.ts
-        // and drop these overrides.
-        setError(
-          toErrorMessage(err, "generic", {
-            bitpandaKeyRejected: t("errors.bitpandaKeyRejected"),
-            bitpandaUnavailable: t("errors.bitpandaUnavailable"),
-          }),
-        );
+        setError(toErrorMessage(err));
         onError?.(err instanceof Error ? err : new Error(String(err)));
       }
     },

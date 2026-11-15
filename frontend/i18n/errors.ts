@@ -33,8 +33,6 @@ function isCodedErrorData(data: unknown): data is CodedErrorData {
 
 /**
  * Turns a caught error into a message for the user, in their language:
- * - ConvexError({ code, params }) whose code is in `overrides` → that message
- *   (a caller's own wording for codes not yet in common.errors);
  * - ConvexError({ code, params }) with a known code → common.errors.<code>
  *   (thrown by convex/lib/userError.ts; codes in services/i18n/userErrorCodes.ts);
  * - ConvexError carrying a plain string (legacy) → that string;
@@ -49,13 +47,10 @@ export function useErrorMessage() {
     (
       error: unknown,
       fallback: ErrorCode = "generic",
-      overrides?: Readonly<Partial<Record<string, string>>>,
     ): string => {
       if (error instanceof ConvexError) {
         const data: unknown = error.data;
         if (isCodedErrorData(data)) {
-          const override = overrides?.[data.code];
-          if (override) return override;
           const key = `${data.code}` as ErrorCode;
           if (t.has(key)) return t(key, data.params);
         } else if (typeof data === "string" && data) {

@@ -228,11 +228,7 @@
       "labelPlaceholder": "z. B. Mein Bitpanda",
       "submit": "Verbinden",
       "connecting": "Wird verbunden…",
-      "keyMissing": "Bitte füge deinen Bitpanda-API-Schlüssel ein.",
-      "errors": {
-        "bitpandaKeyRejected": "Dieser Bitpanda-API-Schlüssel wurde abgelehnt. Prüfe, ob es ein gültiger Schlüssel mit Lesezugriff ist.",
-        "bitpandaUnavailable": "Bitpanda antwortet gerade nicht. Bitte versuche es in ein paar Minuten erneut."
-      }
+      "keyMissing": "Bitte füge deinen Bitpanda-API-Schlüssel ein."
     }
   },
   "connectionNotices": {

@@ -220,10 +220,10 @@ async function seededTest(): Promise<{ t: TestConvex; ids: SeedIds }> {
       isPopular: true,
     }),
   );
-  // Real ciphertext for the provider secrets, so actions get past decrypting
+  // Real ciphertext (key from the stubbed env) for the provider secrets, so actions get past decrypting
   // the caller's own credentials to the ownership check
   await t.run(async (ctx) => {
-    const secret = encrypt("test-secret", TEST_ENCRYPTION_KEY);
+    const secret = encrypt("test-secret");
     for (const row of await ctx.db.query("plaidItems").collect()) {
       await ctx.db.patch(row._id, { accessToken: secret });
     }

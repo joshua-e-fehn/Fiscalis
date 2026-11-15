@@ -212,7 +212,23 @@
       "step": "Schritt",
       "stepPlaceholder": "z. B. Drei Angebote vergleichen",
       "removeStep": "Schritt entfernen",
-      "addStep": "Schritt hinzufügen"
+      "addStep": "Schritt hinzufügen",
+      "ai": {
+        "title": "Beschreib es in deinen eigenen Worten",
+        "placeholder": "z. B. Ich buche die Reise, sobald ich das Zehnfache ihres Preises investiert und 3 Monate lang 3-mal pro Woche trainiert habe.",
+        "hint": "Eine KI schreibt daraus eine Regel, die du vor dem Speichern prüfst. Gesendet werden nur dieser Text, die Währung und die Namen deiner Tracker, nie deine Finanzdaten.",
+        "write": "Regel schreiben",
+        "writing": "Schreibt …",
+        "suggestion": "Vorgeschlagene Regel",
+        "newTrackers": "Diese Tracker werden angelegt: {names}",
+        "unsupported": "Nicht von der Regel abgedeckt: {items}",
+        "use": "Diese Regel verwenden",
+        "discard": "Verwerfen",
+        "applied": "Regel übernommen. Prüf sie unten und speichere dann das Ziel.",
+        "unavailable": "Der Assistent ist gerade nicht verfügbar. Bau die Regel stattdessen unten.",
+        "invalidText": "Beschreib die Regel in 3 bis 1000 Zeichen.",
+        "failed": "Der Assistent konnte daraus keine Regel schreiben. Formulier es anders oder bau die Regel unten."
+      }
     },
     "pools": {
       "invested": "Neu investiertes Geld",

@@ -212,7 +212,23 @@
       "step": "Paso",
       "stepPlaceholder": "p. ej. Comparar tres ofertas",
       "removeStep": "Quitar paso",
-      "addStep": "Añadir paso"
+      "addStep": "Añadir paso",
+      "ai": {
+        "title": "Descríbelo con tus propias palabras",
+        "placeholder": "p. ej. Puedo reservar el viaje cuando haya invertido diez veces su precio y entrenado 3 veces por semana durante 3 meses.",
+        "hint": "Una IA escribe a partir de esto una regla que revisas antes de guardar. Solo se envían este texto, la moneda y los nombres de tus contadores, nunca tus datos financieros.",
+        "write": "Escribir la regla",
+        "writing": "Escribiendo…",
+        "suggestion": "Regla sugerida",
+        "newTrackers": "Se añadirán estos contadores: {names}",
+        "unsupported": "No cubierto por la regla: {items}",
+        "use": "Usar esta regla",
+        "discard": "Descartar",
+        "applied": "Regla aplicada. Revísala abajo y luego guarda el objetivo.",
+        "unavailable": "El asistente no está disponible ahora. Crea la regla abajo.",
+        "invalidText": "Describe la regla en 3 a 1000 caracteres.",
+        "failed": "El asistente no pudo escribir una regla a partir de esto. Prueba a reformularlo o crea la regla abajo."
+      }
     },
     "pools": {
       "invested": "Dinero nuevo invertido",

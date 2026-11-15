@@ -212,7 +212,23 @@
       "step": "Step",
       "stepPlaceholder": "e.g. Compare three offers",
       "removeStep": "Remove step",
-      "addStep": "Add step"
+      "addStep": "Add step",
+      "ai": {
+        "title": "Describe it in your own words",
+        "placeholder": "e.g. I can book the trip once I've invested ten times its price and worked out 3 times a week for 3 months.",
+        "hint": "An AI writes a rule from this for you to check before saving. Only this text, the currency and your tracker names are sent, never your financial data.",
+        "write": "Write the rule",
+        "writing": "Writing…",
+        "suggestion": "Suggested rule",
+        "newTrackers": "These trackers will be added: {names}",
+        "unsupported": "Not covered by the rule: {items}",
+        "use": "Use this rule",
+        "discard": "Discard",
+        "applied": "Rule applied. Check it below, then save the goal.",
+        "unavailable": "The assistant isn't available right now. Build the rule below instead.",
+        "invalidText": "Describe the rule in 3 to 1000 characters.",
+        "failed": "The assistant couldn't write a rule from this. Try rephrasing it, or build the rule below."
+      }
     },
     "pools": {
       "invested": "New money invested",

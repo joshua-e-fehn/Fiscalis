@@ -212,7 +212,23 @@
       "step": "Étape",
       "stepPlaceholder": "p. ex. Comparer trois offres",
       "removeStep": "Retirer l’étape",
-      "addStep": "Ajouter une étape"
+      "addStep": "Ajouter une étape",
+      "ai": {
+        "title": "Décris-le avec tes propres mots",
+        "placeholder": "p. ex. Je peux réserver le voyage quand j’aurai investi dix fois son prix et fait du sport 3 fois par semaine pendant 3 mois.",
+        "hint": "Une IA en tire une règle que tu vérifies avant d’enregistrer. Seuls ce texte, la devise et les noms de tes suivis sont envoyés, jamais tes données financières.",
+        "write": "Écrire la règle",
+        "writing": "Écriture…",
+        "suggestion": "Règle proposée",
+        "newTrackers": "Ces suivis seront ajoutés : {names}",
+        "unsupported": "Non couvert par la règle : {items}",
+        "use": "Utiliser cette règle",
+        "discard": "Ignorer",
+        "applied": "Règle appliquée. Vérifie-la ci-dessous, puis enregistre l’objectif.",
+        "unavailable": "L’assistant n’est pas disponible pour le moment. Construis la règle ci-dessous.",
+        "invalidText": "Décris la règle en 3 à 1000 caractères.",
+        "failed": "L’assistant n’a pas pu en tirer une règle. Reformule-la ou construis la règle ci-dessous."
+      }
     },
     "pools": {
       "invested": "Argent frais investi",

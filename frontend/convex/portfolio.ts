@@ -1,10 +1,11 @@
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { query, type QueryCtx } from "./_generated/server";
 import { getUserId } from "./lib/auth";
 import { loadHoldings, type LoadedHolding } from "./lib/netWorth";
 import {
   aggregateNetWorth,
   HOLDING_CATEGORIES,
+  type NetWorthAggregate,
   placeHolding,
   profitLossCostBase,
 } from "../../services/portfolio/aggregate";
@@ -80,37 +81,40 @@ export const getOverview = query({
     const userId = await getUserId(ctx);
     if (!userId) return null;
 
-    const aggregate = aggregateNetWorth(await loadHoldings(ctx, userId));
-
-    return {
-      totalAssets: aggregate.totalAssets,
-      totalLiabilities: aggregate.totalLiabilities,
-      netWorth: aggregate.netWorth,
-      unrealized: aggregate.unrealized,
-      categories: HOLDING_CATEGORIES.map((category) => {
-        const c = aggregate.byCategory[category];
-        return {
-          category,
-          value: c.value,
-          count: c.count,
-          costBasis: c.costBasis,
-          coveredValue: c.coveredValue,
-          profitLoss: c.profitLoss,
-          profitLossPercent: c.profitLossPercent,
-          coverage: c.coverage,
-        };
-      }),
-      liabilities: {
-        totalBalance: aggregate.totalLiabilities,
-        // Non-loan liabilities; loans are counted in loansCount
-        accountsCount: aggregate.liabilityAccountsCount,
-        loansCount: aggregate.loansCount,
-        monthlyPayment: aggregate.monthlyLoanPayment,
-      },
-      asOf: aggregate.asOf,
-    };
+    return overviewView(aggregateNetWorth(await loadHoldings(ctx, userId)));
   },
 });
+
+/** The overview of an aggregate: one user's (getOverview) or a team's (teamViews.ts). */
+export function overviewView(aggregate: NetWorthAggregate) {
+  return {
+    totalAssets: aggregate.totalAssets,
+    totalLiabilities: aggregate.totalLiabilities,
+    netWorth: aggregate.netWorth,
+    unrealized: aggregate.unrealized,
+    categories: HOLDING_CATEGORIES.map((category) => {
+      const c = aggregate.byCategory[category];
+      return {
+        category,
+        value: c.value,
+        count: c.count,
+        costBasis: c.costBasis,
+        coveredValue: c.coveredValue,
+        profitLoss: c.profitLoss,
+        profitLossPercent: c.profitLossPercent,
+        coverage: c.coverage,
+      };
+    }),
+    liabilities: {
+      totalBalance: aggregate.totalLiabilities,
+      // Non-loan liabilities; loans are counted in loansCount
+      accountsCount: aggregate.liabilityAccountsCount,
+      loansCount: aggregate.loansCount,
+      monthlyPayment: aggregate.monthlyLoanPayment,
+    },
+    asOf: aggregate.asOf,
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════
 // UNIFIED POSITIONS
@@ -190,217 +194,241 @@ export const getUnifiedPositions = query({
     const holdings = (await loadHoldings(ctx, userId)).filter(
       (h) => !args.provider || h.provider === args.provider,
     );
-
-    const plaidItems = holdings.some((h) => h.source === "bank")
-      ? await ctx.db
-          .query("plaidItems")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .collect()
-      : [];
-    const institutionByItem = new Map(
-      plaidItems.map((i) => [i.itemId, i.institutionName]),
-    );
-    const brokerAccounts = new Map(
-      (holdings.some((h) => h.source === "brokerPosition")
-        ? await ctx.db
-            .query("brokerAccounts")
-            .withIndex("by_user", (q) => q.eq("userId", userId))
-            .collect()
-        : []
-      ).map((a) => [a._id, a]),
-    );
-
-    const positions: UnifiedPosition[] = [];
-    for (const h of holdings) {
-      const placed = placeHolding(h);
-      const isLiability = placed.category === "liabilities";
-      const valueInBaseCurrency = isLiability ? -placed.value : placed.value;
-      const plCost = isLiability ? null : profitLossCostBase(h);
-      const pl =
-        plCost !== null
-          ? holdingProfitLoss({ value: placed.value, costBasis: plCost })
-          : null;
-      const base = {
-        _id: h.id,
-        provider: h.provider,
-        source: h.source,
-        category: placed.category,
-        subcategory: placed.subcategory,
-        name: h.name,
-        valueInBaseCurrency,
-        costBasis: isLiability ? undefined : (h.costBase ?? undefined),
-        unrealizedPL: pl?.profitLoss ?? undefined,
-        unrealizedPLPercent: pl?.profitLossPercent ?? undefined,
-      };
-      // The native amount takes the sign of the EUR value: an overridden
-      // positive liability position shows negative, a credit balance (a
-      // card's -40, an overpaid loan) shows positive like its cash value
-      const signed = (native: number) =>
-        valueInBaseCurrency < 0
-          ? -Math.abs(native)
-          : valueInBaseCurrency > 0
-            ? Math.abs(native)
-            : native;
-
-      switch (h.source) {
-        case "bank": {
-          const a = h.doc;
-          positions.push({
-            ...base,
-            id: a.accountId,
-            classification: { target: "plaid", isManual: hasUserOverride(a) },
-            symbol: a.type.toUpperCase(),
-            quantity: 1,
-            marketValue: signed(a.currentBalance ?? 0),
-            currency: a.currency,
-            lastSyncAt: a.lastSynced,
-            metadata: {
-              accountId: a.accountId,
-              institutionName: institutionByItem.get(a.itemId),
-              accountType: a.type,
-              subtype: a.subtype,
-              mask: a.mask,
-            },
-          });
-          break;
-        }
-        case "brokerPosition": {
-          const p = h.doc;
-          const accountDoc = brokerAccounts.get(p.accountId);
-          positions.push({
-            ...base,
-            id: p.snaptradePositionId || p._id,
-            classification: { target: "broker", isManual: hasUserOverride(p) },
-            valuation: positionValuation(h, placed.category, placed.subcategory),
-            symbol: p.symbol,
-            name: p.name || p.symbol,
-            quantity: p.quantity,
-            currentPrice: h.override?.pricePerUnit ?? p.currentPrice,
-            ...(p.costFxEstimated && pl ? { costFxEstimated: true } : {}),
-            marketValue: signed(h.override?.marketValue ?? p.marketValue ?? 0),
-            currency: h.override?.currency ?? p.currency,
-            lastSyncAt: p.lastSyncAt || p.createdAt,
-            metadata: {
-              brokerName: accountDoc?.institutionName,
-              isin: p.isin,
-              assetType: p.assetType,
-              accountName: accountDoc?.name,
-            },
-          });
-          break;
-        }
-        case "brokerAccount": {
-          const a = h.doc;
-          positions.push({
-            ...base,
-            id: `${a._id}-cash`,
-            symbol: "CASH",
-            quantity: 1,
-            marketValue: a.cash ?? 0,
-            currency: a.balanceCurrency ?? a.currency,
-            lastSyncAt: a.lastSyncAt || a.createdAt,
-            metadata: {
-              brokerName: a.institutionName,
-              accountName: a.name,
-              accountType: a.accountType,
-            },
-          });
-          break;
-        }
-        case "bitpanda": {
-          const b = h.doc;
-          positions.push({
-            ...base,
-            id: `${b.connectionId}-${b.assetType}-${b.symbol}`,
-            classification: { target: "bitpanda", isManual: hasUserOverride(b) },
-            valuation: positionValuation(h, placed.category, placed.subcategory),
-            symbol: b.symbol,
-            name: b.name || b.symbol,
-            quantity: b.quantity,
-            currentPrice: h.override?.pricePerUnit ?? b.currentPrice,
-            marketValue: signed(h.override?.marketValue ?? b.marketValue ?? 0),
-            currency: h.override?.currency ?? b.currency,
-            lastSyncAt: b.lastSyncAt ?? b.createdAt,
-            metadata: { assetType: b.assetType },
-          });
-          break;
-        }
-        case "vault": {
-          const item = h.doc;
-          const catalogItem = item.catalogItemId
-            ? await ctx.db.get(item.catalogItemId)
-            : null;
-          positions.push({
-            ...base,
-            id: item._id,
-            symbol:
-              METAL_SYMBOLS[item.metalType] || item.metalType.toUpperCase(),
-            name: item.customName || catalogItem?.name || "Unknown Item",
-            quantity: item.quantity,
-            currentPrice:
-              item.quantity > 0 ? placed.value / item.quantity : undefined,
-            // Valued in EUR on the server (lib/netWorth.ts)
-            marketValue: placed.value,
-            currency: "EUR",
-            lastSyncAt: item.updatedAt,
-            metadata: {
-              metalType: item.metalType,
-              category: item.category,
-              purity: item.purity,
-              weightGrams: item.weightGrams,
-              fineWeightGrams: item.fineWeightGrams,
-              storageLocation: item.storageLocation,
-            },
-          });
-          break;
-        }
-        case "loan": {
-          const loan = h.doc;
-          positions.push({
-            ...base,
-            id: loan._id,
-            symbol: "LOAN",
-            quantity: 1,
-            marketValue: signed(loan.currentBalance),
-            currency: loan.currency,
-            lastSyncAt: loan.updatedAt,
-            metadata: {
-              loanType: loan.loanType,
-              lender: loan.lender,
-              annualInterestRate: loan.annualInterestRate,
-              termMonths: loan.termMonths,
-              nextPaymentDate: loan.nextPaymentDate,
-              scheduledPayment: loan.scheduledPayment,
-            },
-          });
-          break;
-        }
-        case "manualAsset": {
-          const asset = h.doc;
-          const latest = latestValuation(asset.valuations);
-          positions.push({
-            ...base,
-            id: asset._id,
-            symbol: "",
-            quantity: 1,
-            marketValue: latest?.value ?? 0,
-            currency: asset.currency,
-            lastSyncAt: asset.updatedAt,
-            metadata: {
-              valuedOn: latest?.date,
-              linkedLoanId: asset.linkedLoanId,
-              attributes: asset.attributes,
-            },
-          });
-          break;
-        }
-      }
-    }
-
-    positions.sort(
-      (a, b) =>
-        Math.abs(b.valueInBaseCurrency) - Math.abs(a.valueInBaseCurrency),
-    );
-    return args.limit ? positions.slice(0, args.limit) : positions;
+    return await unifiedPositionsView(ctx, [userId], holdings, args.limit);
   },
 });
+
+/**
+ * The unified positions of the holdings of `userIds` (one user, or a
+ * team's sharing members in teamViews.ts), largest first.
+ */
+export async function unifiedPositionsView(
+  ctx: QueryCtx,
+  userIds: readonly string[],
+  holdings: LoadedHolding[],
+  limit: number | undefined,
+): Promise<UnifiedPosition[]> {
+  const plaidItems = holdings.some((h) => h.source === "bank")
+    ? (
+        await Promise.all(
+          userIds.map((userId) =>
+            ctx.db
+              .query("plaidItems")
+              .withIndex("by_user", (q) => q.eq("userId", userId))
+              .collect(),
+          ),
+        )
+      ).flat()
+    : [];
+  const institutionByItem = new Map(
+    plaidItems.map((i) => [i.itemId, i.institutionName]),
+  );
+  const brokerAccounts = new Map(
+    (holdings.some((h) => h.source === "brokerPosition")
+      ? (
+          await Promise.all(
+            userIds.map((userId) =>
+              ctx.db
+                .query("brokerAccounts")
+                .withIndex("by_user", (q) => q.eq("userId", userId))
+                .collect(),
+            ),
+          )
+        ).flat()
+      : []
+    ).map((a) => [a._id, a]),
+  );
+
+  const positions: UnifiedPosition[] = [];
+  for (const h of holdings) {
+    const placed = placeHolding(h);
+    const isLiability = placed.category === "liabilities";
+    const valueInBaseCurrency = isLiability ? -placed.value : placed.value;
+    const plCost = isLiability ? null : profitLossCostBase(h);
+    const pl =
+      plCost !== null
+        ? holdingProfitLoss({ value: placed.value, costBasis: plCost })
+        : null;
+    const base = {
+      _id: h.id,
+      provider: h.provider,
+      source: h.source,
+      category: placed.category,
+      subcategory: placed.subcategory,
+      name: h.name,
+      valueInBaseCurrency,
+      costBasis: isLiability ? undefined : (h.costBase ?? undefined),
+      unrealizedPL: pl?.profitLoss ?? undefined,
+      unrealizedPLPercent: pl?.profitLossPercent ?? undefined,
+    };
+    // The native amount takes the sign of the EUR value: an overridden
+    // positive liability position shows negative, a credit balance (a
+    // card's -40, an overpaid loan) shows positive like its cash value
+    const signed = (native: number) =>
+      valueInBaseCurrency < 0
+        ? -Math.abs(native)
+        : valueInBaseCurrency > 0
+          ? Math.abs(native)
+          : native;
+
+    switch (h.source) {
+      case "bank": {
+        const a = h.doc;
+        positions.push({
+          ...base,
+          id: a.accountId,
+          classification: { target: "plaid", isManual: hasUserOverride(a) },
+          symbol: a.type.toUpperCase(),
+          quantity: 1,
+          marketValue: signed(a.currentBalance ?? 0),
+          currency: a.currency,
+          lastSyncAt: a.lastSynced,
+          metadata: {
+            accountId: a.accountId,
+            institutionName: institutionByItem.get(a.itemId),
+            accountType: a.type,
+            subtype: a.subtype,
+            mask: a.mask,
+          },
+        });
+        break;
+      }
+      case "brokerPosition": {
+        const p = h.doc;
+        const accountDoc = brokerAccounts.get(p.accountId);
+        positions.push({
+          ...base,
+          id: p.snaptradePositionId || p._id,
+          classification: { target: "broker", isManual: hasUserOverride(p) },
+          valuation: positionValuation(h, placed.category, placed.subcategory),
+          symbol: p.symbol,
+          name: p.name || p.symbol,
+          quantity: p.quantity,
+          currentPrice: h.override?.pricePerUnit ?? p.currentPrice,
+          ...(p.costFxEstimated && pl ? { costFxEstimated: true } : {}),
+          marketValue: signed(h.override?.marketValue ?? p.marketValue ?? 0),
+          currency: h.override?.currency ?? p.currency,
+          lastSyncAt: p.lastSyncAt || p.createdAt,
+          metadata: {
+            brokerName: accountDoc?.institutionName,
+            isin: p.isin,
+            assetType: p.assetType,
+            accountName: accountDoc?.name,
+          },
+        });
+        break;
+      }
+      case "brokerAccount": {
+        const a = h.doc;
+        positions.push({
+          ...base,
+          id: `${a._id}-cash`,
+          symbol: "CASH",
+          quantity: 1,
+          marketValue: a.cash ?? 0,
+          currency: a.balanceCurrency ?? a.currency,
+          lastSyncAt: a.lastSyncAt || a.createdAt,
+          metadata: {
+            brokerName: a.institutionName,
+            accountName: a.name,
+            accountType: a.accountType,
+          },
+        });
+        break;
+      }
+      case "bitpanda": {
+        const b = h.doc;
+        positions.push({
+          ...base,
+          id: `${b.connectionId}-${b.assetType}-${b.symbol}`,
+          classification: { target: "bitpanda", isManual: hasUserOverride(b) },
+          valuation: positionValuation(h, placed.category, placed.subcategory),
+          symbol: b.symbol,
+          name: b.name || b.symbol,
+          quantity: b.quantity,
+          currentPrice: h.override?.pricePerUnit ?? b.currentPrice,
+          marketValue: signed(h.override?.marketValue ?? b.marketValue ?? 0),
+          currency: h.override?.currency ?? b.currency,
+          lastSyncAt: b.lastSyncAt ?? b.createdAt,
+          metadata: { assetType: b.assetType },
+        });
+        break;
+      }
+      case "vault": {
+        const item = h.doc;
+        const catalogItem = item.catalogItemId
+          ? await ctx.db.get(item.catalogItemId)
+          : null;
+        positions.push({
+          ...base,
+          id: item._id,
+          symbol:
+            METAL_SYMBOLS[item.metalType] || item.metalType.toUpperCase(),
+          name: item.customName || catalogItem?.name || "Unknown Item",
+          quantity: item.quantity,
+          currentPrice:
+            item.quantity > 0 ? placed.value / item.quantity : undefined,
+          // Valued in EUR on the server (lib/netWorth.ts)
+          marketValue: placed.value,
+          currency: "EUR",
+          lastSyncAt: item.updatedAt,
+          metadata: {
+            metalType: item.metalType,
+            category: item.category,
+            purity: item.purity,
+            weightGrams: item.weightGrams,
+            fineWeightGrams: item.fineWeightGrams,
+            storageLocation: item.storageLocation,
+          },
+        });
+        break;
+      }
+      case "loan": {
+        const loan = h.doc;
+        positions.push({
+          ...base,
+          id: loan._id,
+          symbol: "LOAN",
+          quantity: 1,
+          marketValue: signed(loan.currentBalance),
+          currency: loan.currency,
+          lastSyncAt: loan.updatedAt,
+          metadata: {
+            loanType: loan.loanType,
+            lender: loan.lender,
+            annualInterestRate: loan.annualInterestRate,
+            termMonths: loan.termMonths,
+            nextPaymentDate: loan.nextPaymentDate,
+            scheduledPayment: loan.scheduledPayment,
+          },
+        });
+        break;
+      }
+      case "manualAsset": {
+        const asset = h.doc;
+        const latest = latestValuation(asset.valuations);
+        positions.push({
+          ...base,
+          id: asset._id,
+          symbol: "",
+          quantity: 1,
+          marketValue: latest?.value ?? 0,
+          currency: asset.currency,
+          lastSyncAt: asset.updatedAt,
+          metadata: {
+            valuedOn: latest?.date,
+            linkedLoanId: asset.linkedLoanId,
+            attributes: asset.attributes,
+          },
+        });
+        break;
+      }
+    }
+  }
+
+  positions.sort(
+    (a, b) =>
+      Math.abs(b.valueInBaseCurrency) - Math.abs(a.valueInBaseCurrency),
+  );
+  return limit ? positions.slice(0, limit) : positions;
+}

@@ -21,7 +21,7 @@
  */
 
 import { v } from "convex/values";
-import { query, internalMutation, type MutationCtx } from "./_generated/server";
+import { query, internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { computeNetWorth } from "./lib/netWorth";
@@ -203,33 +203,45 @@ export const getSnapshots = query({
   handler: async (ctx, { limit = 365, since }) => {
     const userId = await getUserId(ctx);
     if (!userId) return [];
-
-    const newestFirst = await ctx.db
-      .query("portfolioSnapshots")
-      .withIndex("by_user_timestamp", (q) =>
-        since === undefined
-          ? q.eq("userId", userId)
-          : q.eq("userId", userId).gt("timestamp", since),
-      )
-      .order("desc")
-      .take(limit);
-
-    // Holdings are kept for the snapshot writer only
-    const snapshots = newestFirst.reverse().map(withoutHoldings);
-
-    if (since === undefined) return snapshots;
-
-    const baseline = await ctx.db
-      .query("portfolioSnapshots")
-      .withIndex("by_user_timestamp", (q) =>
-        q.eq("userId", userId).lte("timestamp", since),
-      )
-      .order("desc")
-      .first();
-
-    return baseline ? [withoutHoldings(baseline), ...snapshots] : snapshots;
+    return await snapshotsOf(ctx, userId, limit, since);
   },
 });
+
+/**
+ * One user's snapshots, oldest first, without the writer's holdings (see
+ * getSnapshots); also read per sharing member by teamViews.ts.
+ */
+export async function snapshotsOf(
+  ctx: QueryCtx,
+  userId: string,
+  limit: number,
+  since: number | undefined,
+) {
+  const newestFirst = await ctx.db
+    .query("portfolioSnapshots")
+    .withIndex("by_user_timestamp", (q) =>
+      since === undefined
+        ? q.eq("userId", userId)
+        : q.eq("userId", userId).gt("timestamp", since),
+    )
+    .order("desc")
+    .take(limit);
+
+  // Holdings are kept for the snapshot writer only
+  const snapshots = newestFirst.reverse().map(withoutHoldings);
+
+  if (since === undefined) return snapshots;
+
+  const baseline = await ctx.db
+    .query("portfolioSnapshots")
+    .withIndex("by_user_timestamp", (q) =>
+      q.eq("userId", userId).lte("timestamp", since),
+    )
+    .order("desc")
+    .first();
+
+  return baseline ? [withoutHoldings(baseline), ...snapshots] : snapshots;
+}
 
 /**
  * Get the latest snapshot for quick portfolio value lookup

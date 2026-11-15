@@ -21,6 +21,9 @@ import loans from "./loans.json";
 import metals from "./metals.json";
 import assets from "./assets.json";
 import settings from "./settings.json";
+import strategies from "./strategies.json";
+import docs from "./docs.json";
+import billing from "./billing.json";
 
 export const ru = {
   common,
@@ -38,4 +41,7 @@ export const ru = {
   metals,
   assets,
   settings,
+  strategies,
+  docs,
+  billing,
 } satisfies Messages;

@@ -152,6 +152,3 @@ export {
   useRevokeApiKey,
   netWorthEndpointUrl,
 } from "./apiKeys";
-
-// GDPR: data export and account deletion
-export { useExportMyData, useDeleteMyAccount } from "./account";

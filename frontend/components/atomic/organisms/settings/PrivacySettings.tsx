@@ -34,7 +34,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/shadcn/alert-dialog";
-import { useDeleteMyAccount, useExportMyData } from "@/hooks/convex";
+import { useDeleteMyAccount, useExportMyData } from "@/hooks/convex/account";
 import { useErrorMessage } from "@/i18n/errors";
 import {
   ACCOUNT_DELETE_PHRASE,

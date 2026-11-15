@@ -1,0 +1,98 @@
+{
+  "general": {
+    "title": "Generali",
+    "subtitle": "Il tuo profilo, la valuta di visualizzazione, la lingua e il tema.",
+    "profile": {
+      "title": "Profilo",
+      "description": "Come Fiscalis si rivolge a te.",
+      "displayName": "Nome visualizzato",
+      "displayNamePlaceholder": "Il tuo nome",
+      "birthDate": "Data di nascita",
+      "birthDateHint": "Facoltativa. Usata dagli strumenti di pianificazione come il piano pensionistico."
+    },
+    "region": {
+      "title": "Regione",
+      "description": "Valuta e lingua.",
+      "currency": "Valuta di visualizzazione",
+      "currencyHint": "Totali, grafici e rendimenti vengono convertiti al tasso di cambio più recente, lo storico al tasso di ciascun giorno. Prestiti e righe dei conti mantengono la propria valuta."
+    },
+    "appearance": {
+      "title": "Aspetto",
+      "description": "Sistema segue l'impostazione del tuo dispositivo.",
+      "theme": "Tema"
+    },
+    "saveFailed": "Non siamo riusciti a salvare le tue impostazioni. Riprova."
+  },
+  "apiKeys": {
+    "title": "Chiavi API",
+    "subtitle": "Leggi il tuo patrimonio netto in modo programmatico. Le chiavi sono private e limitate al tuo account.",
+    "create": {
+      "title": "Crea una chiave",
+      "description": "Una chiave concede l'accesso in sola lettura al tuo patrimonio netto attuale. Trattala come una password: non committarla mai e non usarla nel codice del browser.",
+      "name": "Nome",
+      "namePlaceholder": "es. Dashboard di casa",
+      "expires": "Scadenza",
+      "submit": "Crea chiave"
+    },
+    "expiry": {
+      "30": "30 giorni",
+      "90": "90 giorni",
+      "365": "1 anno",
+      "never": "Mai"
+    },
+    "list": {
+      "title": "Le tue chiavi",
+      "empty": "Ancora nessuna chiave API.",
+      "name": "Nome",
+      "key": "Chiave",
+      "status": "Stato",
+      "created": "Creata",
+      "expires": "Scadenza",
+      "lastUsed": "Ultimo utilizzo",
+      "never": "Mai",
+      "none": "—"
+    },
+    "status": {
+      "active": "Attiva",
+      "revoked": "Revocata",
+      "expired": "Scaduta"
+    },
+    "revoke": {
+      "button": "Revoca",
+      "title": "Revocare “{name}”?",
+      "description": "Le richieste con questa chiave verranno rifiutate immediatamente. L'operazione non può essere annullata.",
+      "confirm": "Revoca"
+    },
+    "usage": {
+      "title": "Utilizzo",
+      "description": "Invia la chiave nell'header Authorization. Le chiavi negli URL non sono accettate. Ogni chiave è limitata a {limit} richieste al minuto. Gli importi sono in EUR; aggiungi <code>?currency=USD</code>, <code>GBP</code> o <code>CHF</code> per convertirli al tasso di cambio più recente."
+    },
+    "newKey": {
+      "title": "Copia la tua nuova chiave API",
+      "description": "È l'unica volta in cui la chiave viene mostrata. Conservala in un posto sicuro, come un password manager o un archivio di segreti.",
+      "copy": "Copia chiave API",
+      "done": "Fatto"
+    }
+  },
+  "privacy": {
+    "title": "Privacy",
+    "subtitle": "Scarica tutto ciò che Fiscalis memorizza su di te, oppure elimina il tuo account.",
+    "export": {
+      "title": "Scarica i miei dati",
+      "description": "Un unico file JSON con tutti i record del tuo account, raggruppati per tabella. Le credenziali cifrate dei fornitori e gli hash delle chiavi API sono esclusi.",
+      "button": "Scarica i miei dati",
+      "preparing": "Preparazione…",
+      "failed": "Non siamo riusciti a preparare i tuoi dati. Riprova."
+    },
+    "delete": {
+      "title": "Elimina il mio account",
+      "description": "Scollega le tue banche e i tuoi broker su Plaid e SnapTrade, elimina tutti i tuoi dati e poi il tuo accesso. L'operazione non può essere annullata.",
+      "button": "Elimina il mio account",
+      "dialogTitle": "Eliminare il tuo account?",
+      "dialogDescription": "Prima vengono revocate le tue connessioni. Poi vengono eliminati tutti i conti, le posizioni, le transazioni, i prestiti, gli oggetti del caveau, le istantanee e le impostazioni, e infine il tuo accesso. Se vuoi una copia, scarica prima i tuoi dati.",
+      "confirmLabel": "Digita {phrase} per confermare",
+      "confirm": "Elimina account definitivamente",
+      "deleting": "Eliminazione…"
+    }
+  }
+}

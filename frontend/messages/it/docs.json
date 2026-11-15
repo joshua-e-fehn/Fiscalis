@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "{page} · Documentazione Fiscalis"
+  },
+  "nav": {
+    "label": "Documentazione",
+    "previous": "Precedente",
+    "next": "Successiva",
+    "onThisPage": "In questa pagina"
+  },
+  "introduction": {
+    "subtitle": "Che cos'è Fiscalis, da dove vengono i tuoi numeri e come vengono calcolati.",
+    "sections": {
+      "whatIs": {
+        "title": "Che cos'è Fiscalis",
+        "body": "Fiscalis è uno strumento privato per seguire il tuo patrimonio netto. Riunisce in un unico posto i tuoi conti bancari, i broker, Bitpanda, un caveau di metalli preziosi, i beni che inserisci a mano e i tuoi prestiti, valuta tutto in un'unica valuta e mostra come si sviluppa il tuo patrimonio nel tempo.\n\nFiscalis legge soltanto i tuoi dati. Non può spostare denaro, eseguire operazioni o modificare nulla presso la tua banca o il tuo broker."
+      },
+      "sources": {
+        "title": "Da dove vengono i tuoi numeri",
+        "body": "- Banche tramite Plaid: saldi di conti correnti, conti di risparmio e carte di credito, più lo storico delle transazioni.\n- Broker tramite SnapTrade: conti di intermediazione, posizioni, liquidità e movimenti.\n- Bitpanda tramite una chiave API di sola lettura: cripto, metalli, azioni, ETF e wallet di liquidità.\n- Caveau di metalli preziosi: monete e lingotti che registri tu, valutati al prezzo spot in tempo reale.\n- Beni manuali: immobili, collezionabili, private equity, obbligazioni e tutto ciò che nessun conto collegato riporta.\n- Prestiti: mutui e altri prestiti che inserisci, con il piano di rimborso completo.",
+        "linkLabel": "Collega il tuo primo conto"
+      },
+      "netWorth": {
+        "title": "Come viene calcolato il tuo patrimonio netto",
+        "body": "Il tuo patrimonio netto è tutto ciò che possiedi meno le tue passività. Lo stesso calcolo alimenta la dashboard, gli snapshot giornalieri che disegnano il tuo storico e l'API, quindi ovunque vedi lo stesso numero.\n\nLe posizioni sono raggruppate in categorie come liquidità, azioni, obbligazioni, cripto, materie prime, immobili e collezionabili. Se una posizione finisce nella categoria sbagliata, puoi spostarla in Impostazioni > Categorie.\n\nIl rendimento dei tuoi investimenti è corretto per i flussi: il denaro che aggiungi o con cui acquisti conta come investito, non come guadagno, così un versamento non sembra mai una buona giornata in borsa.",
+        "linkLabel": "Apri la dashboard"
+      },
+      "metals": {
+        "title": "Come vengono valutati i metalli",
+        "body": "Oro, argento, platino e palladio nel tuo caveau sono valutati al prezzo spot in tempo reale, aggiornato ogni minuto. Fiscalis applica premi dei rivenditori calibrati: il premio d'acquisto è quanto pagheresti sopra lo spot, il premio di vendita quanto ti pagherebbe un rivenditore. Puoi modificarli entrambi per ogni oggetto."
+      },
+      "currency": {
+        "title": "Valuta di visualizzazione e lingua",
+        "body": "Tutto viene salvato in euro. Puoi mostrare i tuoi totali in EUR, USD, GBP o CHF: i totali sono convertiti all'ultimo tasso di cambio giornaliero e il tuo storico al tasso di ciascun giorno. I prestiti e le singole righe dei conti mantengono la propria valuta.\n\nFiscalis è disponibile in inglese, tedesco, spagnolo, francese e italiano. Cambia la valuta di visualizzazione e la lingua in Impostazioni > Generali.",
+        "linkLabel": "Apri Impostazioni > Generali"
+      },
+      "sync": {
+        "title": "Quando si aggiornano i dati",
+        "body": "- Tutte le banche e i broker collegati si sincronizzano una volta al giorno, la mattina presto.\n- Bitpanda si sincronizza ogni sei ore.\n- I prezzi spot dei metalli si aggiornano ogni minuto e i tassi di cambio più volte al giorno.\n- Puoi sincronizzare tutto tu in qualsiasi momento con il pulsante di sincronizzazione in alto nella pagina."
+      },
+      "tools": {
+        "title": "Strumenti di pianificazione",
+        "body": "- Piano pensionistico: calcola se il tuo patrimonio netto attuale, i risparmi e le pensioni coprono la pensione che desideri.\n- Calcolatori di interessi e di prestiti: prova piani di risparmio e opzioni di rimborso senza salvare nulla.\n- Mappa del mondo: indicatori economici, demografici e di sviluppo della Banca Mondiale su una mappa interattiva.\n- API: leggi il tuo patrimonio netto attuale dai tuoi script con una chiave API personale."
+      },
+      "privacy": {
+        "title": "Privacy e sicurezza",
+        "body": "I token di accesso delle tue banche e dei tuoi broker e la tua chiave Bitpanda sono cifrati a riposo. Le chiavi API sono salvate solo come hash, quindi nemmeno Fiscalis può rileggerle. Accedi alla tua banca e al tuo broker nelle loro finestre; Fiscalis non vede mai quelle password.\n\nIn Impostazioni > Privacy puoi scaricare tutto ciò che Fiscalis conserva su di te oppure eliminare il tuo account.",
+        "linkLabel": "Apri Impostazioni > Privacy"
+      },
+      "access": {
+        "title": "Accesso",
+        "body": "Al momento Fiscalis è solo su invito. I nuovi utenti si iscrivono alla lista d'attesa e ottengono l'accesso quando il loro posto viene approvato."
+      }
+    }
+  },
+  "getStarted": {
+    "subtitle": "Dal tuo primo accesso a un quadro completo del tuo patrimonio.",
+    "sections": {
+      "account": {
+        "title": "1. Il tuo account",
+        "body": "La registrazione passa dalla lista d'attesa. Quando il tuo accesso viene approvato, accedi con il tuo indirizzo email. Al primo accesso una breve configurazione ti guida attraverso il tuo profilo e i tuoi primi collegamenti. Puoi saltare ogni passaggio di collegamento e tornarci più tardi."
+      },
+      "profile": {
+        "title": "2. Configura il tuo profilo",
+        "body": "Scegli il tuo nome visualizzato, la valuta di visualizzazione e un tema. La data di nascita è facoltativa; la usa il piano pensionistico. Puoi cambiare tutto più tardi in Impostazioni > Generali, insieme alla lingua.",
+        "linkLabel": "Apri Impostazioni > Generali"
+      },
+      "connect": {
+        "title": "3. Collega i tuoi conti",
+        "body": "- Banche: Integrazioni > Banche, poi Collega banca.\n- Broker: Integrazioni > Broker, poi Collega broker.\n- Bitpanda: sempre in Integrazioni > Broker, con Collega Bitpanda e una chiave API di sola lettura.\n\nLa prima sincronizzazione può richiedere un momento. Dopo, i tuoi conti si aggiornano automaticamente.",
+        "linkLabel": "Apri Banche"
+      },
+      "manual": {
+        "title": "4. Aggiungi ciò che nessun conto riporta",
+        "body": "- Monete e lingotti vanno nel caveau di metalli preziosi in Investimenti > Materie prime.\n- Immobili, collezionabili, private equity, obbligazioni e beni simili si aggiungono come beni manuali dalla pagina della loro categoria.\n- Mutui e altri prestiti vanno in Passività > Prestiti, così il tuo patrimonio netto sottrae ciò che devi ancora.",
+        "linkLabel": "Vedi i tutorial"
+      },
+      "explore": {
+        "title": "5. Esplora la tua dashboard",
+        "body": "La dashboard mostra il tuo patrimonio netto, come è suddiviso tra le categorie e come si è sviluppato. Ogni categoria in Investimenti ha una propria pagina con le posizioni che la compongono. Da ora in poi Fiscalis scatta uno snapshot ogni giorno, così il tuo storico cresce da solo.",
+        "linkLabel": "Apri la dashboard"
+      },
+      "next": {
+        "title": "Prossimi passi",
+        "body": "- Pianifica la tua pensione con il piano pensionistico, partendo dal tuo patrimonio netto reale.\n- Crea una chiave API se vuoi leggere il tuo patrimonio netto dai tuoi strumenti.\n- Consulta le novità per vedere cosa è cambiato."
+      }
+    }
+  },
+  "tutorials": {
+    "subtitle": "Guide passo passo per le attività più comuni.",
+    "sections": {
+      "connectBank": {
+        "title": "Collega una banca",
+        "body": "I conti bancari si collegano tramite Plaid. Fiscalis ottiene accesso in sola lettura a saldi e transazioni.",
+        "steps": "- Apri Integrazioni > Banche.\n- Clicca su Collega banca. Si apre la finestra di Plaid.\n- Scegli la tua banca e accedi lì. Le tue credenziali bancarie vanno a Plaid e alla tua banca, mai a Fiscalis.\n- Seleziona i conti che vuoi condividere e conferma.\n- I tuoi saldi compaiono nella pagina. Apri Transazioni per vedere lo storico delle transazioni.",
+        "note": "Se una banca mostra Riautenticazione richiesta, o il tuo consenso sta per scadere, clicca su Ricollega e accedi di nuovo. I tuoi dati restano dove sono.",
+        "linkLabel": "Apri Banche"
+      },
+      "connectBroker": {
+        "title": "Collega un broker o Bitpanda",
+        "body": "I broker si collegano tramite SnapTrade. Bitpanda si collega direttamente con una chiave API di sola lettura.",
+        "steps": "- Apri Integrazioni > Broker.\n- Per un broker, clicca su Collega broker, scegli il tuo broker nel portale di collegamento di SnapTrade e accedi lì.\n- Per Bitpanda, clicca su Collega Bitpanda. Usa il link Crea una chiave di sola lettura su Bitpanda, crea una chiave con solo accesso in lettura e copiala.\n- Incolla la chiave, assegnale facoltativamente un'etichetta e clicca su Collega.\n- Le tue posizioni e la tua liquidità compaiono dopo la prima sincronizzazione.",
+        "note": "Bitpanda si sincronizza ogni sei ore; usa Sincronizza ora per aggiornarlo subito. Non dare mai a Fiscalis una chiave Bitpanda che può fare trading o prelievi.",
+        "linkLabel": "Apri Broker"
+      },
+      "manualAsset": {
+        "title": "Aggiungi un bene manuale",
+        "body": "I beni manuali coprono tutto ciò che nessun conto collegato riporta, come un appartamento, un orologio, del vino, private equity o titoli di Stato.",
+        "steps": "- Apri la categoria corrispondente in Investimenti, per esempio Immobili o Collezionabili.\n- Clicca su Aggiungi voce, oppure apri una sottocategoria e clicca su Aggiungi bene.\n- Scegli la categoria e la sottocategoria e dai un nome al bene.\n- Scegli la sua valuta e aggiungi una valutazione: una data e quanto valeva il bene quel giorno. Nel tuo patrimonio netto conta la valutazione più recente.\n- Facoltativamente inserisci il prezzo d'acquisto per vedere il tuo guadagno o la tua perdita e scegli in Finanziato da il prestito che lo ha finanziato.\n- Salva. Per aggiornare il valore in seguito, modifica il bene e clicca su Aggiungi valutazione.",
+        "linkLabel": "Apri Immobili"
+      },
+      "vaultPurchase": {
+        "title": "Registra un acquisto nel caveau",
+        "body": "Il caveau contiene oro, argento, platino e palladio fisici. Gli oggetti sono valutati al prezzo spot in tempo reale con i premi dei rivenditori.",
+        "steps": "- Apri Investimenti > Materie prime > Metalli preziosi e passa alla scheda Posizioni.\n- Clicca su Aggiungi oggetto.\n- Scegli una moneta o un lingotto Dal catalogo, oppure scegli Oggetto personalizzato e inserisci nome, metallo, categoria, peso in grammi e purezza in ‰.\n- In Dettagli dell'acquisto inserisci la quantità, il prezzo per unità e la sua valuta, e la data d'acquisto.\n- Facoltativamente aggiungi un luogo di custodia e delle note, poi clicca su Aggiungi al caveau.",
+        "note": "La data d'acquisto conta: il rendimento considera l'acquisto come denaro investito in quel giorno, non come guadagno. Quando vendi un oggetto, usa Vendi oggetto invece di eliminarlo, così la vendita e il tuo guadagno realizzato vengono registrati.",
+        "linkLabel": "Apri il caveau"
+      },
+      "loan": {
+        "title": "Imposta un prestito",
+        "body": "I prestiti contano come passività e riducono il tuo patrimonio netto del loro debito residuo. Fiscalis calcola il piano di rimborso completo.",
+        "steps": "- Apri Passività > Prestiti e clicca su Aggiungi prestito.\n- Nome e tipo: dai un nome al prestito e scegli il tipo: Rata costante, Rata decrescente, Rimborso a scadenza o Preammortamento.\n- Importo e tasso: inserisci l'importo originale, il debito residuo attuale se è diverso, il tasso d'interesse annuo e la valuta.\n- Date e rate: imposta la frequenza delle rate, la durata e la data di inizio. Usa la rata calcolata oppure inserisci la tua rata effettiva.\n- Pagamenti extra: indica se il prestito consente rimborsi anticipati e quanto all'anno.\n- Conferma i dettagli e salva.",
+        "note": "Apri un prestito per vedere il suo piano, registrare i pagamenti che hai fatto e provare scenari ipotetici come una rata più alta o un pagamento extra una tantum.",
+        "linkLabel": "Apri Prestiti"
+      },
+      "apiKey": {
+        "title": "Usa l'API",
+        "body": "Con una chiave API personale puoi leggere il tuo patrimonio netto attuale da uno script, un foglio di calcolo o una dashboard domestica. Le chiavi sono di sola lettura e appartengono al tuo account.",
+        "steps": "- Apri Impostazioni > Chiavi API.\n- Inserisci un nome per la chiave, scegli quando scade (30 giorni, 90 giorni, 1 anno o mai) e clicca su Crea chiave.\n- Copia subito la chiave e conservala in un password manager o in un archivio di segreti. Viene mostrata una sola volta.\n- Inviala nell'header Authorization come bearer token all'endpoint indicato nella pagina delle chiavi API, come nell'esempio qui sotto.\n- Per ottenere gli importi in un'altra valuta, aggiungi ?currency=USD, GBP o CHF all'URL. Senza, gli importi sono in EUR.",
+        "note": "Puoi avere fino a {maxKeys} chiavi attive e ogni chiave è limitata a {rateLimit} richieste al minuto. Le chiavi negli URL non sono accettate e le chiavi non vanno mai usate nel codice del browser. Revoca una chiave nella stessa pagina se potrebbe essere trapelata.",
+        "linkLabel": "Apri Impostazioni > Chiavi API"
+      }
+    }
+  },
+  "changelog": {
+    "subtitle": "Nuove funzionalità e correzioni, dalle più recenti.",
+    "empty": "Ancora nessuna modifica registrata.",
+    "entryLanguage": "Ogni voce è il titolo della modifica così come è stata rilasciata, in inglese.",
+    "types": {
+      "feature": "Novità",
+      "fix": "Correzione"
+    },
+    "pr": "#{number}",
+    "count": "{count, plural, one {# modifica} other {# modifiche}}"
+  }
+}

@@ -234,8 +234,12 @@ describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered language
 });
 
 describe("locale helpers", () => {
-  it("formats English day-first, German as de-DE, Spanish as es-ES and French as fr-FR", () => {
-    expect(INTL_TAGS).toEqual({ en: "en-GB", de: "de-DE", es: "es-ES", fr: "fr-FR" });
+  it("formats English day-first, German as de-DE, Spanish as es-ES, French as fr-FR and Italian as it-IT", () => {
+    expect(INTL_TAGS).toEqual({ en: "en-GB", de: "de-DE", es: "es-ES", fr: "fr-FR", it: "it-IT" });
+  });
+
+  it("maps Italian Intl tags to Italian", () => {
+    expect(languageForLocale("it-CH")).toBe("it");
   });
 
   it("maps Intl tags back to app languages", () => {

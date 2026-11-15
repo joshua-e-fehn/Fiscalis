@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "subheadline": "Tieni traccia di tutti i tuoi investimenti, attività e passività. Conosci il tuo vero patrimonio netto con aggiornamenti automatici su conti bancari, azioni, cripto, metalli preziosi e altro ancora.",
+    "badge": "Il tuo patrimonio, semplificato",
+    "headline": "Il quadro completo del tuo <highlight>patrimonio</highlight><br></br>in un unico posto",
+    "tagline": "Come Finanzguru, ma per tutto il tuo patrimonio netto."
+  },
+  "trust": {
+    "readOnly": "Connessioni in sola lettura",
+    "dailySync": "Sincronizzazione automatica giornaliera",
+    "multiCurrency": "Multivaluta"
+  },
+  "features": {
+    "cryptoDescription": "Importa automaticamente le tue posizioni Bitpanda con una chiave API di sola lettura.",
+    "metalsTitle": "Metalli preziosi",
+    "metalsDescription": "Segui lingotti e monete d'oro e d'argento, valutati ai prezzi correnti dei rivenditori.",
+    "liabilitiesDescription": "Segui i tuoi prestiti e i piani di rimborso. Scopri il tuo vero patrimonio netto.",
+    "headline": "Tutto ciò che ti serve per <highlight>padroneggiare il tuo patrimonio</highlight>",
+    "subheadline": "Dai conti bancari ai wallet cripto, segui tutte le tue attività in un'unica dashboard.",
+    "banksTitle": "Conti bancari",
+    "banksDescription": "Collega i tuoi conti bancari in modo sicuro tramite Plaid. Segui conti correnti, risparmi e carte di credito.",
+    "investmentsTitle": "Portafogli d'investimento",
+    "investmentsDescription": "Importa automaticamente azioni, ETF, obbligazioni e fondi comuni dai principali broker.",
+    "cryptoTitle": "Criptovalute",
+    "liabilitiesTitle": "Debiti e passività",
+    "netWorthTitle": "Monitoraggio del patrimonio netto",
+    "netWorthDescription": "Guarda crescere il tuo patrimonio nel tempo con grafici e analisi chiari."
+  },
+  "steps": {
+    "createDescription": "Registrati con la tua email o un login social. L'accesso viene aperto gradualmente tramite una lista d'attesa. Nessuna carta di credito richiesta.",
+    "netWorthDescription": "Guarda prendere forma il quadro completo del tuo patrimonio, aggiornato automaticamente ogni giorno.",
+    "headline": "Inizia in pochi <highlight>minuti</highlight>",
+    "subheadline": "Tre semplici passaggi per vedere il tuo quadro finanziario completo.",
+    "createTitle": "Crea il tuo account",
+    "connectTitle": "Collega i tuoi conti",
+    "connectDescription": "Collega in modo sicuro banche, broker ed exchange cripto. Solo accesso in sola lettura.",
+    "netWorthTitle": "Scopri il tuo patrimonio netto"
+  },
+  "security": {
+    "description": "Non vediamo mai le tue credenziali bancarie. Token di accesso e chiavi API sono memorizzati cifrati, e ogni connessione è in sola lettura.",
+    "badge": "Sicurezza by design",
+    "headline": "I tuoi dati sono <highlight>al sicuro con noi</highlight>",
+    "encryption": "Crittografia AES-256-GCM per tutti i token sensibili",
+    "readOnly": "Accesso in sola lettura: non possiamo mai spostare il tuo denaro",
+    "credentials": "Le tue credenziali bancarie non toccano mai i nostri server",
+    "providers": "Fornitori affidabili: Plaid, SnapTrade, Bitpanda",
+    "ownership": "I tuoi dati sono tuoi: non li vendiamo mai"
+  },
+  "cta": {
+    "description": "Riunisci conti, posizioni e prestiti e vedi tutto il tuo patrimonio netto in un unico posto.",
+    "headline": "Pronto a prendere il controllo del <highlight>tuo patrimonio?</highlight>"
+  },
+  "nav": {
+    "features": "Funzionalità",
+    "howItWorks": "Come funziona",
+    "security": "Sicurezza",
+    "signIn": "Accedi",
+    "joinWaitlist": "Iscriviti alla lista d'attesa",
+    "dashboard": "Dashboard",
+    "goToDashboard": "Vai alla dashboard"
+  },
+  "logoAlt": "Logo di Fiscalis",
+  "mockup": {
+    "totalNetWorth": "Patrimonio netto totale",
+    "yearChange": "{change} quest'anno",
+    "banks": "{count, plural, one {# banca} other {# banche}}",
+    "brokers": "{count, plural, one {# broker} other {# broker}}",
+    "wallets": "{count, plural, one {# wallet} other {# wallet}}",
+    "equities": "Azioni",
+    "crypto": "Cripto",
+    "cash": "Liquidità",
+    "realEstate": "Immobili"
+  },
+  "languageToggle": {
+    "label": "Lingua"
+  }
+}

@@ -1,0 +1,295 @@
+{
+  "index": {
+    "title": "Calcolatori",
+    "subtitle": "Strumenti finanziari per aiutarti a prendere decisioni migliori su investimenti e prestiti.",
+    "interestDescription": "Tassi d'interesse, durata della crescita, valori futuri e attuali con interesse semplice o composto.",
+    "loanDescription": "Rate, interessi totali e ammortamento per prestiti a rata costante, decrescente, con preammortamento e con rimborso a scadenza, inclusi i rimborsi anticipati."
+  },
+  "intervals": {
+    "label": {
+      "minute": "Minuto",
+      "hour": "Ora",
+      "day": "Giorno",
+      "week": "Settimana",
+      "month": "Mese",
+      "quarter": "Trimestre",
+      "year": "Anno"
+    },
+    "unitPlural": {
+      "minute": "minuti",
+      "hour": "ore",
+      "day": "giorni",
+      "week": "settimane",
+      "month": "mesi",
+      "quarter": "trimestri",
+      "year": "anni"
+    },
+    "per": {
+      "minute": "Al minuto",
+      "hour": "All'ora",
+      "day": "Al giorno",
+      "week": "Alla settimana",
+      "month": "Al mese",
+      "quarter": "Al trimestre",
+      "year": "All'anno"
+    },
+    "count": {
+      "minute": "{count, plural, one {# minuto} other {# minuti}}",
+      "hour": "{count, plural, one {# ora} other {# ore}}",
+      "day": "{count, plural, one {# giorno} other {# giorni}}",
+      "week": "{count, plural, one {# settimana} other {# settimane}}",
+      "month": "{count, plural, one {# mese} other {# mesi}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestri}}",
+      "year": "{count, plural, one {# anno} other {# anni}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, one {# minuto} other {# minuti}}",
+      "hour": "{count, plural, one {# ora} other {# ore}}",
+      "day": "{count, plural, one {# giorno} other {# giorni}}",
+      "week": "{count, plural, one {# settimana} other {# settimane}}",
+      "month": "{count, plural, one {# mese} other {# mesi}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestri}}",
+      "year": "{count, plural, one {# anno} other {# anni}}"
+    }
+  },
+  "interest": {
+    "title": "Calcolatori di interessi",
+    "subtitle": "Strumenti finanziari potenti per aiutarti a prendere decisioni d'investimento migliori. Calcola interesse composto, tassi di crescita, valori futuri e altro ancora.",
+    "tabs": {
+      "rate": "Tasso d'interesse",
+      "duration": "Durata",
+      "futureValue": "Valore futuro",
+      "startingValue": "Valore iniziale"
+    },
+    "fields": {
+      "initialValue": "Valore iniziale",
+      "finalValue": "Valore finale",
+      "startDate": "Data di inizio",
+      "endDate": "Data di fine",
+      "interval": "Periodo di capitalizzazione",
+      "intervalPlaceholder": "Seleziona periodo",
+      "startingCapital": "Capitale iniziale",
+      "targetCapital": "Capitale obiettivo",
+      "interestRate": "Tasso d'interesse (%)",
+      "timePeriod": "Periodo ({unit})"
+    },
+    "calculate": "Calcola",
+    "results": "Risultati",
+    "empty": "Inserisci i valori e calcola per vedere i risultati",
+    "compoundInterest": "Interesse composto",
+    "simpleInterest": "Interesse semplice",
+    "withCompound": "Con interesse composto",
+    "withSimple": "Con interesse semplice",
+    "gainAfter": "Guadagno: {amount} dopo {duration}",
+    "growthAfter": "Crescita: {amount} dopo {duration}",
+    "rate": {
+      "title": "Calcola il tasso d'interesse",
+      "description": "Trova il tasso d'interesse medio tra due momenti, sia con interesse composto sia semplice",
+      "resultsHint": "In base ai tuoi dati, ecco i tassi d'interesse calcolati"
+    },
+    "duration": {
+      "title": "Calcola la durata",
+      "description": "Scopri quanto tempo ti servirà per raggiungere il capitale obiettivo in base al valore iniziale e al tasso d'interesse",
+      "resultsHint": "Tempo necessario per raggiungere il capitale obiettivo"
+    },
+    "futureValue": {
+      "title": "Calcola il valore futuro",
+      "description": "Scopri quanto varrà il tuo investimento in futuro in base al tasso d'interesse e al tempo",
+      "resultsHint": "Valore futuro previsto del tuo investimento"
+    },
+    "startingValue": {
+      "title": "Calcola il valore iniziale",
+      "description": "Scopri quanto devi investire oggi per raggiungere il tuo obiettivo in futuro",
+      "resultsHint": "Investimento iniziale necessario per raggiungere il tuo obiettivo"
+    }
+  },
+  "loan": {
+    "title": "Calcolatore di prestiti",
+    "subtitle": "Comprendi i diversi tipi di prestito, visualizza le tue rate e trova l'opzione migliore per la tua situazione. Ti mostriamo esattamente dove vanno i tuoi soldi.",
+    "tabs": {
+      "calculate": "Calcola prestito",
+      "compare": "Confronta tutti i tipi"
+    },
+    "chooseType": "1. Scegli il tipo di prestito",
+    "calculateSection": "2. Calcola il tuo prestito",
+    "understanding": "Capire: {name}",
+    "howItWorks": "Come funziona",
+    "bestFor": "Ideale per",
+    "watchOut": "Attenzione a",
+    "intervals": {
+      "MONTHLY": {
+        "label": "Mensile",
+        "payment": "Rata mensile",
+        "perPeriod": "al mese",
+        "recurring": "Capitale aggiuntivo (ogni mese)"
+      },
+      "QUARTERLY": {
+        "label": "Trimestrale",
+        "payment": "Rata trimestrale",
+        "perPeriod": "al trimestre",
+        "recurring": "Capitale aggiuntivo (ogni trimestre)"
+      },
+      "SEMI_ANNUAL": {
+        "label": "Semestrale",
+        "payment": "Rata semestrale",
+        "perPeriod": "al semestre",
+        "recurring": "Capitale aggiuntivo (ogni semestre)"
+      },
+      "ANNUAL": {
+        "label": "Annuale",
+        "payment": "Rata annuale",
+        "perPeriod": "all'anno",
+        "recurring": "Capitale aggiuntivo (ogni anno)"
+      }
+    },
+    "types": {
+      "ANNUITY": {
+        "name": "Prestito a rata costante",
+        "shortName": "Rata costante",
+        "shortDescription": "Stessa rata ogni periodo, il tipo più comune",
+        "calculatorTitle": "Calcolatore prestito a rata costante",
+        "calculatorDescription": "Calcola la tua rata periodica e vedi come si compone nel tempo.",
+        "howItWorks1": "Paghi lo stesso importo ogni periodo per tutta la durata del prestito",
+        "howItWorks2": "Le prime rate sono soprattutto interessi, le ultime soprattutto capitale",
+        "howItWorks3": "Il debito totale diminuisce in modo costante nel tempo",
+        "bestFor1": "Chi compra casa e vuole un budget prevedibile",
+        "bestFor2": "Prestiti a lungo termine (15-30 anni)",
+        "bestFor3": "Chi preferisce la stabilità alla flessibilità",
+        "watchOut1": "Nei primi anni paghi più interessi",
+        "watchOut2": "Meno flessibilità se il tuo reddito cambia"
+      },
+      "CONSTANT_PRINCIPAL": {
+        "name": "Prestito a rata decrescente",
+        "shortName": "Rata decrescente",
+        "shortDescription": "Le rate partono alte e diminuiscono nel tempo",
+        "calculatorTitle": "Calcolatore prestito a rata decrescente",
+        "calculatorDescription": "Vedi come le tue rate diminuiscono nel tempo man mano che rimborsi il capitale.",
+        "howItWorks1": "Ogni periodo paghi una quota fissa di capitale, più gli interessi",
+        "howItWorks2": "Man mano che il debito diminuisce, calano anche gli interessi e quindi le rate",
+        "howItWorks3": "Gli interessi totali sono inferiori a quelli di un prestito a rata costante",
+        "bestFor1": "Chi prevede un reddito più basso in futuro (vicino alla pensione)",
+        "bestFor2": "Chi può permettersi rate iniziali più alte",
+        "bestFor3": "Chi vuole ridurre al minimo gli interessi totali",
+        "watchOut1": "Le rate iniziali possono essere del 20-30% più alte rispetto a un prestito a rata costante",
+        "watchOut2": "Potresti non ottenerlo se il tuo reddito copre a malapena la prima rata"
+      },
+      "INTEREST_ONLY": {
+        "name": "Prestito con preammortamento",
+        "shortName": "Preammortamento",
+        "shortDescription": "Paghi solo gli interessi, poi il capitale",
+        "calculatorTitle": "Calcolatore prestito con preammortamento",
+        "calculatorDescription": "Paghi solo gli interessi per un periodo, poi inizi a rimborsare il capitale.",
+        "howItWorks1": "Per un periodo stabilito paghi solo gli interessi: il debito non diminuisce",
+        "howItWorks2": "Dopo il periodo di soli interessi inizi a rimborsare anche il capitale",
+        "howItWorks3": "Le rate aumentano sensibilmente quando inizia il rimborso del capitale",
+        "bestFor1": "Investitori immobiliari che prevedono di vendere prima dell'inizio del rimborso del capitale",
+        "bestFor2": "Chi prevede un reddito più alto in futuro",
+        "bestFor3": "Esigenze di finanziamento a breve termine",
+        "watchOut1": "Durante il periodo di soli interessi non accumuli patrimonio",
+        "watchOut2": "Shock della rata quando iniziano i pagamenti regolari",
+        "watchOut3": "Rischio di dovere più di quanto valga il bene"
+      },
+      "BULLET": {
+        "name": "Prestito con rimborso a scadenza",
+        "shortName": "A scadenza",
+        "shortDescription": "Paghi solo gli interessi, tutto il capitale alla fine",
+        "calculatorTitle": "Calcolatore prestito con rimborso a scadenza",
+        "calculatorDescription": "Paghi solo gli interessi per tutta la durata, con l'intero capitale dovuto alla fine.",
+        "howItWorks1": "Paghi solo gli interessi per tutta la durata del prestito",
+        "howItWorks2": "L'intero capitale è dovuto in un'unica soluzione alla fine",
+        "howItWorks3": "Le rate periodiche sono molto basse, ma ti serve un piano per il pagamento finale",
+        "bestFor1": "Finanziamenti ponte (prestiti a breve termine in attesa di un finanziamento definitivo)",
+        "bestFor2": "Investitori che prevedono di vendere il bene prima della scadenza del prestito",
+        "bestFor3": "Mutui per costruzione o progetti di sviluppo",
+        "watchOut1": "Rischio elevato: devi avere un piano per rimborsare o rifinanziare",
+        "watchOut2": "Se non puoi pagare la rata finale, potresti perdere il bene",
+        "watchOut3": "Nessun patrimonio accumulato durante il prestito"
+      }
+    },
+    "fields": {
+      "loanAmount": "Importo del prestito",
+      "annualInterestRate": "Tasso d'interesse annuo (%)",
+      "interestRate": "Tasso d'interesse (%)",
+      "termYears": "Durata del prestito (anni)",
+      "termYearsShort": "Durata (anni)",
+      "paymentSchedule": "Frequenza delle rate",
+      "interestOnlyYears": "Periodo di soli interessi (anni)",
+      "interestOnlyHint": "Dopo quanti anni inizi a rimborsare il capitale?"
+    },
+    "prepayments": {
+      "title": "Rimborsi anticipati",
+      "enabled": "Attivi",
+      "disabled": "Disattivi",
+      "recurringHint": "Questo importo verrà aggiunto a ogni rata regolare.",
+      "oneTime": "Rimborsi anticipati una tantum",
+      "add": "Aggiungi rimborso",
+      "oneTimeHint": "Pianifica rimborsi anticipati in anni specifici (es. bonus annuale, eredità).",
+      "year": "Anno",
+      "amountPlaceholder": "Importo",
+      "fixedAmount": "Importo fisso",
+      "percentOfBalance": "% del saldo",
+      "remove": "Rimuovi rimborso anticipato"
+    },
+    "calculate": "Calcola il mio prestito",
+    "yourResults": "I tuoi risultati",
+    "summary": {
+      "totalInterest": "Interessi totali",
+      "totalCost": "Costo totale",
+      "interestToPrincipal": "Interessi / capitale",
+      "savingsTitle": "Risparmio dai rimborsi anticipati",
+      "interestSaved": "Interessi risparmiati",
+      "periodsSaved": "Periodi risparmiati",
+      "originalTerm": "Durata originale",
+      "newTerm": "Nuova durata",
+      "payments": "{count, plural, one {# rata} other {# rate}}"
+    },
+    "charts": {
+      "principal": "Capitale",
+      "interest": "Interessi",
+      "balance": "Saldo residuo",
+      "payment": "Rata",
+      "yearTick": "A{year}",
+      "principalValue": "Capitale: {amount}",
+      "interestValue": "Interessi: {amount}",
+      "totalValue": "Totale: {amount}",
+      "balanceValue": "Saldo: {amount}",
+      "breakdownByYear": "Composizione delle rate per anno",
+      "breakdownHint": "Capitale (verde) e interessi (arancione) nel tempo.",
+      "balanceOverTime": "Saldo residuo nel tempo",
+      "balanceHint": "Guarda il tuo debito diminuire man mano che paghi le rate.",
+      "breakdown": "Composizione delle rate"
+    },
+    "schedule": {
+      "view": "Vedi il piano di ammortamento completo",
+      "period": "#",
+      "payment": "Rata",
+      "principal": "Capitale",
+      "interest": "Interessi",
+      "extra": "Extra",
+      "balance": "Saldo",
+      "showAll": "{count, plural, one {Mostra # rata} other {Mostra tutte le # rate}}"
+    },
+    "warnings": {
+      "savingsTitle": "💰 Risparmio sulle rate",
+      "savingsBody": "La tua rata scende da {first} a {last}: alla fine sono {difference} in meno per periodo!",
+      "shockTitle": "⚠️ Attenzione allo shock della rata",
+      "shockBody": "Dopo {years, plural, one {# anno} other {# anni}}, la tua rata salirà da {from} a {to}: un aumento di {difference} ({percent}% in più). Assicurati di potertelo permettere!",
+      "balloonTitle": "🚨 Attenzione alla rata finale",
+      "balloonBody": "Al termine di {years, plural, one {# anno} other {# anni}}, devi pagare {amount} in un'unica soluzione. Si chiama \"maxi-rata finale\".",
+      "balloonOptions": "<strong>Le tue opzioni alla scadenza della maxi-rata:</strong> rifinanziare con un nuovo prestito, vendere il bene o pagare con i risparmi. Se non puoi fare nessuna di queste cose, rischi di perdere il bene."
+    },
+    "compare": {
+      "title": "Confronto fianco a fianco",
+      "description": "Vedi come si confrontano i diversi tipi di prestito con lo stesso importo, tasso e durata.",
+      "button": "Confronta tutti i tipi di prestito",
+      "loanType": "Tipo di prestito",
+      "firstPayment": "Prima rata",
+      "totalInterest": "Interessi totali",
+      "totalCost": "Costo totale",
+      "interestChart": "Confronto degli interessi totali",
+      "byType": "Composizione delle rate e saldo per tipo di prestito",
+      "insightTitle": "💡 Da sapere",
+      "insightBody": "Il <strong>prestito a rata decrescente</strong> ti fa risparmiare {saved} di interessi rispetto a un prestito a rata costante, ma la tua prima rata è più alta di {extra}. Scegli in base al tuo budget attuale e alle aspettative di reddito future."
+    }
+  }
+}

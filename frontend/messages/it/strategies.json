@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "Pies",
+    "subtitle": "Allocazioni obiettivo per il tuo portafoglio: imposta un peso per ogni fetta e guarda quanto si sono discostate le tue posizioni.",
+    "newPie": "Nuova pie",
+    "empty": {
+      "title": "Ancora nessuna pie",
+      "description": "Una pie divide il tuo portafoglio in fette, ciascuna una categoria, una sottocategoria o posizioni specifiche, con un peso obiettivo. Fiscalis ti mostra poi quanto la tua allocazione reale se ne discosta.",
+      "action": "Crea la tua prima pie"
+    },
+    "card": {
+      "totalValue": "Valore nella pie",
+      "maxDrift": "Scostamento maggiore",
+      "noHoldings": "Nessuna delle tue posizioni corrisponde ancora alle fette di questa pie.",
+      "edit": "Modifica pie",
+      "delete": "Elimina pie",
+      "threshold": "Le fette che si discostano dall'obiettivo di oltre {threshold} punti percentuali vanno ribilanciate.",
+      "columns": {
+        "slice": "Fetta",
+        "target": "Obiettivo",
+        "actual": "Reale",
+        "drift": "Scostamento",
+        "rebalance": "Per ribilanciare"
+      },
+      "drift": "{value} pp",
+      "status": {
+        "onTarget": "In linea",
+        "over": "Sovrappesata",
+        "under": "Sottopesata"
+      },
+      "buy": "Compra {amount}",
+      "sell": "Vendi {amount}",
+      "balanced": "—",
+      "allOf": "Tutto {category}",
+      "holdingsCount": "{count, plural, one {# posizione} other {# posizioni}}",
+      "missingHoldings": "{count, plural, one {# posizione non è più} other {# posizioni non sono più}} nel tuo portafoglio"
+    },
+    "delete": {
+      "title": "Eliminare questa pie?",
+      "description": "“{name}” e i suoi pesi obiettivo verranno eliminati. Le tue posizioni non vengono toccate.",
+      "confirm": "Elimina pie"
+    },
+    "toast": {
+      "created": "Pie “{name}” creata",
+      "updated": "Pie “{name}” aggiornata",
+      "deleted": "Pie “{name}” eliminata"
+    },
+    "editor": {
+      "addTitle": "Nuova pie",
+      "editTitle": "Modifica “{name}”",
+      "description": "Assegna a ogni fetta un peso obiettivo. I pesi devono sommare al 100%.",
+      "name": "Nome",
+      "namePlaceholder": "es. Core & Satellite",
+      "descriptionLabel": "Descrizione",
+      "optional": "Facoltativo",
+      "slices": "Fette",
+      "slice": "Fetta {number}",
+      "addSlice": "Aggiungi fetta",
+      "removeSlice": "Rimuovi fetta",
+      "splitEvenly": "Dividi in parti uguali",
+      "kind": "Obiettivo",
+      "kinds": {
+        "category": "Categoria",
+        "holdings": "Posizioni specifiche"
+      },
+      "category": "Categoria",
+      "subcategory": "Sottocategoria",
+      "allSubcategories": "Tutte le sottocategorie",
+      "holdings": "Posizioni",
+      "noHoldings": "Non hai ancora posizioni tra cui scegliere.",
+      "holdingGone": "Non più nel tuo portafoglio",
+      "label": "Etichetta",
+      "weight": "Peso obiettivo (%)",
+      "total": "Totale: {total}%",
+      "totalOff": "Totale: {total}%. I pesi devono sommare al 100%."
+    }
+  }
+}

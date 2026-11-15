@@ -3,7 +3,7 @@ import {
   type DisplayCurrency,
 } from "@/../services/finance/displayCurrency";
 import type { Language, Theme } from "@/../services/settings/userSettings";
-import { LANGUAGES as LANGUAGE_CODES, LANGUAGE_ENDONYMS } from "@/i18n/locales";
+import { LANGUAGE_ENDONYMS, RENDERED_LANGUAGES } from "@/i18n/locales";
 
 // ═══════════════════════════════════════════════════════════════
 // ONBOARDING TYPES
@@ -78,9 +78,13 @@ const CURRENCY_FLAGS: Record<Currency, string> = {
 export const CURRENCIES: { value: Currency; flag: string }[] =
   DISPLAY_CURRENCIES.map((value) => ({ value, flag: CURRENCY_FLAGS[value] }));
 
-/** The supported languages, each labelled in its own language. */
+/**
+ * The languages a user can pick (Settings > General, onboarding), each
+ * labelled in its own language. Only RENDERED_LANGUAGES: a language with a
+ * catalogue that is not rendered yet would save but change nothing visible.
+ */
 export const LANGUAGES: { value: Language; label: string }[] =
-  LANGUAGE_CODES.map((value) => ({ value, label: LANGUAGE_ENDONYMS[value] }));
+  RENDERED_LANGUAGES.map((value) => ({ value, label: LANGUAGE_ENDONYMS[value] }));
 
 export interface ConnectionStatus {
   type: "banking" | "broker" | "crypto";

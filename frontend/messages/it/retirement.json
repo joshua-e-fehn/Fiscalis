@@ -1,0 +1,272 @@
+{
+  "years": "{count, plural, one {# anno} other {# anni}}",
+  "yearsDative": "{count, plural, one {# anno} other {# anni}}",
+  "perMonth": "{amount}/mese",
+  "perMonthUnit": "/ mese",
+  "pensions": "Pensioni",
+  "steps": {
+    "intro": "Inizio",
+    "personal": "Età",
+    "expenses": "Spese",
+    "housing": "Casa",
+    "pensions": "Pensioni",
+    "portfolio": "Portafoglio",
+    "assumptions": "Ipotesi",
+    "results": "Risultati"
+  },
+  "stepShell": {
+    "saving": "Salvataggio…"
+  },
+  "progress": {
+    "stepOf": "Passaggio {current} di {total}"
+  },
+  "wizard": {
+    "defaultPensionLabel": "Pensione pubblica",
+    "editingBanner": "Stai modificando il tuo piano salvato. Le modifiche si applicano quando salvi.",
+    "discardChanges": "Annulla modifiche",
+    "currencyChanged": "La tua valuta di visualizzazione è cambiata in {display}. Gli importi in questo modulo sono ancora in {form} e vengono salvati in {form}.",
+    "reloadInCurrency": "Ricarica in {currency}",
+    "storedCurrency": "Il tuo piano è stato inserito in {stored}. I suoi importi sono mostrati in {shown} al tasso di cambio odierno, e il prossimo salvataggio li manterrà in {shown}.",
+    "birthDateRequired": "La data di nascita è obbligatoria",
+    "saveFailed": "Non siamo riusciti a salvare il tuo piano. Riprova."
+  },
+  "dashboard": {
+    "title": "Piano pensionistico",
+    "subtitle": "Obiettivo: pensione a {age} anni. Questo piano si aggiorna automaticamente quando cambia il tuo portafoglio.",
+    "subtitleFallback": "Il tuo piano pensionistico salvato.",
+    "editPlan": "Modifica piano",
+    "startOver": {
+      "button": "Ricomincia",
+      "title": "Ricominciare con un nuovo piano?",
+      "description": "Verranno eliminati il tuo piano pensionistico salvato e tutte le risposte. La data di nascita resta nel tuo profilo. L'operazione non può essere annullata.",
+      "confirm": "Elimina piano",
+      "resetting": "Eliminazione…",
+      "failed": "Non siamo riusciti a eliminare il tuo piano. Riprova."
+    }
+  },
+  "results": {
+    "timelineTitle": "Controlla l'età di pensionamento",
+    "timelineBody": "Per costruire un piano, l'età di pensionamento deve essere successiva alla tua età attuale.",
+    "assumptionsTitle": "Controlla le tue ipotesi",
+    "editHint": "Modifica il piano per correggerla.",
+    "backHint": "Torna indietro e correggila."
+  },
+  "progressCard": {
+    "title": "Il tuo obiettivo pensionistico",
+    "target": "Portafoglio obiettivo necessario",
+    "in": "Tra",
+    "progressToday": "Avanzamento oggi (prudente)",
+    "growth": "I tuoi <b>{current}</b> attuali crescono fino a <b>{projected}</b> alla pensione con un prudente {rate} all'anno: è il <b>{pct}%</b> dell'obiettivo indicato sopra (prima di aggiungere i risparmi mensili). Al {expectedRate} previsto sarebbe il {expectedPct}%.",
+    "netDebt": "Le tue passività superano le tue attività di {debt}. Il tuo piano parte da {zero}, quindi ripagare quel debito si aggiunge ai risparmi mensili che calcoliamo.",
+    "pensionsCoverAll": "Il reddito da pensione copre già le spese previste: non serve attingere al portafoglio."
+  },
+  "savingsCard": {
+    "title": "Quanto risparmiare ogni mese",
+    "pensionsCoverAll": "Le tue pensioni coprono le spese previste, quindi non devi risparmiare per un portafoglio pensionistico.",
+    "onTrack": "In base alle tue attività attuali e alla crescita prevista, sei sulla buona strada per raggiungere il tuo obiettivo senza risparmiare nulla in più. Continua così!",
+    "expectedCase": "Scenario previsto",
+    "conservativeCase": "Scenario prudente",
+    "expectedHint": "ipotizza {rate} / anno: un portafoglio che raddoppia circa ogni {years, plural, one {# anno} other {# anni}}",
+    "expectedHintNoGrowth": "ipotizza {rate} / anno",
+    "conservativeHint": "ipotizza un prudente {rate} / anno",
+    "indexed": "Importo del primo mese, in aumento con l'inflazione: fino a {amount} (previsto) alla pensione.",
+    "flat": "Un importo nominale fisso ogni mese fino alla pensione; l'inflazione fa valere meno i versamenti successivi.",
+    "netDebt": "Questi importi partono da {zero} e non includono il rimborso del tuo debito attuale.",
+    "mortgageNotProjected": "L'intero saldo di {balance} del mutuo sulla casa conta come ancora dovuto alla pensione e fa parte del tuo obiettivo: aggiungi tasso e rata nel piano per proiettarlo.",
+    "mortgageOwedAtRetirement": "In più, le rate del mutuo sulla casa di {payment}/mese continuano a essere pagate dal tuo reddito; i {balance} ancora dovuti alla pensione fanno parte del tuo obiettivo.",
+    "mortgageRepaidBefore": "In più, le rate del mutuo sulla casa di {payment}/mese continuano a essere pagate dal tuo reddito fino all'estinzione del prestito."
+  },
+  "coverage": {
+    "title": "Spese mensili in pensione",
+    "expensesGrow": "Le tue spese di oggi di <b>{today}/mese</b> diventano <b>{future}/mese</b> tra {years} con l'inflazione.",
+    "pensions": "Le tue pensioni di <b>{today}/mese</b> in valori di oggi diventano <b>{future}/mese</b>.",
+    "pensionsAfterDeductions": "Le tue pensioni di <b>{today}/mese</b> in valori di oggi (al netto di {deductions}/mese di tasse e assicurazione sanitaria) diventano <b>{future}/mese</b>.",
+    "coveredByPensions": "Coperto dalle pensioni",
+    "fundedByPortfolio": "Finanziato dal portafoglio"
+  },
+  "chart": {
+    "title": "Crescita prevista del portafoglio",
+    "age": "{age} anni",
+    "target": "Obiettivo",
+    "expectedSaving": "Previsto + risparmio",
+    "conservativeSaving": "Prudente + risparmio",
+    "expectedNoSaving": "Previsto, senza risparmio",
+    "conservativeNoSaving": "Prudente, senza risparmio",
+    "footnote": "Quattro percorsi: i tuoi rendimenti previsto e prudente, ognuno mostrato con il tuo piano di risparmio mensile e con il portafoglio attuale lasciato crescere da solo. La linea tratteggiata è il tuo obiettivo."
+  },
+  "explainer": {
+    "trigger": "Perché questi numeri? La regola del 4%, spiegata",
+    "rule": "La <b>regola del 4%</b> è una linea guida semplice: ogni anno puoi prelevare circa il 4% del tuo portafoglio senza esaurirlo durante una lunga pensione. Al contrario, il tuo portafoglio deve essere <b>25×</b> l'importo annuo che deve coprire.",
+    "customRate": "Il tuo piano usa invece il <b>{rate}</b>, quindi il tuo portafoglio deve essere <b>{multiple}×</b> quell'importo.",
+    "whereFrom": "Da dove viene il 4%?",
+    "marketReturn": "<b>≈ 7–8%</b> di rendimento di mercato atteso a lungo termine all'anno",
+    "inflation": "<b>− ~2%</b> di inflazione, così il tuo denaro mantiene il potere d'acquisto",
+    "buffer": "<b>− un margine</b> per restare al sicuro negli anni di mercato negativi",
+    "result": "= circa il 4% che puoi spendere ogni anno",
+    "inflationHandlingRate": "Poiché il tasso di prelievo tiene già conto dell'inflazione durante la pensione, non la aggiungiamo due volte. Prima della pensione facciamo crescere spese e pensioni del {rate} all'anno e ogni parte del portafoglio al proprio rendimento previsto, mantenendo tutto coerente.",
+    "inflationHandling": "Poiché il tasso di prelievo tiene già conto dell'inflazione durante la pensione, non la aggiungiamo due volte. Prima della pensione facciamo crescere spese e pensioni al tasso d'inflazione e ogni parte del portafoglio al proprio rendimento previsto, mantenendo tutto coerente.",
+    "simpleTarget": "Per il tuo piano, con le spese e le pensioni di oggi (senza inflazione) l'obiettivo sarebbe <b>{target}</b>.",
+    "adjustedTargetRate": "Corretto per {years} di inflazione al {rate}, l'obiettivo realistico è <b>{target}</b>.",
+    "adjustedTarget": "Corretto per {years} di inflazione, l'obiettivo realistico è <b>{target}</b>.",
+    "difference": "{reason, select, fixedPensionsAndMortgage {La differenza è l'inflazione, che le tue pensioni fisse non seguono, più il mutuo ancora dovuto quando vai in pensione.} fixedPensions {La differenza è l'inflazione, che le tue pensioni fisse non seguono.} mortgage {La differenza è l'inflazione, più il mutuo ancora dovuto quando vai in pensione.} other {La differenza è l'inflazione.}}",
+    "taxIncluded": "Entrambi includono il {rate} di tasse sui prelievi.",
+    "taxExcluded": "Entrambi sono al lordo delle tasse: le tasse sui prelievi non sono incluse."
+  },
+  "teaser": {
+    "titleActive": "Il tuo piano pensionistico",
+    "titleDraft": "Completa il tuo piano pensionistico",
+    "titleNew": "Pianifica la tua pensione",
+    "needsReview": "Il tuo piano ha bisogno di una rapida revisione: aprilo per correggere l'età di pensionamento o le ipotesi.",
+    "pensionsCoverAll": "Le tue pensioni coprono già le spese previste.",
+    "netDebt": "Al momento le tue passività superano le tue attività: ripagarle è il primo passo.",
+    "onTrack": "Sei sulla buona strada per il tuo obiettivo di {target}.",
+    "onTrackExpected": "Sulla buona strada con il rendimento previsto del {rate}; risparmiando {amount}/mese copri lo scenario prudente.",
+    "progress": "Sei al {pct}% del percorso verso il tuo obiettivo di {target}.",
+    "draft": "Riprendi da dove avevi lasciato e scopri il tuo numero.",
+    "new": "Trasforma il tuo obiettivo pensionistico in un piano di risparmio mensile in un paio di minuti.",
+    "viewPlan": "Vedi piano",
+    "getStarted": "Inizia"
+  },
+  "introStep": {
+    "title": "Pianifica la tua pensione",
+    "body": "Poche domande rapide per trasformare il tuo obiettivo pensionistico in un piano di risparmio concreto e monitorabile, basato sul tuo portafoglio reale.",
+    "points": {
+      "age": {
+        "title": "Scegli l'età di pensionamento",
+        "body": "Dicci quando vorresti smettere di lavorare e lo stile di vita che desideri."
+      },
+      "pensions": {
+        "title": "Aggiungi il tuo reddito da pensione",
+        "body": "Pensioni pubbliche, aziendali o private coprono parte dei tuoi costi mensili."
+      },
+      "number": {
+        "title": "Scopri il tuo numero",
+        "body": "Usiamo la regola del 4% per calcolare il portafoglio che ti serve e quanto risparmiare ogni mese per arrivarci."
+      }
+    },
+    "reviewPlan": "Rivedi il mio piano",
+    "getStarted": "Inizia"
+  },
+  "personalStep": {
+    "title": "La tua tabella di marcia",
+    "description": "Quando sei nato e quando vuoi andare in pensione?",
+    "birthDate": "Data di nascita",
+    "retirementAge": "Età di pensionamento",
+    "currentAge": "{age, plural, one {Hai <b>#</b> anno.} other {Hai <b>#</b> anni.}}",
+    "yearsLeft": "Hai <b>{years}</b> per costruire il tuo portafoglio pensionistico.",
+    "enterBirthDate": "Inserisci la tua data di nascita così possiamo calcolare la tua età."
+  },
+  "expensesStep": {
+    "title": "Stile di vita desiderato",
+    "description": "Il reddito mensile minimo che vorresti in pensione, in valori di oggi.",
+    "label": "Spese mensili per vivere (oggi)",
+    "hint": "Se la casa è di tua proprietà, escludi l'affitto: possederla riduce già questo importo.",
+    "future": "Dopo {years} di inflazione al {rate}, sono circa <b>{amount}</b> quando vai in pensione: lo stesso stile di vita costa semplicemente di più."
+  },
+  "housingStep": {
+    "title": "La tua casa",
+    "description": "Gli immobili si trattano diversamente dagli investimenti: facciamolo nel modo giusto.",
+    "ownsHome": "La casa in cui vivo è di mia proprietà",
+    "ownsHomeHint": "Una casa in cui vivi non conta come fonte di finanziamento per la pensione.",
+    "homeNotCounted": "<b>Non</b> contiamo la tua casa nel portafoglio che finanzia la pensione: non puoi venderla e continuare a viverci. Il suo vero vantaggio si riflette già nelle tue spese mensili più basse (niente affitto).",
+    "mortgageLabel": "Mutuo su questa casa <muted>(facoltativo)</muted>",
+    "noMortgage": "Nessun mutuo / non monitorato",
+    "trackedLoans": "Prestiti monitorati",
+    "bankMortgages": "Conti mutuo bancari",
+    "mortgageOption": "{name} — {balance}",
+    "mortgageHint": "Il suo saldo non viene sottratto dai fondi per la pensione: paghi le rate con il tuo reddito fino alla pensione, come un affitto. L'eventuale saldo ancora dovuto alla pensione viene aggiunto al tuo obiettivo.",
+    "bankBalanceOnly": "La tua banca riporta solo il saldo. Aggiungi tasso d'interesse e rata mensile per proiettare quanto sarà ancora dovuto alla pensione.",
+    "interestRate": "Tasso d'interesse (% annuo)",
+    "monthlyRepayment": "Rata mensile ({symbol})",
+    "withoutTerms": "Senza entrambi, l'intero saldo attuale conta come ancora dovuto alla pensione.",
+    "equityLabel": "Patrimonio immobiliare vendibile per la pensione <muted>(facoltativo)</muted>",
+    "equityHint": "Per un immobile in affitto o una seconda casa che pensi di vendere: il suo valore meno eventuali prestiti su di esso non monitorati in Fiscalis (i prestiti monitorati sono già sottratti dal tuo patrimonio netto). Lascia 0 se non ne hai."
+  },
+  "pensionsStep": {
+    "title": "Reddito da pensione",
+    "description": "Il reddito mensile che riceverai in pensione, prima di attingere al portafoglio. Inseriscilo in valori di oggi, ad es. l'importo lordo indicato nella tua Renteninformation. Togliamo tasse e assicurazione sanitaria dagli importi lordi e adeguiamo all'inflazione le pensioni indicizzate, come le tue spese.",
+    "source": "Fonte",
+    "sourcePlaceholder": "es. Pensione pubblica",
+    "amountLabel": "{symbol} / mese (oggi)",
+    "removeSource": "Rimuovi fonte",
+    "gross": "Lordo (prima di tasse e assicurazione sanitaria)",
+    "net": "Netto (già al netto delle trattenute)",
+    "indexed": "Cresce con l'inflazione",
+    "fixed": "Importo fisso (es. molte pensioni aziendali)",
+    "addSource": "Aggiungi fonte di reddito",
+    "deductionLabel": "Tasse e assicurazione sanitaria sulle pensioni lorde",
+    "deductionHint": "Un'aliquota forfettaria per assicurazione sanitaria e di assistenza (≈ 11–12% nella KVdR tedesca) più l'imposta sul reddito. Il valore predefinito del {rate} trasforma {gross} lordi in circa {net} netti.",
+    "totalNet": "Reddito da pensione totale, netto (valori di oggi)",
+    "asEntered": "{amount} come inserito"
+  },
+  "portfolioStep": {
+    "title": "Il tuo portafoglio oggi",
+    "description": "È il punto di partenza che facciamo crescere verso il tuo obiettivo. Scegli come prevedi che cresca ogni parte, oppure escludi il denaro che non investirai, come un fondo di emergenza.",
+    "noAssets": "Ancora nessuna attività monitorata: il tuo piano parte da {zero}.",
+    "growthLabel": "{category}: crescita",
+    "categories": {
+      "equities": "Azioni",
+      "real-estate": "Fondi immobiliari",
+      "crypto": "Cripto",
+      "bonds": "Obbligazioni",
+      "commodities": "Materie prime e metalli",
+      "cash": "Liquidità e risparmi",
+      "collectibles": "Collezionabili",
+      "property": "Immobili vendibili"
+    },
+    "treatments": {
+      "growth": "Cresce al rendimento dello scenario",
+      "moderate": "A metà tra rendimento e inflazione",
+      "inflation": "Segue l'inflazione",
+      "exclude": "Non contato (es. fondo di emergenza)"
+    },
+    "fundable": "Attività utilizzabili",
+    "expectedGrowth": "Crescita prevista {expected} / anno (prudente {conservative})",
+    "netDebt": "Le tue passività superano le tue attività di <b>{debt}</b>. Il tuo piano parte da {zero} (il debito non cresce al rendimento degli investimenti), quindi ripagarlo si aggiunge ai risparmi che calcoliamo.",
+    "mortgageWithPayment": "Il mutuo di <b>{balance}</b> sulla tua casa non viene sottratto qui: le sue rate di {payment} vengono pagate dal tuo reddito fino alla pensione.",
+    "mortgage": "Il mutuo di <b>{balance}</b> sulla tua casa non viene sottratto qui: le sue rate vengono pagate dal tuo reddito fino alla pensione.",
+    "mortgageNotProjected": "Senza tasso e rata, l'intero saldo conta come ancora dovuto quando vai in pensione.",
+    "footnote": "I valori delle attività si aggiornano automaticamente con la sincronizzazione dei conti, così il tuo avanzamento resta sempre aggiornato. Ogni parte cresce al proprio tasso; i nuovi risparmi crescono al rendimento dello scenario. La casa in cui vivi non è inclusa."
+  },
+  "assumptionsStep": {
+    "title": "Ipotesi",
+    "description": "Sono già impostati valori predefiniti ragionevoli: modificali solo se sai cosa stai facendo.",
+    "seePlan": "Vedi il mio piano",
+    "fields": {
+      "optimisticReturn": {
+        "label": "Rendimento annuo previsto",
+        "hint": "Crescita di mercato a lungo termine. Il valore predefinito del {rate} raddoppia un portafoglio ogni 10 anni."
+      },
+      "conservativeReturn": {
+        "label": "Rendimento annuo prudente",
+        "hint": "Un'ipotesi di crescita cauta per la stima più sicura."
+      },
+      "inflationRate": {
+        "label": "Tasso d'inflazione",
+        "hint": "Quanto velocemente salgono i prezzi; aumenta il tuo obiettivo di spesa futuro."
+      },
+      "withdrawalRate": {
+        "label": "Tasso di prelievo sicuro",
+        "hint": "La regola del 4%. Più basso = più sicuro, ma serve un portafoglio più grande."
+      }
+    },
+    "withdrawalTax": "Tasse sui prelievi",
+    "withdrawalTaxHint": "Imposta effettiva su ciò che prelevi (es. imposta sulle plusvalenze sulla quota di guadagno). Allo 0% l'obiettivo è un valore al lordo delle tasse.",
+    "indexContributions": "Aumenta i miei risparmi con l'inflazione",
+    "indexContributionsHint": "Disattivo: un importo fisso in valori di oggi, che vale meno ogni anno. Attivo: un primo importo più basso che cresce con l'inflazione.",
+    "reset": "Ripristina i valori consigliati"
+  },
+  "resultsStep": {
+    "save": "Salva il mio piano",
+    "fixToSave": "{reason}. Correggilo per salvare il tuo piano."
+  },
+  "validation": {
+    "ageRange": "{field, select, currentAge {L'età attuale deve} retirementAge {L'età di pensionamento deve} other {Le età devono}} essere un numero intero tra {min} e {max}",
+    "retirementNotAfterCurrent": "L'età di pensionamento deve essere successiva alla tua età attuale",
+    "rateRange": "{field, select, optimisticReturn {Il rendimento previsto} conservativeReturn {Il rendimento prudente} inflationRate {Il tasso d'inflazione} primaryResidenceMortgageRate {Il tasso del mutuo} pensionDeductionRate {L'aliquota di tasse e assicurazione sanitaria sulla pensione} withdrawalTaxRate {L'imposta sui prelievi} other {Il tasso}} deve essere tra lo 0% e il {max}%",
+    "withdrawalRateRange": "Il tasso di prelievo deve essere superiore allo 0% e al massimo del {max}%",
+    "conservativeAboveExpected": "Il rendimento prudente non può essere superiore a quello previsto",
+    "amountNegative": "{field, select, monthlyExpensesToday {Le spese mensili devono essere pari o superiori a zero} fundableRealEstateEquity {Il valore dell'immobile deve essere pari o superiore a zero} primaryResidenceMortgagePayment {La rata del mutuo deve essere pari o superiore a zero} other {Gli importi delle pensioni devono essere pari o superiori a zero}}",
+    "expensesNotPositive": "Le spese mensili devono essere superiori a zero"
+  }
+}

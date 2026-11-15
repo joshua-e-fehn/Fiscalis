@@ -12,7 +12,7 @@
  */
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import {
@@ -46,6 +46,7 @@ import {
   attributesFor,
   MANUAL_ASSET_ATTRIBUTE_KINDS,
   MANUAL_ASSET_SUBCATEGORIES,
+  parseTypedAmount,
   validateManualAsset,
   type ManualAssetAttribute,
   type ManualAssetAttributes,
@@ -94,11 +95,10 @@ interface ValuationRow {
   value: string;
 }
 
-/** A typed amount as a number: blank is undefined, a decimal comma is read. */
-function parseAmount(text: string): number | undefined {
-  const trimmed = text.trim();
-  if (!trimmed) return undefined;
-  return Number(trimmed.replace(/\s/g, "").replace(",", "."));
+/** A stored amount as the form shows it, with the locale's decimal mark. */
+function amountText(value: number, locale: string): string {
+  const text = String(value);
+  return locale.toLowerCase().startsWith("de") ? text.replace(".", ",") : text;
 }
 
 function firstSubcategory(category: ManualAssetCategory): string {
@@ -116,6 +116,7 @@ function ManualAssetForm({
   const tErrors = useTranslations("common.errors");
   const errorMessage = useErrorMessage();
   const labels = useCategoryLabels();
+  const locale = useLocale();
   const loans = useLoans();
   const create = useCreateManualAsset();
   const update = useUpdateManualAsset();
@@ -138,12 +139,12 @@ function ManualAssetForm({
       ? asset.valuations.map((v, key) => ({
           key,
           date: v.date,
-          value: String(v.value),
+          value: amountText(v.value, locale),
         }))
       : [{ key: 0, date: todayLocalISO(), value: "" }],
   );
   const [costBasis, setCostBasis] = useState(
-    asset?.costBasis !== undefined ? String(asset.costBasis) : "",
+    asset?.costBasis !== undefined ? amountText(asset.costBasis, locale) : "",
   );
   const [linkedLoanId, setLinkedLoanId] = useState<string>(
     asset?.linkedLoanId ?? NO_LOAN,
@@ -205,9 +206,9 @@ function ManualAssetForm({
       currency,
       valuations: rows.map((r) => ({
         date: r.date,
-        value: parseAmount(r.value) ?? Number.NaN,
+        value: parseTypedAmount(r.value, locale) ?? Number.NaN,
       })),
-      costBasis: parseAmount(costBasis),
+      costBasis: parseTypedAmount(costBasis, locale),
       linkedLoanId:
         linkedLoanId === NO_LOAN ? undefined : (linkedLoanId as Id<"loans">),
       attributes: typedAttributes(),
@@ -322,7 +323,10 @@ function ManualAssetForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CURRENCIES.map((c) => (
+              {(asset && !CURRENCIES.includes(asset.currency)
+                ? [asset.currency, ...CURRENCIES]
+                : CURRENCIES
+              ).map((c) => (
                 <SelectItem key={c} value={c}>
                   {c}
                 </SelectItem>

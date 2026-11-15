@@ -10,6 +10,7 @@ import {
   manualAssetGainLoss,
   manualAssetInBase,
   normalizeValuations,
+  parseTypedAmount,
   validateManualAsset,
   type ManualAssetInput,
 } from "./manualAssets";
@@ -262,5 +263,29 @@ describe("helpers", () => {
   it("stores currency codes in upper case", () => {
     expect(manualAssetCurrency("chf")).toBe("CHF");
     expect(manualAssetCurrency("")).toBeNull();
+  });
+});
+
+describe("parseTypedAmount", () => {
+  it("is undefined when blank and NaN when not a number", () => {
+    expect(parseTypedAmount("  ", "en")).toBeUndefined();
+    expect(parseTypedAmount("12a", "en")).toBeNaN();
+    expect(parseTypedAmount("1,2,3.4.5", "en")).toBeNaN();
+  });
+
+  it("reads German input", () => {
+    expect(parseTypedAmount("250.000", "de")).toBe(250_000);
+    expect(parseTypedAmount("1.250,50", "de")).toBe(1250.5);
+    expect(parseTypedAmount("1250,5", "de")).toBe(1250.5);
+    expect(parseTypedAmount("1500.50", "de")).toBe(1500.5);
+    expect(parseTypedAmount("1.250.000", "de")).toBe(1_250_000);
+  });
+
+  it("reads English input", () => {
+    expect(parseTypedAmount("1,500", "en")).toBe(1500);
+    expect(parseTypedAmount("1,250.50", "en")).toBe(1250.5);
+    expect(parseTypedAmount("1.5", "en")).toBe(1.5);
+    expect(parseTypedAmount("1,5", "en")).toBe(1.5);
+    expect(parseTypedAmount("1 250 000", "en")).toBe(1_250_000);
   });
 });

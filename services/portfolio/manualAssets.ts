@@ -330,3 +330,44 @@ export function validateManualAsset(
   }
   return null;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Typed amounts
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * An amount as typed in the form, as a number: undefined when blank, NaN
+ * when it is not a number. Spaces and apostrophes group digits. With both
+ * "." and "," in it, the last one is the decimal mark ("1.250,50",
+ * "1,250.50"). With one of them only, repeated it groups ("1.250.000"),
+ * and once it is the decimal mark, except the locale's grouping mark
+ * before exactly three digits: in German "250.000" is 250000, in English
+ * "1,500" is 1500. So a typed "250.000" is never read as 250.
+ */
+export function parseTypedAmount(
+  text: string,
+  locale: string,
+): number | undefined {
+  const compact = text.trim().replace(/[\s'  ]/g, "");
+  if (!compact) return undefined;
+  if (!/^-?[\d.,]+$/.test(compact)) return Number.NaN;
+  const lastDot = compact.lastIndexOf(".");
+  const lastComma = compact.lastIndexOf(",");
+  let decimalMark: "." | "," | null = null;
+  if (lastDot >= 0 && lastComma >= 0) {
+    decimalMark = lastDot > lastComma ? "." : ",";
+  } else if (lastDot >= 0 || lastComma >= 0) {
+    const mark = lastDot >= 0 ? "." : ",";
+    const groupingMark = locale.toLowerCase().startsWith("de") ? "." : ",";
+    const count = compact.split(mark).length - 1;
+    const digitsAfter = compact.length - compact.lastIndexOf(mark) - 1;
+    const groups = count > 1 || (mark === groupingMark && digitsAfter === 3);
+    decimalMark = groups ? null : mark;
+  }
+  const groupingMarks = decimalMark === "," ? /\./g : decimalMark === "." ? /,/g : /[.,]/g;
+  const normalized = compact
+    .replace(groupingMarks, "")
+    .replace(decimalMark ?? "", decimalMark ? "." : "");
+  if (decimalMark && normalized.split(".").length > 2) return Number.NaN;
+  return Number(normalized);
+}

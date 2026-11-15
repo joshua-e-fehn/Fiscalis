@@ -16,7 +16,10 @@ import { encrypt, decrypt } from "../lib/encryption";
 import { NO_CURRENCY } from "../../../services/finance/currency";
 import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
-import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
+import {
+  plaidLinkLanguage,
+  plaidLinkProducts,
+} from "../../../services/banking/plaidProducts";
 import { enforceUserRateLimit } from "../lib/rateLimit";
 import { withSyncRun } from "../lib/syncRuns";
 import { syncTriggerValidator } from "../lib/syncRunValidators";
@@ -85,8 +88,8 @@ function getProducts(): Products[] {
  * passes (languageForLocale(useLocale()), hooks/convex/banking.ts), else
  * English. Not the stored userSettings.language: that can be a language the
  * UI does not render yet (i18n/locales.ts RENDERED_LANGUAGES), and Plaid
- * should not be German inside an English app. Plaid's language codes match
- * the app's for every supported language (en, de, es, fr, it).
+ * should not be German inside an English app. plaidLinkLanguage maps app
+ * codes to Plaid's ("pt-PT" → "pt"), English where Plaid has none.
  */
 const linkLanguageArg = v.optional(languageValidator);
 
@@ -114,7 +117,7 @@ export const createLinkToken = action({
       client_name: "Fiscalis",
       products: getProducts(),
       country_codes: getCountryCodes(),
-      language: args.language ?? "en",
+      language: plaidLinkLanguage(args.language),
       webhook: getWebhookUrl(),
     });
 
@@ -151,7 +154,7 @@ export const createUpdateLinkToken = action({
       client_name: "Fiscalis",
       access_token: accessToken,
       country_codes: getCountryCodes(),
-      language: args.language ?? "en",
+      language: plaidLinkLanguage(args.language),
     });
 
     return { linkToken: response.data.link_token };

@@ -25,3 +25,19 @@ export function plaidLinkProducts(envValue: string | undefined): string[] {
   );
   return allowed.length > 0 ? allowed : [...DEFAULT_PLAID_PRODUCTS];
 }
+
+/** The languages Plaid Link is offered in (Plaid's `language` parameter). */
+const PLAID_LINK_LANGUAGES: ReadonlySet<string> = new Set([
+  "da", "de", "en", "es", "et", "fr", "it", "lt", "lv", "nl", "no", "pl",
+  "pt", "ro", "sv",
+]);
+
+/**
+ * The Plaid Link language for an app language code. Plaid takes primary
+ * subtags only ("pt", not "pt-PT"); a language Plaid does not offer opens
+ * Link in English.
+ */
+export function plaidLinkLanguage(language: string | undefined): string {
+  const primary = (language ?? "").split("-")[0].toLowerCase();
+  return PLAID_LINK_LANGUAGES.has(primary) ? primary : "en";
+}

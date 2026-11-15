@@ -12,6 +12,7 @@ import {
   normalizeValuations,
   localeDecimalMark,
   parseTypedAmount,
+  typedAmountText,
   validateManualAsset,
   type ManualAssetInput,
 } from "./manualAssets";
@@ -296,6 +297,18 @@ describe("parseTypedAmount", () => {
     expect(parseTypedAmount("1 250,50", "fr-FR")).toBe(1250.5);
     expect(parseTypedAmount("1\u202f250,5", "fr")).toBe(1250.5);
     expect(parseTypedAmount("1,500", "fr")).toBe(1.5);
+  });
+
+  it("shows stored amounts with the locale's decimal mark", () => {
+    expect(typedAmountText(1250.5, "de-DE")).toBe("1250,5");
+    expect(typedAmountText(1250.5, "pt-PT")).toBe("1250,5");
+    expect(typedAmountText(1250.5, "en-GB")).toBe("1250.5");
+  });
+
+  it("reads input in other comma-decimal locales", () => {
+    expect(parseTypedAmount("250.000", "pt-PT")).toBe(250_000);
+    expect(parseTypedAmount("1 250,50", "pt-PT")).toBe(1250.5);
+    expect(parseTypedAmount("1,5", "pt-PT")).toBe(1.5);
   });
 
   it("reads English input", () => {

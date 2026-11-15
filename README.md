@@ -1,267 +1,128 @@
 # Fiscalis
 
-<div align="center">
+A private, EUR-first net worth and wealth tracker. Fiscalis pulls bank,
+broker and Bitpanda accounts together with a manually kept precious-metals
+vault and loans, values everything in one currency, and shows honest,
+flow-adjusted performance and a retirement plan funded from real net worth.
 
-**A comprehensive personal wealth management platform for tracking and analyzing your entire financial portfolio.**
+Sign-up is waitlist-only. The backlog is in Linear (see [ToDo.md](./ToDo.md)).
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![Convex](https://img.shields.io/badge/Convex-Real--time-orange?style=flat-square)](https://convex.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Bun](https://img.shields.io/badge/Bun-Runtime-f9f1e1?style=flat-square&logo=bun)](https://bun.sh/)
+## What it does
 
-</div>
-
----
-
-## Overview
-
-Fiscalis is a modern wealth management dashboard that aggregates all your financial accounts into a single, unified view. Track bank accounts, brokerage portfolios, cryptocurrency holdings, precious metals, loans, and more — all with real-time updates and powerful analytics.
-
-### Key Features
-
-- 🏦 **Bank Account Integration** — Connect via Plaid for automatic balance and transaction sync
-- 📈 **Brokerage Portfolio Tracking** — Support for 38+ brokers via SnapTrade (Interactive Brokers, Schwab, Fidelity, etc.)
-- ₿ **Crypto Aggregation** — Track exchanges, wallets, DeFi positions, and NFTs via Vezgo
-- 🥇 **Precious Metals Inventory** — Track physical gold, silver, platinum, and palladium holdings
-- 💰 **Loan & Debt Management** — Amortization schedules, what-if scenarios, and payoff strategies
-- 🌍 **World Economic Data** — World Bank indicators with interactive country comparisons
-- 📊 **Portfolio Analytics** — Performance tracking, asset allocation charts, and historical snapshots
-- 💱 **Display Currency** — See every figure in EUR, USD, GBP or CHF
-- 🌗 **Light & Dark Theme** — Light, dark, or follow the system
-- 🔑 **Read-only API** — Your net worth over a key-authenticated REST endpoint ([docs/API.md](./docs/API.md))
-- 🔐 **Secure by Design** — AES-256-GCM encryption for sensitive tokens, Clerk authentication
-
-### Settings
-
-**Settings → General** (`/settings/general`) holds your display name, date of
-birth (used by the retirement planner), display currency, language and theme.
-The same fields are asked once during onboarding.
-
-- **Theme.** Light, dark or system. Choosing one previews it at once; it is
-  saved with the form and applied on every device you sign in on.
-- **Language.** English or German, stored with your profile. The interface is
-  rendered in English until the German translation is complete. Amounts keep
-  one format in every language (`-15'000€`, `1'234.00 CHF`).
-- **Display currency.** EUR, USD, GBP or CHF. Everything is stored and synced
-  in EUR; the app converts at the presentation boundary, so switching back and
-  forth changes no data:
-  - Totals, positions, profit and loss and allocations use the latest daily
-    exchange rate (mirrored daily: the USD/CHF rate store first, ECB
-    reference rates otherwise).
-  - Charts, year-to-date and performance figures convert each day at that
-    day's rate, so their returns are returns in your currency and include the
-    exchange-rate effect. They can differ from the EUR figures.
-  - Unrealised profit and loss is the EUR figure at today's rate, not cost at
-    historical rates.
-  - A loan's own pages, provider account rows and metal transactions stay in
-    their own currency; the totals they add up to are converted.
-  - When the latest rate is more than a week old, or no rate is available and
-    an approximate built-in one is used, the header says so.
-- **API.** `GET /api/v1/net-worth` stays in EUR whatever the display currency;
-  pass `?currency=USD`, `GBP` or `CHF` to convert (see [docs/API.md](./docs/API.md)).
-
----
+- **Banking** via Plaid: balances and an incrementally synced transaction
+  history (`/transactions/sync`).
+- **Brokers** via SnapTrade: accounts, positions, cash and activities.
+- **Bitpanda** via a read-only API key: crypto, metals, stocks/ETFs and fiat
+  wallets, synced every 6 hours.
+- **Metals vault**: coins and bars entered by hand, valued at live spot
+  (a minutely gold.de feed) with calibrated dealer premiums
+  ([docs/METAL_PREMIUMS.md](./docs/METAL_PREMIUMS.md)).
+- **Loans**: amortisation for every repayment type, recorded payments,
+  What-If scenarios.
+- **Net worth and performance**: one server-side aggregator for the
+  dashboard, daily snapshots and the API. Investment categories are
+  flow-adjusted (Modified Dietz chained into TWR); see
+  [docs/adr/0001-valuation-resolution.md](./docs/adr/0001-valuation-resolution.md).
+- **Retirement planner** funded from the current net worth.
+- **World Bank data**: map and per-country indicator views.
+- **Display currency** EUR, USD, GBP or CHF. Everything is stored in EUR and
+  converted at the presentation boundary (latest daily rate for totals,
+  each day's rate for charts).
+- **Languages**: English and German (next-intl).
+- **Read-only API**: `GET /api/v1/net-worth` with user-scoped API keys
+  ([docs/API.md](./docs/API.md)).
 
 ## Architecture
 
-Fiscalis uses a **hybrid architecture** optimized for different data patterns:
-
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND                                    │
-│                         Next.js 16 + React 19                           │
-│                                                                          │
-│   Dashboard │ Banking │ Brokers │ Crypto │ Commodities │ Loans │ Maps   │
-└──────────────────────────────┬───────────────────────────────────────────┘
-                               │
-         ┌─────────────────────┴─────────────────────┐
-         │                                           │
-         ▼                                           ▼
-┌─────────────────────────┐             ┌─────────────────────────┐
-│       CONVEX            │             │         HONO            │
-│   (Real-time Backend)   │             │   (World Bank routes)   │
-├─────────────────────────┤             ├─────────────────────────┤
-│ • User data (banking,   │             │ • World Bank data       │
-│   brokers, crypto)      │             │   (live upstream, TTL   │
-│ • Portfolio snapshots   │             │   cache)                │
-│ • Loans & vault items   │             │                         │
-│ • Metal prices (minute  │             │                         │
-│   ingest) & FX rates    │             │                         │
-│ WebSocket subscriptions │             │ REST API (React Query)  │
-└─────────────────────────┘             └─────────────────────────┘
-         │
-         ▼
-┌─────────────────────────┐
-│   EXTERNAL PROVIDERS    │
-├─────────────────────────┤
-│ • Plaid (Banking)       │
-│ • SnapTrade (Brokers)   │
-│ • Vezgo (Crypto)        │
-│ • World Bank API        │
-└─────────────────────────┘
+Next.js 16 app (frontend/)  ──WebSocket──▶  Convex (frontend/convex/)
+  React 19, Clerk auth,                      system of record: user data,
+  next-intl, shadcn/ui                       snapshots, metal prices, FX,
+  Hono route: World Bank only                crons, HTTP routes (/health,
+                                             /health/deep, /api/v1/net-worth)
+            │                                        │
+            └── services/ (pure TS + vitest) ◀───────┘
+                calculations used by both sides
 ```
 
-**Why Hybrid?**
+- **Convex is the only backend.** Supabase, its SQL price tables and drizzle
+  were retired on 2026-11-14. Metal prices are ingested by a Convex cron
+  every minute and kept as hour/day closes; finished days of raw ticks are
+  archived to S3.
+- **Providers:** Plaid (banking), SnapTrade (brokers), Bitpanda (mixed
+  assets). A rule-priority engine in `services/classification/` maps each
+  provider's vocabulary onto one category/subcategory taxonomy; users can
+  override a holding's category.
+- **Scheduled jobs** (`frontend/convex/crons.ts`): daily provider sync and
+  snapshot (06:00 UTC), Bitpanda every 6 h, FX every 6 h, metal prices every
+  minute, tick archive and prune daily, World Bank weekly. Provider-syncing
+  crons run only where `SCHEDULED_SYNC_ENABLED=true` (production).
+- **Security:** provider tokens and Bitpanda keys are AES-256-GCM encrypted
+  at rest and API keys are stored only as a SHA-256 hash; every Convex function derives the user from auth and checks document
+  ownership; CSP is nonce-based and set in `frontend/proxy.ts`
+  ([docs/SECURITY_CSP_GUIDE.md](./docs/SECURITY_CSP_GUIDE.md)).
 
-- **Convex** holds all data, user data and market data alike (a minutely gold.de price ingest stored as hour/day closes, plus daily FX), with automatic cache invalidation via WebSocket
-- **Hono** only fronts the public World Bank routes, which proxy the upstream API live
-
----
-
-## Repository Structure
+## Repository layout
 
 ```
-Fiscalis/
-├── frontend/              # Next.js 16 application (main app)
-│   ├── app/               # App Router pages and API routes
-│   ├── convex/            # Convex backend (schemas, queries, mutations, actions)
-│   ├── components/        # React components (Atomic Design)
-│   ├── hooks/             # Data fetching hooks (Convex + React Query)
-│   └── lib/               # Utilities and type definitions
-│
-├── services/              # Shared calculation services
-│   ├── finance/           # Financial calculations (loans, interest, time-series)
-│   └── performance/       # Portfolio performance calculation strategies
-│
-└── docs/                  # Architecture and specification documents
-    ├── ARCHITECTURE.md    # Comprehensive architecture guide
-    ├── LOANS_PAGE_SPEC.md # Loan calculator specification
-    └── ...                # Other documentation
+frontend/        Next.js app, Convex functions (convex/), messages/ (en, de)
+services/        Framework-free calculations and their vitest suite
+ops/             Health monitor that runs on the Mya VPS
+docs/            Current reference docs, ADRs (adr/), archived plans (archive/)
+.github/         CI (one "check" job, required on main)
 ```
-
----
-
-## Tech Stack
-
-| Layer                 | Technology                     | Purpose                            |
-| --------------------- | ------------------------------ | ---------------------------------- |
-| **Frontend**          | Next.js 16, React 19           | App framework with App Router      |
-| **Real-time Backend** | Convex                         | User data, WebSocket subscriptions |
-| **API Layer**         | Hono                           | Public World Bank routes           |
-| **Auth**              | Clerk                          | Authentication & user management   |
-| **State**             | TanStack Query                 | Server state for REST endpoints    |
-| **UI**                | Tailwind CSS, shadcn/ui, Radix | Styling & components               |
-| **Charts**            | Recharts                       | Data visualization                 |
-| **Maps**              | MapLibre GL                    | Interactive world map              |
-| **Financial APIs**    | Plaid, SnapTrade, Vezgo        | Account aggregation                |
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) (recommended) or Node.js 20+
-- [Convex](https://convex.dev/) account (free tier available)
-- [Clerk](https://clerk.com/) account for authentication
-- API credentials for: Plaid, SnapTrade, Vezgo (optional)
-
-### Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/fiscalis.git
-cd fiscalis
-
-# Install dependencies for all packages
-cd frontend && bun install
-cd ../services && bun install
-
-# Set up environment variables
-cp frontend/.env.example frontend/.env.local
-# Edit .env.local with your credentials
-
-# Initialize Convex
-cd frontend
-bunx convex dev
-
-# In a new terminal, start the development server
-bun run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to view the app.
-
-### Environment Variables
-
-See [frontend/README.md](./frontend/README.md) for required environment variables.
-
----
-
-## Documentation
-
-| Document                                          | Description                       |
-| ------------------------------------------------- | --------------------------------- |
-| [Architecture Guide](./docs/ARCHITECTURE.md)      | Comprehensive system architecture |
-| [Frontend README](./frontend/README.md)           | Frontend setup and development    |
-| [Services README](./services/README.md)           | Shared calculation services       |
-| [Convex README](./frontend/convex/README.md)      | Backend queries and mutations     |
-| [Loan Calculator Spec](./docs/LOANS_PAGE_SPEC.md) | Loan calculator specification     |
-| [API Reference](./docs/API.md)                    | The public net worth REST API     |
-
----
 
 ## Development
 
-### Running Tests
+Requires [Bun](https://bun.sh/) and access to the Convex dev deployment.
 
 ```bash
-# Run services tests
-cd services
-bun test
+cd frontend && bun install --frozen-lockfile
+cd ../services && bun install --frozen-lockfile
 
-# Run specific test file
-bun test finance/financeService.test.ts
+cd ../frontend
+bunx convex dev        # codegen + push to the dev deployment; keep running
+bun run dev            # app on http://localhost:3000 (Turbopack)
 ```
 
-### Convex Development
+Environment variables are listed in [frontend/README.md](./frontend/README.md).
 
-```bash
-# Start Convex dev server (watches for changes)
-bunx convex dev
+| Command (in `frontend/`) | What it does |
+| --- | --- |
+| `bun run check` | lint (0 warnings) + `tsc` for app and Convex + services tests. CI runs exactly this. |
+| `bun run lint` | ESLint, including the repo's own rules in `eslint-rules/` |
+| `bun run typecheck` | `tsc` for the app and for `convex/` |
+| `bun run test:services` | the `services/` vitest suite |
+| `bun run build` | `convex codegen`, then `next build --webpack` |
 
-# Deploy to production
-bunx convex deploy
+`build` is pinned to webpack on purpose; `dev` uses Turbopack. Testable
+logic goes in `services/`; `frontend/` has no test runner of its own.
 
-# Run a one-off function
-bunx convex run functionName
-```
+## CI and deployments
 
----
+- **CI** (`.github/workflows/ci.yml`): frozen installs of both lockfiles,
+  `convex codegen` against the dev deployment, then `bun run check`. The
+  `check` job is a required status on `main`. Commit the regenerated
+  `bun.lock` after any dependency change.
+- **Production:** Convex `handsome-gecko-941`, deployed only by the Vercel
+  production build (`build:vercel` runs `convex deploy`). Every merge to
+  `main` ships matching frontend and backend. Never push functions to
+  production by hand.
+- **Dev:** Convex `blessed-ermine-693`. `bunx convex dev` pushes there, and
+  Vercel preview builds use it for codegen.
+- **Monitoring:** a VPS job polls `/health/deep` every five minutes and
+  audits the S3 price archive daily, alerting in Slack
+  ([ops/health-monitor/README.md](./ops/health-monitor/README.md)).
 
-## Deployment
+## Documentation
 
-### Vercel (Recommended)
-
-The frontend is optimized for Vercel deployment:
-
-```bash
-cd frontend
-vercel
-```
-
-Configure environment variables in the Vercel dashboard.
-
-### Convex
-
-Convex automatically deploys when you run `bunx convex deploy`.
-
----
-
-## Security
-
-- **Token Encryption**: All sensitive tokens (Plaid access tokens, Vezgo user tokens) are encrypted at rest using AES-256-GCM
-- **Authentication**: All routes protected by Clerk authentication
-- **Row-Level Security**: Convex queries filter by authenticated user ID
-- **HTTPS Only**: All external API calls use HTTPS
-
----
+| Document | What it covers |
+| --- | --- |
+| [AGENTS.md](./AGENTS.md) | Contract for coding agents: structure gotchas, deploy rules |
+| [frontend/README.md](./frontend/README.md) | App layout, environment variables, conventions |
+| [services/README.md](./services/README.md) | The calculation package |
+| [docs/](./docs/README.md) | API, metal premiums, CSP, ADRs, archived plans |
 
 ## License
 
-This project is private and proprietary.
-
----
-
-<div align="center">
-  <sub>Built with ❤️ for personal wealth management</sub>
-</div>
+Private and proprietary.

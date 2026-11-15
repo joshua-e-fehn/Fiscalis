@@ -260,7 +260,7 @@ export interface PerformanceResult {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * How a holding's value history is known (docs/VALUATION_RESOLUTION_PLAN.md):
+ * How a holding's value history is known (docs/adr/0001-valuation-resolution.md):
  * - continuous: a price feed values it at any time (vault metals);
  * - semi-continuous: periodic prices (fund NAV, NFT floor), computed like
  *   discrete;

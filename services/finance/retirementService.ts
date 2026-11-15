@@ -8,7 +8,7 @@
 // annually (the primitives in `financeService.ts`); savings are monthly
 // deposits at the equivalent monthly rate r_m = (1 + r)^(1/12) − 1.
 //
-// The model (see docs/RETIREMENT_PLANNER_PLAN.md §1):
+// The model (see docs/archive/RETIREMENT_PLANNER_PLAN.md §1):
 //   0. n               = years from today to (date of birth + retirementAge),
 //                        fractional; whole years only without a date of birth
 //   1. expenseFuture   = monthlyExpensesToday × (1 + inflation)^n

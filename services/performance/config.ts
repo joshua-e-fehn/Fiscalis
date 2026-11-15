@@ -2,7 +2,7 @@
  * Performance Calculation Service - Valuation resolution
  *
  * Which strategy values a holding's history is resolved in three tiers,
- * the most specific winning (docs/VALUATION_RESOLUTION_PLAN.md):
+ * the most specific winning (docs/adr/0001-valuation-resolution.md):
  *
  *   asset override → subcategory override → category default
  *

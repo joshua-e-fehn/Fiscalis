@@ -99,6 +99,7 @@ import strategiesIt from "@/messages/it/strategies.json";
 import docsIt from "@/messages/it/docs.json";
 import billingIt from "@/messages/it/billing.json";
 
+import ptPT from "@/messages/pt-PT";
 import type { Language } from "./locales";
 
 const en = {
@@ -187,7 +188,6 @@ const fr = {
   billing: billingFr,
 } satisfies Messages;
 
-
 const it = {
   common: commonIt,
   worldMap: worldMapIt,
@@ -209,7 +209,7 @@ const it = {
   billing: billingIt,
 } satisfies Messages;
 
-const MESSAGES: Record<Language, Messages> = { en, de, es, fr, it };
+const MESSAGES: Record<Language, Messages> = { en, de, es, fr, it, "pt-PT": ptPT };
 
 export function messagesFor(language: Language): Messages {
   return MESSAGES[language];

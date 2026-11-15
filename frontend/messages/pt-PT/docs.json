@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "{page} · Documentação do Fiscalis"
+  },
+  "nav": {
+    "label": "Documentação",
+    "previous": "Anterior",
+    "next": "Seguinte",
+    "onThisPage": "Nesta página"
+  },
+  "introduction": {
+    "subtitle": "O que é o Fiscalis, de onde vêm os teus números e como são calculados.",
+    "sections": {
+      "whatIs": {
+        "title": "O que é o Fiscalis",
+        "body": "O Fiscalis é uma ferramenta privada para acompanhar o teu património líquido. Junta num só lugar as tuas contas bancárias, corretoras, a Bitpanda, um cofre de metais preciosos, os ativos que introduzes à mão e os teus empréstimos, avalia tudo numa única moeda e mostra como o teu património evolui ao longo do tempo.\n\nO Fiscalis só lê os teus dados. Não consegue movimentar dinheiro, executar ordens nem alterar nada no teu banco ou na tua corretora."
+      },
+      "sources": {
+        "title": "De onde vêm os teus números",
+        "body": "- Bancos através da Plaid: saldos de contas à ordem, poupanças e cartões de crédito, mais o histórico de transações.\n- Corretoras através da SnapTrade: contas de corretagem, posições, dinheiro e movimentos.\n- Bitpanda através de uma chave de API só de leitura: cripto, metais, ações, ETF e carteiras de dinheiro.\n- Cofre de metais preciosos: moedas e barras que registas tu, avaliadas ao preço spot em direto.\n- Ativos manuais: imobiliário, colecionáveis, private equity, obrigações e tudo o que nenhuma conta ligada reporta.\n- Empréstimos: créditos à habitação e outros empréstimos que introduzes, com o plano de reembolso completo.",
+        "linkLabel": "Liga a tua primeira conta"
+      },
+      "netWorth": {
+        "title": "Como é calculado o teu património líquido",
+        "body": "O teu património líquido é tudo o que tens menos os teus passivos. O mesmo cálculo alimenta o painel, os snapshots diários que desenham o teu histórico e a API, por isso todos os sítios mostram o mesmo número.\n\nAs posições estão agrupadas em categorias como dinheiro, ações, obrigações, cripto, matérias-primas, imobiliário e colecionáveis. Se uma posição ficar na categoria errada, podes movê-la em Definições > Categorias.\n\nA rentabilidade dos teus investimentos é ajustada aos fluxos: o dinheiro que acrescentas ou com que compras conta como investido, não como ganho, por isso um depósito nunca parece um bom dia no mercado.",
+        "linkLabel": "Abrir o painel"
+      },
+      "metals": {
+        "title": "Como são avaliados os metais",
+        "body": "O ouro, a prata, a platina e o paládio do teu cofre são avaliados ao preço spot em direto, que é atualizado a cada minuto. O Fiscalis aplica prémios de comerciante calibrados: o prémio de compra é o que pagarias acima do spot, o prémio de venda o que um comerciante te pagaria. Podes substituir ambos em cada artigo."
+      },
+      "currency": {
+        "title": "Moeda de apresentação e idioma",
+        "body": "Tudo é guardado em euros. Podes ver os teus totais em EUR, USD, GBP ou CHF: os totais são convertidos à taxa de câmbio diária mais recente e o teu histórico à taxa de cada dia. Os empréstimos e as linhas de cada conta mantêm a sua própria moeda.\n\nO Fiscalis está disponível em inglês, alemão, espanhol, francês, italiano e português. Altera a moeda de apresentação e o idioma em Definições > Geral.",
+        "linkLabel": "Abrir Definições > Geral"
+      },
+      "sync": {
+        "title": "Quando os dados são atualizados",
+        "body": "- Todos os bancos e corretoras ligados sincronizam uma vez por dia, de madrugada.\n- A Bitpanda sincroniza a cada seis horas.\n- Os preços spot dos metais são atualizados a cada minuto e as taxas de câmbio várias vezes por dia.\n- Podes sincronizar tudo tu próprio a qualquer momento com o botão de sincronização no topo da página."
+      },
+      "tools": {
+        "title": "Ferramentas de planeamento",
+        "body": "- Planeador de reforma: calcula se o teu património líquido atual, as tuas poupanças e as tuas pensões cobrem a reforma que queres.\n- Calculadoras de juros e de empréstimos: experimenta planos de poupança e opções de reembolso sem guardar nada.\n- Mapa-múndi: indicadores económicos, demográficos e de desenvolvimento do Banco Mundial num mapa interativo.\n- API: lê o teu património líquido atual a partir dos teus próprios scripts com uma chave de API pessoal."
+      },
+      "privacy": {
+        "title": "Privacidade e segurança",
+        "body": "Os tokens de acesso dos teus bancos e corretoras e a tua chave da Bitpanda são guardados encriptados. As chaves de API são guardadas apenas como hash, por isso nem o Fiscalis as consegue ler. Inicias sessão no teu banco e na tua corretora nas janelas deles; o Fiscalis nunca vê essas palavras-passe.\n\nEm Definições > Privacidade podes descarregar tudo o que o Fiscalis guarda sobre ti ou eliminar a tua conta.",
+        "linkLabel": "Abrir Definições > Privacidade"
+      },
+      "access": {
+        "title": "Acesso",
+        "body": "De momento, o Fiscalis só funciona por convite. Os novos utilizadores entram na lista de espera e recebem acesso quando o seu lugar é aprovado."
+      }
+    }
+  },
+  "getStarted": {
+    "subtitle": "Do teu primeiro início de sessão a uma imagem completa do teu património.",
+    "sections": {
+      "account": {
+        "title": "1. A tua conta",
+        "body": "O registo é feito através da lista de espera. Quando o teu acesso for aprovado, inicia sessão com o teu endereço de email. Da primeira vez que inicias sessão, uma configuração curta guia-te pelo teu perfil e pelas tuas primeiras ligações. Podes saltar todos os passos de ligação e voltar mais tarde."
+      },
+      "profile": {
+        "title": "2. Configura o teu perfil",
+        "body": "Escolhe o teu nome de apresentação, a moeda de apresentação e um tema. A data de nascimento é opcional; o planeador de reforma usa-a. Podes alterar tudo isto mais tarde em Definições > Geral, juntamente com o idioma.",
+        "linkLabel": "Abrir Definições > Geral"
+      },
+      "connect": {
+        "title": "3. Liga as tuas contas",
+        "body": "- Bancos: Integrações > Bancos e depois Ligar banco.\n- Corretoras: Integrações > Corretoras e depois Ligar corretora.\n- Bitpanda: também em Integrações > Corretoras, com Ligar a Bitpanda e uma chave de API só de leitura.\n\nA primeira sincronização pode demorar um pouco. Depois disso, as tuas contas são atualizadas automaticamente.",
+        "linkLabel": "Abrir Bancos"
+      },
+      "manual": {
+        "title": "4. Acrescenta o que nenhuma conta reporta",
+        "body": "- As moedas e barras vão para o cofre de metais preciosos em Investimentos > Matérias-primas.\n- O imobiliário, os colecionáveis, o private equity, as obrigações e ativos semelhantes são adicionados como ativos manuais a partir da página da respetiva categoria.\n- Os créditos à habitação e outros empréstimos vão para Passivos > Empréstimos, para que o teu património líquido desconte o que ainda deves.",
+        "linkLabel": "Ver os tutoriais"
+      },
+      "explore": {
+        "title": "5. Explora o teu painel",
+        "body": "O painel mostra o teu património líquido, como está dividido pelas categorias e como evoluiu. Cada categoria em Investimentos tem a sua própria página com as posições por trás dela. A partir de agora, o Fiscalis tira um snapshot todos os dias, por isso o teu histórico cresce sozinho.",
+        "linkLabel": "Abrir o painel"
+      },
+      "next": {
+        "title": "Próximos passos",
+        "body": "- Planeia a tua reforma com o planeador de reforma, com base no teu património líquido real.\n- Cria uma chave de API se quiseres ler o teu património líquido a partir das tuas próprias ferramentas.\n- Consulta o registo de alterações para veres as novidades."
+      }
+    }
+  },
+  "tutorials": {
+    "subtitle": "Guias passo a passo para as tarefas mais comuns.",
+    "sections": {
+      "connectBank": {
+        "title": "Ligar um banco",
+        "body": "As contas bancárias são ligadas através da Plaid. O Fiscalis recebe acesso só de leitura aos saldos e às transações.",
+        "steps": "- Abre Integrações > Bancos.\n- Clica em Ligar banco. Abre-se a janela da Plaid.\n- Escolhe o teu banco e inicia sessão lá. As credenciais do teu banco vão para a Plaid e para o teu banco, nunca para o Fiscalis.\n- Seleciona as contas que queres partilhar e confirma.\n- Os teus saldos aparecem na página. Abre Transações para veres o teu histórico de transações.",
+        "note": "Se um banco mostrar Reautenticação necessária, ou se o teu consentimento estiver prestes a terminar, clica em Voltar a ligar e inicia sessão novamente. Os teus dados mantêm-se.",
+        "linkLabel": "Abrir Bancos"
+      },
+      "connectBroker": {
+        "title": "Ligar uma corretora ou a Bitpanda",
+        "body": "As corretoras são ligadas através da SnapTrade. A Bitpanda é ligada diretamente com uma chave de API só de leitura.",
+        "steps": "- Abre Integrações > Corretoras.\n- Para uma corretora, clica em Ligar corretora, escolhe a tua corretora no portal de ligação da SnapTrade e inicia sessão lá.\n- Para a Bitpanda, clica em Ligar a Bitpanda. Usa a ligação Cria uma chave só de leitura na Bitpanda, cria uma chave apenas com acesso de leitura e copia-a.\n- Cola a chave, dá-lhe opcionalmente uma etiqueta e clica em Ligar.\n- As tuas posições e o teu dinheiro aparecem após a primeira sincronização.",
+        "note": "A Bitpanda sincroniza a cada seis horas; usa Sincronizar agora para a atualizar de imediato. Nunca dês ao Fiscalis uma chave da Bitpanda que permita negociar ou levantar.",
+        "linkLabel": "Abrir Corretoras"
+      },
+      "manualAsset": {
+        "title": "Adicionar um ativo manual",
+        "body": "Os ativos manuais cobrem tudo o que nenhuma conta ligada reporta, como um apartamento, um relógio, vinho, private equity ou obrigações do Tesouro.",
+        "steps": "- Abre a categoria correspondente em Investimentos, por exemplo Imobiliário ou Colecionáveis.\n- Clica em Adicionar artigo, ou abre uma subcategoria e clica em Adicionar ativo.\n- Escolhe a categoria e a subcategoria e dá um nome ao ativo.\n- Escolhe a moeda e adiciona uma avaliação: uma data e quanto o ativo valia nesse dia. A avaliação mais recente conta no teu património líquido.\n- Opcionalmente, introduz o preço de compra para veres o teu ganho ou perda e escolhe o empréstimo que o financiou em Financiado por.\n- Guarda. Para atualizar o valor mais tarde, edita o ativo e clica em Adicionar avaliação.",
+        "linkLabel": "Abrir Imobiliário"
+      },
+      "vaultPurchase": {
+        "title": "Registar uma compra no cofre",
+        "body": "O cofre guarda ouro, prata, platina e paládio físicos. Os artigos são avaliados ao preço spot em direto com prémios de comerciante.",
+        "steps": "- Abre Investimentos > Matérias-primas > Metais preciosos e muda para o separador Posições.\n- Clica em Adicionar artigo.\n- Escolhe uma moeda ou barra Do catálogo, ou escolhe Artigo personalizado e introduz o nome, o metal, a categoria, o peso em gramas e a pureza em ‰.\n- Em Detalhes da compra, introduz a quantidade, o preço por unidade e a respetiva moeda, e a data de compra.\n- Opcionalmente, acrescenta um local de armazenamento e notas e clica em Adicionar ao cofre.",
+        "note": "A data de compra é importante: a rentabilidade conta a compra como dinheiro investido nesse dia, não como ganho. Quando venderes um artigo, usa Vender artigo em vez de o eliminar, para que a venda e o teu ganho realizado fiquem registados.",
+        "linkLabel": "Abrir o cofre"
+      },
+      "loan": {
+        "title": "Configurar um empréstimo",
+        "body": "Os empréstimos contam como passivos e reduzem o teu património líquido pelo capital em dívida. O Fiscalis calcula o plano de reembolso completo.",
+        "steps": "- Abre Passivos > Empréstimos e clica em Adicionar empréstimo.\n- Nome e tipo: dá um nome ao empréstimo e escolhe o tipo: Prestação constante, Prestação decrescente, Balão/bullet ou Período só de juros.\n- Montante e taxa: introduz o montante original, o capital em dívida atual se for diferente, a taxa de juro anual e a moeda.\n- Datas e prestações: define a periodicidade das prestações, o prazo e a data de início. Usa a prestação calculada ou introduz a tua prestação real.\n- Pagamentos extra: indica se o empréstimo permite amortizações antecipadas e quanto por ano.\n- Confirmar detalhes e guarda.",
+        "note": "Abre um empréstimo para veres o plano, registares os pagamentos que já fizeste e experimentares cenários hipotéticos, como uma prestação mais alta ou um pagamento extra pontual.",
+        "linkLabel": "Abrir Empréstimos"
+      },
+      "apiKey": {
+        "title": "Usar a API",
+        "body": "Com uma chave de API pessoal podes ler o teu património líquido atual a partir de um script, de uma folha de cálculo ou de um painel em casa. As chaves são só de leitura e pertencem à tua conta.",
+        "steps": "- Abre Definições > Chaves de API.\n- Introduz um nome para a chave, escolhe quando expira (30 dias, 90 dias, 1 ano ou nunca) e clica em Criar chave.\n- Copia a chave de imediato e guarda-a num gestor de palavras-passe ou cofre de segredos. Só é mostrada uma vez.\n- Envia-a no cabeçalho Authorization como bearer token para o endpoint indicado na página das chaves de API, como no exemplo abaixo.\n- Para obteres os montantes noutra moeda, acrescenta ?currency=USD, GBP ou CHF ao URL. Sem isso, os montantes vêm em EUR.",
+        "note": "Podes ter até {maxKeys} chaves ativas e cada chave está limitada a {rateLimit} pedidos por minuto. Chaves em URLs não são aceites e as chaves nunca devem ser usadas em código do browser. Revoga uma chave na mesma página se ela puder ter sido divulgada.",
+        "linkLabel": "Abrir Definições > Chaves de API"
+      }
+    }
+  },
+  "changelog": {
+    "subtitle": "Novas funcionalidades e correções, das mais recentes para as mais antigas.",
+    "empty": "Ainda não há alterações registadas.",
+    "entryLanguage": "Cada entrada é o título da alteração tal como foi publicada (em inglês).",
+    "types": {
+      "feature": "Novo",
+      "fix": "Correção"
+    },
+    "pr": "#{number}",
+    "count": "{count, plural, one {# alteração} other {# alterações}}"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "subheadline": "Acompanha todos os teus investimentos, ativos e passivos. Conhece o teu património líquido real com atualizações automáticas de contas bancárias, ações, cripto, metais preciosos e muito mais.",
+    "badge": "O teu património, simplificado",
+    "headline": "O retrato completo do teu <highlight>património</highlight><br></br>num só lugar",
+    "tagline": "Como o Finanzguru, mas para todo o teu património líquido."
+  },
+  "trust": {
+    "readOnly": "Ligações só de leitura",
+    "dailySync": "Sincronização automática diária",
+    "multiCurrency": "Várias moedas"
+  },
+  "features": {
+    "cryptoDescription": "Importa automaticamente as tuas posições na Bitpanda com uma chave de API só de leitura.",
+    "metalsTitle": "Metais preciosos",
+    "metalsDescription": "Acompanha barras e moedas de ouro e prata, avaliadas aos preços atuais dos comerciantes.",
+    "liabilitiesDescription": "Acompanha os teus empréstimos e planos de reembolso. Vê o teu património líquido real.",
+    "headline": "Tudo o que precisas para <highlight>dominar o teu património</highlight>",
+    "subheadline": "De contas bancárias a carteiras cripto, acompanha todos os teus ativos num painel unificado.",
+    "banksTitle": "Contas bancárias",
+    "banksDescription": "Liga as tuas contas bancárias em segurança através da Plaid. Acompanha contas à ordem, poupanças e cartões de crédito.",
+    "investmentsTitle": "Carteiras de investimento",
+    "investmentsDescription": "Importa automaticamente ações, ETFs, obrigações e fundos de investimento das principais corretoras.",
+    "cryptoTitle": "Criptomoedas",
+    "liabilitiesTitle": "Dívidas e passivos",
+    "netWorthTitle": "Acompanhamento do património líquido",
+    "netWorthDescription": "Vê o teu património crescer ao longo do tempo com gráficos e análises claros."
+  },
+  "steps": {
+    "createDescription": "Regista-te com o teu email ou uma conta social. O acesso abre gradualmente através de uma lista de espera. Não é preciso cartão de crédito.",
+    "netWorthDescription": "Vê o retrato completo do teu património a ganhar forma, atualizado automaticamente todos os dias.",
+    "headline": "Começa em <highlight>minutos</highlight>",
+    "subheadline": "Três passos simples para veres o teu retrato financeiro completo.",
+    "createTitle": "Cria a tua conta",
+    "connectTitle": "Liga as tuas contas",
+    "connectDescription": "Liga em segurança os teus bancos, corretoras e plataformas cripto. Apenas acesso só de leitura.",
+    "netWorthTitle": "Vê o teu património líquido"
+  },
+  "security": {
+    "description": "Nunca vemos as tuas credenciais bancárias. Os tokens de acesso e as chaves de API são guardados encriptados, e todas as ligações são só de leitura.",
+    "badge": "Segurança desde a conceção",
+    "headline": "Os teus dados estão <highlight>seguros connosco</highlight>",
+    "encryption": "Encriptação AES-256-GCM para todos os tokens sensíveis",
+    "readOnly": "Acesso só de leitura: nunca podemos movimentar o teu dinheiro",
+    "credentials": "As tuas credenciais bancárias nunca passam pelos nossos servidores",
+    "providers": "Fornecedores de confiança: Plaid, SnapTrade, Bitpanda",
+    "ownership": "Os teus dados são teus: nunca os vendemos"
+  },
+  "cta": {
+    "description": "Junta as tuas contas, posições e empréstimos e vê todo o teu património líquido num só lugar.",
+    "headline": "Pronto para assumir o controlo do <highlight>teu património?</highlight>"
+  },
+  "nav": {
+    "features": "Funcionalidades",
+    "howItWorks": "Como funciona",
+    "security": "Segurança",
+    "signIn": "Iniciar sessão",
+    "joinWaitlist": "Entrar na lista de espera",
+    "dashboard": "Painel",
+    "goToDashboard": "Ir para o painel"
+  },
+  "logoAlt": "Logótipo do Fiscalis",
+  "mockup": {
+    "totalNetWorth": "Património líquido total",
+    "yearChange": "{change} este ano",
+    "banks": "{count, plural, one {# banco} other {# bancos}}",
+    "brokers": "{count, plural, one {# corretora} other {# corretoras}}",
+    "wallets": "{count, plural, one {# carteira} other {# carteiras}}",
+    "equities": "Ações",
+    "crypto": "Cripto",
+    "cash": "Liquidez",
+    "realEstate": "Imobiliário"
+  },
+  "languageToggle": {
+    "label": "Idioma"
+  }
+}

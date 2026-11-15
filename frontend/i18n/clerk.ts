@@ -1,4 +1,4 @@
-import { deDE, enGB, esES, frFR, itIT } from "@clerk/localizations";
+import { deDE, enGB, esES, frFR, itIT, ptPT } from "@clerk/localizations";
 
 import type { Language } from "./locales";
 
@@ -8,6 +8,7 @@ const CLERK_LOCALIZATIONS = {
   es: esES,
   fr: frFR,
   it: itIT,
+  "pt-PT": ptPT,
 } satisfies Record<
   Language,
   unknown

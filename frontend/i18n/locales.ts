@@ -5,10 +5,10 @@
  * tag each code formats with, the planned (not yet enabled) locales, text
  * direction, the cookies and a pure locale resolver.
  *
- * App codes ("en", "de") are what is stored (userSettings.language), what the
+ * App codes ("en", "de", "pt-PT") are what is stored (userSettings.language), what the
  * locale cookie holds and how the catalogues under messages/ are named.
  * next-intl is given the Intl tag instead, so dates are day-first in English
- * (en-GB), German formats as de-DE and French as fr-FR.
+ * (en-GB), German formats as de-DE, French as fr-FR and Portuguese as pt-PT.
  *
  * Pure module (no Next.js imports): services/i18n/i18n.test.ts covers it.
  */
@@ -29,14 +29,14 @@ export const DEFAULT_LANGUAGE: Language = "en";
  * renders as English, so the page language, Clerk, Plaid Link and the
  * catalogue never claim a language the content is not in (browsers would
  * offer to translate the page, screen readers would mispronounce it). English,
- * German, Spanish, French and Italian are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
+ * German, Spanish, French, Italian and European Portuguese are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
  * in LANGUAGES, for checking a new catalogue locally (inlined at build time on
  * both server and client).
  */
 export const RENDERED_LANGUAGES: readonly Language[] =
   process.env.NEXT_PUBLIC_I18N_PREVIEW === "1"
     ? LANGUAGES
-    : ["en", "de", "es", "fr", "it"];
+    : ["en", "de", "es", "fr", "it", "pt-PT"];
 
 /** The language a stored or requested language is rendered in. */
 export function renderedLanguage(
@@ -62,6 +62,7 @@ export const INTL_TAGS = {
   es: "es-ES",
   fr: "fr-FR",
   it: "it-IT",
+  "pt-PT": "pt-PT",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -73,6 +74,7 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   es: "Español",
   fr: "Français",
   it: "Italiano",
+  "pt-PT": "Português (Portugal)",
 };
 
 /**
@@ -80,7 +82,6 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
 export const PLANNED_LOCALES = [
-  "pt-PT",
   "ru",
   "zh-Hans",
   "hi",

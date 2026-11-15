@@ -1,0 +1,272 @@
+{
+  "years": "{count, plural, one {# ano} other {# anos}}",
+  "yearsDative": "{count, plural, one {# ano} other {# anos}}",
+  "perMonth": "{amount}/mês",
+  "perMonthUnit": "/ mês",
+  "pensions": "Pensões",
+  "steps": {
+    "intro": "Início",
+    "personal": "Idade",
+    "expenses": "Despesas",
+    "housing": "Habitação",
+    "pensions": "Pensões",
+    "portfolio": "Carteira",
+    "assumptions": "Pressupostos",
+    "results": "Resultados"
+  },
+  "stepShell": {
+    "saving": "A guardar…"
+  },
+  "progress": {
+    "stepOf": "Passo {current} de {total}"
+  },
+  "wizard": {
+    "defaultPensionLabel": "Pensão do Estado",
+    "editingBanner": "Estás a editar o teu plano guardado. As alterações aplicam-se quando guardares.",
+    "discardChanges": "Descartar alterações",
+    "currencyChanged": "A tua moeda de apresentação mudou para {display}. Os montantes neste formulário continuam em {form} e são guardados em {form}.",
+    "reloadInCurrency": "Recarregar em {currency}",
+    "storedCurrency": "O teu plano foi introduzido em {stored}. Os montantes são mostrados em {shown} à taxa de câmbio de hoje e, quando voltares a guardar, ficam em {shown}.",
+    "birthDateRequired": "A data de nascimento é obrigatória",
+    "saveFailed": "Não conseguimos guardar o teu plano. Tenta novamente."
+  },
+  "dashboard": {
+    "title": "Plano de reforma",
+    "subtitle": "Objetivo: reforma aos {age} anos. Este plano atualiza-se automaticamente à medida que a tua carteira muda.",
+    "subtitleFallback": "O teu plano de reforma guardado.",
+    "editPlan": "Editar plano",
+    "startOver": {
+      "button": "Recomeçar",
+      "title": "Recomeçar com um novo plano?",
+      "description": "Isto elimina o teu plano de reforma guardado e todas as respostas. A tua data de nascimento mantém-se no teu perfil. Esta ação não pode ser anulada.",
+      "confirm": "Eliminar plano",
+      "resetting": "A eliminar…",
+      "failed": "Não conseguimos eliminar o teu plano. Tenta novamente."
+    }
+  },
+  "results": {
+    "timelineTitle": "Verifica a tua idade de reforma",
+    "timelineBody": "A tua idade de reforma tem de ser superior à tua idade atual para criarmos um plano.",
+    "assumptionsTitle": "Verifica os teus pressupostos",
+    "editHint": "Edita o teu plano para o ajustares.",
+    "backHint": "Volta atrás e ajusta-o."
+  },
+  "progressCard": {
+    "title": "O teu objetivo de reforma",
+    "target": "Carteira objetivo necessária",
+    "in": "Daqui a",
+    "progressToday": "Progresso hoje (conservador)",
+    "growth": "Os teus <b>{current}</b> atuais crescem até <b>{projected}</b> na reforma a uns prudentes {rate} por ano — ou seja, <b>{pct}%</b> do objetivo acima (antes de somar qualquer poupança mensal). Com os {expectedRate} esperados seriam {expectedPct}%.",
+    "netDebt": "Os teus passivos excedem os teus ativos em {debt}. O teu plano parte de {zero}, por isso pagar essa dívida acresce à poupança mensal que calculamos.",
+    "pensionsCoverAll": "O rendimento das tuas pensões já cobre as despesas previstas — não é preciso levantar dinheiro da carteira."
+  },
+  "savingsCard": {
+    "title": "Quanto poupar por mês",
+    "pensionsCoverAll": "As tuas pensões cobrem as despesas previstas, por isso não precisas de poupar para uma carteira de reforma.",
+    "onTrack": "Com base nos teus ativos atuais e no crescimento esperado, estás no bom caminho para atingires o teu objetivo sem poupares nada a mais. Continua assim!",
+    "expectedCase": "Cenário esperado",
+    "conservativeCase": "Cenário conservador",
+    "expectedHint": "pressupõe {rate} / ano — uma carteira que duplica aproximadamente a cada {years, plural, one {# ano} other {# anos}}",
+    "expectedHintNoGrowth": "pressupõe {rate} / ano",
+    "conservativeHint": "pressupõe uns prudentes {rate} / ano",
+    "indexed": "Montante do primeiro mês, a subir com a inflação — até {amount} (esperado) na reforma.",
+    "flat": "Um montante nominal fixo todos os meses até à reforma; a inflação faz com que os pagamentos posteriores valham menos.",
+    "netDebt": "Estes montantes partem de {zero} e não incluem o pagamento da tua dívida atual.",
+    "mortgageNotProjected": "O saldo total de {balance} do crédito à habitação da tua casa conta como ainda em dívida na reforma e faz parte do teu objetivo: acrescenta a taxa e a prestação no plano para o projetares.",
+    "mortgageOwedAtRetirement": "Além disto, as prestações de {payment}/mês do crédito à habitação continuam a sair do teu rendimento; os {balance} ainda em dívida na reforma fazem parte do teu objetivo.",
+    "mortgageRepaidBefore": "Além disto, as prestações de {payment}/mês do crédito à habitação continuam a sair do teu rendimento até o empréstimo estar liquidado."
+  },
+  "coverage": {
+    "title": "Despesas mensais na reforma",
+    "expensesGrow": "As tuas despesas atuais de <b>{today}/mês</b> passam a <b>{future}/mês</b> daqui a {years}, com a inflação.",
+    "pensions": "As tuas pensões de <b>{today}/mês</b> a preços de hoje correspondem a <b>{future}/mês</b>.",
+    "pensionsAfterDeductions": "As tuas pensões de <b>{today}/mês</b> a preços de hoje (após {deductions}/mês de impostos e seguro de saúde) correspondem a <b>{future}/mês</b>.",
+    "coveredByPensions": "Coberto pelas pensões",
+    "fundedByPortfolio": "Financiado pela carteira"
+  },
+  "chart": {
+    "title": "Crescimento projetado da carteira",
+    "age": "{age} anos",
+    "target": "Objetivo",
+    "expectedSaving": "Esperado + poupança",
+    "conservativeSaving": "Conservador + poupança",
+    "expectedNoSaving": "Esperado, sem poupança",
+    "conservativeNoSaving": "Conservador, sem poupança",
+    "footnote": "Quatro trajetórias: as tuas rendibilidades esperada e conservadora, cada uma com o teu plano de poupança mensal e com a tua carteira atual a crescer sozinha. A linha tracejada é o teu objetivo."
+  },
+  "explainer": {
+    "trigger": "Porquê estes números? A regra dos 4%, explicada",
+    "rule": "A <b>regra dos 4%</b> é uma orientação simples: todos os anos podes levantar cerca de 4% da tua carteira sem a esgotar ao longo de uma reforma longa. Ao contrário, a tua carteira tem de ser <b>25×</b> o montante anual que precisa de cobrir.",
+    "customRate": "O teu plano usa <b>{rate}</b>, por isso a tua carteira tem de ser <b>{multiple}×</b> esse montante.",
+    "whereFrom": "De onde vêm os 4%?",
+    "marketReturn": "<b>≈ 7–8%</b> de rendibilidade de mercado esperada por ano a longo prazo",
+    "inflation": "<b>− ~2%</b> de inflação, para o teu dinheiro manter o poder de compra",
+    "buffer": "<b>− uma margem</b> para estares seguro nos anos maus do mercado",
+    "result": "= cerca de 4% que podes gastar todos os anos",
+    "inflationHandlingRate": "Como a taxa de levantamento já tem em conta a inflação durante a reforma, não somamos a inflação duas vezes. Antes da reforma, fazemos crescer as tuas despesas e pensões {rate} por ano e cada parte da tua carteira à sua rendibilidade esperada — mantendo tudo coerente.",
+    "inflationHandling": "Como a taxa de levantamento já tem em conta a inflação durante a reforma, não somamos a inflação duas vezes. Antes da reforma, fazemos crescer as tuas despesas e pensões à taxa de inflação e cada parte da tua carteira à sua rendibilidade esperada — mantendo tudo coerente.",
+    "simpleTarget": "Para o teu plano, com as despesas e pensões de hoje (sem inflação), o objetivo seria <b>{target}</b>.",
+    "adjustedTargetRate": "Ajustado a {years} de inflação de {rate}, o objetivo realista é <b>{target}</b>.",
+    "adjustedTarget": "Ajustado a {years} de inflação, o objetivo realista é <b>{target}</b>.",
+    "difference": "{reason, select, fixedPensionsAndMortgage {A diferença é a inflação, que as tuas pensões fixas não acompanham, mais o crédito à habitação ainda em dívida quando te reformares.} fixedPensions {A diferença é a inflação, que as tuas pensões fixas não acompanham.} mortgage {A diferença é a inflação, mais o crédito à habitação ainda em dívida quando te reformares.} other {A diferença é a inflação.}}",
+    "taxIncluded": "Ambos incluem {rate} de imposto sobre os levantamentos.",
+    "taxExcluded": "Ambos são antes de impostos: o imposto sobre os levantamentos não está incluído."
+  },
+  "teaser": {
+    "titleActive": "O teu plano de reforma",
+    "titleDraft": "Termina o teu plano de reforma",
+    "titleNew": "Planeia a tua reforma",
+    "needsReview": "O teu plano precisa de uma revisão rápida — abre-o para ajustares a idade de reforma ou os pressupostos.",
+    "pensionsCoverAll": "As tuas pensões já cobrem as despesas previstas.",
+    "netDebt": "Os teus passivos excedem atualmente os teus ativos — pagá-los é o primeiro passo.",
+    "onTrack": "Estás no bom caminho para o teu objetivo de {target}.",
+    "onTrackExpected": "No bom caminho com a rendibilidade esperada de {rate}; poupar {amount}/mês cobre o cenário conservador.",
+    "progress": "Já percorreste {pct}% do caminho até ao teu objetivo de {target}.",
+    "draft": "Continua onde ficaste e vê o teu número.",
+    "new": "Transforma o teu objetivo de reforma num plano de poupança mensal em poucos minutos.",
+    "viewPlan": "Ver plano",
+    "getStarted": "Começar"
+  },
+  "introStep": {
+    "title": "Planeia a tua reforma",
+    "body": "Algumas perguntas rápidas para transformar o teu objetivo de reforma num plano de poupança concreto e acompanhável — com base na tua carteira real.",
+    "points": {
+      "age": {
+        "title": "Escolhe a tua idade de reforma",
+        "body": "Diz-nos quando gostarias de deixar de trabalhar e o estilo de vida que queres."
+      },
+      "pensions": {
+        "title": "Adiciona o rendimento das tuas pensões",
+        "body": "Pensões do Estado, de empresa ou privadas cobrem parte dos teus custos mensais."
+      },
+      "number": {
+        "title": "Vê o teu número",
+        "body": "Usamos a regra dos 4% para calcular a carteira de que precisas — e quanto poupar por mês para lá chegares."
+      }
+    },
+    "reviewPlan": "Rever o meu plano",
+    "getStarted": "Começar"
+  },
+  "personalStep": {
+    "title": "A tua cronologia",
+    "description": "Quando nasceste e quando te queres reformar?",
+    "birthDate": "Data de nascimento",
+    "retirementAge": "Idade de reforma",
+    "currentAge": "{age, plural, one {Tens <b>#</b> ano.} other {Tens <b>#</b> anos.}}",
+    "yearsLeft": "Tens <b>{years}</b> para construir a tua carteira de reforma.",
+    "enterBirthDate": "Introduz a tua data de nascimento para calcularmos a tua idade."
+  },
+  "expensesStep": {
+    "title": "Estilo de vida desejado",
+    "description": "O rendimento mensal mínimo que quererias na reforma, a preços de hoje.",
+    "label": "Despesas mensais de vida (hoje)",
+    "hint": "Se a tua casa for própria, exclui a renda — tê-la já reduz este número.",
+    "future": "Com {years} de inflação de {rate}, isso dá cerca de <b>{amount}</b> quando te reformares — o mesmo estilo de vida, só que mais caro."
+  },
+  "housingStep": {
+    "title": "A tua casa",
+    "description": "Os imóveis são tratados de forma diferente dos investimentos — vamos acertar isto.",
+    "ownsHome": "A casa onde vivo é minha",
+    "ownsHomeHint": "Uma habitação própria não conta como financiamento da reforma.",
+    "homeNotCounted": "<b>Não</b> contamos a tua casa para a carteira que financia a reforma — não a podes vender e continuar a viver nela. O seu benefício real já está refletido nas tuas despesas mensais mais baixas (sem renda).",
+    "mortgageLabel": "Crédito à habitação desta casa <muted>(opcional)</muted>",
+    "noMortgage": "Sem crédito / não acompanhado",
+    "trackedLoans": "Empréstimos acompanhados",
+    "bankMortgages": "Contas de crédito à habitação no banco",
+    "mortgageOption": "{name} — {balance}",
+    "mortgageHint": "O saldo não é subtraído ao financiamento da tua reforma: pagas as prestações com o teu rendimento até à reforma, como uma renda. Qualquer saldo ainda em dívida quando te reformares é somado ao teu objetivo.",
+    "bankBalanceOnly": "O teu banco só indica o saldo. Acrescenta a taxa de juro e a prestação mensal para projetares o que ainda estará em dívida quando te reformares.",
+    "interestRate": "Taxa de juro (% ao ano)",
+    "monthlyRepayment": "Prestação mensal ({symbol})",
+    "withoutTerms": "Sem ambos, o saldo atual total conta como ainda em dívida na reforma.",
+    "equityLabel": "Capital imobiliário vendável para financiar a reforma <muted>(opcional)</muted>",
+    "equityHint": "Para um imóvel arrendado ou uma segunda casa que planeias vender: o seu valor menos qualquer empréstimo sobre ele que não esteja acompanhado no Fiscalis (os empréstimos acompanhados já são subtraídos ao teu património líquido). Deixa 0 se não houver."
+  },
+  "pensionsStep": {
+    "title": "Rendimento de pensões",
+    "description": "Rendimento mensal que vais receber na reforma, antes de mexeres na tua carteira. Introduz-o a preços de hoje, p. ex. o montante bruto da tua simulação de pensão (Renteninformation). Descontamos impostos e seguro de saúde dos montantes brutos e ajustamos as pensões indexadas à inflação, tal como as tuas despesas.",
+    "source": "Origem",
+    "sourcePlaceholder": "p. ex. Pensão do Estado",
+    "amountLabel": "{symbol} / mês (hoje)",
+    "removeSource": "Remover origem",
+    "gross": "Bruto (antes de impostos e seguro de saúde)",
+    "net": "Líquido (já após descontos)",
+    "indexed": "Sobe com a inflação",
+    "fixed": "Montante fixo (p. ex. muitas pensões de empresa)",
+    "addSource": "Adicionar fonte de rendimento",
+    "deductionLabel": "Impostos e seguro de saúde sobre pensões brutas",
+    "deductionHint": "Uma taxa fixa para seguro de saúde e dependência (≈ 11–12% na KVdR alemã) mais imposto sobre o rendimento. A predefinição de {rate} transforma {gross} brutos em cerca de {net} líquidos.",
+    "totalNet": "Rendimento total de pensões, líquido (a preços de hoje)",
+    "asEntered": "{amount} conforme introduzido"
+  },
+  "portfolioStep": {
+    "title": "A tua carteira hoje",
+    "description": "Este é o ponto de partida que fazemos crescer até ao teu objetivo. Escolhe como se espera que cada parte cresça, ou deixa de fora dinheiro que não vais investir, como um fundo de emergência.",
+    "noAssets": "Ainda sem ativos acompanhados — o teu plano parte de {zero}.",
+    "growthLabel": "{category}: crescimento",
+    "categories": {
+      "equities": "Ações",
+      "real-estate": "Fundos imobiliários",
+      "crypto": "Cripto",
+      "bonds": "Obrigações",
+      "commodities": "Matérias-primas e metais",
+      "cash": "Liquidez e poupanças",
+      "collectibles": "Colecionáveis",
+      "property": "Imóveis vendáveis"
+    },
+    "treatments": {
+      "growth": "Cresce à rendibilidade do cenário",
+      "moderate": "A meio caminho entre rendibilidade e inflação",
+      "inflation": "Acompanha a inflação",
+      "exclude": "Não conta (p. ex. fundo de emergência)"
+    },
+    "fundable": "Ativos disponíveis para a reforma",
+    "expectedGrowth": "Crescimento esperado {expected} / ano (conservador {conservative})",
+    "netDebt": "Os teus passivos excedem os teus ativos em <b>{debt}</b>. O teu plano parte de {zero} — a dívida não cresce à rendibilidade do investimento — por isso pagá-la acresce à poupança que calculamos.",
+    "mortgageWithPayment": "O crédito à habitação de <b>{balance}</b> da tua casa não é subtraído aqui: as prestações de {payment} saem do teu rendimento até à reforma.",
+    "mortgage": "O crédito à habitação de <b>{balance}</b> da tua casa não é subtraído aqui: as prestações saem do teu rendimento até à reforma.",
+    "mortgageNotProjected": "Sem a taxa e a prestação, o saldo total conta como ainda em dívida quando te reformares.",
+    "footnote": "Os valores dos ativos atualizam-se automaticamente à medida que as tuas contas sincronizam, por isso o teu progresso está sempre em dia. Cada parte cresce à sua própria taxa; as novas poupanças crescem à rendibilidade do cenário. A casa onde vives não está incluída."
+  },
+  "assumptionsStep": {
+    "title": "Pressupostos",
+    "description": "Já estão preenchidos valores sensatos — ajusta-os só se souberes o que estás a fazer.",
+    "seePlan": "Ver o meu plano",
+    "fields": {
+      "optimisticReturn": {
+        "label": "Rendibilidade anual esperada",
+        "hint": "Crescimento do mercado a longo prazo. A predefinição de {rate} duplica uma carteira a cada 10 anos."
+      },
+      "conservativeReturn": {
+        "label": "Rendibilidade anual conservadora",
+        "hint": "Um pressuposto de crescimento prudente para a estimativa mais segura."
+      },
+      "inflationRate": {
+        "label": "Taxa de inflação",
+        "hint": "A rapidez com que os preços sobem; aumenta o teu objetivo de despesas futuras."
+      },
+      "withdrawalRate": {
+        "label": "Taxa de levantamento segura",
+        "hint": "A regra dos 4%. Mais baixa = mais segura, mas exige uma carteira maior."
+      }
+    },
+    "withdrawalTax": "Imposto sobre levantamentos",
+    "withdrawalTaxHint": "Imposto efetivo sobre o que levantas (p. ex. imposto sobre mais-valias na parte dos ganhos). Com 0%, o objetivo é um valor antes de impostos.",
+    "indexContributions": "Aumentar a minha poupança com a inflação",
+    "indexContributionsHint": "Desligado: um montante fixo a preços de hoje, que vale menos todos os anos. Ligado: um primeiro montante mais baixo que cresce com a inflação.",
+    "reset": "Repor as predefinições recomendadas"
+  },
+  "resultsStep": {
+    "save": "Guardar o meu plano",
+    "fixToSave": "{reason}. Corrige isto para guardares o teu plano."
+  },
+  "validation": {
+    "ageRange": "{field, select, currentAge {A idade atual tem} retirementAge {A idade de reforma tem} other {As idades têm}} de ser um número inteiro entre {min} e {max}",
+    "retirementNotAfterCurrent": "A idade de reforma tem de ser posterior à tua idade atual",
+    "rateRange": "{field, select, optimisticReturn {A rendibilidade esperada} conservativeReturn {A rendibilidade conservadora} inflationRate {A taxa de inflação} primaryResidenceMortgageRate {A taxa do crédito à habitação} pensionDeductionRate {Os impostos e o seguro de saúde sobre pensões} withdrawalTaxRate {O imposto sobre levantamentos} other {A taxa}} tem de estar entre 0% e {max}%",
+    "withdrawalRateRange": "A taxa de levantamento tem de ser superior a 0% e no máximo {max}%",
+    "conservativeAboveExpected": "A rendibilidade conservadora não pode ser superior à rendibilidade esperada",
+    "amountNegative": "{field, select, monthlyExpensesToday {As despesas mensais têm de ser zero ou mais} fundableRealEstateEquity {O valor do imóvel tem de ser zero ou mais} primaryResidenceMortgagePayment {A prestação do crédito à habitação tem de ser zero ou mais} other {Os montantes das pensões têm de ser zero ou mais}}",
+    "expensesNotPositive": "As despesas mensais têm de ser superiores a zero"
+  }
+}

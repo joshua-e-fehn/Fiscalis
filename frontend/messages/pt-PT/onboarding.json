@@ -1,0 +1,109 @@
+{
+  "steps": {
+    "welcome": "Boas-vindas",
+    "profile": "Perfil",
+    "banking": "Bancos",
+    "brokers": "Corretoras",
+    "crypto": "Cripto",
+    "completion": "Concluído"
+  },
+  "progress": {
+    "stepOf": "Passo {current} de {total}"
+  },
+  "shared": {
+    "skip": "Saltar por agora",
+    "noConnections": "Ainda sem ligações",
+    "accounts": "{count, plural, one {# conta} other {# contas}}"
+  },
+  "welcome": {
+    "logoAlt": "Logótipo do Fiscalis",
+    "title": "Boas-vindas ao <brand>Fiscalis</brand>",
+    "subtitle": "O retrato completo do teu património, num só lugar.",
+    "trackTitle": "Acompanha tudo",
+    "trackDescription": "Ações, cripto, imobiliário, liquidez, metais preciosos — tudo numa só vista",
+    "debtsTitle": "Conhece as tuas dívidas",
+    "debtsDescription": "Empréstimos, créditos à habitação e cartões de crédito num relance",
+    "netWorthTitle": "Património líquido real",
+    "netWorthDescription": "Ativos menos passivos, atualizados em tempo real",
+    "mockupNetWorth": "Património líquido total",
+    "mockupChange": "{change} este ano",
+    "getStarted": "Vamos começar"
+  },
+  "profile": {
+    "title": "Personaliza a tua experiência",
+    "subtitle": "Define as tuas preferências para tirares o máximo partido do Fiscalis",
+    "displayName": "Nome a apresentar",
+    "displayNamePlaceholder": "O teu nome",
+    "birthDate": "Data de nascimento",
+    "birthDateHint": "Usada para personalizar ferramentas de planeamento, como a tua previsão de reforma.",
+    "currency": "Moeda preferida",
+    "currencies": {
+      "EUR": "Euro (€)",
+      "USD": "Dólar americano ($)",
+      "GBP": "Libra esterlina (£)",
+      "CHF": "Franco suíço (CHF)"
+    },
+    "theme": "Tema",
+    "themes": {
+      "light": "Claro",
+      "dark": "Escuro",
+      "system": "Sistema"
+    },
+    "saveFailed": "Não conseguimos guardar o teu perfil. Tenta novamente."
+  },
+  "banking": {
+    "title": "Liga as tuas contas bancárias",
+    "subtitle": "Vê as tuas contas à ordem, poupanças e cartões de crédito numa só vista",
+    "benefitBalances": "Atualização automática de saldos",
+    "benefitTransactions": "Histórico e categorização de transações",
+    "benefitCurrencies": "Suporte para várias moedas",
+    "connected": "Contas ligadas",
+    "connecting": "A ligar…",
+    "addAnother": "Adicionar outro banco",
+    "connect": "Ligar conta bancária",
+    "security": "Encriptação de nível bancário • Acesso só de leitura",
+    "continueWithout": "Continuar sem bancos"
+  },
+  "brokers": {
+    "title": "Liga as tuas contas de investimento",
+    "subtitle": "Importa automaticamente as tuas ações, ETFs e obrigações",
+    "benefitRealtime": "Atualizações da carteira em tempo real",
+    "benefitBrokerages": "Suporte para mais de 15 corretoras",
+    "benefitDividends": "Acompanhamento de dividendos e desempenho",
+    "connected": "Corretoras ligadas",
+    "supported": "Corretoras suportadas",
+    "opening": "A abrir a ligação…",
+    "addAnother": "Adicionar outra corretora",
+    "connect": "Ligar conta de corretora",
+    "newWindow": "Deve ter-se aberto uma nova janela. Conclui a ligação lá.",
+    "security": "Ligação segura através da SnapTrade • Acesso só de leitura",
+    "continueWithout": "Continuar sem corretoras"
+  },
+  "crypto": {
+    "title": "Ligar a Bitpanda",
+    "subtitle": "Acompanha Bitcoin, Ethereum e mais de 100 outros ativos — e ainda metais, ações e liquidez",
+    "benefitAssets": "Cripto, metais preciosos, matérias-primas e ações num só lugar",
+    "benefitApiKey": "Liga com uma chave de API só de leitura",
+    "benefitValuation": "Avaliação automática na tua moeda base",
+    "connected": "Ligada",
+    "addAnother": "Adicionar outra conta",
+    "connect": "Ligar a Bitpanda",
+    "security": "Chave de API só de leitura • Encriptada em repouso",
+    "continueWithout": "Continuar sem a Bitpanda"
+  },
+  "completion": {
+    "title": "Está tudo pronto! 🎉",
+    "subtitle": "O teu painel de património está pronto a explorar",
+    "summaryConnected": "O que ligaste",
+    "summaryEmpty": "Resumo da configuração",
+    "bankAccounts": "Contas bancárias",
+    "brokerageAccounts": "Contas de corretora",
+    "cryptoWallets": "Carteiras cripto",
+    "notConnected": "Não ligado",
+    "connectLater": "Podes ligar as tuas contas a qualquer momento nas Definições",
+    "syncing": "As tuas contas estão a sincronizar. Vai ao teu painel para veres o retrato completo do teu património.",
+    "goToDashboard": "Ir para o painel",
+    "goBack": "Voltar",
+    "addAccounts": "Adicionar contas"
+  }
+}

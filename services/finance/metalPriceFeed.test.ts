@@ -6,6 +6,7 @@ import {
   addUtcMonths,
   archiveKey,
   archiveLines,
+  mergeArchiveLines,
   archiveRow,
   bucketStart,
   chartSeries,
@@ -319,5 +320,41 @@ describe("archive rows", () => {
       "2026-11-14T20:32:00.000Z",
       "2026-11-14T20:33:00.000Z",
     ]);
+  });
+
+  describe("merging into a stored file", () => {
+    const minute = (n: number) => ({ ...snapshot, timestamp: snapshot.timestamp + n * 60_000 });
+    const stored = archiveLines([minute(0), minute(1), minute(2)]);
+
+    it("keeps every stored line when Convex holds only a late minute", () => {
+      const merged = mergeArchiveLines(stored, [minute(1)]);
+      expect(merged.rows).toBe(3);
+      expect(merged.text).toBe(stored);
+    });
+
+    it("adds the minutes the stored file lacks, oldest first", () => {
+      const merged = mergeArchiveLines(stored, [minute(5), minute(-1)]);
+      expect(merged.rows).toBe(5);
+      const times = merged.text.trim().split("\n").map((l) => JSON.parse(l).timestamp);
+      expect(times).toEqual([-1, 0, 1, 2, 5].map((n) => new Date(minute(n).timestamp).toISOString()));
+      // Stored lines are copied verbatim, not re-serialised
+      for (const line of stored.trim().split("\n")) expect(merged.text).toContain(line);
+    });
+
+    it("never has fewer rows than the stored file", () => {
+      const merged = mergeArchiveLines(stored, []);
+      expect(merged.rows).toBe(3);
+    });
+
+    it("refuses a stored line it cannot place rather than drop it", () => {
+      expect(() => mergeArchiveLines(`${stored}not json\n`, [minute(9)])).toThrow(/line 4/);
+      expect(() => mergeArchiveLines('{"gold_eur":1}\n', [])).toThrow(/line 1/);
+    });
+
+    it("matches archiveLines without a stored file", () => {
+      expect(mergeArchiveLines(null, [minute(1), minute(0)]).text).toBe(
+        archiveLines([minute(0), minute(1)]),
+      );
+    });
   });
 });

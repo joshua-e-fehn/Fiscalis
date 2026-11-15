@@ -32,6 +32,7 @@ export const freshnessInputs = internalQuery({
   returns: v.object({
     newestTickAt: v.union(v.number(), v.null()),
     newestArchivedDay: v.union(v.string(), v.null()),
+    newestArchivedRows: v.union(v.number(), v.null()),
     fxRefreshedAt: v.union(v.number(), v.null()),
     providerSyncedAt: v.union(v.number(), v.null()),
   }),
@@ -61,8 +62,47 @@ export const freshnessInputs = internalQuery({
     return {
       newestTickAt: tick?.timestamp ?? null,
       newestArchivedDay: archived?.day ?? null,
+      newestArchivedRows: archived?.rows ?? null,
       fxRefreshedAt,
       providerSyncedAt,
     };
+  },
+});
+
+/** Days the archive ledger returns by default, and at most. */
+export const LEDGER_DEFAULT_DAYS = 30;
+export const LEDGER_MAX_DAYS = 1000;
+
+/**
+ * The newest `days` entries of the metalPriceArchive log, newest first,
+ * for GET /health/metal-archive-ledger: the off-site monitor compares each
+ * with the S3 object's size and checksum. Public price metadata only.
+ */
+export const metalArchiveLedger = internalQuery({
+  args: { days: v.optional(v.number()) },
+  returns: v.array(
+    v.object({
+      day: v.string(),
+      key: v.string(),
+      rows: v.number(),
+      bytes: v.number(),
+      sha256: v.string(),
+    }),
+  ),
+  handler: async (ctx, { days = LEDGER_DEFAULT_DAYS }) => {
+    const requested = Number.isFinite(days) ? Math.floor(days) : LEDGER_DEFAULT_DAYS;
+    const limit = Math.min(LEDGER_MAX_DAYS, Math.max(1, requested));
+    const rows = await ctx.db
+      .query("metalPriceArchive")
+      .withIndex("by_day")
+      .order("desc")
+      .take(limit);
+    return rows.map(({ day, key, rows, bytes, sha256 }) => ({
+      day,
+      key,
+      rows,
+      bytes,
+      sha256,
+    }));
   },
 });

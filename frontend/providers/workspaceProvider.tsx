@@ -20,12 +20,18 @@ interface WorkspaceContextValue {
   /** The selected team, or null for Personal */
   team: MyTeam | null;
   teams: MyTeam[];
+  /**
+   * A team is remembered but the user's teams have not loaded yet: data
+   * hooks wait instead of briefly showing Personal numbers.
+   */
+  pending: boolean;
   select: (teamId: Id<"teams"> | null) => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue>({
   team: null,
   teams: [],
+  pending: false,
   select: () => {},
 });
 
@@ -62,7 +68,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const teams = myTeams ?? [];
     // Unknown until the teams load; a stale id reads as Personal
     const team = teams.find((t) => t.teamId === selected) ?? null;
-    return { team, teams, select };
+    const pending = selected !== null && myTeams === undefined;
+    return { team, teams, pending, select };
   }, [myTeams, selected, select]);
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
@@ -73,7 +80,11 @@ export function useWorkspace(): WorkspaceContextValue {
   return useContext(WorkspaceContext);
 }
 
-/** The selected team's id, or null in Personal (for query arguments). */
-export function useWorkspaceTeamId(): Id<"teams"> | null {
-  return useWorkspace().team?.teamId ?? null;
+/**
+ * The selected team's id, or null in Personal (for query arguments), and
+ * whether a remembered team is still resolving.
+ */
+export function useWorkspaceTarget(): { teamId: Id<"teams"> | null; pending: boolean } {
+  const { team, pending } = useWorkspace();
+  return { teamId: team?.teamId ?? null, pending };
 }

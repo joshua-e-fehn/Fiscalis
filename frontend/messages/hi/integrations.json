@@ -1,0 +1,244 @@
+{
+  "status": {
+    "connected": "कनेक्टेड",
+    "syncing": "सिंक हो रहा है",
+    "error": "त्रुटि",
+    "reauthRequired": "फिर से प्रमाणीकरण ज़रूरी",
+    "pending": "लंबित",
+    "retrying": "फिर से कोशिश",
+    "disconnected": "डिस्कनेक्टेड"
+  },
+  "connection": {
+    "openMenu": "मेनू खोलो",
+    "sync": "सिंक करो",
+    "syncing": "सिंक हो रहा है…",
+    "disconnect": "डिस्कनेक्ट करो",
+    "disconnecting": "डिस्कनेक्ट हो रहा है…",
+    "disconnectTitle": "{name} डिस्कनेक्ट करें?",
+    "disconnectInfo": "इससे {info} और उनका डेटा तुम्हारे डैशबोर्ड से हट जाएगा।",
+    "disconnectDefault": "इससे यह कनेक्शन और उससे जुड़ा सारा डेटा तुम्हारे डैशबोर्ड से हट जाएगा।",
+    "notAffected": "तुम्हारे असली खाते पर कोई असर नहीं पड़ेगा। तुम कभी भी फिर से कनेक्ट कर सकते हो।",
+    "cash": "{amount} नकद",
+    "syncedJustNow": "अभी-अभी"
+  },
+  "banking": {
+    "title": "बैंक खाते",
+    "subtitle": "बैलेंस और लेन-देन अपने-आप ट्रैक करने के लिए अपने बैंक खाते कनेक्ट करो।",
+    "connectBank": "बैंक कनेक्ट करो",
+    "unknownBank": "अज्ञात बैंक",
+    "accounts": "{count, plural, one {# खाता} other {# खाते}}",
+    "stats": {
+      "netBalance": "शुद्ध शेष",
+      "netBalanceDescription": "{accounts, plural, one {# खाता} other {# खाते}}, कर्ज़ घटाकर",
+      "netBalanceDescriptionUnconverted": "{accounts, plural, one {# खाता} other {# खाते}}, कर्ज़ घटाकर · {unconverted} बिना विनिमय दर के",
+      "checking": "चालू",
+      "savings": "बचत",
+      "owed": "बकाया",
+      "cards": "{cards, plural, one {# कार्ड} other {# कार्ड}}",
+      "cardsAndLoans": "{cards, plural, one {# कार्ड} other {# कार्ड}}, {loans, plural, one {# ऋण} other {# ऋण}}"
+    },
+    "empty": {
+      "loadFailedTitle": "खाते लोड नहीं हो सके",
+      "loadFailedDescription": "हम तुम्हारे बैंक खाते लोड नहीं कर पाए। कृपया पेज रीफ़्रेश करके देखो।",
+      "refreshPage": "पेज रीफ़्रेश करो",
+      "syncTitle": "अपने खाते सिंक करो",
+      "syncDescription": "{count, plural, one {तुम्हारे पास # बैंक कनेक्शन है, लेकिन अभी कोई खाता सिंक नहीं हुआ है।} other {तुम्हारे पास # बैंक कनेक्शन हैं, लेकिन अभी कोई खाता सिंक नहीं हुआ है।}} अपने खाते का डेटा लाने के लिए नीचे क्लिक करो।",
+      "syncAccounts": "खाते सिंक करो",
+      "noAccountsTitle": "कोई जुड़ा हुआ खाता नहीं",
+      "noAccountsDescription": "अपने वित्त ट्रैक करने, बैलेंस देखने और लेन-देन पर नज़र रखने के लिए अपने बैंक खाते एक ही जगह कनेक्ट करो।"
+    },
+    "accountTypes": {
+      "checking": "चालू खाता",
+      "savings": "बचत खाता",
+      "moneyMarket": "मनी मार्केट",
+      "cd": "सावधि जमा",
+      "cashManagement": "कैश मैनेजमेंट",
+      "prepaid": "प्रीपेड",
+      "paypal": "PayPal",
+      "depository": "बैंक खाता",
+      "creditCard": "क्रेडिट कार्ड",
+      "credit": "क्रेडिट",
+      "loan": "ऋण",
+      "mortgage": "होम लोन",
+      "student": "शिक्षा ऋण",
+      "auto": "कार लोन",
+      "investment": "निवेश",
+      "brokerage": "ब्रोकरेज खाता"
+    },
+    "account": {
+      "fallbackName": "बैंक खाता",
+      "available": "उपलब्ध: {amount}"
+    },
+    "link": {
+      "connecting": "कनेक्ट हो रहा है…",
+      "connectAnother": "एक और बैंक कनेक्ट करो",
+      "connectFirst": "अपना बैंक कनेक्ट करो",
+      "connected": "बैंक सफलतापूर्वक कनेक्ट हुआ"
+    },
+    "reauth": {
+      "needsReauth": "इस कनेक्शन को फिर से प्रमाणित करना होगा",
+      "disconnectBank": "बैंक डिस्कनेक्ट करो",
+      "expiredTitle": "कनेक्शन समाप्त हो गया",
+      "expiredDescription": "सुरक्षा के लिए तुम्हारा बैंक तुमसे फिर से लॉग इन करवाना चाहता है। अपने खातों की पहुँच वापस पाने के लिए फिर से कनेक्ट करो पर क्लिक करो।",
+      "disconnectDescription": "इससे यह कनेक्शन तुम्हारे डैशबोर्ड से पूरी तरह हट जाएगा।",
+      "notAffected": "तुम्हारे असली बैंक खाते पर कोई असर नहीं पड़ेगा। तुम कभी भी फिर से कनेक्ट कर सकते हो।",
+      "reconnect": "फिर से कनेक्ट करो",
+      "reconnecting": "फिर से कनेक्ट हो रहा है…",
+      "alertTitle": "{count, plural, one {बैंक कनेक्शन पर ध्यान देना ज़रूरी है} other {बैंक कनेक्शनों पर ध्यान देना ज़रूरी है}}",
+      "alertOne": "{name} से तुम्हारे कनेक्शन को फिर से प्रमाणित करना होगा।",
+      "alertOneUnnamed": "एक बैंक से तुम्हारे कनेक्शन को फिर से प्रमाणित करना होगा।",
+      "alertMany": "{count, plural, one {# बैंक कनेक्शन को फिर से प्रमाणित करना होगा।} other {# बैंक कनेक्शनों को फिर से प्रमाणित करना होगा।}}"
+    },
+    "transactions": {
+      "title": "लेन-देन",
+      "subtitle": "सभी कनेक्टेड खातों में तुम्हारे बैंक लेन-देन।",
+      "open": "लेन-देन",
+      "sync": "लेन-देन सिंक करो",
+      "syncing": "लेन-देन सिंक हो रहे हैं…",
+      "syncDone": "{count, plural, =0 {अप-टू-डेट: कोई नया लेन-देन नहीं।} one {# लेन-देन अपडेट हुआ।} other {# लेन-देन अपडेट हुए।}}",
+      "syncPartial": "{failed, plural, one {# बैंक सिंक नहीं हो सका।} other {# बैंक सिंक नहीं हो सके।}} बाद में फिर से कोशिश करो।",
+      "syncFailed": "लेन-देन सिंक नहीं हो सके। बाद में फिर से कोशिश करो।",
+      "filters": {
+        "account": "खाता",
+        "allAccounts": "सभी खाते",
+        "from": "से",
+        "to": "तक",
+        "search": "खोजो",
+        "searchPlaceholder": "विवरण खोजो…",
+        "clear": "फ़िल्टर हटाओ"
+      },
+      "columns": {
+        "date": "तिथि",
+        "description": "विवरण",
+        "account": "खाता",
+        "amount": "राशि"
+      },
+      "pending": "लंबित",
+      "moneyIn": "आया पैसा",
+      "moneyOut": "गया पैसा",
+      "loadMore": "और लोड करो",
+      "loadingMore": "लोड हो रहा है…",
+      "searchOrder": "खोज परिणाम सबसे अच्छे मेल के अनुसार क्रमबद्ध हैं।",
+      "empty": {
+        "noBankTitle": "कोई बैंक कनेक्ट नहीं है",
+        "noBankDescription": "उसके लेन-देन यहाँ देखने के लिए एक बैंक कनेक्ट करो।",
+        "noTransactionsTitle": "अभी कोई लेन-देन नहीं",
+        "noTransactionsDescription": "अपने बैंक से लेन-देन लाने के लिए उन्हें सिंक करो। नए लेन-देन रोज़ के सिंक के साथ भी आते हैं।",
+        "noMatchesTitle": "कोई मेल खाता लेन-देन नहीं",
+        "noMatchesDescription": "कोई दूसरा खाता, तिथि सीमा या खोज शब्द आज़माओ।"
+      }
+    },
+    "consent": {
+      "expiringTitle": "{days, plural, one {इस बैंक के लिए तुम्हारी सहमति # दिन में समाप्त होगी} other {इस बैंक के लिए तुम्हारी सहमति # दिनों में समाप्त होगी}}",
+      "expiringDescription": "अपने बैलेंस सिंक होते रहने के लिए {date} तक इसे नवीनीकृत करो।",
+      "expiredTitle": "इस बैंक के लिए तुम्हारी सहमति समाप्त हो गई है",
+      "expiredDescription": "अपने बैलेंस फिर से सिंक करने के लिए इसे नवीनीकृत करो।"
+    }
+  },
+  "brokers": {
+    "title": "ब्रोकर",
+    "subtitle": "अपने ब्रोकर और एक्सचेंज कनेक्ट करो। अभी: SnapTrade ब्रोकर और Bitpanda — और जल्द आ रहे हैं।",
+    "refresh": "रीफ़्रेश करो",
+    "connectBroker": "ब्रोकर कनेक्ट करो",
+    "stats": {
+      "totalValue": "कुल मूल्य",
+      "positions": "{count, plural, one {# पोज़िशन} other {# पोज़िशन}}",
+      "brokers": "ब्रोकर",
+      "connectedBrokers": "कनेक्टेड ब्रोकर",
+      "accounts": "खाते",
+      "tradingAccounts": "ब्रोकरेज खाते",
+      "cash": "नकद",
+      "availableCash": "उपलब्ध नकद"
+    },
+    "connect": {
+      "connectFirst": "अपना ब्रोकर कनेक्ट करो",
+      "connectAnother": "एक और ब्रोकर कनेक्ट करो",
+      "add": "ब्रोकर जोड़ो",
+      "preparing": "तैयार हो रहा है…",
+      "connecting": "कनेक्ट हो रहा है…",
+      "connected": "ब्रोकर कनेक्ट हुआ",
+      "connectingAccount": "तुम्हारा ब्रोकर खाता कनेक्ट हो रहा है…",
+      "portalTitle": "SnapTrade कनेक्शन पोर्टल",
+      "failed": "हम तुम्हारा ब्रोकर कनेक्ट नहीं कर पाए। कृपया फिर से कोशिश करो।"
+    },
+    "connection": {
+      "unknownBroker": "अज्ञात ब्रोकर",
+      "fallbackName": "ब्रोकर",
+      "accounts": "{count, plural, one {# खाता} other {# खाते}}",
+      "status": "स्थिति",
+      "accountId": "खाता ID",
+      "username": "यूज़रनेम",
+      "lastSynced": "अंतिम सिंक",
+      "never": "कभी नहीं",
+      "pendingNotice": "API इंटीग्रेशन लंबित है। कनेक्ट होने के बाद डेटा सिंक होगा।",
+      "transientNotice": "ब्रोकर पर अस्थायी समस्या। यह अपने-आप फिर से कोशिश करेगा।",
+      "disconnectTitle": "ब्रोकर डिस्कनेक्ट करो",
+      "disconnectDescription": "क्या तुम सच में “{name}” डिस्कनेक्ट करना चाहते हो? इससे ब्रोकर कनेक्शन और उसकी सारी पोज़िशन जानकारी तुम्हारे खाते से हट जाएगी। इसे पलटा नहीं जा सकता।"
+    },
+    "connections": {
+      "title": "ब्रोकर कनेक्शन",
+      "description": "अपने ब्रोकरेज कनेक्शन संभालो",
+      "loadFailed": "ब्रोकर कनेक्शन लोड नहीं हो सके। कृपया बाद में फिर से कोशिश करो।",
+      "connectedCount": "{count, plural, one {# ब्रोकर कनेक्टेड} other {# ब्रोकर कनेक्टेड}}",
+      "connectPrompt": "अपने निवेश ट्रैक करने के लिए अपने ब्रोकरेज खाते कनेक्ट करो",
+      "emptyTitle": "कोई ब्रोकर कनेक्ट नहीं है",
+      "emptyDescription": "अपने निवेश और पोर्टफोलियो प्रदर्शन अपने-आप ट्रैक करने के लिए अपना ब्रोकरेज खाता कनेक्ट करो।"
+    },
+    "account": {
+      "fallbackType": "निवेश",
+      "accountNumber": "खाता {number}",
+      "totalValue": "कुल मूल्य",
+      "cash": "नकद",
+      "invested": "निवेशित"
+    },
+    "empty": {
+      "syncTitle": "अपने खाते सिंक करो",
+      "syncDescription": "{count, plural, one {तुम्हारे पास # ब्रोकर कनेक्शन है, लेकिन अभी कोई खाता सिंक नहीं हुआ है।} other {तुम्हारे पास # ब्रोकर कनेक्शन हैं, लेकिन अभी कोई खाता सिंक नहीं हुआ है।}} अपने खाते का डेटा लाने के लिए नीचे क्लिक करो।",
+      "syncAccounts": "खाते सिंक करो",
+      "noBrokersTitle": "कोई ब्रोकर कनेक्ट नहीं है",
+      "noBrokersDescription": "अपने निवेश, पोज़िशन और पोर्टफोलियो प्रदर्शन एक ही जगह ट्रैक करने के लिए अपने ब्रोकरेज खाते कनेक्ट करो।"
+    },
+    "reauth": {
+      "needsAttention": "कनेक्शन पर ध्यान देना ज़रूरी है",
+      "description": "यह कनेक्शन समाप्त हो गया है या इसे फिर से प्रमाणित करना होगा। अपना डेटा सिंक करते रहने के लिए कृपया फिर से कनेक्ट करो।",
+      "reconnect": "फिर से कनेक्ट करो",
+      "dialogTitle": "{name} फिर से कनेक्ट करो",
+      "dialogDescription": "डेटा सिंक करते रहने के लिए अपने कनेक्शन को फिर से प्रमाणित करो।",
+      "completing": "फिर से प्रमाणीकरण पूरा हो रहा है…",
+      "success": "सफलतापूर्वक फिर से प्रमाणित हुआ!",
+      "failedTitle": "कनेक्शन विफल रहा",
+      "failed": "फिर से कनेक्ट करना विफल रहा। कृपया फिर से कोशिश करो।",
+      "portalTitle": "SnapTrade से फिर से कनेक्शन"
+    }
+  },
+  "bitpanda": {
+    "title": "Bitpanda",
+    "subtitle": "केवल-पढ़ने वाली API कुंजी से क्रिप्टो, धातुएँ, कमोडिटी, शेयर और नकद।",
+    "holdings": "{count, plural, one {# होल्डिंग} other {# होल्डिंग्स}}",
+    "emptyDescription": "अपनी सभी होल्डिंग्स ट्रैक करने के लिए केवल-पढ़ने वाली API कुंजी से अपना Bitpanda खाता कनेक्ट करो।",
+    "fallbackLabel": "Bitpanda खाता",
+    "keyRejected": "API कुंजी अस्वीकार — नई केवल-पढ़ने वाली कुंजी से फिर से कनेक्ट करो",
+    "syncFailed": "सिंक विफल — फिर से कोशिश करो",
+    "transient": "Bitpanda पर अस्थायी समस्या — अपने-आप फिर से कोशिश होगी",
+    "lastSynced": "अंतिम सिंक {date}",
+    "syncNow": "अभी सिंक करो",
+    "addAnother": "एक और Bitpanda कुंजी जोड़ो",
+    "connect": {
+      "button": "Bitpanda कनेक्ट करो",
+      "title": "Bitpanda कनेक्ट करो",
+      "description": "एक <strong>केवल-पढ़ने वाली</strong> Bitpanda API कुंजी पेस्ट करो। Fiscalis इससे तुम्हारी क्रिप्टो, धातु, कमोडिटी, शेयर और नकद होल्डिंग्स सिंक करता है। कुंजी एन्क्रिप्ट की जाती है और कभी साझा नहीं की जाती।",
+      "apiKey": "API कुंजी",
+      "apiKeyPlaceholder": "तुम्हारी केवल-पढ़ने वाली Bitpanda API कुंजी",
+      "createKey": "Bitpanda में केवल-पढ़ने वाली कुंजी बनाओ",
+      "label": "लेबल (वैकल्पिक)",
+      "labelPlaceholder": "जैसे मेरा Bitpanda",
+      "submit": "कनेक्ट करो",
+      "connecting": "कनेक्ट हो रहा है…",
+      "keyMissing": "कृपया अपनी Bitpanda API कुंजी पेस्ट करो।"
+    }
+  },
+  "connectionNotices": {
+    "disconnectFailed": "डिस्कनेक्ट नहीं हो सका। कुछ भी नहीं हटाया गया; कृपया फिर से कोशिश करो।",
+    "transientError": "प्रदाता पर अस्थायी समस्या। तुम्हारा कनेक्शन ठीक है; यह अपने-आप फिर से कोशिश करेगा।"
+  }
+}

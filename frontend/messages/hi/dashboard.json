@@ -1,0 +1,143 @@
+{
+  "page": {
+    "title": "डैशबोर्ड",
+    "subtitle": "तुम्हारा पूरा वित्तीय अवलोकन",
+    "performanceTitle": "पोर्टफोलियो का विकास",
+    "investmentCategories": "निवेश श्रेणियाँ"
+  },
+  "netWorth": {
+    "title": "कुल निवल संपत्ति",
+    "unrealized": "({percent}) अप्राप्त",
+    "unrealizedCoverage": "({percent}) अप्राप्त, {covered}% परिसंपत्तियों पर"
+  },
+  "kpi": {
+    "totalAssets": "कुल परिसंपत्तियाँ",
+    "totalLiabilities": "कुल देनदारियाँ"
+  },
+  "ytdNetWorth": {
+    "title": "YTD निवल संपत्ति",
+    "changeSinceJan1": "1 जनवरी से {percent} बदलाव",
+    "fxEffectHint": "{currency} में मापा गया: इसमें 1 जनवरी से यूरो विनिमय दर का बदलाव शामिल है।",
+    "partial": "आंशिक: किसी प्रदाता का सिंक विफल रहा या कोई कीमत गायब है",
+    "trackingSince": "पर्याप्त इतिहास नहीं ({date} से ट्रैकिंग)",
+    "noData": "इस साल का कोई डेटा नहीं"
+  },
+  "allocation": {
+    "title": "परिसंपत्ति आवंटन",
+    "description": "निवेश श्रेणियों में वितरण",
+    "empty": "दिखाने के लिए कोई परिसंपत्ति नहीं",
+    "emptyHint": "अपना आवंटन देखने के लिए निवेश जोड़ो"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, one {# होल्डिंग} other {# होल्डिंग्स}}",
+    "noHoldings": "कोई होल्डिंग नहीं",
+    "comingSoon": "जल्द आ रहा है"
+  },
+  "liabilitiesCard": {
+    "title": "देनदारियाँ",
+    "accounts": "{accounts, plural, one {# खाता} other {# खाते}}",
+    "loans": "{loans, plural, one {# ऋण} other {# ऋण}}",
+    "accountsAndLoans": "{accounts, plural, one {# खाता} other {# खाते}} · {loans, plural, one {# ऋण} other {# ऋण}}",
+    "monthlyPayments": "ऋण भुगतान में {amount}/महीना"
+  },
+  "section": {
+    "totalValue": "कुल पोर्टफोलियो मूल्य",
+    "totalCash": "कुल नकद होल्डिंग्स",
+    "profitLoss": "कुल लाभ / हानि",
+    "profitLossSinceTracking": "ट्रैकिंग शुरू होने से लाभ / हानि",
+    "changeSinceTracking": "ट्रैकिंग शुरू होने से बदलाव",
+    "since": "{date} से",
+    "sinceNetOfFlows": "{date} से, ख़रीद और जमा को घटाकर",
+    "coverage": "मूल्य के {percent}% पर: बिना लागत आधार वाली होल्डिंग्स शामिल नहीं हैं",
+    "addCostData": "प्रदर्शन ट्रैक करने के लिए लागत डेटा जोड़ो",
+    "noHoldings": "अभी कोई होल्डिंग नहीं",
+    "ytdChange": "YTD बदलाव",
+    "ytdReturn": "YTD रिटर्न",
+    "ytdReturnEstimated": "YTD रिटर्न (अनुमानित)",
+    "sincePartial": "{date} से · आंशिक: कोई सिंक विफल रहा या कोई कीमत गायब है",
+    "trackedSince": "पर्याप्त इतिहास नहीं ({date} से ट्रैक किया गया)",
+    "noDataThisYear": "इस साल का अभी कोई डेटा नहीं",
+    "portfolioAllocation": "पोर्टफोलियो आवंटन",
+    "highCash": "ज़्यादा नकद हिस्सा (रूढ़िवादी)",
+    "lowCash": "कम नकद भंडार",
+    "ofTotalPortfolio": "कुल पोर्टफोलियो का",
+    "addAssets": "आवंटन देखने के लिए परिसंपत्तियाँ जोड़ो",
+    "activeAccounts": "सक्रिय खाते",
+    "accountsLinked": "{count, plural, one {खाता जुड़ा} other {खाते जुड़े}}",
+    "historyHint": "इतिहास अगले दैनिक स्नैपशॉट के बाद दिखेगा"
+  },
+  "allocationChart": {
+    "title": "आवंटन",
+    "empty": "अभी कोई होल्डिंग नहीं",
+    "other": "अन्य (<2%)"
+  },
+  "performanceChart": {
+    "portfolioTitle": "पोर्टफोलियो प्रदर्शन",
+    "netWorthTitle": "निवल संपत्ति प्रदर्शन",
+    "portfolio": "पोर्टफोलियो",
+    "netWorth": "निवल संपत्ति",
+    "value": "मूल्य",
+    "costBasis": "लागत आधार",
+    "empty": "अभी कोई प्रदर्शन डेटा नहीं",
+    "emptyHint": "पोर्टफोलियो प्रदर्शन ट्रैक करने के लिए होल्डिंग्स जोड़ो",
+    "tooltipRow": "{series}: {amount}",
+    "partial": "आंशिक: किसी प्रदाता का सिंक विफल रहा या कोई कीमत गायब है"
+  },
+  "topHoldings": {
+    "title": "सबसे बड़ी होल्डिंग्स",
+    "empty": "अभी कोई होल्डिंग नहीं",
+    "count": "({count, plural, one {# होल्डिंग} other {# होल्डिंग्स}})"
+  },
+  "positions": {
+    "title": "सभी पोज़िशन",
+    "description": "सभी वित्तीय प्रदाताओं का एकीकृत दृश्य",
+    "empty": "कोई पोज़िशन नहीं मिली",
+    "emptyHint": "अपनी होल्डिंग्स देखने के लिए अपने खाते कनेक्ट करो",
+    "shownOfTotal": "{total, plural, one {# पोज़िशन} other {# पोज़िशन}} में से {shown}",
+    "showLess": "कम दिखाओ",
+    "viewAll": "सब देखो",
+    "searchPlaceholder": "पोज़िशन खोजो...",
+    "provider": "प्रदाता",
+    "allProviders": "सभी प्रदाता",
+    "category": "श्रेणी",
+    "allCategories": "सभी श्रेणियाँ",
+    "providers": {
+      "plaid": "बैंकिंग",
+      "snaptrade": "ब्रोकर",
+      "bitpanda": "Bitpanda",
+      "manual": "मैनुअल"
+    },
+    "providerFilter": {
+      "plaid": "बैंकिंग",
+      "snaptrade": "ब्रोकर",
+      "bitpanda": "Bitpanda",
+      "manual": "मैनुअल"
+    },
+    "columns": {
+      "source": "स्रोत",
+      "position": "पोज़िशन",
+      "category": "श्रेणी",
+      "quantity": "मात्रा",
+      "value": "मूल्य",
+      "profitLoss": "लाभ/हानि",
+      "actions": "कार्रवाइयाँ"
+    },
+    "shown": "{count, plural, one {# पोज़िशन दिखाई गई} other {# पोज़िशन दिखाई गईं}}",
+    "total": "कुल: {amount}",
+    "costFxEstimated": "(अनुमानित)",
+    "costFxEstimatedHint": "लागत आज की विनिमय दर पर बदली गई: ख़रीद की तिथियाँ ज्ञात नहीं हैं"
+  },
+  "cashHoldings": {
+    "bankAccount": "बैंक खाता",
+    "cashPosition": "नकद पोज़िशन",
+    "brokerCash": "{account} - नकद"
+  },
+  "emptyState": {
+    "title": "अपना पहला खाता कनेक्ट करो",
+    "description": "जैसे ही Fiscalis को पता चलेगा कि तुम्हारे पास क्या है, तुम्हारा डैशबोर्ड भर जाएगा। कोई बैंक या ब्रोकर कनेक्ट करो, Bitpanda इम्पोर्ट करो, या कीमती धातुएँ और ऋण हाथ से जोड़ो।",
+    "bank": "बैंक कनेक्ट करो",
+    "broker": "ब्रोकर कनेक्ट करो",
+    "metals": "कीमती धातुएँ जोड़ो",
+    "loan": "ऋण जोड़ो"
+  }
+}

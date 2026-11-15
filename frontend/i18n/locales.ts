@@ -65,6 +65,7 @@ export const INTL_TAGS = {
   "pt-PT": "pt-PT",
   ru: "ru-RU",
   "zh-Hans": "zh-CN",
+  hi: "hi-IN",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -79,6 +80,7 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   "pt-PT": "Português (Portugal)",
   ru: "Русский",
   "zh-Hans": "简体中文",
+  hi: "हिन्दी",
 };
 
 /**
@@ -86,7 +88,6 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
 export const PLANNED_LOCALES = [
-  "hi",
   "ar",
 ] as const;
 

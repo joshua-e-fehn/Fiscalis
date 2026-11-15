@@ -1,0 +1,75 @@
+{
+  "sidebar": {
+    "groups": {
+      "portfolio": "पोर्टफोलियो",
+      "tools": "टूल्स",
+      "integrations": "इंटीग्रेशन",
+      "others": "अन्य"
+    },
+    "items": {
+      "dashboard": "डैशबोर्ड",
+      "investments": "निवेश",
+      "equities": "शेयर",
+      "commodities": "कमोडिटी",
+      "bonds": "बॉन्ड",
+      "realEstate": "अचल संपत्ति",
+      "cash": "नकद और मनी मार्केट",
+      "crypto": "क्रिप्टो",
+      "collectibles": "संग्रहणीय वस्तुएँ",
+      "liabilities": "देनदारियाँ",
+      "liabilitiesOverview": "सभी देनदारियाँ",
+      "loans": "ऋण",
+      "investmentStrategies": "निवेश रणनीतियाँ",
+      "pies": "पाई",
+      "banking": "बैंकिंग",
+      "brokers": "ब्रोकर",
+      "retirementPlanner": "सेवानिवृत्ति प्लानर",
+      "interestCalculators": "ब्याज कैलकुलेटर",
+      "loanCalculators": "ऋण कैलकुलेटर",
+      "worldMap": "विश्व मानचित्र",
+      "documentation": "दस्तावेज़",
+      "introduction": "परिचय",
+      "getStarted": "शुरू करो",
+      "tutorials": "ट्यूटोरियल",
+      "changelog": "बदलावों की सूची",
+      "settings": "सेटिंग्स",
+      "general": "सामान्य",
+      "apiKeys": "API कुंजियाँ",
+      "categories": "श्रेणियाँ",
+      "privacy": "गोपनीयता",
+      "team": "टीम",
+      "billing": "बिलिंग",
+      "limits": "सीमाएँ"
+    }
+  },
+  "brand": {
+    "logoAlt": "Fiscalis लोगो"
+  },
+  "userMenu": {
+    "upgrade": "Pro में अपग्रेड करो",
+    "account": "खाता",
+    "billing": "बिलिंग",
+    "notifications": "सूचनाएँ",
+    "logOut": "लॉग आउट"
+  },
+  "header": {
+    "signIn": "साइन इन",
+    "joinWaitlist": "वेटलिस्ट से जुड़ो",
+    "dashboard": "डैशबोर्ड"
+  },
+  "sync": {
+    "syncAll": "सभी खाते सिंक करो",
+    "syncing": "सभी खाते सिंक हो रहे हैं…",
+    "complete": "सिंक पूरा हुआ",
+    "failed": "सिंक विफल रहा",
+    "synced": "सिंक हुए: {providers}",
+    "failedProviders": "विफल: {providers}",
+    "partial": "सिंक हुए: {synced}। विफल: {failed}",
+    "providerCount": "{provider} ({count})",
+    "providers": {
+      "plaid": "बैंकिंग",
+      "snaptrade": "ब्रोकर",
+      "bitpanda": "Bitpanda"
+    }
+  }
+}

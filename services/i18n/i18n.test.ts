@@ -215,19 +215,20 @@ describe("resolveLocale", () => {
 
 // The defaults assume NEXT_PUBLIC_I18N_PREVIEW is unset.
 describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered languages", () => {
-  it("renders English only until the UI is translated", () => {
-    expect(RENDERED_LANGUAGES).toEqual(["en"]);
+  it("renders English and German", () => {
+    expect(RENDERED_LANGUAGES).toEqual(["en", "de"]);
   });
 
-  it("keeps German visitors and users on English by default", () => {
-    expect(resolveLocale({ cookie: "de", acceptLanguage: "de-DE" })).toBe("en");
-    expect(resolveLocale({ acceptLanguage: "de-CH,de;q=0.9" })).toBe("en");
+  it("renders German for German visitors and users by default", () => {
+    expect(resolveLocale({ cookie: "de", acceptLanguage: "en-GB" })).toBe("de");
+    expect(resolveLocale({ acceptLanguage: "de-CH,de;q=0.9" })).toBe("de");
+    expect(resolveLocale({ acceptLanguage: "fr-FR" })).toBe("en");
   });
 
   it("maps a stored language to the one it renders in", () => {
-    expect(renderedLanguage("de")).toBe("en");
+    expect(renderedLanguage("de")).toBe("de");
     expect(renderedLanguage("en")).toBe("en");
-    expect(renderedLanguage("de", LANGUAGES)).toBe("de");
+    expect(renderedLanguage("de", ["en"])).toBe("en");
   });
 });
 

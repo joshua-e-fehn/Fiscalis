@@ -65,6 +65,7 @@ export const USER_DATA_TABLES = [
   "bitpandaConnections",
   "vaultItems",
   "loans",
+  "manualAssets",
   "retirementPlans",
   "portfolioSnapshots",
   "apiKeys",

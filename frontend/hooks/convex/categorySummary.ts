@@ -1,6 +1,6 @@
 /**
  * Category summary for the investment category pages (equities, bonds,
- * real estate, crypto, commodities): turns a `categories.get*` query result, whose
+ * real estate, crypto, commodities, collectibles): turns a `categories.get*` query result, whose
  * `summary` the server built with services/portfolio/categorySummary.ts,
  * into the `CategorySummary` the dashboard renders.
  *
@@ -34,7 +34,7 @@ import { categorySummaryInCurrency } from "@/../services/finance/displayCurrency
 
 /**
  * Result of categories.getEquities / getBonds / getCrypto / getRealEstate /
- * getCommodities
+ * getCommodities / getCollectibles
  */
 export type CategoryPositionsData = FunctionReturnType<
   typeof api.categories.getEquities
@@ -144,11 +144,11 @@ export function useCategorySummary(
   const summary = useMemo<CategorySummary | null>(() => {
     // No figures until the rate is known
     if (data == null || display.isLoading) return null;
-    const { positions, vaultHoldings, summary: total } = data;
-    // Provider positions and vault items (commodities) side by side
+    const { positions, manualHoldings, summary: total } = data;
+    // Provider positions, vault items and manual assets side by side
     const holdings: CategoryHolding[] = [
       ...positions.map(positionToHolding),
-      ...vaultHoldings,
+      ...manualHoldings,
     ];
 
     const eur = toCategorySummary(

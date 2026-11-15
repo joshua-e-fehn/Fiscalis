@@ -42,7 +42,7 @@ import { useDisplayCurrency } from "./displayCurrency";
 import {
   summaryProfitLoss,
   toCategorySummary,
-  toTopHoldings,
+  toTopHoldingRows,
 } from "./categorySummary";
 
 // ═══════════════════════════════════════════════════════════════
@@ -189,24 +189,26 @@ export function useCryptoSummary(): {
   const summary = useMemo<CategorySummary | null>(() => {
     // No figures until the rate is known
     if (data == null || display.isLoading) return null;
-    const { positions, summary: total } = data;
+    const { positions, manualHoldings, summary: total } = data;
+    // Provider positions and manual assets (DeFi) side by side
+    const holdings = [
+      ...positions.map((p) => {
+        const h = positionToHolding(p);
+        return { ...h, name: p.name || h.name };
+      }),
+      ...manualHoldings,
+    ];
 
     const subcategories = BUCKETS.map(({ id, base }): SubcategoryData => {
-      const inBucket = positions.filter(
-        (p) => displayBucket(p.investmentSubcategory) === id,
+      const inBucket = holdings.filter(
+        (h) => displayBucket(h.subcategory) === id,
       );
-      const bucket = summarizeHoldings(inBucket.map(positionToHolding));
+      const bucket = summarizeHoldings(inBucket);
       return {
         ...base,
         totalValue: bucket.value,
         ...summaryProfitLoss(bucket),
-        topHoldings: toTopHoldings(
-          inBucket,
-          id,
-          bucket.value,
-          5,
-          (p) => p.name || p.symbol,
-        ),
+        topHoldings: toTopHoldingRows(inBucket, id, bucket.value, 5),
         holdingsCount: bucket.count,
         implemented: true,
       };

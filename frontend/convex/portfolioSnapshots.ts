@@ -57,7 +57,7 @@ export async function scheduleSnapshot(
 export const takeSnapshot = internalMutation({
   args: {
     userId: v.string(),
-    source: v.string(), // "plaid", "snaptrade", "bitpanda", "vault", "loan", "scheduled-daily", ...
+    source: v.string(), // "plaid", "snaptrade", "bitpanda", "vault", "loan", "manualAsset", "scheduled-daily", ...
     // Set by a full sync only: true when a provider sync before this
     // snapshot failed, so that provider's holdings are the ones stored by its
     // last successful sync. Other writes omit it and keep the row's flag

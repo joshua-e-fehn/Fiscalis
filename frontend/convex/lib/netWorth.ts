@@ -11,6 +11,7 @@ import {
   type FxRates,
 } from "../../../services/finance/currency";
 import { vaultItemValuation } from "../../../services/finance/metals";
+import { manualAssetInBase } from "../../../services/portfolio/manualAssets";
 import type { ToBaseAmount } from "../../../services/finance/metalsLedger";
 import {
   averageCostPerUnit,
@@ -85,6 +86,9 @@ import {
  *   snapshot takes its exact flow from the trade logs instead
  *   (loadExactFlows).
  * - Loans count when active or defaulted (D1).
+ * - Manual assets are worth their latest valuation, converted from their
+ *   currency at today's rates (services/portfolio/manualAssets.ts); they
+ *   are valued discretely, from their own valuations, with no price feed.
  */
 
 type BankAccountDoc = Doc<"plaidAccounts">;
@@ -106,7 +110,8 @@ export type LoadedHolding =
   | (NormalizedHolding & { source: "brokerAccount"; doc: BrokerAccountDoc })
   | (NormalizedHolding & { source: "bitpanda"; doc: BitpandaHoldingDoc })
   | (NormalizedHolding & { source: "vault"; doc: Doc<"vaultItems"> })
-  | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> });
+  | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> })
+  | (NormalizedHolding & { source: "manualAsset"; doc: Doc<"manualAssets"> });
 
 /** The spot-price mirror (metalPrices.ts), by metal. */
 export async function loadSpotPrices(
@@ -323,6 +328,31 @@ export async function loadHoldings(
       costBase: null,
       pricedAt: null,
       monthlyPaymentBase: loanMonthlyPaymentInBase(doc, rates),
+      doc,
+    });
+  }
+
+  // 6. Manual assets (property, vehicles, private equity, collectibles)
+  const manualAssets = await ctx.db
+    .query("manualAssets")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const doc of manualAssets) {
+    const { valueBase, costBase, costNative } = manualAssetInBase(
+      doc,
+      toBaseAmount,
+    );
+    holdings.push({
+      id: doc._id,
+      provider: "manual",
+      source: "manualAsset",
+      category: toHoldingCategory(doc.category),
+      subcategory: doc.subcategory,
+      name: doc.name,
+      valueBase,
+      costBase,
+      ...(costNative ? { costNative } : {}),
+      pricedAt: null,
       doc,
     });
   }

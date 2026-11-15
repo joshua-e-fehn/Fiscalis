@@ -41,6 +41,7 @@ import {
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { userError } from "./lib/userError";
 import { scheduleSnapshot } from "./portfolioSnapshots";
+import { unlinkLoan } from "./manualAssets";
 import { ensureSyncTarget } from "./lib/syncTargets";
 import { loadFxRates } from "./fxRates";
 import {
@@ -667,7 +668,8 @@ export const deleteLoan = mutation({
       await ctx.db.delete(scenario._id);
     }
 
-    // Delete the loan
+    // Unlink it from the manual assets it financed, then delete it
+    await unlinkLoan(ctx, userId, args.loanId);
     await ctx.db.delete(args.loanId);
     await scheduleSnapshot(ctx, userId, "loan");
   },

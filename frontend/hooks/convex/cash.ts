@@ -28,6 +28,7 @@ import {
 } from "@/../services/portfolio/categorySummary";
 import { categorySummaryInCurrency } from "@/../services/finance/displayCurrency";
 import { useDisplayCurrency } from "./displayCurrency";
+import { toTopHoldingRows } from "./categorySummary";
 
 /**
  * Hook to get the cash category summary, in the display currency
@@ -54,6 +55,7 @@ export function useCashSummary(): {
       bankAccounts,
       brokerCash,
       brokerAccountCash,
+      manualHoldings,
       summary: dataSummary,
     } = cashData;
     const bySubcategory = dataSummary.bySubcategory;
@@ -139,6 +141,16 @@ export function useCashSummary(): {
             });
           });
       }
+
+      // Add manual assets (treasury bills) matching this subcategory
+      holdings.push(
+        ...toTopHoldingRows(
+          manualHoldings.filter((h) => h.subcategory === subcategory),
+          subcategory,
+          dataSummary.totalValue,
+          limit - holdings.length,
+        ),
+      );
 
       return holdings.slice(0, limit);
     };

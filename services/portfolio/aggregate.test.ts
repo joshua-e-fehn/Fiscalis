@@ -41,7 +41,7 @@ function holding(
         ? "plaid"
         : h.source === "bitpanda"
           ? "bitpanda"
-          : h.source === "vault" || h.source === "loan"
+          : h.source === "vault" || h.source === "loan" || h.source === "manualAsset"
             ? "manual"
             : "snaptrade",
     subcategory: "unknown",
@@ -653,6 +653,56 @@ describe("a vault item valued at cost (no fresh spot)", () => {
       value: 4_000,
       cost: 4_000,
     });
+  });
+});
+
+describe("manual assets (a discrete source)", () => {
+  const house = (valueBase: number, costBase: number | null) =>
+    holding({
+      id: "house",
+      source: "manualAsset",
+      category: "real-estate",
+      subcategory: "residential",
+      valueBase,
+      costBase,
+    });
+  const write = (hs: NormalizedHolding[], previous?: SnapshotCategoryEntry[]) =>
+    buildSnapshotBreakdown(aggregateNetWorth(hs), hs, previous).categoryBreakdown;
+
+  it("counts in its category, its own source and net worth", () => {
+    const a = aggregateNetWorth([
+      house(400_000, 350_000),
+      holding({ source: "loan", category: "liabilities", subcategory: "loans", valueBase: 250_000 }),
+    ]);
+    expect(a.byCategory["real-estate"].value).toBe(400_000);
+    expect(a.byCategory["real-estate"].bySource).toEqual({ manualAsset: 400_000 });
+    expect(a.byCategory["real-estate"].profitLoss).toBe(50_000);
+    expect(a.netWorth).toBe(150_000);
+    // A manual record carries no price time, so it never pulls asOf back
+    expect(a.asOf).toBeNull();
+  });
+
+  it("is stored in the snapshot with its holdings, so the next one derives its flow", () => {
+    const first = write([house(400_000, 350_000)]);
+    const entry = first.find((e) => e.category === "real-estate")!;
+    expect(entry.sources).toEqual([
+      expect.objectContaining({
+        source: "manualAsset",
+        value: 400_000,
+        costBasis: 350_000,
+        holdings: [{ key: "house", value: 400_000, cost: 350_000 }],
+      }),
+    ]);
+
+    // A revaluation is a gain, not money put in
+    const revalued = write([house(420_000, 350_000)], first);
+    expect(revalued.find((e) => e.category === "real-estate")!.netFlow).toBe(0);
+  });
+
+  it("takes a newly added asset as an inflow", () => {
+    const previous = write([]);
+    const added = write([house(400_000, 350_000)], previous);
+    expect(added.find((e) => e.category === "real-estate")!.netFlow).toBe(400_000);
   });
 });
 

@@ -21,6 +21,7 @@ import {
   Wallet,
   CreditCard,
   Banknote,
+  Receipt,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { bankAccountTotals } from "@/../services/portfolio/categorySummary";
@@ -105,6 +106,12 @@ export default function BankingPage() {
         actions={
           hasAccounts
             ? [
+                {
+                  label: t("transactions.open"),
+                  href: "/integrations/banking/transactions",
+                  variant: "outline",
+                  icon: Receipt,
+                },
                 {
                   label: tConnection("sync"),
                   onClick: () => refreshAll(),

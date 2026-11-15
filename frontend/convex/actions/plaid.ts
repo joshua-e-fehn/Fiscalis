@@ -562,7 +562,8 @@ export const refreshAccounts = action({
 });
 
 /**
- * Admin action to sync accounts for a user - for use from dashboard without auth
+ * Sync accounts, then transactions, for each of a user's items. Used by
+ * the daily sync and "Sync all" (actions/syncAll.ts); internal, no auth.
  */
 export const syncAccountsForUserAdmin = internalAction({
   args: { userId: v.string() },
@@ -591,7 +592,17 @@ export const syncAccountsForUserAdmin = internalAction({
       } catch (error) {
         failed++;
         console.error(`Error syncing item ${item.itemId}:`, describeError(error));
+        continue;
       }
+      // New transactions arrive with the daily sync (ENG-190). Balances are
+      // what net worth needs, so transactions run as their own scheduled
+      // action: a slow first (full-history) pull or a failure neither delays
+      // nor fails the item, the other providers or the snapshot
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.plaid.syncItemTransactions,
+        { itemId: item.itemId },
+      );
     }
 
     // A failed item makes the daily snapshot partial (syncAll.ts)

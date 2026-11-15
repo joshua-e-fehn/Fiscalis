@@ -88,6 +88,45 @@
       "alertOne": "Für deine Verbindung zu {name} musst du dich erneut anmelden.",
       "alertOneUnnamed": "Für deine Verbindung zu einer Bank musst du dich erneut anmelden.",
       "alertMany": "{count, plural, one {Für # Bankverbindung musst du dich erneut anmelden.} other {Für # Bankverbindungen musst du dich erneut anmelden.}}"
+    },
+    "transactions": {
+      "title": "Transaktionen",
+      "subtitle": "Deine Banktransaktionen aus allen verbundenen Konten.",
+      "open": "Transaktionen",
+      "sync": "Transaktionen synchronisieren",
+      "syncing": "Transaktionen werden synchronisiert…",
+      "syncDone": "{count, plural, =0 {Alles aktuell: keine neuen Transaktionen.} one {# Transaktion aktualisiert.} other {# Transaktionen aktualisiert.}}",
+      "syncPartial": "{failed, plural, one {# Bank konnte nicht synchronisiert werden.} other {# Banken konnten nicht synchronisiert werden.}} Versuch es später noch einmal.",
+      "syncFailed": "Die Transaktionen konnten nicht synchronisiert werden. Versuch es später noch einmal.",
+      "filters": {
+        "account": "Konto",
+        "allAccounts": "Alle Konten",
+        "from": "Von",
+        "to": "Bis",
+        "search": "Suche",
+        "searchPlaceholder": "Beschreibungen durchsuchen…",
+        "clear": "Filter zurücksetzen"
+      },
+      "columns": {
+        "date": "Datum",
+        "description": "Beschreibung",
+        "account": "Konto",
+        "amount": "Betrag"
+      },
+      "pending": "Ausstehend",
+      "moneyIn": "Eingang",
+      "moneyOut": "Ausgang",
+      "loadMore": "Mehr laden",
+      "loadingMore": "Wird geladen…",
+      "searchOrder": "Suchergebnisse sind nach Relevanz sortiert.",
+      "empty": {
+        "noBankTitle": "Keine Bank verbunden",
+        "noBankDescription": "Verbinde eine Bank, um ihre Transaktionen hier zu sehen.",
+        "noTransactionsTitle": "Noch keine Transaktionen",
+        "noTransactionsDescription": "Synchronisiere deine Transaktionen, um sie von deiner Bank abzurufen. Neue kommen außerdem mit der täglichen Synchronisierung.",
+        "noMatchesTitle": "Keine passenden Transaktionen",
+        "noMatchesDescription": "Probier ein anderes Konto, einen anderen Zeitraum oder Suchbegriff."
+      }
     }
   },
   "brokers": {

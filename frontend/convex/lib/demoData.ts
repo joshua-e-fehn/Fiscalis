@@ -67,6 +67,9 @@ export const DEMO_TABLES = [
   "retirementPlans",
   "manualAssets",
   "pies",
+  "goalTrackers",
+  "goalEntries",
+  "goals",
   "vaultItems",
   "vaultTransactions",
   "worldBankFavorites",
@@ -415,6 +418,64 @@ export async function insertDemoData(
       { weight: 20, label: "Cash buffer", target: { kind: "category", category: "cash" } },
     ],
     createdAt: now,
+    updatedAt: now,
+  });
+
+  // ── Goals ──────────────────────────────────────────────────────
+  // An unused tracker first, so it can be deleted; the workouts tracker
+  // feeds the trip's counter; the watch goal is archived
+  await insert("goalTrackers", { userId, name: "Meditation", kind: "count", createdAt: now });
+  const workouts = await insert("goalTrackers", {
+    userId,
+    name: "Workouts",
+    kind: "count",
+    unit: "sessions",
+    createdAt: now,
+  });
+  for (const daysAgo of [12, 9, 5, 2]) {
+    await insert("goalEntries", {
+      userId,
+      trackerId: workouts,
+      date: isoDay(now - daysAgo * DAY_MS),
+      value: 1,
+      createdAt: now,
+    });
+  }
+  await insert("goals", {
+    userId,
+    name: "Lisbon trip",
+    description: "A week in Lisbon once it is earned",
+    currency: "EUR",
+    price: 1500,
+    rule: {
+      kind: "all",
+      children: [
+        { kind: "invested", target: { kind: "priceMultiple", multiple: 10 } },
+        { kind: "counter", trackerId: workouts, count: 20 },
+        { kind: "checklist", items: [{ id: "flights", label: "Compare flights" }] },
+      ],
+    },
+    startDate: isoDay(now - 30 * DAY_MS),
+    status: "active",
+    checklistDone: [],
+    history: [{ at: now, kind: "created" }],
+    createdAt: now,
+    updatedAt: now,
+  });
+  await insert("goals", {
+    userId,
+    name: "Watch",
+    currency: "EUR",
+    price: 4000,
+    rule: { kind: "gains", target: { kind: "priceMultiple", multiple: 1 } },
+    startDate: isoDay(now - 60 * DAY_MS),
+    status: "archived",
+    checklistDone: [],
+    history: [
+      { at: now, kind: "created" },
+      { at: now, kind: "archived" },
+    ],
+    createdAt: now - 1,
     updatedAt: now,
   });
 

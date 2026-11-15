@@ -380,6 +380,77 @@ export default defineSchema({
 	// PIES (Investment Strategies: target allocations, convex/pies.ts)
 	// ═══════════════════════════════════════════════════════════════
 
+	// ═══════════════════════════════════════════════════════════════
+	// GOALS (earned purchases, ENG-256)
+	// ═══════════════════════════════════════════════════════════════
+	// A goal is bought only once its rule is met. The rule is a tree of
+	// checks (services/goals/rules.ts), stored as plain data because a
+	// validator cannot be recursive: every write passes parseRule. Money,
+	// gains and counter pools are replayed on read from the snapshots and
+	// the entries (services/goals/evaluate.ts); a purchase stores only what
+	// it drew from each pool.
+
+	goals: defineTable({
+		userId: v.string(),
+		name: v.string(),
+		description: v.optional(v.string()),
+		currency: v.string(), // a display currency; price and fixed amounts use it
+		price: v.number(),
+		rule: v.any(), // services/goals/rules.ts RuleNode, parsed on every write
+		startDate: v.string(), // UTC day; only lots from it on count
+		status: v.union(v.literal("active"), v.literal("bought"), v.literal("archived")),
+		checklistDone: v.array(v.object({ itemId: v.string(), at: v.number() })),
+		purchase: v.optional(
+			v.object({
+				date: v.string(), // UTC day
+				at: v.number(),
+				price: v.number(), // paid, in the goal's currency
+				earned: v.boolean(), // false: bought before the rule was met
+				charges: v.array(v.object({ metric: v.string(), amount: v.number() })), // EUR or counts
+			}),
+		),
+		// Every change, oldest first: rule changes are kept with the rule before
+		history: v.array(
+			v.object({
+				at: v.number(),
+				kind: v.union(
+					v.literal("created"),
+					v.literal("renamed"),
+					v.literal("priceChanged"),
+					v.literal("ruleChanged"),
+					v.literal("bought"),
+					v.literal("archived"),
+					v.literal("restored"),
+				),
+				before: v.optional(v.any()),
+				after: v.optional(v.any()),
+			}),
+		),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	}).index("by_user", ["userId"]),
+
+	// Something the user attests for goals: a count (workouts) or a
+	// measurement (a 10 km time)
+	goalTrackers: defineTable({
+		userId: v.string(),
+		name: v.string(),
+		kind: v.union(v.literal("count"), v.literal("measurement")),
+		unit: v.optional(v.string()),
+		createdAt: v.number(),
+	}).index("by_user", ["userId"]),
+
+	goalEntries: defineTable({
+		userId: v.string(),
+		trackerId: v.id("goalTrackers"),
+		date: v.string(), // UTC day, never in the future
+		value: v.number(), // a count's +N, a measurement's reading
+		note: v.optional(v.string()),
+		createdAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_tracker", ["trackerId"]),
+
 	pies: defineTable({
 		userId: v.string(), // Clerk user ID
 		...pieFields, // name, description, slices (weights sum to 100)

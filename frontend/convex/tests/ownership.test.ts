@@ -121,6 +121,26 @@ const ARG_OVERRIDES: Record<string, (ids: SeedIds) => Args> = {
       { weight: 30, target: { kind: "category", category: "bonds" } },
     ],
   }),
+  "goals:create": (ids) => ({
+    name: "Bike",
+    currency: "EUR",
+    price: 800,
+    rule: { kind: "counter", trackerId: ids.goalTrackers[1], count: 10 },
+  }),
+  "goals:update": (ids) => ({
+    goalId: ids.goals[0],
+    name: "Renamed",
+    currency: "EUR",
+    price: 1600,
+    rule: { kind: "invested", target: { kind: "priceMultiple", multiple: 5 } },
+  }),
+  "goals:setChecklistItem": (ids) => ({
+    goalId: ids.goals[0],
+    checklistItemId: "flights",
+    done: true,
+  }),
+  "goals:restore": (ids) => ({ goalId: ids.goals[1] }),
+  "goals:entries": (ids) => ({ trackerId: ids.goalTrackers[1] }),
   "retirement:saveRetirementPlan": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
   "retirement:getFundingBase": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
 };

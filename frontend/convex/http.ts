@@ -15,10 +15,13 @@ import {
   metalArchiveRequired,
   scheduledSyncEnabled,
 } from "./lib/scheduledSync";
+import { verifySvixSignature } from "../../services/security/svixSignature";
+import { deletedClerkUserId } from "../../services/privacy/userData";
 
 // ═══════════════════════════════════════════════════════════════
 // Convex HTTP Router
-// Health checks, provider webhooks and the public, API-key authenticated
+// Health checks, provider webhooks (Plaid, SnapTrade, Clerk) and the public,
+// API-key authenticated
 // REST API.
 // Served from https://<deployment>.convex.site
 // ═══════════════════════════════════════════════════════════════
@@ -169,6 +172,60 @@ http.route({
         headers,
       });
     }
+  }),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CLERK WEBHOOK
+// ═══════════════════════════════════════════════════════════════
+//
+// user.deleted (registered in the Clerk dashboard) purges the user's data,
+// whether the account was deleted in the app (account.deleteMyAccount, whose
+// purge this repeats harmlessly) or in Clerk directly. Deliveries are signed
+// by Svix under CLERK_WEBHOOK_SECRET; anything unsigned is rejected before
+// the body is parsed. Other event types are acknowledged and ignored.
+
+http.route({
+  path: "/clerk-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const secret = process.env.CLERK_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error("POST /clerk-webhook: CLERK_WEBHOOK_SECRET is not set");
+      return new Response(null, { status: 500 });
+    }
+
+    const body = await request.text();
+    const verified = await verifySvixSignature(
+      secret,
+      {
+        id: request.headers.get("svix-id"),
+        timestamp: request.headers.get("svix-timestamp"),
+        signature: request.headers.get("svix-signature"),
+      },
+      body,
+      Date.now(),
+    );
+    if (!verified.ok) {
+      console.warn(`POST /clerk-webhook rejected: ${verified.reason}`);
+      return new Response(null, { status: 401 });
+    }
+
+    let event: unknown;
+    try {
+      event = JSON.parse(body);
+    } catch {
+      return new Response(null, { status: 400 });
+    }
+
+    const userId = deletedClerkUserId(event);
+    if (userId) {
+      await ctx.scheduler.runAfter(0, internal.account.deleteUserData, {
+        userId,
+        deleteClerkUser: false,
+      });
+    }
+    return new Response(null, { status: 204 });
   }),
 });
 

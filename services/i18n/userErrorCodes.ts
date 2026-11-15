@@ -19,6 +19,10 @@ export const USER_ERROR_CODES = [
   "apiKeyNotFound",
   "apiKeyLimit",
 
+  // Account deletion (convex/account.ts)
+  "accountDeleteConfirmationMismatch",
+  "accountDeleteRevokeFailed",
+
   // Ownership: a missing and a foreign document read the same
   "accountNotFound",
   "connectionNotFound",

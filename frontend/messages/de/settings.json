@@ -73,5 +73,26 @@
       "copy": "API-Schlüssel kopieren",
       "done": "Fertig"
     }
+  },
+  "privacy": {
+    "title": "Datenschutz",
+    "subtitle": "Lade alles herunter, was Fiscalis über dich speichert, oder lösche dein Konto.",
+    "export": {
+      "title": "Meine Daten herunterladen",
+      "description": "Eine JSON-Datei mit allen Einträgen deines Kontos, nach Tabelle gruppiert. Verschlüsselte Zugangsdaten der Anbieter und die Hashes deiner API-Schlüssel sind nicht enthalten.",
+      "button": "Meine Daten herunterladen",
+      "preparing": "Wird vorbereitet…",
+      "failed": "Deine Daten konnten nicht vorbereitet werden. Bitte versuch es erneut."
+    },
+    "delete": {
+      "title": "Mein Konto löschen",
+      "description": "Trennt deine Banken und Broker bei Plaid und SnapTrade, löscht alle deine Daten und danach deine Anmeldung. Das kann nicht rückgängig gemacht werden.",
+      "button": "Mein Konto löschen",
+      "dialogTitle": "Dein Konto löschen?",
+      "dialogDescription": "Zuerst werden deine Verbindungen widerrufen. Danach werden alle Konten, Positionen, Transaktionen, Kredite, Tresor-Einträge, Snapshots und Einstellungen gelöscht, zuletzt deine Anmeldung. Lade deine Daten vorher herunter, wenn du eine Kopie möchtest.",
+      "confirmLabel": "Gib {phrase} ein, um zu bestätigen",
+      "confirm": "Konto endgültig löschen",
+      "deleting": "Wird gelöscht…"
+    }
   }
 }

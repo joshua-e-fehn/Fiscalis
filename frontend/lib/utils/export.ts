@@ -82,6 +82,13 @@ export function downloadCSV(
 }
 
 /**
+ * Download data as a pretty-printed JSON file
+ */
+export function downloadJSON(data: unknown, filename: string): void {
+  downloadFile(JSON.stringify(data, null, 2), filename, "application/json");
+}
+
+/**
  * Trigger file download in browser
  */
 function downloadFile(

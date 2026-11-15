@@ -125,7 +125,9 @@
     "snaptradeUnknown": "Something went wrong with your broker. Please try again.",
     "snaptradeAccountUnavailable": "This account is no longer available from your broker.",
     "snaptradeAccountsUnplaced": "Your broker didn't say which accounts belong to this connection, so none were synced.",
-    "snaptradeSyncFailed": "Some of your broker accounts couldn't be synced. Please try again later."
+    "snaptradeSyncFailed": "Some of your broker accounts couldn't be synced. Please try again later.",
+    "accountDeleteConfirmationMismatch": "Type the confirmation phrase exactly to delete your account.",
+    "accountDeleteRevokeFailed": "A bank or broker connection couldn't be revoked at the provider, so nothing was deleted. Please try again in a few minutes."
   },
   "a11y": {
     "toggleSidebar": "Toggle sidebar",

@@ -23,7 +23,8 @@ export async function requireUserId(ctx: AuthCtx): Promise<string> {
   return userId;
 }
 
-type OwnedTable = {
+/** Every table whose documents carry a `userId`. */
+export type OwnedTable = {
   [T in TableNames]: Doc<T> extends { userId: string } ? T : never;
 }[TableNames];
 

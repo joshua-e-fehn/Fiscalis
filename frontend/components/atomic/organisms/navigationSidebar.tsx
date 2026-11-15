@@ -233,6 +233,10 @@ const data: Record<
 					url: "/settings/categories",
 				},
 				{
+					titleKey: "privacy",
+					url: "/settings/privacy",
+				},
+				{
 					titleKey: "team",
 					url: "#",
 					feature: "teamSettings",

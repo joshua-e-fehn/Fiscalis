@@ -73,5 +73,26 @@
       "copy": "Copy API key",
       "done": "Done"
     }
+  },
+  "privacy": {
+    "title": "Privacy",
+    "subtitle": "Download everything Fiscalis stores about you, or delete your account.",
+    "export": {
+      "title": "Download my data",
+      "description": "One JSON file with every record in your account, grouped by table. Encrypted provider credentials and API key hashes are left out.",
+      "button": "Download my data",
+      "preparing": "Preparing…",
+      "failed": "We couldn't prepare your data. Please try again."
+    },
+    "delete": {
+      "title": "Delete my account",
+      "description": "Disconnects your banks and brokers at Plaid and SnapTrade, deletes all of your data and then your sign-in. This cannot be undone.",
+      "button": "Delete my account",
+      "dialogTitle": "Delete your account?",
+      "dialogDescription": "Your connections are revoked first. Then every account, position, transaction, loan, vault item, snapshot and setting is deleted, and finally your sign-in. Download your data first if you want a copy.",
+      "confirmLabel": "Type {phrase} to confirm",
+      "confirm": "Delete account permanently",
+      "deleting": "Deleting…"
+    }
   }
 }

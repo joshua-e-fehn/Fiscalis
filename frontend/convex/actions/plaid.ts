@@ -873,19 +873,8 @@ export const disconnectItem = action({
       userError("connectionNotFound");
     }
 
-    try {
-      await getPlaidClient().itemRemove({
-        access_token: decrypt(item.accessToken),
-      });
-    } catch (error: unknown) {
-      const code = (
-        error as { response?: { data?: { error_code?: string } } }
-      )?.response?.data?.error_code;
-      if (code !== "ITEM_NOT_FOUND" && code !== "INVALID_ACCESS_TOKEN") {
-        console.error("Plaid itemRemove error:", describeError(error));
-        userError("plaidDisconnectFailed");
-      }
-      console.warn(`Plaid item already gone (${code}); deleting locally`);
+    if (!(await removeItemAtPlaid(item.accessToken))) {
+      userError("plaidDisconnectFailed");
     }
 
     await ctx.runMutation(internal.banking.deleteItemData, {
@@ -1070,5 +1059,52 @@ export const updateItemWebhooks = internalAction({
     }
 
     return { dryRun, webhook, items: items.length, updated, failed };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ACCOUNT DELETION (ENG-232)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Revoke one item at Plaid (`itemRemove`) by its encrypted access token.
+ * True once Plaid no longer has the item, also when it was already removed
+ * or its token is invalid; false (logged) on any other Plaid failure.
+ */
+async function removeItemAtPlaid(encryptedAccessToken: string): Promise<boolean> {
+  try {
+    await getPlaidClient().itemRemove({
+      access_token: decrypt(encryptedAccessToken),
+    });
+    return true;
+  } catch (error: unknown) {
+    const code = (
+      error as { response?: { data?: { error_code?: string } } }
+    )?.response?.data?.error_code;
+    if (code !== "ITEM_NOT_FOUND" && code !== "INVALID_ACCESS_TOKEN") {
+      console.error("Plaid itemRemove error:", describeError(error));
+      return false;
+    }
+    console.warn(`Plaid item already gone (${code})`);
+    return true;
+  }
+}
+
+/**
+ * Account deletion (convex/account.ts): revoke every Plaid item of a user.
+ * Local data is left to the purge. Returns how many items Plaid could not
+ * revoke.
+ */
+export const revokeItemsForUser = internalAction({
+  args: { userId: v.string() },
+  handler: async (ctx, args): Promise<{ failed: number }> => {
+    const items = await ctx.runQuery(internal.banking.getItemsByUserInternal, {
+      userId: args.userId,
+    });
+    let failed = 0;
+    for (const item of items) {
+      if (!(await removeItemAtPlaid(item.accessToken))) failed++;
+    }
+    return { failed };
   },
 });

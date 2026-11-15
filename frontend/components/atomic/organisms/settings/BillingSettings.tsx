@@ -124,11 +124,14 @@ function CurrentPlanCard({ overview }: { overview: Overview }) {
                 {subscription.interval === "year" ? t("intervalYear") : t("intervalMonth")}
               </span>
             )}
-            <span>
-              {subscription.cancelAtPeriodEnd
-                ? t("endsOn", { date: date(subscription.currentPeriodEnd) })
-                : t("renews", { date: date(subscription.currentPeriodEnd) })}
-            </span>
+            {/* The component stores 0 when Stripe sent no period end */}
+            {subscription.currentPeriodEnd > 0 && (
+              <span>
+                {subscription.cancelAtPeriodEnd
+                  ? t("endsOn", { date: date(subscription.currentPeriodEnd) })
+                  : t("renews", { date: date(subscription.currentPeriodEnd) })}
+              </span>
+            )}
           </div>
         )}
         {subscription?.status === "past_due" && (

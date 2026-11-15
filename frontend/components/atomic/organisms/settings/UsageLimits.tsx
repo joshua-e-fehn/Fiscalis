@@ -28,7 +28,7 @@ function UsageLine({ row }: { row: UsageRow }) {
     row.limit === 0
       ? t("notIncluded")
       : row.limit === null
-        ? `${t("used", { used: row.used })} · ${t("unlimited")}`
+        ? t("usedUnlimited", { used: row.used })
         : t("usedOf", { used: row.used, limit: row.limit });
 
   return (

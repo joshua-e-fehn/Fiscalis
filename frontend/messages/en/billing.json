@@ -71,10 +71,9 @@
       "apiKeys": "API keys",
       "pies": "Pies"
     },
-    "unlimited": "Unlimited",
     "notIncluded": "Not included",
     "usedOf": "{used} of {limit}",
-    "used": "{used} in use",
+    "usedUnlimited": "{used} in use · Unlimited",
     "upgradeHint": "Need more? Pro has no limits.",
     "upgrade": "See Pro"
   }

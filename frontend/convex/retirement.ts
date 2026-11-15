@@ -1,11 +1,11 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import {
 	DEFAULT_CONSERVATIVE_RETURN,
 	DEFAULT_INFLATION_RATE,
 	DEFAULT_OPTIMISTIC_RETURN,
 	DEFAULT_WITHDRAWAL_RATE,
 	computeRetirementResults,
-	firstRetirementInputError,
+	firstRetirementInputIssue,
 	mortgageAccountHoldings,
 	planToInputs,
 	type ResidenceMortgage,
@@ -33,6 +33,7 @@ import { validateBirthDate } from "../lib/utils/date";
 import type { Id } from "./_generated/dataModel";
 import { mutation, type QueryCtx, query } from "./_generated/server";
 import { getOwnedDoc, getUserId } from "./lib/auth";
+import { userError } from "./lib/userError";
 import { loadFxRates } from "./fxRates";
 import { loadHoldings } from "./lib/netWorth";
 import {
@@ -84,7 +85,7 @@ function requestedCurrency(
 ): DisplayCurrency | undefined {
 	if (code === undefined) return undefined;
 	const currency = toDisplayCurrency(code);
-	if (!currency) throw new ConvexError(`Unsupported currency: ${code}`);
+	if (!currency) throw new Error(`Unsupported currency: ${code}`);
 	return currency;
 }
 
@@ -106,7 +107,7 @@ async function currencyFactor(
 	);
 	const factor = convertBetween(1, from, to, unitsPerEur);
 	if (factor === null || !(factor > 0)) {
-		throw new ConvexError(`No exchange rate from ${from} to ${to}`);
+		userError("exchangeRateUnavailable", { from, to });
 	}
 	return factor;
 }
@@ -460,7 +461,9 @@ export const saveRetirementPlan = mutation({
 				existing?.conservativeReturn ??
 				DEFAULT_CONSERVATIVE_RETURN,
 		};
-		const firstError = firstRetirementInputError(merged, {
+		// The wizard runs the same validator first, so this only rejects a
+		// save that bypassed it: one code rather than a message per rule.
+		const issue = firstRetirementInputIssue(merged, {
 			requireValidTimeline: status === "active",
 			fields:
 				args.status === "active"
@@ -469,7 +472,7 @@ export const saveRetirementPlan = mutation({
 							(k) => args[k] !== undefined,
 						),
 		});
-		if (firstError) throw new Error(firstError);
+		if (issue) userError("retirementPlanInvalid");
 
 		// The plan's date of birth is only a snapshot (userSettings is canonical),
 		// so an invalid one is dropped rather than failing the whole save.
@@ -480,7 +483,7 @@ export const saveRetirementPlan = mutation({
 		// The residence mortgage must be one of the user's own loans.
 		if (args.primaryResidenceLoanId) {
 			const loan = await getOwnedDoc(ctx, userId, args.primaryResidenceLoanId);
-			if (!loan) throw new Error("Loan not found");
+			if (!loan) userError("loanNotFound");
 		}
 		if (args.primaryResidenceAccountId) {
 			if (args.primaryResidenceLoanId)
@@ -490,7 +493,7 @@ export const saveRetirementPlan = mutation({
 				userId,
 				args.primaryResidenceAccountId,
 			);
-			if (!account) throw new Error("Account not found");
+			if (!account) userError("accountNotFound");
 		}
 		// Linking one kind of mortgage unlinks the other.
 		const loanArg = args.primaryResidenceAccountId

@@ -1,5 +1,6 @@
 import { v, type VLiteral } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import { userError } from "./lib/userError";
 import { validateBirthDate } from "../lib/utils/date";
 import {
   LANGUAGES,
@@ -18,7 +19,7 @@ import {
  */
 function assertValidBirthDate(birthDate: string): string {
   const result = validateBirthDate(birthDate);
-  if (!result.ok) throw new Error(result.error);
+  if (!result.ok) userError(`birthDate.${result.code}`);
   return result.value;
 }
 
@@ -415,7 +416,7 @@ export const completeOnboarding = mutation({
 
     if (!progress) throw new Error("Onboarding not initialized");
     if (!progress.profileCompleted) {
-      throw new Error("Complete your profile before finishing onboarding");
+      userError("onboardingProfileIncomplete");
     }
 
     await ctx.db.patch(progress._id, {

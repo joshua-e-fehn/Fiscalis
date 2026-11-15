@@ -23,6 +23,7 @@
  * Framework-free so the Convex bundle, Next.js and vitest can all import it.
  */
 
+import type { UserErrorCode } from "../i18n/userErrorCodes";
 import type { HoldingData } from "../performance/types";
 import { convertBetween } from "./currency";
 import { convertAtSpotRates, type SpotExchangeRates } from "./metals";
@@ -100,8 +101,15 @@ export interface ItemLedger {
   lots: LedgerLot[];
 }
 
+/**
+ * A transaction the ledger rejects. `code` is the user-facing error code
+ * (services/i18n/userErrorCodes.ts) that convex/vault.ts throws for it.
+ */
 export class LedgerError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: UserErrorCode,
+  ) {
     super(message);
     this.name = "LedgerError";
   }
@@ -125,7 +133,7 @@ export function ledgerTimestamp(
   if (!date) return undefined;
   const ts = Date.parse(date);
   if (!Number.isFinite(ts)) {
-    throw new LedgerError(`Invalid transaction date: ${date}`);
+    throw new LedgerError(`Invalid transaction date: ${date}`, "vaultInvalidDate");
   }
   return ts;
 }
@@ -148,18 +156,18 @@ export function validateTransactionInput(
   options: { requireDate?: boolean; now?: number } = {},
 ): void {
   if (!Number.isFinite(tx.quantity) || tx.quantity <= 0) {
-    throw new LedgerError("Quantity must be greater than 0");
+    throw new LedgerError("Quantity must be greater than 0", "vaultQuantityNotPositive");
   }
   if (
     tx.pricePerUnit != null &&
     (!Number.isFinite(tx.pricePerUnit) || tx.pricePerUnit < 0)
   ) {
-    throw new LedgerError("Price per unit cannot be negative");
+    throw new LedgerError("Price per unit cannot be negative", "vaultPriceNegative");
   }
   const timestamp = ledgerTimestamp(tx.transactionDate);
   if (timestamp === undefined) {
     if (options.requireDate) {
-      throw new LedgerError("A transaction date is required");
+      throw new LedgerError("A transaction date is required", "vaultDateRequired");
     }
     return;
   }
@@ -167,7 +175,10 @@ export function validateTransactionInput(
     options.now !== undefined &&
     timestamp > options.now + FUTURE_TOLERANCE_MS
   ) {
-    throw new LedgerError("The transaction date cannot be in the future");
+    throw new LedgerError(
+      "The transaction date cannot be in the future",
+      "vaultDateInFuture",
+    );
   }
 }
 
@@ -218,7 +229,10 @@ export function nextOpeningQuantity(
   edit: { openingQuantity?: number; quantity?: number; held: number },
 ): number {
   if (edit.openingQuantity !== undefined && edit.quantity !== undefined) {
-    throw new LedgerError("Set either the opening quantity or the total held, not both");
+    throw new LedgerError(
+      "Set either the opening quantity or the total held, not both",
+      "vaultOpeningAndTotalBoth",
+    );
   }
   if (edit.openingQuantity !== undefined) return edit.openingQuantity;
   if (edit.quantity !== undefined) return currentOpening + (edit.quantity - edit.held);
@@ -282,6 +296,7 @@ export function replayLedger(
     if (tx.quantity > quantity + EPSILON) {
       throw new LedgerError(
         "Cannot sell or give away more than is held at that date",
+        "vaultSellsMoreThanHeld",
       );
     }
     const averageCost = cost !== null && quantity > 0 ? cost / quantity : null;

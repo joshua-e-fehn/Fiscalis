@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import { ConvexError } from "convex/values";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,10 +16,11 @@ import {
 } from "@/hooks/convex/retirement";
 import {
 	DEFAULT_RETIREMENT_INPUTS,
-	firstRetirementInputError,
+	firstRetirementInputIssue,
 	type RetirementInputs,
 	RetirementStep,
 } from "@/lib/types/retirement";
+import { useErrorMessage } from "@/i18n/errors";
 import { getAgeFromBirthDate, validateBirthDate } from "@/lib/utils/date";
 import { RetirementWizardProgress } from "./RetirementWizardProgress";
 import { AssumptionsStep } from "./steps/AssumptionsStep";
@@ -29,6 +31,7 @@ import { PensionsStep } from "./steps/PensionsStep";
 import { PersonalStep } from "./steps/PersonalStep";
 import { PortfolioStep } from "./steps/PortfolioStep";
 import { ResultsStep } from "./steps/ResultsStep";
+import { useRetirementIssueMessage } from "./shared/useRetirementIssueMessage";
 
 interface RetirementWizardProps {
 	/** Called after the plan is saved as active (e.g. to leave edit mode). */
@@ -119,6 +122,9 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 	const settings = useUserSettings();
 	const display = useDisplayCurrency();
 	const t = useTranslations("retirement.wizard");
+	const tErrors = useTranslations("common.errors");
+	const toErrorMessage = useErrorMessage();
+	const issueMessage = useRetirementIssueMessage();
 	// A fresh plan starts with one (editable) state pension row, named in the
 	// user's language.
 	const defaultPensionLabel = t("defaultPensionLabel");
@@ -227,13 +233,11 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 		() => (birthDate ? validateBirthDate(birthDate) : null),
 		[birthDate],
 	);
-	// dob.error is the shared validator's message, still English (see the
-	// error-code batch).
 	const dobError = !dob
 		? t("birthDateRequired")
 		: dob.ok
 			? undefined
-			: dob.error;
+			: tErrors(`birthDate.${dob.code}`);
 
 	/**
 	 * Validate and save `fields` (plus the date of birth to the profile, if it
@@ -247,12 +251,13 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 			status?: "active",
 		): Promise<boolean> => {
 			setSaveError(null);
+			const issue = firstRetirementInputIssue(data, {
+				fields,
+				requireValidTimeline: status === "active",
+			});
 			const firstError =
 				(status === "active" ? dobError : undefined) ??
-				firstRetirementInputError(data, {
-					fields,
-					requireValidTimeline: status === "active",
-				});
+				(issue && issueMessage(issue));
 			if (firstError) {
 				setSaveError(firstError);
 				return false;
@@ -282,9 +287,11 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 				return true;
 			} catch (err) {
 				console.error("Failed to save retirement plan:", err);
-				// Convex hides server error messages in production, so failures
-				// that pass the client-side validation get a generic message.
-				setSaveError(t("saveFailed"));
+				// A coded server error in the user's language; anything else
+				// (Convex hides its message in production) gets a generic one.
+				setSaveError(
+					err instanceof ConvexError ? toErrorMessage(err) : t("saveFailed"),
+				);
 				return false;
 			} finally {
 				setIsSaving(false);
@@ -299,6 +306,8 @@ export function RetirementWizard({ onSaved, onCancel }: RetirementWizardProps) {
 			saveProfileBirthDate,
 			formCurrency,
 			t,
+			issueMessage,
+			toErrorMessage,
 		],
 	);
 

@@ -17,6 +17,7 @@ import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
 import { enforceUserRateLimit } from "../lib/rateLimit";
+import { userError } from "../lib/userError";
 
 // ═══════════════════════════════════════════════════════════════
 // PLAID CLIENT SETUP
@@ -118,7 +119,7 @@ export const createUpdateLinkToken = action({
     });
 
     if (!item || item.userId !== userId) {
-      throw new Error("Item not found or unauthorized");
+      userError("connectionNotFound");
     }
 
     const accessToken = decrypt(item.accessToken, getEncryptionKey());
@@ -299,7 +300,7 @@ export const updateInstitutionLogo = action({
     });
 
     if (!item || item.userId !== userId) {
-      throw new Error("Item not found or unauthorized");
+      userError("connectionNotFound");
     }
 
     // Call internal action to do the actual work
@@ -490,7 +491,7 @@ export const refreshAccounts = action({
       });
 
       if (!item || item.userId !== userId) {
-        throw new Error("Item not found or unauthorized");
+        userError("connectionNotFound");
       }
 
       await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {
@@ -615,7 +616,7 @@ export const syncTransactions = action({
         itemId: args.itemId,
       });
       if (!item || item.userId !== userId) {
-        throw new Error("Item not found or unauthorized");
+        userError("connectionNotFound");
       }
       items = [item];
     } else {
@@ -707,7 +708,7 @@ export const disconnectItem = action({
       itemId: args.itemId,
     });
     if (!item || item.userId !== userId) {
-      throw new Error("Item not found or unauthorized");
+      userError("connectionNotFound");
     }
 
     try {
@@ -720,9 +721,7 @@ export const disconnectItem = action({
       )?.response?.data?.error_code;
       if (code !== "ITEM_NOT_FOUND" && code !== "INVALID_ACCESS_TOKEN") {
         console.error("Plaid itemRemove error:", describeError(error));
-        throw new Error(
-          "Could not disconnect this bank at Plaid. Please try again.",
-        );
+        userError("plaidDisconnectFailed");
       }
       console.warn(`Plaid item already gone (${code}); deleting locally`);
     }

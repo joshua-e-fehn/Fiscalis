@@ -9,10 +9,11 @@ import {
   getEncryptionKey,
   normalizeAccountType,
   parseSnapTradeError,
-  formatErrorForUser,
   requiresReauthentication,
+  snaptradeUserError,
   withSnaptradeRetry,
 } from "../lib/snaptrade";
+import { userError, type UserErrorCode } from "../lib/userError";
 import { Doc, Id } from "../_generated/dataModel";
 import {
   mapSnaptradeHoldings,
@@ -121,11 +122,11 @@ export const registerUser = action({
         errorMessage.includes("already exists")
       ) {
         // User exists on SnapTrade but not in our DB - this shouldn't happen normally
-        throw new Error("User registration conflict. Please contact support.");
+        userError("snaptradeRegistrationConflict");
       }
 
       // Use improved error handling
-      throw new Error(formatErrorForUser(error));
+      snaptradeUserError(error);
     }
   },
 });
@@ -217,9 +218,7 @@ export const createConnectUrl = action({
     );
 
     if (!snaptradeUser) {
-      throw new Error(
-        "User not registered with SnapTrade. Call registerUser first.",
-      );
+      userError("snaptradeNotRegistered");
     }
 
     // Reconnect: SnapTrade expects the authorization ID of the connection
@@ -232,7 +231,7 @@ export const createConnectUrl = action({
         { connectionId: args.connectionId },
       );
       if (!connection || connection.userId !== userId) {
-        throw new Error("Connection not found");
+        userError("connectionNotFound");
       }
       reconnect = connection.authorizationId;
       broker = connection.brokerSlug;
@@ -271,12 +270,10 @@ export const createConnectUrl = action({
 
       // Check if re-authentication is needed
       if (requiresReauthentication(error)) {
-        throw new Error(
-          "Your SnapTrade session has expired. Please try again.",
-        );
+        userError("snaptradeSessionExpired");
       }
 
-      throw new Error(formatErrorForUser(error));
+      snaptradeUserError(error);
     }
   },
 });
@@ -314,7 +311,7 @@ export const handleCallback = action({
     );
 
     if (!snaptradeUser) {
-      throw new Error("User not registered with SnapTrade");
+      userError("snaptradeNotRegistered");
     }
 
     // An authorization we already store: the portal returned from a
@@ -328,7 +325,7 @@ export const handleCallback = action({
 
     if (existingConnection) {
       if (existingConnection.userId !== userId) {
-        throw new Error("Connection not found");
+        userError("connectionNotFound");
       }
       await syncConnectionAndSnapshot(
         ctx,
@@ -401,12 +398,10 @@ export const handleCallback = action({
       const parsedError = parseSnapTradeError(error);
 
       if (parsedError.code === "CONNECTION_NOT_FOUND") {
-        throw new Error(
-          "The broker connection was not found. Please try connecting again.",
-        );
+        userError("snaptradeConnectionNotFound");
       }
 
-      throw new Error(formatErrorForUser(error));
+      snaptradeUserError(error);
     }
   },
 });
@@ -456,7 +451,7 @@ export const listConnections = action({
       };
     } catch (error: unknown) {
       console.error("SnapTrade list connections error:", describeError(error));
-      throw new Error(formatErrorForUser(error));
+      snaptradeUserError(error);
     }
   },
 });
@@ -481,7 +476,7 @@ export const deleteConnection = action({
     );
 
     if (!connection || connection.userId !== userId) {
-      throw new Error("Connection not found or unauthorized");
+      userError("connectionNotFound");
     }
 
     // Get SnapTrade user
@@ -518,7 +513,7 @@ export const deleteConnection = action({
             "SnapTrade delete connection error:",
             describeError(error),
           );
-          throw new Error(formatErrorForUser(error));
+          snaptradeUserError(error);
         }
       }
     }
@@ -673,7 +668,7 @@ async function syncSnaptrade(
       { accountId: scope.accountId },
     );
     if (!target || target.userId !== userId) {
-      throw new Error("Account not found or unauthorized");
+      userError("accountNotFound");
     }
     targetSnaptradeAccountId = target.snaptradeAccountId;
   }
@@ -688,7 +683,7 @@ async function syncSnaptrade(
   } catch (listError) {
     // Nothing was fetched, so nothing is written; the connections show why
     const parsedError = parseSnapTradeError(listError);
-    if (scope.kind === "account") throw new Error(parsedError.userMessage);
+    if (scope.kind === "account") userError(parsedError.userCode);
     for (const connection of allConnections) {
       if (scope.kind === "connection" && connection._id !== scope.connectionId) {
         continue;
@@ -696,10 +691,10 @@ async function syncSnaptrade(
       await ctx.runMutation(internal.brokers.updateConnectionStatus, {
         connectionId: connection._id,
         status: snaptradeFailureStatus(parsedError),
-        errorMessage: parsedError.userMessage,
+        errorMessage: parsedError.userCode,
       });
     }
-    result.errors.push(`SnapTrade accounts: ${parsedError.userMessage}`);
+    result.errors.push(`SnapTrade accounts: ${parsedError.message}`);
     return result;
   }
 
@@ -744,10 +739,10 @@ async function syncSnaptrade(
     return true;
   });
   if (scope.kind === "account" && connections.length === 0) {
-    throw new Error(
+    userError(
       unplacedAccounts.length > 0
-        ? result.errors.join("; ")
-        : "This account is no longer available from your broker.",
+        ? "snaptradeAccountsUnplaced"
+        : "snaptradeAccountUnavailable",
     );
   }
 
@@ -834,10 +829,10 @@ async function syncSnaptrade(
           );
           const parsed = parseSnapTradeError(accountError);
           accountsFailed++;
-          lastAccountError = parsed.userMessage;
+          lastAccountError = parsed.userCode;
           if (!parsed.isRetryable) allFailuresRetryable = false;
-          if (parsed.requiresReauth) reauthError = parsed.userMessage;
-          result.errors.push(`Account ${accountName}: ${parsed.userMessage}`);
+          if (parsed.requiresReauth) reauthError = parsed.userCode;
+          result.errors.push(`Account ${accountName}: ${parsed.message}`);
         }
       }
 
@@ -860,8 +855,7 @@ async function syncSnaptrade(
         await ctx.runMutation(internal.brokers.updateConnectionStatus, {
           connectionId: connection._id,
           status: "error",
-          errorMessage:
-            "The broker did not say which accounts belong to this connection, so none were synced.",
+          errorMessage: "snaptradeAccountsUnplaced" satisfies UserErrorCode,
         });
       } else {
         await ctx.runMutation(internal.brokers.updateConnectionStatus, {
@@ -874,12 +868,12 @@ async function syncSnaptrade(
     } catch (connectionError) {
       const parsedError = parseSnapTradeError(connectionError);
       result.errors.push(
-        `Connection ${connection.brokerName}: ${parsedError.userMessage}`,
+        `Connection ${connection.brokerName}: ${parsedError.message}`,
       );
       await ctx.runMutation(internal.brokers.updateConnectionStatus, {
         connectionId: connection._id,
         status: snaptradeFailureStatus(parsedError),
-        errorMessage: parsedError.userMessage,
+        errorMessage: parsedError.userCode,
       });
     }
   }
@@ -956,15 +950,18 @@ export const syncAccounts = action({
       { connectionId: args.connectionId },
     );
     if (!connection || connection.userId !== userId) {
-      throw new Error("Connection not found or unauthorized");
+      userError("connectionNotFound");
     }
 
     const result = await syncSnaptrade(ctx, userId, {
       kind: "connection",
       connectionId: args.connectionId,
     });
-    if (!result) throw new Error("User not registered with SnapTrade");
-    if (result.errors.length > 0) throw new Error(result.errors.join("; "));
+    if (!result) userError("snaptradeNotRegistered");
+    if (result.errors.length > 0) {
+      console.error("[SNAPTRADE SYNC]", result.errors.join("; "));
+      userError("snaptradeSyncFailed");
+    }
 
     return { success: true };
   },
@@ -986,8 +983,11 @@ export const syncPositions = action({
       kind: "account",
       accountId: args.accountId,
     });
-    if (!result) throw new Error("User not registered with SnapTrade");
-    if (result.errors.length > 0) throw new Error(result.errors.join("; "));
+    if (!result) userError("snaptradeNotRegistered");
+    if (result.errors.length > 0) {
+      console.error("[SNAPTRADE SYNC]", result.errors.join("; "));
+      userError("snaptradeSyncFailed");
+    }
 
     return {
       success: true,
@@ -1179,7 +1179,7 @@ export const listBrokers = action({
       };
     } catch (error: unknown) {
       console.error("List brokers error:", describeError(error));
-      throw new Error(formatErrorForUser(error));
+      snaptradeUserError(error);
     }
   },
 });
@@ -1219,7 +1219,7 @@ export const searchBrokers = action({
       };
     } catch (error: unknown) {
       console.error("Search brokers error:", describeError(error));
-      throw new Error(formatErrorForUser(error));
+      snaptradeUserError(error);
     }
   },
 });

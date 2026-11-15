@@ -39,6 +39,7 @@ import {
   prepaymentEffectValidator,
 } from "./schema";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
+import { userError } from "./lib/userError";
 import { scheduleSnapshot } from "./portfolioSnapshots";
 import { loadFxRates } from "./fxRates";
 import {
@@ -97,7 +98,7 @@ function resolveToday(clientToday?: string): string {
 async function requireOwnedLoan(ctx: MutationCtx, loanId: Id<"loans">) {
   const userId = await requireUserId(ctx);
   const loan = await getOwnedDoc(ctx, userId, loanId);
-  if (!loan) throw new Error("Loan not found");
+  if (!loan) userError("loanNotFound");
   return { userId, loan };
 }
 
@@ -107,9 +108,9 @@ async function requireOwnedPayment(
 ) {
   const userId = await requireUserId(ctx);
   const payment = await getOwnedDoc(ctx, userId, paymentId);
-  if (!payment) throw new Error("Payment not found");
+  if (!payment) userError("loanPaymentNotFound");
   const loan = await getOwnedDoc(ctx, userId, payment.loanId);
-  if (!loan) throw new Error("Loan not found");
+  if (!loan) userError("loanNotFound");
   return { payment, loan };
 }
 
@@ -119,7 +120,7 @@ async function requireOwnedScenario(
 ) {
   const userId = await requireUserId(ctx);
   const scenario = await getOwnedDoc(ctx, userId, scenarioId);
-  if (!scenario) throw new Error("Scenario not found");
+  if (!scenario) userError("loanScenarioNotFound");
   return scenario;
 }
 

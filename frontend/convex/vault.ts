@@ -1,4 +1,4 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import {
   query,
   mutation,
@@ -7,6 +7,7 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
+import { userError, userErrorOf } from "./lib/userError";
 import {
   resolvePremiums,
   vaultItemValuation,
@@ -181,9 +182,9 @@ async function vaultItemView(
   };
 }
 
-/** A LedgerError as an error the client can show; anything else rethrown. */
+/** A LedgerError as its coded user error; anything else rethrown. */
 function asUserError(error: unknown): unknown {
-  return error instanceof LedgerError ? new ConvexError(error.message) : error;
+  return error instanceof LedgerError ? userErrorOf(error.code) : error;
 }
 
 /** validateTransactionInput against today, as a user-facing error. */
@@ -510,7 +511,7 @@ export const addVaultItemFromCatalog = mutation({
     const userId = await requireUserId(ctx);
     const catalogItem = await ctx.db.get(args.catalogItemId);
     if (!catalogItem) {
-      throw new Error("Catalog item not found");
+      userError("catalogItemNotFound");
     }
 
     // Explicit premium, then the catalog default, then the legacy single
@@ -573,7 +574,7 @@ export const addCustomVaultItem = mutation({
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     if (!(args.weightGrams > 0) || !(args.purity > 0)) {
-      throw new ConvexError("Weight and purity must be greater than 0");
+      userError("vaultWeightAndPurityRequired");
     }
     return await createVaultItem(
       ctx,
@@ -633,7 +634,7 @@ export const updateVaultItem = mutation({
     const userId = await requireUserId(ctx);
     const existing = await getOwnedDoc(ctx, userId, vaultItemId);
     if (!existing) {
-      throw new Error("Vault item not found");
+      userError("vaultItemNotFound");
     }
 
     // Non-ledger fields: filter out undefined values
@@ -658,9 +659,7 @@ export const updateVaultItem = mutation({
       const txs = await ensureOpeningTransaction(ctx, existing);
       const opening = txs.find(isOpeningTransaction);
       if (!opening) {
-        throw new ConvexError(
-          "This item has no opening balance; record a buy or sale instead",
-        );
+        userError("vaultNoOpeningBalance");
       }
       const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
       let openingQuantity: number;
@@ -711,7 +710,7 @@ export const deleteVaultItem = mutation({
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     if (!(await getOwnedDoc(ctx, userId, args.vaultItemId))) {
-      throw new Error("Vault item not found");
+      userError("vaultItemNotFound");
     }
 
     // Delete all related transactions first
@@ -758,7 +757,7 @@ async function recordTransaction(
   // Re-read: an earlier sale in the same mutation changed the projection
   const vaultItem = await getOwnedDoc(ctx, userId, vaultItemId);
   if (!vaultItem) {
-    throw new Error("Vault item not found");
+    userError("vaultItemNotFound");
   }
   await ensureOpeningTransaction(ctx, vaultItem);
   const transactionId = await ctx.db.insert("vaultTransactions", {
@@ -821,7 +820,7 @@ export const sellItems = mutation({
   handler: async (ctx, args) => {
     const userId = await requireUserId(ctx);
     if (args.sales.length === 0) {
-      throw new ConvexError("Nothing to sell");
+      userError("vaultNothingToSell");
     }
     const toBaseAmount = toBaseAmountWith(await loadFxRates(ctx));
     const transactionIds: Id<"vaultTransactions">[] = [];
@@ -863,7 +862,7 @@ export const deleteTransaction = mutation({
     const userId = await requireUserId(ctx);
     const transaction = await getOwnedDoc(ctx, userId, args.transactionId);
     if (!transaction) {
-      throw new ConvexError({ code: "vaultEntryNotFound" });
+      userError("vaultEntryNotFound");
     }
     const vaultItem = await getOwnedDoc(ctx, userId, transaction.vaultItemId);
     if (vaultItem) {
@@ -877,17 +876,15 @@ export const deleteTransaction = mutation({
       if (conflict) {
         // A timestamp, formatted as a calendar date by the client (dateOnly)
         const date = ledgerTimestamp(conflict.transaction.transactionDate);
-        throw new ConvexError(
-          date !== undefined
-            ? {
-                code: "vaultDeleteLeavesNegativeHolding",
-                params: { quantity: conflict.shortfall, date },
-              }
-            : {
-                code: "vaultDeleteLeavesNegativeHoldingUndated",
-                params: { quantity: conflict.shortfall },
-              },
-        );
+        if (date !== undefined) {
+          userError("vaultDeleteLeavesNegativeHolding", {
+            quantity: conflict.shortfall,
+            date,
+          });
+        }
+        userError("vaultDeleteLeavesNegativeHoldingUndated", {
+          quantity: conflict.shortfall,
+        });
       }
     }
 

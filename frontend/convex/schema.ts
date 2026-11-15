@@ -7,6 +7,11 @@ import {
 } from "./lib/metalPriceValidators";
 import { manualAssetFields } from "./lib/manualAssetValidators";
 import {
+	syncProviderValidator,
+	syncRunStatusValidator,
+	syncTriggerValidator,
+} from "./lib/syncRunValidators";
+import {
 	DAY_COUNT_CONVENTIONS,
 	LOAN_PAYMENT_FREQUENCIES,
 	LOAN_PAYMENT_TYPES,
@@ -1057,6 +1062,26 @@ export default defineSchema({
 		job: v.union(v.literal("fx-refresh"), v.literal("provider-sync")),
 		lastSuccessAt: v.number(),
 	}).index("by_job", ["job"]),
+
+	// ═══════════════════════════════════════════════════════════════
+	// SYNC RUNS
+	// ═══════════════════════════════════════════════════════════════
+	// One row per provider sync of one user's item, connection or account
+	// set, scheduled or manual (convex/lib/syncRuns.ts withSyncRun). Inserted
+	// as running, patched when the sync ends; errorCode is a short machine
+	// code (services/health/syncRuns.ts syncErrorCode), never a message.
+	// Pruned after 90 days; summarized for the daily digest
+	// (GET /health/sync-digest).
+
+	syncRuns: defineTable({
+		provider: syncProviderValidator,
+		userId: v.string(),
+		trigger: syncTriggerValidator,
+		startedAt: v.number(),
+		endedAt: v.optional(v.number()),
+		status: syncRunStatusValidator,
+		errorCode: v.optional(v.string()),
+	}).index("by_startedAt", ["startedAt"]),
 
 	// ═══════════════════════════════════════════════════════════════
 	// API KEYS

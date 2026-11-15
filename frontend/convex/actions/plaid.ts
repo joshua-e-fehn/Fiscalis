@@ -18,6 +18,8 @@ import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { plaidLinkProducts } from "../../../services/banking/plaidProducts";
 import { enforceUserRateLimit } from "../lib/rateLimit";
+import { withSyncRun } from "../lib/syncRuns";
+import { syncTriggerValidator } from "../lib/syncRunValidators";
 import { userError } from "../lib/userError";
 import {
   chunk,
@@ -214,6 +216,7 @@ export const exchangeToken = action({
     // Fetch initial accounts
     await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {
       itemId,
+      trigger: "manual",
     });
 
     // Take a snapshot after new connection is synced
@@ -385,8 +388,11 @@ export const updateAllInstitutionLogos = action({
  * Internal action to sync accounts for an item
  */
 export const syncAccountsInternal = internalAction({
-  args: { itemId: v.string() },
-  handler: async (ctx, args) => {
+  args: { itemId: v.string(), trigger: syncTriggerValidator },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ success: boolean; accountCount: number }> => {
     // Get item with encrypted token
     const item = await ctx.runQuery(internal.banking.getItemByIdInternal, {
       itemId: args.itemId,
@@ -394,78 +400,85 @@ export const syncAccountsInternal = internalAction({
 
     if (!item) throw new Error("Item not found");
 
-    const accessToken = decrypt(item.accessToken, getEncryptionKey());
-    const plaidClient = getPlaidClient();
+    // One ledger row per item (convex/syncRuns.ts)
+    return withSyncRun(
+      ctx,
+      { provider: "plaid", userId: item.userId, trigger: args.trigger },
+      async () => {
+        const accessToken = decrypt(item.accessToken, getEncryptionKey());
+        const plaidClient = getPlaidClient();
 
-    try {
-      const response = await plaidClient.accountsGet({
-        access_token: accessToken,
-      });
-
-      const accounts = response.data.accounts.map((acc) => ({
-        accountId: acc.account_id,
-        name: acc.name,
-        officialName: acc.official_name ?? undefined,
-        type: acc.type,
-        subtype: acc.subtype ?? undefined,
-        mask: acc.mask ?? undefined,
-        currentBalance: acc.balances.current ?? undefined,
-        availableBalance: acc.balances.available ?? undefined,
-        // Plaid sets iso_currency_code to null exactly when the account uses
-        // a non-ISO currency (unofficial_currency_code). With neither, store
-        // "XXX" (ISO 4217 "no currency"): saveAccounts flags it as
-        // unconverted instead of reading it as USD.
-        currency:
-          acc.balances.iso_currency_code ??
-          acc.balances.unofficial_currency_code ??
-          NO_CURRENCY,
-      }));
-
-      await ctx.runMutation(internal.banking.saveAccounts, {
-        userId: item.userId,
-        itemId: args.itemId,
-        accounts,
-      });
-
-      // Update item status to active
-      await ctx.runMutation(internal.banking.updateItemStatus, {
-        itemId: args.itemId,
-        status: "active",
-      });
-
-      // Fetch and update institution logo if missing
-      if (!item.institutionLogo && item.institutionId) {
         try {
-          await ctx.runAction(
-            internal.actions.plaid.updateInstitutionLogoInternal,
-            {
-              itemId: args.itemId,
-            },
-          );
-        } catch (logoError) {
-          // Don't fail the sync if logo fetch fails
-          console.warn(
-            "Failed to fetch institution logo during sync:",
-            describeError(logoError),
-          );
-        }
-      }
+          const response = await plaidClient.accountsGet({
+            access_token: accessToken,
+          });
 
-      return { success: true, accountCount: accounts.length };
-    } catch (error: unknown) {
-      // Handle Plaid errors
-      const plaidError = error as {
-        response?: { data?: { error_code?: string } };
-      };
-      if (plaidError.response?.data?.error_code) {
-        await ctx.runMutation(internal.banking.updateItemStatus, {
-          itemId: args.itemId,
-          status: "error",
-          errorCode: plaidError.response.data.error_code,
-        });
-      }
-      throw error;
-    }
+          const accounts = response.data.accounts.map((acc) => ({
+            accountId: acc.account_id,
+            name: acc.name,
+            officialName: acc.official_name ?? undefined,
+            type: acc.type,
+            subtype: acc.subtype ?? undefined,
+            mask: acc.mask ?? undefined,
+            currentBalance: acc.balances.current ?? undefined,
+            availableBalance: acc.balances.available ?? undefined,
+            // Plaid sets iso_currency_code to null exactly when the account uses
+            // a non-ISO currency (unofficial_currency_code). With neither, store
+            // "XXX" (ISO 4217 "no currency"): saveAccounts flags it as
+            // unconverted instead of reading it as USD.
+            currency:
+              acc.balances.iso_currency_code ??
+              acc.balances.unofficial_currency_code ??
+              NO_CURRENCY,
+          }));
+
+          await ctx.runMutation(internal.banking.saveAccounts, {
+            userId: item.userId,
+            itemId: args.itemId,
+            accounts,
+          });
+
+          // Update item status to active
+          await ctx.runMutation(internal.banking.updateItemStatus, {
+            itemId: args.itemId,
+            status: "active",
+          });
+
+          // Fetch and update institution logo if missing
+          if (!item.institutionLogo && item.institutionId) {
+            try {
+              await ctx.runAction(
+                internal.actions.plaid.updateInstitutionLogoInternal,
+                {
+                  itemId: args.itemId,
+                },
+              );
+            } catch (logoError) {
+              // Don't fail the sync if logo fetch fails
+              console.warn(
+                "Failed to fetch institution logo during sync:",
+                describeError(logoError),
+              );
+            }
+          }
+
+          return { success: true, accountCount: accounts.length };
+        } catch (error: unknown) {
+          // Handle Plaid errors
+          const plaidError = error as {
+            response?: { data?: { error_code?: string } };
+          };
+          if (plaidError.response?.data?.error_code) {
+            await ctx.runMutation(internal.banking.updateItemStatus, {
+              itemId: args.itemId,
+              status: "error",
+              errorCode: plaidError.response.data.error_code,
+            });
+          }
+          throw error;
+        }
+      },
+    );
   },
 });
 
@@ -504,6 +517,7 @@ export const refreshAccounts = action({
 
       await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {
         itemId: args.itemId,
+        trigger: "manual",
       });
 
       // Take a portfolio snapshot after sync (unless skipped)
@@ -534,6 +548,7 @@ export const refreshAccounts = action({
       try {
         await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {
           itemId: item.itemId,
+          trigger: "manual",
         });
       } catch (error) {
         failed++;
@@ -566,7 +581,7 @@ export const refreshAccounts = action({
  * the daily sync and "Sync all" (actions/syncAll.ts); internal, no auth.
  */
 export const syncAccountsForUserAdmin = internalAction({
-  args: { userId: v.string() },
+  args: { userId: v.string(), trigger: syncTriggerValidator },
   handler: async (
     ctx,
     args,
@@ -587,6 +602,7 @@ export const syncAccountsForUserAdmin = internalAction({
       try {
         await ctx.runAction(internal.actions.plaid.syncAccountsInternal, {
           itemId: item.itemId,
+          trigger: args.trigger,
         });
         console.log(`Synced accounts for item ${item.itemId}`);
       } catch (error) {
@@ -601,7 +617,7 @@ export const syncAccountsForUserAdmin = internalAction({
       await ctx.scheduler.runAfter(
         0,
         internal.actions.plaid.syncItemTransactions,
-        { itemId: item.itemId },
+        { itemId: item.itemId, trigger: args.trigger },
       );
     }
 
@@ -632,7 +648,7 @@ function plaidErrorCode(error: unknown): string | undefined {
  * that Plaid no longer lists. Until then each sync re-reads from the start.
  */
 export const syncItemTransactions = internalAction({
-  args: { itemId: v.string() },
+  args: { itemId: v.string(), trigger: syncTriggerValidator },
   handler: async (
     ctx,
     args,
@@ -642,90 +658,100 @@ export const syncItemTransactions = internalAction({
     });
     if (!item) throw new Error("Item not found");
 
-    const accessToken = decrypt(item.accessToken, getEncryptionKey());
-    const plaidClient = getPlaidClient();
-    const startCursor = item.transactionsCursor;
-    const syncStartedAt = Date.now();
+    return withSyncRun(
+      ctx,
+      {
+        provider: "plaid-transactions",
+        userId: item.userId,
+        trigger: args.trigger,
+      },
+      async () => {
+        const accessToken = decrypt(item.accessToken, getEncryptionKey());
+        const plaidClient = getPlaidClient();
+        const startCursor = item.transactionsCursor;
+        const syncStartedAt = Date.now();
 
-    try {
-      const result = await collectSyncPages(
-        async (cursor) => {
-          const response = await plaidClient.transactionsSync({
-            access_token: accessToken,
-            cursor,
-            count: TRANSACTIONS_SYNC_PAGE_SIZE,
-          });
-          const data = response.data;
-          return {
-            added: data.added.map((t) => toPlaidTransactionRecord(item.itemId, t)),
-            modified: data.modified.map((t) =>
-              toPlaidTransactionRecord(item.itemId, t),
-            ),
-            removed: data.removed.map((t) => t.transaction_id),
-            nextCursor: data.next_cursor,
-            hasMore: data.has_more,
-            updateStatus: data.transactions_update_status,
-            accountIds: data.accounts.map((a) => a.account_id),
-          };
-        },
-        startCursor,
-        {
-          isRestartError: (error) =>
-            plaidErrorCode(error) === MUTATION_DURING_PAGINATION,
-        },
-      );
+        try {
+          const result = await collectSyncPages(
+            async (cursor) => {
+              const response = await plaidClient.transactionsSync({
+                access_token: accessToken,
+                cursor,
+                count: TRANSACTIONS_SYNC_PAGE_SIZE,
+              });
+              const data = response.data;
+              return {
+                added: data.added.map((t) => toPlaidTransactionRecord(item.itemId, t)),
+                modified: data.modified.map((t) =>
+                  toPlaidTransactionRecord(item.itemId, t),
+                ),
+                removed: data.removed.map((t) => t.transaction_id),
+                nextCursor: data.next_cursor,
+                hasMore: data.has_more,
+                updateStatus: data.transactions_update_status,
+                accountIds: data.accounts.map((a) => a.account_id),
+              };
+            },
+            startCursor,
+            {
+              isRestartError: (error) =>
+                plaidErrorCode(error) === MUTATION_DURING_PAGINATION,
+            },
+          );
 
-      const { upserts, removed } = mergeSyncPages(result.pages);
-      const upsertBatches = chunk(upserts, TRANSACTIONS_WRITE_BATCH);
-      const removedBatches = chunk(removed, TRANSACTIONS_WRITE_BATCH);
-      for (let i = 0; i < Math.max(upsertBatches.length, removedBatches.length); i++) {
-        await ctx.runMutation(internal.banking.applyTransactionChanges, {
-          userId: item.userId,
-          upserts: upsertBatches[i] ?? [],
-          removed: removedBatches[i] ?? [],
-        });
-      }
-
-      const initial = !startCursor;
-      const complete =
-        !initial ||
-        result.updateStatus ===
-          TransactionsUpdateStatus.HistoricalUpdateComplete;
-
-      if (initial && complete) {
-        for (const accountId of result.accountIds) {
-          let more = true;
-          while (more) {
-            ({ more } = await ctx.runMutation(
-              internal.banking.reconcileAccountTransactions,
-              { userId: item.userId, accountId, syncStartedAt },
-            ));
+          const { upserts, removed } = mergeSyncPages(result.pages);
+          const upsertBatches = chunk(upserts, TRANSACTIONS_WRITE_BATCH);
+          const removedBatches = chunk(removed, TRANSACTIONS_WRITE_BATCH);
+          for (let i = 0; i < Math.max(upsertBatches.length, removedBatches.length); i++) {
+            await ctx.runMutation(internal.banking.applyTransactionChanges, {
+              userId: item.userId,
+              upserts: upsertBatches[i] ?? [],
+              removed: removedBatches[i] ?? [],
+            });
           }
+
+          const initial = !startCursor;
+          const complete =
+            !initial ||
+            result.updateStatus ===
+              TransactionsUpdateStatus.HistoricalUpdateComplete;
+
+          if (initial && complete) {
+            for (const accountId of result.accountIds) {
+              let more = true;
+              while (more) {
+                ({ more } = await ctx.runMutation(
+                  internal.banking.reconcileAccountTransactions,
+                  { userId: item.userId, accountId, syncStartedAt },
+                ));
+              }
+            }
+          }
+
+          if (complete && result.nextCursor) {
+            await ctx.runMutation(internal.banking.saveTransactionsCursor, {
+              itemId: item.itemId,
+              cursor: result.nextCursor,
+            });
+          }
+
+          return { upserted: upserts.length, removed: removed.length, complete };
+        } catch (error: unknown) {
+          // Only a login problem flags the item: the balance sync
+          // (syncAccountsInternal) owns item health, and a transactions-only
+          // failure (e.g. a bank without the product) must not show a working
+          // connection as broken
+          if (plaidErrorCode(error) === "ITEM_LOGIN_REQUIRED") {
+            await ctx.runMutation(internal.banking.updateItemStatus, {
+              itemId: item.itemId,
+              status: "error",
+              errorCode: "ITEM_LOGIN_REQUIRED",
+            });
+          }
+          throw error;
         }
-      }
-
-      if (complete && result.nextCursor) {
-        await ctx.runMutation(internal.banking.saveTransactionsCursor, {
-          itemId: item.itemId,
-          cursor: result.nextCursor,
-        });
-      }
-
-      return { upserted: upserts.length, removed: removed.length, complete };
-    } catch (error: unknown) {
-      // Only a login problem flags the item: the balance sync
-      // (syncAccountsInternal) owns item health, and a transactions-only
-      // failure (e.g. a bank without the product) must not show a working
-      // connection as broken
-      if (plaidErrorCode(error) === "ITEM_LOGIN_REQUIRED") {
-        await ctx.runMutation(internal.banking.updateItemStatus, {
-          itemId: item.itemId,
-          status: "error",
-          errorCode: "ITEM_LOGIN_REQUIRED",
-        });
-      }
-      throw error;
-    }
+      },
+    );
   },
 });
 
@@ -771,6 +797,7 @@ export const syncTransactions = action({
         const result: { upserted: number; removed: number } =
           await ctx.runAction(internal.actions.plaid.syncItemTransactions, {
             itemId: item.itemId,
+            trigger: "manual",
           });
         transactionsChanged += result.upserted + result.removed;
       } catch (error) {

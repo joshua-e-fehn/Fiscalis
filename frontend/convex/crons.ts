@@ -80,4 +80,15 @@ crons.cron(
   {},
 );
 
+// ═══════════════════════════════════════════════════════════════
+// Sync Run Ledger
+// Daily at 04:30 UTC: delete syncRuns rows older than 90 days
+// (services/health/syncRuns.ts SYNC_RUN_RETENTION_MS)
+// ═══════════════════════════════════════════════════════════════
+crons.daily(
+  "prune-sync-runs",
+  { hourUTC: 4, minuteUTC: 30 },
+  internal.syncRuns.pruneRuns,
+);
+
 export default crons;

@@ -79,9 +79,9 @@ function ExportCard() {
       <CardContent className="flex flex-col items-start gap-3">
         <Button onClick={handleExport} disabled={isExporting}>
           {isExporting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="me-2 h-4 w-4 animate-spin" />
           ) : (
-            <Download className="mr-2 h-4 w-4" />
+            <Download className="me-2 h-4 w-4" />
           )}
           {isExporting ? t("preparing") : t("button")}
         </Button>
@@ -138,7 +138,7 @@ function DeleteAccountCard() {
         >
           <AlertDialogTrigger asChild>
             <Button variant="destructive">
-              <Trash2 className="mr-2 h-4 w-4" />
+              <Trash2 className="me-2 h-4 w-4" />
               {t("button")}
             </Button>
           </AlertDialogTrigger>
@@ -173,7 +173,7 @@ function DeleteAccountCard() {
                   variant="destructive"
                   disabled={!confirmed || isDeleting}
                 >
-                  {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                   {isDeleting ? t("deleting") : t("confirm")}
                 </Button>
               </AlertDialogFooter>

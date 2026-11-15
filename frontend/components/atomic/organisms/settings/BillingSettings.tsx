@@ -249,7 +249,7 @@ function InvoicesCard({ invoices }: { invoices: Overview["invoices"] }) {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("date")}</TableHead>
-                <TableHead className="text-right">{t("amount")}</TableHead>
+                <TableHead className="text-end">{t("amount")}</TableHead>
                 <TableHead>{t("status")}</TableHead>
               </TableRow>
             </TableHeader>
@@ -259,7 +259,7 @@ function InvoicesCard({ invoices }: { invoices: Overview["invoices"] }) {
                 return (
                   <TableRow key={invoice.id}>
                     <TableCell>{format.dateTime(new Date(invoice.created), "date")}</TableCell>
-                    <TableCell className="text-right tabular-nums">
+                    <TableCell className="text-end tabular-nums">
                       {formatCurrency(
                         status === "paid" ? invoice.amountPaid : invoice.amountDue,
                         invoice.currency,

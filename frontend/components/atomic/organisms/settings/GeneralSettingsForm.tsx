@@ -302,7 +302,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={isSaving || !!birthDateError}>
-          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isSaving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
           {tActions("saveChanges")}
         </Button>
         {saved && (

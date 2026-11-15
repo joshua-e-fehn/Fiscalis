@@ -109,7 +109,7 @@ export const PriceChart = memo(function PriceChart({
   return (
     <div className="relative h-full">
       {hasGaps && (
-        <p className="absolute right-3 top-0 z-10 text-xs text-muted-foreground">
+        <p className="absolute end-3 top-0 z-10 text-xs text-muted-foreground">
           {t("gaps")}
         </p>
       )}

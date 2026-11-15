@@ -9,6 +9,7 @@ import {
 import { internal } from "./_generated/api";
 import type { TableNames } from "./_generated/dataModel";
 import { requireUserId, type OwnedTable } from "./lib/auth";
+import { resetUserRateLimits } from "./lib/rateLimit";
 import { userError } from "./lib/userError";
 import {
   EXPORT_PAGE_SIZE,
@@ -158,6 +159,7 @@ export const purgeUserData = internalMutation({
   },
   handler: async (ctx, args) => {
     if (args.tableIndex >= USER_DATA_TABLE_NAMES.length) {
+      await resetUserRateLimits(ctx, args.userId);
       console.log("Account deletion: user data purged");
       if (args.deleteClerkUser) {
         await ctx.scheduler.runAfter(0, internal.account.deleteClerkUser, {

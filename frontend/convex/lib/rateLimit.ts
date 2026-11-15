@@ -1,7 +1,7 @@
 import { RateLimiter } from "@convex-dev/rate-limiter";
 import { ConvexError } from "convex/values";
 import { components } from "../_generated/api";
-import type { ActionCtx } from "../_generated/server";
+import type { ActionCtx, MutationCtx } from "../_generated/server";
 import {
   USER_RATE_LIMITS,
   rateLimitedError,
@@ -28,5 +28,19 @@ export async function enforceUserRateLimit(
   const status = await rateLimiter.limit(ctx, name, { key: userId });
   if (!status.ok) {
     throw new ConvexError(rateLimitedError(name, status.retryAfter));
+  }
+}
+
+/**
+ * Drops every rate-limit bucket keyed by `userId` (account deletion,
+ * convex/account.ts purgeUserData), so no state for the user is left in
+ * the rate-limiter component.
+ */
+export async function resetUserRateLimits(
+  ctx: MutationCtx,
+  userId: string,
+): Promise<void> {
+  for (const name of Object.keys(USER_RATE_LIMITS) as UserRateLimitName[]) {
+    await rateLimiter.reset(ctx, name, { key: userId });
   }
 }

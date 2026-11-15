@@ -99,17 +99,14 @@ export function investmentLots(
   const invested: Lot[] = [];
   const gains: Lot[] = [];
   const estimatedDates: string[] = [];
+  const owned = ownedSourcesByDay(days, baselines);
   for (let i = 1; i < days.length; i++) {
     const prev = days[i - 1].categoryBreakdown;
     const cur = days[i].categoryBreakdown;
     if (!prev || !cur) continue;
-    const from = days[i - 1].date;
-    const to = days[i].date;
-    const sources = new Set(
-      baselines.filter((b) => b.date > from && b.date <= to).map((b) => b.source),
-    );
+    const sources = owned.get(i) ?? new Set<string>();
     let flow = 0;
-    let owned = 0;
+    let ownedFlow = 0;
     let change = 0;
     let estimated = false;
     for (const category of GOAL_INVESTMENT_CATEGORIES) {
@@ -120,17 +117,60 @@ export function investmentLots(
       flow += f.amount;
       estimated ||= f.estimated;
       change += (after?.value ?? 0) - (before?.value ?? 0);
-      for (const source of sources) owned += sourceFlow(before, after, source);
+      for (const source of sources) ownedFlow += sourceFlow(before, after, source);
     }
     const date = days[i].date;
     flow = roundMoney(flow);
     const gain = roundMoney(change - flow);
-    const added = roundMoney(flow - owned);
+    const added = roundMoney(flow - ownedFlow);
     if (added !== 0) invested.push({ date, amount: added });
     if (gain !== 0) gains.push({ date, amount: gain });
     if (estimated) estimatedDates.push(date);
   }
   return { invested, gains, estimatedDates };
+}
+
+/** A source's value across the goal categories of one row. */
+function sourceValue(row: SnapshotForLots, source: string): number {
+  let value = 0;
+  for (const c of row.categoryBreakdown ?? []) {
+    if (!(GOAL_INVESTMENT_CATEGORIES as readonly string[]).includes(c.category)) continue;
+    value += c.sources?.find((s) => s.source === source)?.value ?? 0;
+  }
+  return value;
+}
+
+/**
+ * Per day index, the sources whose flow that day moved holdings already
+ * owned: the day covering each baseline, and, for a reconnect, the day
+ * the same source last dropped to nothing before it (the disconnect), so
+ * removing and re-adding an account nets out instead of leaving its whole
+ * value as money taken out.
+ */
+function ownedSourcesByDay(
+  days: readonly SnapshotForLots[],
+  baselines: readonly LotBaseline[],
+): Map<number, Set<string>> {
+  const owned = new Map<number, Set<string>>();
+  const mark = (i: number, source: string) => {
+    const set = owned.get(i) ?? new Set<string>();
+    set.add(source);
+    owned.set(i, set);
+  };
+  for (const b of baselines) {
+    const j = days.findIndex((d, i) => i > 0 && d.date >= b.date && days[i - 1].date < b.date);
+    if (j < 1) continue;
+    mark(j, b.source);
+    // Walk back over the days the source held nothing to the one it emptied
+    for (let i = j - 1; i >= 1; i--) {
+      if (sourceValue(days[i], b.source) !== 0) break;
+      if (sourceValue(days[i - 1], b.source) !== 0) {
+        mark(i, b.source);
+        break;
+      }
+    }
+  }
+  return owned;
 }
 
 /**

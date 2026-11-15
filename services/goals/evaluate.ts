@@ -325,40 +325,76 @@ function evaluateLeaf(
   }
 }
 
-/** Evaluate a rule tree for one goal. */
-export function evaluateRule(node: RuleNode, ctx: RuleContext, path = ""): RuleResult {
-  if (!isGroup(node)) return evaluateLeaf(node, path, ctx);
+/** Most satisfying charge sets a node keeps (bounds the search). */
+const MAX_OPTIONS = 64;
+
+/** A node's result plus every way (up to MAX_OPTIONS) it is met that fits the pools. */
+type Evaluated = RuleResult & { options: MetricCharge[][] };
+
+/**
+ * The charge sets of picking one option from each list, merged, that fit
+ * the pools together, in order, at most MAX_OPTIONS.
+ */
+function fittingProducts(lists: readonly MetricCharge[][][], ctx: RuleContext): MetricCharge[][] {
+  let acc: MetricCharge[][] = [[]];
+  for (const list of lists) {
+    const next: MetricCharge[][] = [];
+    for (const base of acc) {
+      for (const option of list) {
+        const merged = mergeCharges([base, option]);
+        if (fits(merged, ctx)) next.push(merged);
+        if (next.length >= MAX_OPTIONS) break;
+      }
+      if (next.length >= MAX_OPTIONS) break;
+    }
+    acc = next;
+    if (acc.length === 0) break;
+  }
+  return acc;
+}
+
+function evaluateNode(node: RuleNode, ctx: RuleContext, path: string): Evaluated {
+  if (!isGroup(node)) {
+    const r = evaluateLeaf(node, path, ctx);
+    return { ...r, options: r.satisfied ? [r.charges] : [] };
+  }
   const children = node.children.map((child, i) =>
-    evaluateRule(child, ctx, path === "" ? String(i) : `${path}.${i}`),
+    evaluateNode(child, ctx, path === "" ? String(i) : `${path}.${i}`),
   );
   const leaves = children.flatMap((c) => c.leaves);
 
   if (node.kind === "all") {
+    const options = children.every((c) => c.options.length > 0)
+      ? fittingProducts(children.map((c) => c.options), ctx)
+      : [];
+    if (options.length > 0) {
+      return { satisfied: true, progress: 1, charges: options[0], leaves, options };
+    }
     const charges = mergeCharges(children.map((c) => c.charges));
-    const satisfied = children.every((c) => c.satisfied) && fits(charges, ctx);
     const mean = children.reduce((s, c) => s + c.progress, 0) / children.length;
     return {
-      satisfied,
-      progress: satisfied ? 1 : unmetProgress(mean, charges, ctx),
+      satisfied: false,
+      progress: unmetProgress(mean, charges, ctx),
       charges,
       leaves,
+      options: [],
     };
   }
 
-  // The first combination (in child order) of `need` satisfied children
-  // whose charges fit together; an `any` is a combination of one
+  // Every combination (in child order) of `need` met children whose
+  // options fit together; an `any` is a combination of one
   const need = node.kind === "any" ? 1 : node.count;
-  const satisfiedIdx = children.flatMap((c, i) => (c.satisfied ? [i] : []));
-  const met = firstCombination(satisfiedIdx, need, (idx) =>
-    fits(mergeCharges(idx.map((i) => children[i].charges)), ctx),
-  );
-  if (met) {
-    return {
-      satisfied: true,
-      progress: 1,
-      charges: mergeCharges(met.map((i) => children[i].charges)),
-      leaves,
-    };
+  const metIdx = children.flatMap((c, i) => (c.options.length > 0 ? [i] : []));
+  const options: MetricCharge[][] = [];
+  forEachCombination(metIdx, need, (idx) => {
+    for (const o of fittingProducts(idx.map((i) => children[i].options), ctx)) {
+      options.push(o);
+      if (options.length >= MAX_OPTIONS) return false;
+    }
+    return true;
+  });
+  if (options.length > 0) {
+    return { satisfied: true, progress: 1, charges: options[0], leaves, options };
   }
   // Unmet: an early purchase charges the `need` children closest to done
   const closest = children
@@ -369,7 +405,23 @@ export function evaluateRule(node: RuleNode, ctx: RuleContext, path = ""): RuleR
     .map((x) => x.c);
   const charges = mergeCharges(closest.map((c) => c.charges));
   const mean = closest.reduce((s, c) => s + c.progress, 0) / need;
-  return { satisfied: false, progress: unmetProgress(mean, charges, ctx), charges, leaves };
+  return {
+    satisfied: false,
+    progress: unmetProgress(mean, charges, ctx),
+    charges,
+    leaves,
+    options: [],
+  };
+}
+
+/**
+ * Evaluate a rule tree for one goal. It is met when some choice of
+ * branches, across every level, is met with charges that fit the pools
+ * together; its charges are the first such choice in rule order.
+ */
+export function evaluateRule(node: RuleNode, ctx: RuleContext, path = ""): RuleResult {
+  const { satisfied, progress, charges, leaves } = evaluateNode(node, ctx, path);
+  return { satisfied, progress, charges, leaves };
 }
 
 /**
@@ -385,25 +437,25 @@ function unmetProgress(mean: number, charges: readonly MetricCharge[], ctx: Rule
   return Math.min(mean, covered, 0.99);
 }
 
-/** The first `k`-subset of `items` (lexicographic) that `ok` accepts, or null. */
-function firstCombination(
+/** Call `visit` with each `k`-subset of `items` in lexicographic order until it returns false. */
+function forEachCombination(
   items: readonly number[],
   k: number,
-  ok: (subset: number[]) => boolean,
-): number[] | null {
-  if (k > items.length) return null;
+  visit: (subset: number[]) => boolean,
+): void {
+  if (k > items.length) return;
   const pick: number[] = [];
-  const walk = (from: number): number[] | null => {
-    if (pick.length === k) return ok(pick) ? [...pick] : null;
+  const walk = (from: number): boolean => {
+    if (pick.length === k) return visit([...pick]);
     for (let i = from; i <= items.length - (k - pick.length); i++) {
       pick.push(items[i]);
-      const found = walk(i + 1);
+      const go = walk(i + 1);
       pick.pop();
-      if (found) return found;
+      if (!go) return false;
     }
-    return null;
+    return true;
   };
-  return walk(0);
+  walk(0);
 }
 
 // ═══════════════════════════════════════════════════════════════

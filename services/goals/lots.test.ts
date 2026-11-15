@@ -134,4 +134,29 @@ describe("investmentLots", () => {
     // No per-source rows: nothing to attribute the appearance to
     expect(invested).toEqual([{ date: "2026-01-05", amount: 500 }]);
   });
+
+  it("nets a disconnect against the reconnect that follows it", () => {
+    const row = (date: string, ts: number, bitpanda: number, flow?: number) => ({
+      date,
+      timestamp: ts,
+      categoryBreakdown: [
+        {
+          category: "crypto",
+          value: bitpanda,
+          netFlow: flow ?? 0,
+          sources: bitpanda || flow ? [{ source: "bitpanda", value: bitpanda, netFlow: flow ?? 0 }] : [],
+        },
+      ],
+    });
+    const { invested } = investmentLots(
+      [
+        row("2026-03-01", 1, 50_000),
+        row("2026-03-03", 2, 0, -50_000), // disconnected
+        row("2026-03-04", 3, 0),
+        row("2026-03-05", 4, 50_000, 50_000), // reconnected
+      ],
+      [{ date: "2026-03-05", source: "bitpanda" }],
+    );
+    expect(invested).toEqual([]);
+  });
 });

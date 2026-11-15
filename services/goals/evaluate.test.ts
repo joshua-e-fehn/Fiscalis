@@ -292,6 +292,29 @@ describe("groups", () => {
     ]);
   });
 
+  it("chooses branches across levels so the whole rule fits", () => {
+    const once = (kind: "invested" | "gains"): RuleNode => ({
+      kind,
+      target: { kind: "priceMultiple", multiple: 1 },
+    });
+    const rule: RuleNode = {
+      kind: "all",
+      children: [{ kind: "any", children: [once("invested"), once("gains")] }, once("invested")],
+    };
+    const r = evaluateGoals(
+      input({
+        investedLots: [{ date: "2026-02-01", amount: 1000 }],
+        gainsLots: [{ date: "2026-02-01", amount: 1000 }],
+        goals: [goal({ rule })],
+      }),
+    );
+    expect(only(r).satisfied).toBe(true);
+    expect(only(r).charges).toEqual([
+      { metric: "gains", amount: 1000 },
+      { metric: "invested", amount: 1000 },
+    ]);
+  });
+
   it("charges the first satisfied branch of an any", () => {
     const rule: RuleNode = {
       kind: "any",

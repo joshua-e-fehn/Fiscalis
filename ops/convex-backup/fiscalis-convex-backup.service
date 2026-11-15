@@ -32,7 +32,10 @@ Environment=PATH=/usr/bin:/bin
 # The Convex CLI keeps a little state under $HOME.
 Environment=HOME=%C/fiscalis-convex-backup
 Environment=CONVEX_TELEMETRY_DISABLED=1
-TimeoutStartSec=90min
+# Longer than the script's own worst case (60 min export + 3 x 10 min PUT +
+# retry sleeps), so the script times out first and posts the alert; a kill
+# by systemd would fail silently.
+TimeoutStartSec=100min
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7

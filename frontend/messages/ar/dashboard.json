@@ -1,0 +1,143 @@
+{
+  "page": {
+    "title": "لوحة التحكم",
+    "subtitle": "نظرتك المالية الشاملة",
+    "performanceTitle": "تطور المحفظة",
+    "investmentCategories": "فئات الاستثمار"
+  },
+  "netWorth": {
+    "title": "إجمالي صافي الثروة",
+    "unrealized": "({percent}) غير محقق",
+    "unrealizedCoverage": "({percent}) غير محقق على {covered}% من الأصول"
+  },
+  "kpi": {
+    "totalAssets": "إجمالي الأصول",
+    "totalLiabilities": "إجمالي الالتزامات"
+  },
+  "ytdNetWorth": {
+    "title": "صافي الثروة منذ بداية العام",
+    "changeSinceJan1": "تغيّر بنسبة {percent} منذ 1 يناير",
+    "fxEffectHint": "مقيس بعملة {currency}: يشمل تغيّر سعر صرف اليورو منذ 1 يناير.",
+    "partial": "جزئي: فشلت مزامنة أحد المزوّدين أو يوجد سعر مفقود",
+    "trackingSince": "لا يوجد سجل كافٍ (التتبّع منذ {date})",
+    "noData": "لا توجد بيانات لهذا العام"
+  },
+  "allocation": {
+    "title": "توزيع الأصول",
+    "description": "التوزيع عبر فئات الاستثمار",
+    "empty": "لا توجد أصول لعرضها",
+    "emptyHint": "أضف استثمارات لترى توزيعك"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, zero {لا مقتنيات} one {مقتنى واحد} two {مقتنيان} few {# مقتنيات} many {# مقتنى} other {# مقتنى}}",
+    "noHoldings": "لا توجد مقتنيات",
+    "comingSoon": "قريبًا"
+  },
+  "liabilitiesCard": {
+    "title": "الالتزامات",
+    "accounts": "{accounts, plural, zero {لا حسابات} one {حساب واحد} two {حسابان} few {# حسابات} many {# حسابًا} other {# حساب}}",
+    "loans": "{loans, plural, zero {لا قروض} one {قرض واحد} two {قرضان} few {# قروض} many {# قرضًا} other {# قرض}}",
+    "accountsAndLoans": "{accounts, plural, zero {لا حسابات} one {حساب واحد} two {حسابان} few {# حسابات} many {# حسابًا} other {# حساب}} · {loans, plural, zero {لا قروض} one {قرض واحد} two {قرضان} few {# قروض} many {# قرضًا} other {# قرض}}",
+    "monthlyPayments": "{amount} شهريًا كأقساط قروض"
+  },
+  "section": {
+    "totalValue": "إجمالي قيمة المحفظة",
+    "totalCash": "إجمالي المقتنيات النقدية",
+    "profitLoss": "إجمالي الربح / الخسارة",
+    "profitLossSinceTracking": "الربح / الخسارة منذ بدء التتبّع",
+    "changeSinceTracking": "التغيّر منذ بدء التتبّع",
+    "since": "منذ {date}",
+    "sinceNetOfFlows": "منذ {date}، بعد خصم المشتريات والإيداعات",
+    "coverage": "على {percent}% من القيمة: المقتنيات التي ليس لها أساس تكلفة مستبعدة",
+    "addCostData": "أضف بيانات التكلفة لتتبّع الأداء",
+    "noHoldings": "لا توجد مقتنيات بعد",
+    "ytdChange": "التغيّر منذ بداية العام",
+    "ytdReturn": "العائد منذ بداية العام",
+    "ytdReturnEstimated": "العائد منذ بداية العام (تقديري)",
+    "sincePartial": "منذ {date} · جزئي: فشلت مزامنة أو يوجد سعر مفقود",
+    "trackedSince": "لا يوجد سجل كافٍ (التتبّع منذ {date})",
+    "noDataThisYear": "لا توجد بيانات لهذا العام بعد",
+    "portfolioAllocation": "توزيع المحفظة",
+    "highCash": "مركز نقدي مرتفع (متحفظ)",
+    "lowCash": "احتياطي نقدي منخفض",
+    "ofTotalPortfolio": "من إجمالي المحفظة",
+    "addAssets": "أضف أصولًا لترى التوزيع",
+    "activeAccounts": "الحسابات النشطة",
+    "accountsLinked": "{count, plural, zero {حساب مرتبط} one {حساب مرتبط} two {حسابان مرتبطان} few {حسابات مرتبطة} many {حسابًا مرتبطًا} other {حساب مرتبط}}",
+    "historyHint": "يظهر السجل بعد اللقطة اليومية القادمة"
+  },
+  "allocationChart": {
+    "title": "التوزيع",
+    "empty": "لا توجد مقتنيات بعد",
+    "other": "أخرى (<2%)"
+  },
+  "performanceChart": {
+    "portfolioTitle": "أداء المحفظة",
+    "netWorthTitle": "أداء صافي الثروة",
+    "portfolio": "المحفظة",
+    "netWorth": "صافي الثروة",
+    "value": "القيمة",
+    "costBasis": "أساس التكلفة",
+    "empty": "لا توجد بيانات أداء بعد",
+    "emptyHint": "أضف مقتنيات لتتبّع أداء المحفظة",
+    "tooltipRow": "{series}: {amount}",
+    "partial": "جزئي: فشلت مزامنة أحد المزوّدين أو يوجد سعر مفقود"
+  },
+  "topHoldings": {
+    "title": "أكبر المقتنيات",
+    "empty": "لا توجد مقتنيات بعد",
+    "count": "({count, plural, zero {لا مقتنيات} one {مقتنى واحد} two {مقتنيان} few {# مقتنيات} many {# مقتنى} other {# مقتنى}})"
+  },
+  "positions": {
+    "title": "كل المراكز",
+    "description": "عرض موحّد عبر جميع المزوّدين الماليين",
+    "empty": "لم يُعثر على مراكز",
+    "emptyHint": "اربط حساباتك لترى مقتنياتك",
+    "shownOfTotal": "{shown} من {total, plural, zero {# مركز} one {مركز واحد} two {مركزين} few {# مراكز} many {# مركزًا} other {# مركز}}",
+    "showLess": "عرض أقل",
+    "viewAll": "عرض الكل",
+    "searchPlaceholder": "ابحث في المراكز...",
+    "provider": "المزوّد",
+    "allProviders": "كل المزوّدين",
+    "category": "الفئة",
+    "allCategories": "كل الفئات",
+    "providers": {
+      "plaid": "بنك",
+      "snaptrade": "وسيط",
+      "bitpanda": "Bitpanda",
+      "manual": "يدوي"
+    },
+    "providerFilter": {
+      "plaid": "البنوك",
+      "snaptrade": "الوسطاء",
+      "bitpanda": "Bitpanda",
+      "manual": "يدوي"
+    },
+    "columns": {
+      "source": "المصدر",
+      "position": "المركز",
+      "category": "الفئة",
+      "quantity": "الكمية",
+      "value": "القيمة",
+      "profitLoss": "الربح/الخسارة",
+      "actions": "الإجراءات"
+    },
+    "shown": "{count, plural, zero {لا مراكز معروضة} one {مركز واحد معروض} two {مركزان معروضان} few {# مراكز معروضة} many {# مركزًا معروضًا} other {# مركز معروض}}",
+    "total": "الإجمالي: {amount}",
+    "costFxEstimated": "(تقديري)",
+    "costFxEstimatedHint": "حُوّلت التكلفة بسعر صرف اليوم: تواريخ الشراء غير معروفة"
+  },
+  "cashHoldings": {
+    "bankAccount": "حساب مصرفي",
+    "cashPosition": "مركز نقدي",
+    "brokerCash": "{account} - نقد"
+  },
+  "emptyState": {
+    "title": "اربط حسابك الأول",
+    "description": "تمتلئ لوحة التحكم بمجرد أن يعرف Fiscalis ما تملكه. اربط بنكًا أو وسيطًا، أو استورد Bitpanda، أو أضف المعادن الثمينة والقروض يدويًا.",
+    "bank": "ربط بنك",
+    "broker": "ربط وسيط",
+    "metals": "إضافة معادن ثمينة",
+    "loan": "إضافة قرض"
+  }
+}

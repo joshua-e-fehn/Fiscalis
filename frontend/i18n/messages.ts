@@ -103,6 +103,7 @@ import ptPT from "@/messages/pt-PT";
 import { ru } from "@/messages/ru";
 import { zhHans } from "@/messages/zh-Hans";
 import { hi } from "@/messages/hi";
+import { ar } from "@/messages/ar";
 import type { Language } from "./locales";
 
 const en = {
@@ -222,6 +223,7 @@ const MESSAGES: Record<Language, Messages> = {
   ru,
   "zh-Hans": zhHans,
   hi,
+  ar,
 };
 
 export function messagesFor(language: Language): Messages {

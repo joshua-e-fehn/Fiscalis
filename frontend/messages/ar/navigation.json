@@ -1,0 +1,75 @@
+{
+  "sidebar": {
+    "groups": {
+      "portfolio": "المحفظة",
+      "tools": "الأدوات",
+      "integrations": "التكاملات",
+      "others": "أخرى"
+    },
+    "items": {
+      "dashboard": "لوحة التحكم",
+      "investments": "الاستثمارات",
+      "equities": "الأسهم",
+      "commodities": "السلع",
+      "bonds": "السندات",
+      "realEstate": "العقارات",
+      "cash": "النقد وسوق المال",
+      "crypto": "العملات المشفرة",
+      "collectibles": "المقتنيات النادرة",
+      "liabilities": "الالتزامات",
+      "liabilitiesOverview": "كل الالتزامات",
+      "loans": "القروض",
+      "investmentStrategies": "استراتيجيات الاستثمار",
+      "pies": "المحافظ الجزئية",
+      "banking": "الخدمات المصرفية",
+      "brokers": "الوسطاء",
+      "retirementPlanner": "مخطط التقاعد",
+      "interestCalculators": "حاسبات الفائدة",
+      "loanCalculators": "حاسبات القروض",
+      "worldMap": "خريطة العالم",
+      "documentation": "التوثيق",
+      "introduction": "مقدمة",
+      "getStarted": "ابدأ",
+      "tutorials": "دروس تعليمية",
+      "changelog": "سجل التغييرات",
+      "settings": "الإعدادات",
+      "general": "عام",
+      "apiKeys": "مفاتيح API",
+      "categories": "الفئات",
+      "privacy": "الخصوصية",
+      "team": "الفريق",
+      "billing": "الفوترة",
+      "limits": "الحدود"
+    }
+  },
+  "brand": {
+    "logoAlt": "شعار Fiscalis"
+  },
+  "userMenu": {
+    "upgrade": "الترقية إلى Pro",
+    "account": "الحساب",
+    "billing": "الفوترة",
+    "notifications": "الإشعارات",
+    "logOut": "تسجيل الخروج"
+  },
+  "header": {
+    "signIn": "تسجيل الدخول",
+    "joinWaitlist": "انضم إلى قائمة الانتظار",
+    "dashboard": "لوحة التحكم"
+  },
+  "sync": {
+    "syncAll": "مزامنة كل الحسابات",
+    "syncing": "جارٍ مزامنة كل الحسابات…",
+    "complete": "اكتملت المزامنة",
+    "failed": "فشلت المزامنة",
+    "synced": "تمت المزامنة: {providers}",
+    "failedProviders": "فشلت: {providers}",
+    "partial": "تمت المزامنة: {synced}. فشلت: {failed}",
+    "providerCount": "{provider} ({count})",
+    "providers": {
+      "plaid": "الخدمات المصرفية",
+      "snaptrade": "الوسطاء",
+      "bitpanda": "Bitpanda"
+    }
+  }
+}

@@ -313,6 +313,10 @@ describe("locale helpers", () => {
     expect(INTL_TAGS.hi).toBe("hi-IN");
   });
 
+  it("formats Arabic with Latin digits, like formatCurrency", () => {
+    expect(INTL_TAGS.ar).toBe("ar-u-nu-latn");
+  });
+
   it("maps Intl tags back to app languages", () => {
     expect(languageForLocale("de-DE")).toBe("de");
     expect(languageForLocale("de-CH")).toBe("de");

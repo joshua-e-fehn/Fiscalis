@@ -3,7 +3,8 @@ import type { MutationCtx, QueryCtx } from "../_generated/server";
 /**
  * Tables whose rows make a user a target of the daily sync: a provider
  * connection to refresh, or manual assets/liabilities whose value moves
- * (vault spot prices, loan schedules) and so needs a daily snapshot.
+ * (vault spot prices, loan schedules, exchange rates of a foreign manual
+ * asset) and so needs a daily snapshot.
  */
 export const SYNC_SOURCE_TABLES = [
   "plaidItems",
@@ -11,6 +12,7 @@ export const SYNC_SOURCE_TABLES = [
   "bitpandaConnections",
   "vaultItems",
   "loans",
+  "manualAssets",
 ] as const;
 
 type UserTable =

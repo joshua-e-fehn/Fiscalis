@@ -10,6 +10,7 @@ import {
 } from "../../services/portfolio/aggregate";
 import { holdingProfitLoss } from "../../services/portfolio/categorySummary";
 import { hasUserOverride } from "../../services/classification";
+import { latestValuation } from "../../services/portfolio/manualAssets";
 import type { ClassificationTarget } from "../lib/types/classification";
 
 /**
@@ -83,6 +84,8 @@ export interface UnifiedPosition {
   id: string;
   _id: string;
   provider: LoadedHolding["provider"];
+  /** Where it comes from: tells a vault item, a loan and a manual asset apart */
+  source: LoadedHolding["source"];
   /** The holding's category (stored, override-aware; see placeHolding) */
   category: string;
   subcategory?: string;
@@ -119,8 +122,9 @@ export interface UnifiedPosition {
 /**
  * Get all positions across all providers in a unified format, sorted by
  * value in EUR (largest first). Categories are the classified ones (user
- * overrides included), vault items are valued at spot on the server and
- * P/L is in EUR, all from the shared loader.
+ * overrides included), vault items are valued at spot and manual assets
+ * at their latest valuation on the server, and P/L is in EUR, all from the
+ * shared loader.
  */
 export const getUnifiedPositions = query({
   args: {
@@ -174,6 +178,7 @@ export const getUnifiedPositions = query({
       const base = {
         _id: h.id,
         provider: h.provider,
+        source: h.source,
         category: placed.category,
         subcategory: placed.subcategory,
         name: h.name,
@@ -319,6 +324,25 @@ export const getUnifiedPositions = query({
               termMonths: loan.termMonths,
               nextPaymentDate: loan.nextPaymentDate,
               scheduledPayment: loan.scheduledPayment,
+            },
+          });
+          break;
+        }
+        case "manualAsset": {
+          const asset = h.doc;
+          const latest = latestValuation(asset.valuations);
+          positions.push({
+            ...base,
+            id: asset._id,
+            symbol: "",
+            quantity: 1,
+            marketValue: latest?.value ?? 0,
+            currency: asset.currency,
+            lastSyncAt: asset.updatedAt,
+            metadata: {
+              valuedOn: latest?.date,
+              linkedLoanId: asset.linkedLoanId,
+              attributes: asset.attributes,
             },
           });
           break;

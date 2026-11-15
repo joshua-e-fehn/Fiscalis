@@ -73,7 +73,9 @@ export type HoldingSource =
   | "brokerAccount"
   | "bitpanda"
   | "vault"
-  | "loan";
+  | "loan"
+  /** A manual asset (manualAssets.ts), valued by its own valuations */
+  | "manualAsset";
 
 export interface NormalizedHolding {
   /** Id of the stored document (unique per source) */

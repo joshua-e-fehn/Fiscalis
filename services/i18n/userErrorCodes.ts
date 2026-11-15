@@ -43,6 +43,20 @@ export const USER_ERROR_CODES = [
   "vaultOpeningAndTotalBoth",
   "vaultSellsMoreThanHeld",
 
+  // Manual assets (convex/manualAssets.ts, services/portfolio/manualAssets.ts)
+  "manualAssetNotFound",
+  "manualAssetSubcategoryInvalid",
+  "manualAssetNameRequired",
+  "manualAssetNameTooLong",
+  "manualAssetCurrencyInvalid",
+  "manualAssetValuationRequired",
+  "manualAssetTooManyValuations",
+  "manualAssetInvalidDate",
+  "manualAssetDateInFuture",
+  "manualAssetValueInvalid",
+  "manualAssetCostInvalid",
+  "manualAssetAttributeInvalid",
+
   // Profile and onboarding (frontend/lib/utils/date.ts BirthDateError)
   "birthDate.format",
   "birthDate.invalid",

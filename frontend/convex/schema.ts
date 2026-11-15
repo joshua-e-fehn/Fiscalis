@@ -5,6 +5,7 @@ import {
 	metalPriceCoreFields,
 	metalPriceSnapshotFields,
 } from "./lib/metalPriceValidators";
+import { manualAssetFields } from "./lib/manualAssetValidators";
 import {
 	DAY_COUNT_CONVENTIONS,
 	LOAN_PAYMENT_FREQUENCIES,
@@ -320,6 +321,22 @@ export default defineSchema({
 		.index("by_account_date", ["accountId", "tradeDate"])
 		.index("by_date", ["userId", "tradeDate"])
 		.index("by_snaptrade_id", ["snaptradeActivityId"]),
+
+	// ═══════════════════════════════════════════════════════════════
+	// MANUAL ASSETS (property, vehicles, private equity, collectibles, ...)
+	// ═══════════════════════════════════════════════════════════════
+
+	// Anything no provider reports, valued by the user's own dated
+	// valuations in its own currency (convex/manualAssets.ts). Counted in net
+	// worth and the snapshots as the "manualAsset" source (lib/netWorth.ts).
+	manualAssets: defineTable({
+		userId: v.string(), // Clerk user ID
+		...manualAssetFields, // category, subcategory, name, currency, valuations, ...
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_subcategory", ["userId", "category", "subcategory"]),
 
 	// ═══════════════════════════════════════════════════════════════
 	// LOANS (Debt Management)
@@ -949,7 +966,7 @@ export default defineSchema({
 
 		// Sync source that last wrote this snapshot (one row per user per
 		// day, upserted; older days may hold several intraday rows)
-		source: v.string(), // "plaid", "snaptrade", "loan", "vault", "scheduled-daily", ...
+		source: v.string(), // "plaid", "snaptrade", "loan", "vault", "manualAsset", "scheduled-daily", ...
 		// true when a provider sync before the snapshot failed, so that
 		// provider's holdings are from its last successful sync
 		partial: v.optional(v.boolean()),

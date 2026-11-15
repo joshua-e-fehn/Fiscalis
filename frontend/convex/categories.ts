@@ -76,34 +76,36 @@ function toCategoryPositions(holdings: LoadedHolding[]): CategoryPosition[] {
 }
 
 /**
- * The vault items among some holdings as top-holding rows: EUR value at the
- * spot mirror and cost, as the aggregate counts them (lib/netWorth.ts), named
- * like the vault pages (custom name, else the catalog name).
+ * The manual holdings among some holdings as top-holding rows, in EUR as
+ * the aggregate counts them (lib/netWorth.ts): vault items at the spot
+ * mirror and cost, named like the vault pages (custom name, else the
+ * catalog name), and manual assets at their latest valuation.
  */
-async function toVaultHoldings(
+async function toManualHoldings(
   ctx: QueryCtx,
   holdings: LoadedHolding[],
 ): Promise<CategoryHolding[]> {
   return await Promise.all(
-    holdings.flatMap((h) =>
-      h.source === "vault"
-        ? [
-            (async () => {
-              const catalog = h.doc.catalogItemId
-                ? await ctx.db.get(h.doc.catalogItemId)
-                : null;
-              return {
-                id: h.id,
-                name: h.doc.customName || catalog?.name || h.name,
-                subcategory: h.subcategory,
-                value: h.valueBase,
-                // None when valued at cost: its P/L is unknown
-                costBasis: profitLossCostBase(h),
-              };
-            })(),
-          ]
-        : [],
-    ),
+    holdings.flatMap((h) => {
+      const row = (name: string): CategoryHolding => ({
+        id: h.id,
+        name,
+        subcategory: h.subcategory,
+        value: h.valueBase,
+        // None when valued at cost: its P/L is unknown
+        costBasis: profitLossCostBase(h),
+      });
+      if (h.source === "manualAsset") return [Promise.resolve(row(h.name))];
+      if (h.source !== "vault") return [];
+      return [
+        (async () => {
+          const catalog = h.doc.catalogItemId
+            ? await ctx.db.get(h.doc.catalogItemId)
+            : null;
+          return row(h.doc.customName || catalog?.name || h.name);
+        })(),
+      ];
+    }),
   );
 }
 
@@ -129,11 +131,12 @@ function sourceTotal(
 /**
  * All positions in a category across providers, with the category summary
  * (value, cost-covered P&L and coverage, per subcategory too) from the
- * shared aggregator. Vault items (manual metals, commodities only) have no
- * position row and come as vaultHoldings. The summary also counts
- * account-level holdings that have no row (a Plaid investment account
- * classified into the category); accountLevelValue is their total, so the
- * positions and vaultHoldings sum to summary.value − accountLevelValue.
+ * shared aggregator. Vault items (manual metals, commodities only) and
+ * manual assets have no position row and come as manualHoldings. The
+ * summary also counts account-level holdings that have no row (a Plaid
+ * investment account classified into the category); accountLevelValue is
+ * their total, so the positions and manualHoldings sum to summary.value −
+ * accountLevelValue.
  */
 async function getCategoryPositions(
   ctx: QueryCtx,
@@ -145,7 +148,7 @@ async function getCategoryPositions(
   const summary = loaded.aggregate.byCategory[category];
   return {
     positions: toCategoryPositions(holdings),
-    vaultHoldings: await toVaultHoldings(ctx, holdings),
+    manualHoldings: await toManualHoldings(ctx, holdings),
     summary,
     accountLevelValue: sourceTotal(summary, ["bank"]),
   };
@@ -337,12 +340,25 @@ export const getCommodities = query({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Get all real estate holdings across providers (primarily REITs; physical
- * real estate is manual entry)
+ * Get all real estate holdings: REITs across providers, and physical
+ * property recorded as manual assets
  */
 export const getRealEstate = query({
   args: {},
   handler: (ctx) => getCategoryPositions(ctx, "real-estate"),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// COLLECTIBLES
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Get all collectibles: manual assets (art, watches, wine, ...) and any
+ * provider position classified as a collectible
+ */
+export const getCollectibles = query({
+  args: {},
+  handler: (ctx) => getCategoryPositions(ctx, "collectibles"),
 });
 
 // ═══════════════════════════════════════════════════════════════

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { SyncAllButton } from "@/components/atomic/atoms/syncAllButton";
 import { FxRateNotice } from "@/components/atomic/atoms/fxRateNotice";
+import { NotificationBell } from "@/components/atomic/atoms/notificationBell";
 
 export function Header({
   hasSidebarTrigger,
@@ -30,6 +31,7 @@ export function Header({
             {/* Only for a stale or fallback display-currency rate */}
             <FxRateNotice />
             <SyncAllButton />
+            <NotificationBell />
           </SignedIn>
           <SignedOut>
             <SignInButton>

@@ -33,7 +33,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/shadcn/sidebar";
-import { isFeatureEnabled } from "@/lib/config/features";
 import { useMyPlan } from "@/hooks/convex";
 
 export function NavigationUserMenu({
@@ -126,13 +125,12 @@ export function NavigationUserMenu({
                   {t("billing")}
                 </Link>
               </DropdownMenuItem>
-              {/* Planned entries stay hidden until they are built (lib/config/features.ts) */}
-              {isFeatureEnabled("notifications") && (
-                <DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/notifications">
                   <Bell />
                   {t("notifications")}
-                </DropdownMenuItem>
-              )}
+                </Link>
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>

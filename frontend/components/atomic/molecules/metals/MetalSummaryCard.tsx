@@ -37,22 +37,22 @@ const metalConfig: Record<
   }
 > = {
   gold: {
-    borderClass: "border-l-metal-gold",
+    borderClass: "border-s-metal-gold",
     bgClass: "hover:bg-metal-gold/5",
     hoverShadow: "hover:shadow-metal-gold",
   },
   silver: {
-    borderClass: "border-l-metal-silver",
+    borderClass: "border-s-metal-silver",
     bgClass: "hover:bg-metal-silver/5",
     hoverShadow: "hover:shadow-metal-silver",
   },
   platinum: {
-    borderClass: "border-l-metal-platinum",
+    borderClass: "border-s-metal-platinum",
     bgClass: "hover:bg-metal-platinum/5",
     hoverShadow: "hover:shadow-metal-platinum",
   },
   palladium: {
-    borderClass: "border-l-metal-palladium",
+    borderClass: "border-s-metal-palladium",
     bgClass: "hover:bg-metal-palladium/5",
     hoverShadow: "hover:shadow-metal-palladium",
   },
@@ -82,7 +82,7 @@ export function MetalSummaryCard({
     >
       <Card
         className={cn(
-          "border-l-4 transition-all duration-200 cursor-pointer",
+          "border-s-4 transition-all duration-200 cursor-pointer",
           config.borderClass,
           config.bgClass,
           config.hoverShadow,
@@ -121,7 +121,7 @@ export function MetalSummaryCard({
                     value={summary.profitLossPercent}
                     size="sm"
                   />
-                  <span className="text-xs text-muted-foreground ml-1">
+                  <span className="text-xs text-muted-foreground ms-1">
                     {t("holdings.profitLoss")}
                   </span>
                 </div>

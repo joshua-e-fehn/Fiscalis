@@ -312,7 +312,7 @@ export function SellItemDialog({
                     >
                       {formatCurrency(saleProfit, saleCurrency, { showSign: true })}
                       {saleProfitPercent !== null && (
-                        <span className="text-xs ml-1">
+                        <span className="text-xs ms-1">
                           ({saleProfitPercent >= 0 ? "+" : ""}
                           {saleProfitPercent.toFixed(1)}%)
                         </span>
@@ -341,7 +341,7 @@ export function SellItemDialog({
               disabled={isSubmitting || quantity <= 0 || parsedPrice <= 0}
             >
               {isSubmitting && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
               )}
               {t("submit")}
             </Button>

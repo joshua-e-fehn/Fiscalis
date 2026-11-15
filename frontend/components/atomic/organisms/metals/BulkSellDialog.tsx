@@ -225,7 +225,7 @@ export function BulkSellDialog({
 
           {/* Items list */}
           <div className="flex-1 min-h-0 py-4 overflow-y-auto">
-            <div className="space-y-4 pr-4">
+            <div className="space-y-4 pe-4">
               {sellEntries.map((entry, index) => {
                 const saleValue = previews[index]?.proceeds ?? 0;
                 const profit = previews[index]?.profitLoss ?? null;
@@ -383,7 +383,7 @@ export function BulkSellDialog({
             </Button>
             <Button type="submit" disabled={isSubmitting || !isValid}>
               {isSubmitting && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
               )}
               {t("submit", { count: sellEntries.length })}
             </Button>

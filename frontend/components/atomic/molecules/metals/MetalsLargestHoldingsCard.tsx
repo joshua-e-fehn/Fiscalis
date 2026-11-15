@@ -144,7 +144,7 @@ export function MetalsLargestHoldingsCard({
               </div>
 
               {/* Holdings list */}
-              <div className="space-y-1 pl-5">
+              <div className="space-y-1 ps-5">
                 {metalItems.slice(0, maxHoldingsPerMetal).map((item, index) => (
                   <div
                     key={item._id}
@@ -157,7 +157,7 @@ export function MetalsLargestHoldingsCard({
                       <span className="truncate max-w-[200px]">
                         {item.displayName}
                         {item.quantity > 1 && (
-                          <span className="text-muted-foreground ml-1">
+                          <span className="text-muted-foreground ms-1">
                             {t("holdings.quantity", { count: item.quantity })}
                           </span>
                         )}

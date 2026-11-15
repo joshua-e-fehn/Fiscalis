@@ -60,7 +60,7 @@ export function PurityBadge({
     >
       {formattedPurity}
       {karat && (
-        <span className="ml-1 opacity-70">
+        <span className="ms-1 opacity-70">
           {t("karat", { karat: String(karat) })}
         </span>
       )}

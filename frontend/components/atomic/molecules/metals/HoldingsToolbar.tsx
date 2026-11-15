@@ -126,12 +126,12 @@ export function HoldingsToolbar({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {/* Search */}
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={t("holdings.toolbar.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-8"
+              className="ps-8"
             />
           </div>
 
@@ -141,7 +141,7 @@ export function HoldingsToolbar({
             onValueChange={(v) => onMetalFilterChange(v as MetalsType | "all")}
           >
             <SelectTrigger className="w-full sm:w-36">
-              <Filter className="h-4 w-4 mr-2" />
+              <Filter className="h-4 w-4 me-2" />
               <SelectValue placeholder={t("holdings.toolbar.allMetals")} />
             </SelectTrigger>
             <SelectContent>
@@ -162,7 +162,7 @@ export function HoldingsToolbar({
             onValueChange={(v) => onSortChange(v as SortField)}
           >
             <SelectTrigger className="w-full sm:w-40">
-              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <ArrowUpDown className="h-4 w-4 me-2" />
               <SelectValue placeholder={t("holdings.toolbar.sortBy")} />
             </SelectTrigger>
             <SelectContent>
@@ -181,7 +181,7 @@ export function HoldingsToolbar({
         {selectionMode ? (
           /* Selection mode actions */
           <Button onClick={onSellSelected} disabled={selectedCount === 0}>
-            <BadgeDollarSign className="h-4 w-4 mr-2" />
+            <BadgeDollarSign className="h-4 w-4 me-2" />
             {t("holdings.toolbar.sellSelected")}
           </Button>
         ) : (
@@ -191,7 +191,7 @@ export function HoldingsToolbar({
               <Button
                 variant={viewMode === "table" ? "secondary" : "ghost"}
                 size="icon"
-                className="h-8 w-8 rounded-r-none"
+                className="h-8 w-8 rounded-e-none"
                 onClick={() => onViewModeChange("table")}
                 title={t("holdings.toolbar.tableView")}
                 aria-label={t("holdings.toolbar.tableView")}
@@ -211,7 +211,7 @@ export function HoldingsToolbar({
               <Button
                 variant={viewMode === "grouped" ? "secondary" : "ghost"}
                 size="icon"
-                className="h-8 w-8 rounded-l-none"
+                className="h-8 w-8 rounded-s-none"
                 onClick={() => onViewModeChange("grouped")}
                 title={t("holdings.toolbar.groupedView")}
                 aria-label={t("holdings.toolbar.groupedView")}
@@ -236,14 +236,14 @@ export function HoldingsToolbar({
             {/* Sell Items */}
             {onToggleSelectionMode && (
               <Button onClick={onToggleSelectionMode}>
-                <BadgeDollarSign className="h-4 w-4 mr-2" />
+                <BadgeDollarSign className="h-4 w-4 me-2" />
                 {t("holdings.toolbar.sellItems")}
               </Button>
             )}
 
             {/* Add Item */}
             <Button onClick={onAddItem}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 me-2" />
               {t("holdings.toolbar.addItem")}
             </Button>
           </>

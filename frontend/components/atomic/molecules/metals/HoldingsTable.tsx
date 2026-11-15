@@ -66,18 +66,18 @@ export function HoldingsTable({
       <Button
         variant="ghost"
         size="sm"
-        className="-ml-3 h-8 data-[state=open]:bg-accent"
+        className="-ms-3 h-8 data-[state=open]:bg-accent"
         onClick={() => onSort?.(field)}
       >
         {children}
         {isActive ? (
           sortDirection === "asc" ? (
-            <ArrowUp className="ml-1 h-3 w-3" />
+            <ArrowUp className="ms-1 h-3 w-3" />
           ) : (
-            <ArrowDown className="ml-1 h-3 w-3" />
+            <ArrowDown className="ms-1 h-3 w-3" />
           )
         ) : (
-          <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />
+          <ArrowUpDown className="ms-1 h-3 w-3 opacity-50" />
         )}
       </Button>
     );
@@ -113,11 +113,11 @@ export function HoldingsTable({
               {selectionMode && <TableHead className="w-10"></TableHead>}
               <TableHead className="w-[40%]">{t("columns.item")}</TableHead>
               <TableHead>{t("columns.metal")}</TableHead>
-              <TableHead className="text-right">
+              <TableHead className="text-end">
                 {t("columns.weight")}
               </TableHead>
-              <TableHead className="text-right">{t("columns.value")}</TableHead>
-              <TableHead className="text-right">
+              <TableHead className="text-end">{t("columns.value")}</TableHead>
+              <TableHead className="text-end">
                 {t("columns.profitLoss")}
               </TableHead>
               <TableHead className="w-8"></TableHead>
@@ -134,13 +134,13 @@ export function HoldingsTable({
                   <div className="h-5 w-16 bg-muted animate-pulse rounded" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-5 w-20 bg-muted animate-pulse rounded ml-auto" />
+                  <div className="h-5 w-20 bg-muted animate-pulse rounded ms-auto" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-5 w-24 bg-muted animate-pulse rounded ml-auto" />
+                  <div className="h-5 w-24 bg-muted animate-pulse rounded ms-auto" />
                 </TableCell>
                 <TableCell>
-                  <div className="h-5 w-20 bg-muted animate-pulse rounded ml-auto" />
+                  <div className="h-5 w-20 bg-muted animate-pulse rounded ms-auto" />
                 </TableCell>
                 <TableCell></TableCell>
               </TableRow>
@@ -160,11 +160,11 @@ export function HoldingsTable({
               {selectionMode && <TableHead className="w-10"></TableHead>}
               <TableHead className="w-[40%]">{t("columns.item")}</TableHead>
               <TableHead>{t("columns.metal")}</TableHead>
-              <TableHead className="text-right">
+              <TableHead className="text-end">
                 {t("columns.weight")}
               </TableHead>
-              <TableHead className="text-right">{t("columns.value")}</TableHead>
-              <TableHead className="text-right">
+              <TableHead className="text-end">{t("columns.value")}</TableHead>
+              <TableHead className="text-end">
                 {t("columns.profitLoss")}
               </TableHead>
             </TableRow>
@@ -215,21 +215,21 @@ export function HoldingsTable({
               )}
             </TableHead>
             <TableHead>{t("columns.metal")}</TableHead>
-            <TableHead className="text-right">
+            <TableHead className="text-end">
               {onSort ? (
                 <SortButton field="weight">{t("columns.weight")}</SortButton>
               ) : (
                 t("columns.weight")
               )}
             </TableHead>
-            <TableHead className="text-right">
+            <TableHead className="text-end">
               {onSort ? (
                 <SortButton field="value">{t("columns.value")}</SortButton>
               ) : (
                 t("columns.value")
               )}
             </TableHead>
-            <TableHead className="text-right">
+            <TableHead className="text-end">
               {onSort ? (
                 <SortButton field="profitLoss">
                   {t("columns.profitLoss")}
@@ -281,14 +281,14 @@ export function HoldingsTable({
               <TableCell>
                 <MetalBadge metal={item.metalType} size="sm" />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-end">
                 <WeightDisplay
                   grams={item.fineWeightGrams * item.quantity}
                   unit="oz"
                   size="sm"
                 />
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-end">
                 {/* No fresh spot and no cost: the value is unknown */}
                 {item.marketValue === null ? (
                   <span className="text-muted-foreground">—</span>
@@ -300,7 +300,7 @@ export function HoldingsTable({
                   />
                 )}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-end">
                 {item.profitLoss !== null && item.profitLossPercent !== null ? (
                   <ChangeIndicator
                     value={item.profitLoss}
@@ -315,7 +315,7 @@ export function HoldingsTable({
               </TableCell>
               {!selectionMode && (
                 <TableCell>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground rtl:-scale-x-100" />
                 </TableCell>
               )}
             </TableRow>

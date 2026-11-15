@@ -110,7 +110,7 @@ export function DeleteTransactionDialog({
             disabled={isDeleting || error !== null}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isDeleting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
             {isDeleting ? t("deleting") : tActions("delete")}
           </AlertDialogAction>
         </AlertDialogFooter>

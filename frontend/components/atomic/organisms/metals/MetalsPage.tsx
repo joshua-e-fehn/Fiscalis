@@ -134,22 +134,22 @@ const metalConfig: Record<
   }
 > = {
   gold: {
-    borderClass: "border-l-metal-gold",
+    borderClass: "border-s-metal-gold",
     bgClass: "hover:bg-metal-gold/5",
     selectedBgClass: "bg-metal-gold/10",
   },
   silver: {
-    borderClass: "border-l-metal-silver",
+    borderClass: "border-s-metal-silver",
     bgClass: "hover:bg-metal-silver/5",
     selectedBgClass: "bg-metal-silver/10",
   },
   platinum: {
-    borderClass: "border-l-metal-platinum",
+    borderClass: "border-s-metal-platinum",
     bgClass: "hover:bg-metal-platinum/5",
     selectedBgClass: "bg-metal-platinum/10",
   },
   palladium: {
-    borderClass: "border-l-metal-palladium",
+    borderClass: "border-s-metal-palladium",
     bgClass: "hover:bg-metal-palladium/5",
     selectedBgClass: "bg-metal-palladium/10",
   },
@@ -199,7 +199,7 @@ const MetalPriceCard = ({
     return (
       <Card
         className={cn(
-          "border-l-4 cursor-pointer transition-all duration-200",
+          "border-s-4 cursor-pointer transition-all duration-200",
           config.borderClass,
           config.bgClass,
         )}
@@ -225,7 +225,7 @@ const MetalPriceCard = ({
   return (
     <Card
       className={cn(
-        "border-l-4 cursor-pointer transition-all duration-200",
+        "border-s-4 cursor-pointer transition-all duration-200",
         config.borderClass,
         isSelected ? config.selectedBgClass : config.bgClass,
         isSelected && "ring-2 ring-primary",
@@ -950,11 +950,11 @@ export function MetalsPage({ className }: MetalsPageProps) {
                       className="h-8"
                     >
                       {priceCurrency === "eur" ? (
-                        <Euro className="h-4 w-4 mr-1" />
+                        <Euro className="h-4 w-4 me-1" />
                       ) : priceCurrency === "usd" ? (
-                        <DollarSign className="h-4 w-4 mr-1" />
+                        <DollarSign className="h-4 w-4 me-1" />
                       ) : (
-                        <Banknote className="h-4 w-4 mr-1" />
+                        <Banknote className="h-4 w-4 me-1" />
                       )}
                       {priceCurrency.toUpperCase()}
                     </Button>

@@ -39,19 +39,19 @@ const metalConfig: Record<
   }
 > = {
   gold: {
-    borderClass: "border-l-metal-gold",
+    borderClass: "border-s-metal-gold",
     bgClass: "hover:bg-metal-gold/5",
   },
   silver: {
-    borderClass: "border-l-metal-silver",
+    borderClass: "border-s-metal-silver",
     bgClass: "hover:bg-metal-silver/5",
   },
   platinum: {
-    borderClass: "border-l-metal-platinum",
+    borderClass: "border-s-metal-platinum",
     bgClass: "hover:bg-metal-platinum/5",
   },
   palladium: {
-    borderClass: "border-l-metal-palladium",
+    borderClass: "border-s-metal-palladium",
     bgClass: "hover:bg-metal-palladium/5",
   },
 };
@@ -71,7 +71,7 @@ export function MetalCard({
 
   if (isLoading) {
     return (
-      <Card className={cn("border-l-4", config.borderClass, className)}>
+      <Card className={cn("border-s-4", config.borderClass, className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <MetalIcon metal={metal} />
@@ -89,7 +89,7 @@ export function MetalCard({
   return (
     <Card
       className={cn(
-        "border-l-4 transition-all duration-200 cursor-pointer",
+        "border-s-4 transition-all duration-200 cursor-pointer",
         config.borderClass,
         config.bgClass,
         className,
@@ -103,7 +103,7 @@ export function MetalCard({
             {t(`metal.${metal}`)}
           </div>
           {/* Spot Price */}
-          <div className="text-right">
+          <div className="text-end">
             {spotPrice !== null ? (
               <div className="flex items-baseline gap-1">
                 <AnimatedNumber
@@ -144,7 +144,7 @@ export function MetalCard({
             {summary.profitLossPercent !== null && (
               <div className="mt-1">
                 <PercentageChange value={summary.profitLossPercent} size="sm" />
-                <span className="text-xs text-muted-foreground ml-1">
+                <span className="text-xs text-muted-foreground ms-1">
                   {t("holdings.profitLoss")}
                 </span>
               </div>

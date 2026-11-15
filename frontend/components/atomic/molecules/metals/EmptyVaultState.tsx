@@ -47,11 +47,11 @@ export function EmptyVaultState({
         {/* CTA Buttons */}
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <Button onClick={onAddFromCatalog} className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 me-2" />
             {t("addFromCatalog")}
           </Button>
           <Button onClick={onAddCustom} variant="outline" className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 me-2" />
             {t("addCustom")}
           </Button>
         </div>
@@ -117,7 +117,7 @@ export function EmptyStateSmall({
       {action && actionLabel && (
         <Button variant="link" size="sm" onClick={action} className="mt-2">
           {actionLabel}
-          <ArrowRight className="h-3 w-3 ml-1" />
+          <ArrowRight className="h-3 w-3 ms-1 rtl:-scale-x-100" />
         </Button>
       )}
     </div>

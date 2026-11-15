@@ -1,0 +1,80 @@
+{
+  "plans": {
+    "free": "Gratuit",
+    "pro": "Pro"
+  },
+  "billing": {
+    "title": "Facturation",
+    "subtitle": "Ton offre, ton abonnement et tes factures.",
+    "current": {
+      "title": "Offre actuelle",
+      "description": "Ton offre et son renouvellement.",
+      "sourceSubscription": "Abonnement payant",
+      "sourceGrant": "Inclus gratuitement",
+      "sourceDefault": "Gratuit pour toujours",
+      "renews": "Renouvellement le {date}",
+      "endsOn": "Se termine le {date}",
+      "pastDue": "Le dernier paiement a échoué. Mets à jour ton moyen de paiement pour garder Pro.",
+      "ended": "Ton abonnement Pro est terminé.",
+      "intervalMonth": "Facturé chaque mois",
+      "intervalYear": "Facturé chaque année",
+      "manage": "Gérer l’abonnement",
+      "manageHint": "Change ou résilie ton offre, mets à jour ton moyen de paiement et télécharge tes factures dans le portail client Stripe."
+    },
+    "upgrade": {
+      "title": "Passer à Pro",
+      "description": "Connexions illimitées, accès à l’API et Pies.",
+      "perMonth": "{price} par mois",
+      "perYear": "{price} par an",
+      "month": "Mensuel",
+      "year": "Annuel",
+      "submit": "Passer à Pro",
+      "unavailable": "Le passage à Pro n’est pas encore disponible. Reviens bientôt.",
+      "grantNote": "Pro est déjà inclus pour toi. Tu peux quand même t’abonner pour soutenir Fiscalis.",
+      "features": {
+        "connections": "Connexions illimitées aux banques, courtiers et plateformes crypto",
+        "apiKeys": "Clés API pour l’API du patrimoine net",
+        "pies": "Pies (stratégies d’investissement)"
+      }
+    },
+    "checkout": {
+      "success": "Merci d’être passé à Pro ! Ton offre est mise à jour dès que Stripe confirme le paiement.",
+      "canceled": "Le paiement a été annulé. Rien n’a été débité."
+    },
+    "invoices": {
+      "title": "Factures",
+      "description": "Tes factures les plus récentes. Le portail client contient l’historique complet et les PDF.",
+      "empty": "Aucune facture pour l’instant.",
+      "date": "Date",
+      "amount": "Montant",
+      "status": "Statut",
+      "statuses": {
+        "draft": "Brouillon",
+        "open": "Ouverte",
+        "paid": "Payée",
+        "void": "Annulée",
+        "uncollectible": "Irrécouvrable",
+        "failed": "Échouée",
+        "other": "Autre"
+      }
+    }
+  },
+  "limits": {
+    "title": "Limites",
+    "subtitle": "Ce que comprend ton offre et ce que tu en utilises.",
+    "card": {
+      "title": "Utilisation",
+      "description": "Tu as l’offre {plan}."
+    },
+    "rows": {
+      "connections": "Connexions aux fournisseurs",
+      "apiKeys": "Clés API",
+      "pies": "Pies"
+    },
+    "notIncluded": "Non inclus",
+    "usedOf": "{used} sur {limit}",
+    "usedUnlimited": "{used} en service · Illimité",
+    "upgradeHint": "Besoin de plus ? Pro n’a aucune limite.",
+    "upgrade": "Découvrir Pro"
+  }
+}

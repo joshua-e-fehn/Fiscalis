@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "{page} · Documentation Fiscalis"
+  },
+  "nav": {
+    "label": "Documentation",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "onThisPage": "Sur cette page"
+  },
+  "introduction": {
+    "subtitle": "Ce qu’est Fiscalis, d’où viennent tes chiffres et comment ils sont calculés.",
+    "sections": {
+      "whatIs": {
+        "title": "Ce qu’est Fiscalis",
+        "body": "Fiscalis est un outil privé de suivi du patrimoine net. Il réunit en un seul endroit tes comptes bancaires, tes courtiers, Bitpanda, un coffre de métaux précieux, les actifs que tu saisis à la main et tes prêts, valorise le tout dans une seule devise et montre comment ton patrimoine évolue dans le temps.\n\nFiscalis ne fait que lire tes données. Il ne peut ni déplacer d’argent, ni passer d’ordres, ni modifier quoi que ce soit chez ta banque ou ton courtier."
+      },
+      "sources": {
+        "title": "D’où viennent tes chiffres",
+        "body": "- Banques via Plaid : soldes des comptes courants, d’épargne et de cartes de crédit, ainsi que ton historique de transactions.\n- Courtiers via SnapTrade : comptes-titres, positions, liquidités et opérations.\n- Bitpanda via une clé API en lecture seule : crypto, métaux, actions, ETF et portefeuilles de liquidités.\n- Coffre de métaux précieux : pièces et lingots que tu enregistres toi-même, valorisés au cours spot en direct.\n- Actifs manuels : immobilier, objets de collection, private equity, obligations et tout ce qu’aucun compte connecté ne remonte.\n- Prêts : crédits immobiliers et autres prêts que tu saisis, avec leur tableau d’amortissement complet.",
+        "linkLabel": "Connecte ton premier compte"
+      },
+      "netWorth": {
+        "title": "Comment ton patrimoine net est calculé",
+        "body": "Ton patrimoine net correspond à tout ce que tu possèdes moins tes passifs. Le même calcul alimente le tableau de bord, les instantanés quotidiens qui tracent ton historique et l’API, si bien que chaque endroit affiche le même chiffre.\n\nLes avoirs sont regroupés en catégories comme les liquidités, les actions, les obligations, la crypto, les matières premières, l’immobilier et les objets de collection. Si un avoir se retrouve dans la mauvaise catégorie, tu peux le déplacer sous Paramètres > Catégories.\n\nLa performance de tes investissements tient compte des flux : l’argent que tu ajoutes ou avec lequel tu achètes compte comme investi, pas comme un gain, donc un versement ne ressemble jamais à une bonne journée en bourse.",
+        "linkLabel": "Ouvrir le tableau de bord"
+      },
+      "metals": {
+        "title": "Comment les métaux sont valorisés",
+        "body": "L’or, l’argent, le platine et le palladium de ton coffre sont valorisés au cours spot en direct, mis à jour chaque minute. Fiscalis applique des primes de négociant calibrées : la prime d’achat est ce que tu paierais au-dessus du spot, la prime de vente ce qu’un négociant te paierait. Tu peux remplacer les deux pour chaque article."
+      },
+      "currency": {
+        "title": "Devise d’affichage et langue",
+        "body": "Tout est enregistré en euros. Tu peux afficher tes totaux en EUR, USD, GBP ou CHF : les totaux sont convertis au dernier taux de change quotidien et ton historique au taux de chaque jour. Les prêts et les lignes de comptes individuelles gardent leur propre devise.\n\nFiscalis est disponible en anglais, allemand, espagnol et français. Change la devise d’affichage et la langue sous Paramètres > Général.",
+        "linkLabel": "Ouvrir Paramètres > Général"
+      },
+      "sync": {
+        "title": "Quand les données sont mises à jour",
+        "body": "- Toutes les banques et tous les courtiers connectés se synchronisent une fois par jour, tôt le matin.\n- Bitpanda se synchronise toutes les six heures.\n- Les cours spot des métaux sont mis à jour chaque minute et les taux de change plusieurs fois par jour.\n- Tu peux tout synchroniser toi-même à tout moment avec le bouton de synchronisation en haut de la page."
+      },
+      "tools": {
+        "title": "Outils de planification",
+        "body": "- Planificateur retraite : détermine si ton patrimoine net actuel, ton épargne et tes pensions couvrent la retraite que tu souhaites.\n- Calculateurs d’intérêts et de prêt : teste des plans d’épargne et des options de remboursement sans rien enregistrer.\n- Carte du monde : indicateurs économiques, démographiques et de développement de la Banque mondiale sur une carte interactive.\n- API : lis ton patrimoine net actuel depuis tes propres scripts avec une clé API personnelle."
+      },
+      "privacy": {
+        "title": "Confidentialité et sécurité",
+        "body": "Les jetons d’accès de tes banques et courtiers ainsi que ta clé Bitpanda sont chiffrés au repos. Les clés API ne sont stockées que sous forme de hash, si bien que même Fiscalis ne peut pas les relire. Tu te connectes à ta banque et à ton courtier dans leurs propres fenêtres ; Fiscalis ne voit jamais ces mots de passe.\n\nSous Paramètres > Confidentialité, tu peux télécharger tout ce que Fiscalis enregistre à ton sujet ou supprimer ton compte.",
+        "linkLabel": "Ouvrir Paramètres > Confidentialité"
+      },
+      "access": {
+        "title": "Accès",
+        "body": "Fiscalis est actuellement accessible sur invitation uniquement. Les nouveaux utilisateurs rejoignent la liste d’attente et obtiennent l’accès une fois leur place approuvée."
+      }
+    }
+  },
+  "getStarted": {
+    "subtitle": "De ta première connexion à une vue complète de ton patrimoine.",
+    "sections": {
+      "account": {
+        "title": "1. Ton compte",
+        "body": "L’inscription passe par la liste d’attente. Une fois ton accès approuvé, connecte-toi avec ton adresse e-mail. À ta première connexion, une courte configuration te guide à travers ton profil et tes premières connexions. Tu peux passer chaque étape de connexion et y revenir plus tard."
+      },
+      "profile": {
+        "title": "2. Configure ton profil",
+        "body": "Choisis ton nom d’affichage, ta devise d’affichage et un thème. Ta date de naissance est facultative ; le planificateur retraite l’utilise. Tu peux modifier tout cela plus tard sous Paramètres > Général, ainsi que la langue.",
+        "linkLabel": "Ouvrir Paramètres > Général"
+      },
+      "connect": {
+        "title": "3. Connecte tes comptes",
+        "body": "- Banques : Intégrations > Banques, puis Connecter une banque.\n- Courtiers : Intégrations > Courtiers, puis Connecter un courtier.\n- Bitpanda : également sous Intégrations > Courtiers, avec Connecter Bitpanda et une clé API en lecture seule.\n\nLa première synchronisation peut prendre un moment. Ensuite, tes comptes se mettent à jour automatiquement.",
+        "linkLabel": "Ouvrir Banques"
+      },
+      "manual": {
+        "title": "4. Ajoute ce qu’aucun compte ne remonte",
+        "body": "- Les pièces et lingots vont dans le coffre de métaux précieux sous Investissements > Matières premières.\n- L’immobilier, les objets de collection, le private equity, les obligations et les actifs similaires s’ajoutent comme actifs manuels depuis la page de leur catégorie.\n- Les crédits immobiliers et autres prêts vont sous Passifs > Prêts, pour que ton patrimoine net déduise ce que tu dois encore.",
+        "linkLabel": "Voir les tutoriels"
+      },
+      "explore": {
+        "title": "5. Explore ton tableau de bord",
+        "body": "Le tableau de bord montre ton patrimoine net, sa répartition entre les catégories et son évolution. Chaque catégorie sous Investissements a sa propre page avec les avoirs qui la composent. À partir de maintenant, Fiscalis prend un instantané chaque jour, et ton historique s’enrichit tout seul.",
+        "linkLabel": "Ouvrir le tableau de bord"
+      },
+      "next": {
+        "title": "Étapes suivantes",
+        "body": "- Planifie ta retraite avec le planificateur retraite, alimenté par ton patrimoine net réel.\n- Crée une clé API si tu veux lire ton patrimoine net depuis tes propres outils.\n- Consulte les nouveautés pour voir ce qui a changé."
+      }
+    }
+  },
+  "tutorials": {
+    "subtitle": "Des guides pas à pas pour les tâches les plus courantes.",
+    "sections": {
+      "connectBank": {
+        "title": "Connecter une banque",
+        "body": "Les comptes bancaires sont connectés via Plaid. Fiscalis obtient un accès en lecture seule aux soldes et aux transactions.",
+        "steps": "- Ouvre Intégrations > Banques.\n- Clique sur Connecter une banque. La fenêtre Plaid s’ouvre.\n- Choisis ta banque et connecte-toi. Tes identifiants bancaires vont à Plaid et à ta banque, jamais à Fiscalis.\n- Sélectionne les comptes que tu veux partager et confirme.\n- Tes soldes apparaissent sur la page. Ouvre Transactions pour voir ton historique de transactions.",
+        "note": "Si une banque affiche Reconnexion requise, ou si ton consentement arrive à échéance, clique sur Reconnecter et connecte-toi à nouveau. Tes données restent en place.",
+        "linkLabel": "Ouvrir Banques"
+      },
+      "connectBroker": {
+        "title": "Connecter un courtier ou Bitpanda",
+        "body": "Les courtiers sont connectés via SnapTrade. Bitpanda est connecté directement avec une clé API en lecture seule.",
+        "steps": "- Ouvre Intégrations > Courtiers.\n- Pour un courtier, clique sur Connecter un courtier, choisis ton courtier dans le portail de connexion SnapTrade et connecte-toi.\n- Pour Bitpanda, clique sur Connecter Bitpanda. Utilise le lien Créer une clé en lecture seule dans Bitpanda, crée une clé avec un accès en lecture uniquement et copie-la.\n- Colle la clé, donne-lui éventuellement un libellé et clique sur Connecter.\n- Tes positions et tes liquidités apparaissent après la première synchronisation.",
+        "note": "Bitpanda se synchronise toutes les six heures ; utilise Synchroniser pour le mettre à jour tout de suite. Ne donne jamais à Fiscalis une clé Bitpanda qui permet de trader ou de retirer des fonds.",
+        "linkLabel": "Ouvrir Courtiers"
+      },
+      "manualAsset": {
+        "title": "Ajouter un actif manuel",
+        "body": "Les actifs manuels couvrent tout ce qu’aucun compte connecté ne remonte, comme un appartement, une montre, du vin, du private equity ou des obligations d’État.",
+        "steps": "- Ouvre la catégorie correspondante sous Investissements, par exemple Immobilier ou Objets de collection.\n- Clique sur Ajouter, ou ouvre une sous-catégorie et clique sur Ajouter un actif.\n- Choisis la catégorie et la sous-catégorie et donne un nom à l’actif.\n- Choisis sa devise et ajoute une valorisation : une date et ce que valait l’actif ce jour-là. La dernière valorisation compte dans ton patrimoine net.\n- Saisis éventuellement le prix d’achat pour voir ton gain ou ta perte, et choisis le prêt qui l’a financé sous Financé par.\n- Enregistre. Pour mettre la valeur à jour plus tard, modifie l’actif et clique sur Ajouter une valorisation.",
+        "linkLabel": "Ouvrir Immobilier"
+      },
+      "vaultPurchase": {
+        "title": "Enregistrer un achat pour le coffre",
+        "body": "Le coffre contient de l’or, de l’argent, du platine et du palladium physiques. Les articles sont valorisés au cours spot en direct avec des primes de négociant.",
+        "steps": "- Ouvre Investissements > Matières premières > Métaux précieux et passe à l’onglet Avoirs.\n- Clique sur Ajouter un article.\n- Choisis une pièce ou un lingot Depuis le catalogue, ou choisis Article personnalisé et saisis son nom, son métal, sa catégorie, son poids en grammes et sa pureté en ‰.\n- Sous Détails de l’achat, saisis la quantité, le prix par unité et sa devise, ainsi que la date d’achat.\n- Ajoute éventuellement un lieu de stockage et des notes, puis clique sur Ajouter au coffre.",
+        "note": "La date d’achat compte : la performance traite l’achat comme de l’argent investi ce jour-là, pas comme un gain. Quand tu vends un article, utilise Vendre l’article au lieu de le supprimer, pour que la vente et ta plus-value réalisée soient enregistrées.",
+        "linkLabel": "Ouvrir le coffre"
+      },
+      "loan": {
+        "title": "Configurer un prêt",
+        "body": "Les prêts comptent comme passifs et réduisent ton patrimoine net de leur capital restant dû. Fiscalis calcule le tableau d’amortissement complet.",
+        "steps": "- Ouvre Passifs > Prêts et clique sur Ajouter un prêt.\n- Nom et type : donne un nom au prêt et choisis son type : Échéances constantes, Échéances dégressives, In fine ou Période à intérêts seuls.\n- Montant et taux : saisis le montant initial, le capital restant dû s’il diffère, le taux d’intérêt annuel et la devise.\n- Dates et échéances : fixe la fréquence des échéances, la durée et la date de début. Utilise l’échéance calculée ou saisis ton échéance réelle.\n- Remboursements supplémentaires : indique si le prêt autorise les remboursements anticipés et combien par an.\n- Confirmer les détails et enregistrer.",
+        "note": "Ouvre un prêt pour voir son tableau d’amortissement, enregistrer les échéances que tu as payées et tester des scénarios comme une échéance plus élevée ou un remboursement exceptionnel.",
+        "linkLabel": "Ouvrir Prêts"
+      },
+      "apiKey": {
+        "title": "Utiliser l’API",
+        "body": "Avec une clé API personnelle, tu peux lire ton patrimoine net actuel depuis un script, un tableur ou un tableau de bord domestique. Les clés sont en lecture seule et appartiennent à ton compte.",
+        "steps": "- Ouvre Paramètres > Clés API.\n- Saisis un nom pour la clé, choisis quand elle expire (30 jours, 90 jours, 1 an ou jamais) et clique sur Créer la clé.\n- Copie la clé tout de suite et conserve-la dans un gestionnaire de mots de passe ou un coffre à secrets. Elle n’est affichée qu’une seule fois.\n- Envoie-la dans l’en-tête Authorization comme jeton bearer vers l’endpoint indiqué sur la page Clés API, comme dans l’exemple ci-dessous.\n- Pour obtenir les montants dans une autre devise, ajoute ?currency=USD, GBP ou CHF à l’URL. Sans cela, les montants sont en EUR.",
+        "note": "Tu peux avoir jusqu’à {maxKeys} clés actives, et chaque clé est limitée à {rateLimit} requêtes par minute. Les clés dans les URL ne sont pas acceptées, et les clés ne doivent jamais être utilisées dans du code exécuté dans le navigateur. Révoque une clé sur la même page si elle a pu fuiter.",
+        "linkLabel": "Ouvrir Paramètres > Clés API"
+      }
+    }
+  },
+  "changelog": {
+    "subtitle": "Nouvelles fonctionnalités et corrections, des plus récentes aux plus anciennes.",
+    "empty": "Aucune modification enregistrée pour l’instant.",
+    "entryLanguage": "Chaque entrée reprend le titre de la modification tel qu’il a été publié.",
+    "types": {
+      "feature": "Nouveau",
+      "fix": "Correction"
+    },
+    "pr": "#{number}",
+    "count": "{count, plural, one {# modification} other {# modifications}}"
+  }
+}

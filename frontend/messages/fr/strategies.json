@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "Pies",
+    "subtitle": "Des allocations cibles pour ton portefeuille : fixe un poids par part et vois à quel point tes avoirs s’en sont écartés.",
+    "newPie": "Nouveau pie",
+    "empty": {
+      "title": "Aucun pie pour l’instant",
+      "description": "Un pie découpe ton portefeuille en parts, chacune une catégorie, une sous-catégorie ou des avoirs précis, avec un poids cible. Fiscalis te montre ensuite l’écart entre ton allocation réelle et cette cible.",
+      "action": "Crée ton premier pie"
+    },
+    "card": {
+      "totalValue": "Valeur dans le pie",
+      "maxDrift": "Plus grand écart",
+      "noHoldings": "Aucun de tes avoirs ne correspond encore aux parts de ce pie.",
+      "edit": "Modifier le pie",
+      "delete": "Supprimer le pie",
+      "threshold": "Les parts à plus de {threshold} points de pourcentage de leur cible doivent être rééquilibrées.",
+      "columns": {
+        "slice": "Part",
+        "target": "Cible",
+        "actual": "Réel",
+        "drift": "Écart",
+        "rebalance": "Pour rééquilibrer"
+      },
+      "drift": "{value} pp",
+      "status": {
+        "onTarget": "Dans la cible",
+        "over": "Surpondéré",
+        "under": "Sous-pondéré"
+      },
+      "buy": "Acheter {amount}",
+      "sell": "Vendre {amount}",
+      "balanced": "—",
+      "allOf": "Tout {category}",
+      "holdingsCount": "{count, plural, one {# avoir} other {# avoirs}}",
+      "missingHoldings": "{count, plural, one {# avoir qui n’est plus} other {# avoirs qui ne sont plus}} dans ton portefeuille"
+    },
+    "delete": {
+      "title": "Supprimer ce pie ?",
+      "description": "« {name} » et ses poids cibles seront supprimés. Tes avoirs ne sont pas concernés.",
+      "confirm": "Supprimer le pie"
+    },
+    "toast": {
+      "created": "Pie « {name} » créé",
+      "updated": "Pie « {name} » mis à jour",
+      "deleted": "Pie « {name} » supprimé"
+    },
+    "editor": {
+      "addTitle": "Nouveau pie",
+      "editTitle": "Modifier « {name} »",
+      "description": "Donne un poids cible à chaque part. Les poids doivent totaliser 100 %.",
+      "name": "Nom",
+      "namePlaceholder": "p. ex. Cœur et satellites",
+      "descriptionLabel": "Description",
+      "optional": "Facultatif",
+      "slices": "Parts",
+      "slice": "Part {number}",
+      "addSlice": "Ajouter une part",
+      "removeSlice": "Retirer la part",
+      "splitEvenly": "Répartir à parts égales",
+      "kind": "Cible",
+      "kinds": {
+        "category": "Catégorie",
+        "holdings": "Avoirs précis"
+      },
+      "category": "Catégorie",
+      "subcategory": "Sous-catégorie",
+      "allSubcategories": "Toutes les sous-catégories",
+      "holdings": "Avoirs",
+      "noHoldings": "Tu n’as pas encore d’avoirs à choisir.",
+      "holdingGone": "N’est plus dans ton portefeuille",
+      "label": "Libellé",
+      "weight": "Poids cible (%)",
+      "total": "Total : {total} %",
+      "totalOff": "Total : {total} %. Les poids doivent totaliser 100 %."
+    }
+  }
+}

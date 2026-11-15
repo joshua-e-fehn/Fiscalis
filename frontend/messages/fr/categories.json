@@ -318,5 +318,44 @@
       },
       "edit": "Modifier"
     }
+  },
+  "valuation": {
+    "action": "Fixer le prix",
+    "reset": "Utiliser le prix du fournisseur",
+    "badges": {
+      "live": "En direct",
+      "manualPrice": "Prix manuel",
+      "markToModel": "Modèle"
+    },
+    "badgeHints": {
+      "live": "Le prix de ton fournisseur, actualisé pendant la journée entre les synchronisations.",
+      "manualPrice": "Valorisé au prix que tu as saisi, pas à celui du fournisseur.",
+      "markToModel": "Valorisé selon ton modèle : le prix de départ augmenté de ton taux annuel."
+    },
+    "kinds": {
+      "manualPrice": "Prix manuel",
+      "markToModel": "Valorisation par modèle"
+    },
+    "kindHints": {
+      "manualPrice": "Un prix fixe par unité que tu mets à jour toi-même.",
+      "markToModel": "Un prix de départ qui augmente (ou baisse) à un taux annuel fixe, pour les avoirs sans prix de marché."
+    },
+    "dialog": {
+      "title": "Fixer le prix",
+      "description": "Valorise {name} à ton propre prix. Ton prix est conservé lors des synchronisations du fournisseur ; la quantité vient toujours du fournisseur.",
+      "kind": "Méthode",
+      "price": "Prix par unité",
+      "modelPrice": "Prix par unité à la date de départ",
+      "currency": "Devise",
+      "date": "Date du prix",
+      "modelDate": "Date de départ",
+      "rate": "Taux annuel (%)",
+      "rateHint": "Utilise un taux négatif pour une valeur qui baisse avec le temps.",
+      "preview": "Aujourd’hui : {price} par unité, {value} au total"
+    },
+    "toast": {
+      "saved": "Prix enregistré pour {name}",
+      "reset": "{name} utilise de nouveau le prix du fournisseur"
+    }
   }
 }

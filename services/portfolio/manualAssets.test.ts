@@ -311,6 +311,11 @@ describe("parseTypedAmount", () => {
     expect(parseTypedAmount("1,5", "pt-PT")).toBe(1.5);
   });
 
+  it("reads Russian input with a comma decimal mark", () => {
+    expect(parseTypedAmount("1,500", "ru-RU")).toBe(1.5);
+    expect(parseTypedAmount("1 250,50", "ru-RU")).toBe(1250.5);
+  });
+
   it("reads English input", () => {
     expect(parseTypedAmount("1,500", "en")).toBe(1500);
     expect(parseTypedAmount("1,250.50", "en")).toBe(1250.5);
@@ -329,6 +334,7 @@ describe("localeDecimalMark", () => {
     expect(localeDecimalMark("es-ES")).toBe(",");
     expect(localeDecimalMark("fr-FR")).toBe(",");
     expect(localeDecimalMark("it-IT")).toBe(",");
+    expect(localeDecimalMark("ru-RU")).toBe(",");
     expect(localeDecimalMark("not a locale")).toBe(".");
   });
 });

@@ -25,6 +25,41 @@ const eslintConfig = [
     },
   },
   {
+    // i18n guard: user-visible JSX text goes through next-intl (messages/),
+    // so raw text between tags fails the lint. Only JSX text is checked:
+    // props, attributes and string expressions are not. Bare symbols,
+    // punctuation and the brand name need no translation.
+    files: ["app/**/*.tsx", "components/**/*.tsx"],
+    ignores: ["components/ui/**", "app/(api)/**"],
+    rules: {
+      "react/jsx-no-literals": [
+        "error",
+        {
+          noStrings: false,
+          ignoreProps: true,
+          allowedStrings: [
+            "Fiscalis",
+            "%",
+            "(",
+            ")",
+            "%)",
+            "[",
+            "]",
+            ".",
+            "…",
+            "·",
+            "•",
+            "-",
+            "--",
+            "—",
+            "−",
+            "#",
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Server code must not log caught errors raw: provider SDK errors carry
     // credentials in their request config (ENG-218).
     files: ["convex/**/*.ts", "app/(api)/**/*.ts"],

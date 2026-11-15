@@ -24,17 +24,17 @@ export const DEFAULT_LANGUAGE: Language = "en";
 
 /**
  * The languages the UI is rendered in, which can be narrower than LANGUAGES
- * (the languages a user can store). German has a catalogue and can be picked,
- * but until the feature batches translate the screens nearly every string is
- * English. Rendering that as <html lang="de">, with German Clerk screens and
- * German metadata, would make browsers offer to translate the page and screen
- * readers read English with German pronunciation. So the page language, Clerk
- * and the catalogue follow this list; "de" joins it once the app shell is
- * translated. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language, for checking
- * the catalogues locally (inlined at build time on both server and client).
+ * (the languages a user can store). A language with a catalogue joins this
+ * list once its screens are translated; until then a stored choice of it
+ * renders as English, so the page language, Clerk, Plaid Link and the
+ * catalogue never claim a language the content is not in (browsers would
+ * offer to translate the page, screen readers would mispronounce it). English
+ * and German are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
+ * in LANGUAGES, for checking a new catalogue locally (inlined at build time on
+ * both server and client).
  */
 export const RENDERED_LANGUAGES: readonly Language[] =
-  process.env.NEXT_PUBLIC_I18N_PREVIEW === "1" ? LANGUAGES : [DEFAULT_LANGUAGE];
+  process.env.NEXT_PUBLIC_I18N_PREVIEW === "1" ? LANGUAGES : ["en", "de"];
 
 /** The language a stored or requested language is rendered in. */
 export function renderedLanguage(

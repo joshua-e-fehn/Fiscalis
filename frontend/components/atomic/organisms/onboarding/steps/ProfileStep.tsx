@@ -64,7 +64,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const tLanguage = useTranslations("common.language");
   const tErrors = useTranslations("common.errors");
   // Preselect the language the app is shown in (cookie or browser language,
-  // limited to RENDERED_LANGUAGES, so English until German is rendered)
+  // limited to RENDERED_LANGUAGES)
   const currentLanguage = languageForLocale(useLocale());
 
   const [formData, setFormData] = useState<ProfileFormData>({

@@ -29,7 +29,7 @@ export const DEFAULT_LANGUAGE: Language = "en";
  * renders as English, so the page language, Clerk, Plaid Link and the
  * catalogue never claim a language the content is not in (browsers would
  * offer to translate the page, screen readers would mispronounce it). English,
- * German, Spanish, French, Italian and European Portuguese are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
+ * German, Spanish, French, Italian, European Portuguese and Russian are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
  * in LANGUAGES, for checking a new catalogue locally (inlined at build time on
  * both server and client).
  */

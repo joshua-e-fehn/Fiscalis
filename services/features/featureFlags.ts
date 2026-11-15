@@ -4,11 +4,9 @@
  * without showing users links that go nowhere (ENG-227).
  *
  * Turn flags on per environment with a comma-separated list, e.g.
- * NEXT_PUBLIC_FEATURES="pies,documentation", or "all" for every flag.
+ * NEXT_PUBLIC_FEATURES="billing,documentation", or "all" for every flag.
  */
 export const FEATURE_FLAGS = [
-  /** Portfolio > Investment Strategies > Pies */
-  "pies",
   /** Others > Documentation (Introduction, Get Started, Tutorials, Changelog) */
   "documentation",
   /** Settings > Team */

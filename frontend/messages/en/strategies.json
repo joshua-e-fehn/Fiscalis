@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "Pies",
+    "subtitle": "Target allocations for your portfolio: set a weight per slice and see how far your holdings have drifted.",
+    "newPie": "New pie",
+    "empty": {
+      "title": "No pies yet",
+      "description": "A pie splits your portfolio into slices, each a category, a subcategory or specific holdings, with a target weight. Fiscalis then shows how far your actual allocation drifts from it.",
+      "action": "Create your first pie"
+    },
+    "card": {
+      "totalValue": "Value in pie",
+      "maxDrift": "Largest drift",
+      "noHoldings": "None of your holdings match this pie's slices yet.",
+      "edit": "Edit pie",
+      "delete": "Delete pie",
+      "threshold": "Slices more than {threshold} percentage points off target need rebalancing.",
+      "columns": {
+        "slice": "Slice",
+        "target": "Target",
+        "actual": "Actual",
+        "drift": "Drift",
+        "rebalance": "To rebalance"
+      },
+      "drift": "{value} pp",
+      "status": {
+        "onTarget": "On target",
+        "over": "Overweight",
+        "under": "Underweight"
+      },
+      "buy": "Buy {amount}",
+      "sell": "Sell {amount}",
+      "balanced": "—",
+      "allOf": "All {category}",
+      "holdingsCount": "{count, plural, one {# holding} other {# holdings}}",
+      "missingHoldings": "{count, plural, one {# holding} other {# holdings}} no longer in your portfolio"
+    },
+    "delete": {
+      "title": "Delete this pie?",
+      "description": "“{name}” and its target weights will be deleted. Your holdings are not affected.",
+      "confirm": "Delete pie"
+    },
+    "toast": {
+      "created": "Pie “{name}” created",
+      "updated": "Pie “{name}” updated",
+      "deleted": "Pie “{name}” deleted"
+    },
+    "editor": {
+      "addTitle": "New pie",
+      "editTitle": "Edit “{name}”",
+      "description": "Give each slice a target weight. The weights must add up to 100%.",
+      "name": "Name",
+      "namePlaceholder": "e.g. Core & Satellite",
+      "descriptionLabel": "Description",
+      "optional": "Optional",
+      "slices": "Slices",
+      "slice": "Slice {number}",
+      "addSlice": "Add slice",
+      "removeSlice": "Remove slice",
+      "splitEvenly": "Split evenly",
+      "kind": "Target",
+      "kinds": {
+        "category": "Category",
+        "holdings": "Specific holdings"
+      },
+      "category": "Category",
+      "subcategory": "Subcategory",
+      "allSubcategories": "All subcategories",
+      "holdings": "Holdings",
+      "noHoldings": "You have no holdings to choose from yet.",
+      "holdingGone": "No longer in your portfolio",
+      "label": "Label",
+      "weight": "Target weight (%)",
+      "total": "Total: {total}%",
+      "totalOff": "Total: {total}%. The weights must add up to 100%."
+    }
+  }
+}

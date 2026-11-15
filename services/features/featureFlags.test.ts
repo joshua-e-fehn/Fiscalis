@@ -16,8 +16,8 @@ describe("parseFeatureFlags", () => {
   });
 
   it("turns on the listed flags and ignores unknown names", () => {
-    const flags = parseFeatureFlags(" pies , billing,unknown");
-    expect(flags.pies).toBe(true);
+    const flags = parseFeatureFlags(" notifications , billing,unknown");
+    expect(flags.notifications).toBe(true);
     expect(flags.billing).toBe(true);
     expect(flags.upgrade).toBe(false);
     expect("unknown" in flags).toBe(false);
@@ -31,7 +31,7 @@ describe("parseFeatureFlags", () => {
 
 describe("filterByFeature", () => {
   it("keeps unflagged items and flagged ones that are on", () => {
-    const items = [{ id: 1 }, { id: 2, feature: "pies" as const }, { id: 3, feature: "billing" as const }];
+    const items = [{ id: 1 }, { id: 2, feature: "notifications" as const }, { id: 3, feature: "billing" as const }];
     expect(filterByFeature(items, parseFeatureFlags("billing")).map((i) => i.id)).toEqual([1, 3]);
   });
 });
@@ -39,7 +39,7 @@ describe("filterByFeature", () => {
 describe("filterMenuByFeature", () => {
   const menu = [
     { title: "Dashboard", items: [] },
-    { title: "Strategies", items: [{ title: "Pies", feature: "pies" as const }] },
+    { title: "Account", items: [{ title: "Notifications", feature: "notifications" as const }] },
     {
       title: "Settings",
       items: [{ title: "General" }, { title: "Team", feature: "teamSettings" as const }],
@@ -65,7 +65,7 @@ describe("filterMenuByFeature", () => {
 
 describe("isFeatureFlag", () => {
   it("recognises known flags only", () => {
-    expect(isFeatureFlag("pies")).toBe(true);
+    expect(isFeatureFlag("billing")).toBe(true);
     expect(isFeatureFlag("nope")).toBe(false);
   });
 });

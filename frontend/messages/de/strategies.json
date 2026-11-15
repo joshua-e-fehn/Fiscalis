@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "Pies",
+    "subtitle": "Zielallokationen für dein Portfolio: Leg pro Slice eine Gewichtung fest und sieh, wie weit deine Positionen davon abweichen.",
+    "newPie": "Neuer Pie",
+    "empty": {
+      "title": "Noch keine Pies",
+      "description": "Ein Pie teilt dein Portfolio in Slices auf, jeder eine Kategorie, eine Unterkategorie oder bestimmte Positionen, mit einer Zielgewichtung. Fiscalis zeigt dir dann, wie weit deine tatsächliche Allokation davon abweicht.",
+      "action": "Ersten Pie erstellen"
+    },
+    "card": {
+      "totalValue": "Wert im Pie",
+      "maxDrift": "Größte Abweichung",
+      "noHoldings": "Noch passt keine deiner Positionen zu den Slices dieses Pies.",
+      "edit": "Pie bearbeiten",
+      "delete": "Pie löschen",
+      "threshold": "Slices, die mehr als {threshold} Prozentpunkte vom Ziel abweichen, solltest du rebalancieren.",
+      "columns": {
+        "slice": "Slice",
+        "target": "Ziel",
+        "actual": "Ist",
+        "drift": "Abweichung",
+        "rebalance": "Zum Rebalancing"
+      },
+      "drift": "{value} PP",
+      "status": {
+        "onTarget": "Im Ziel",
+        "over": "Übergewichtet",
+        "under": "Untergewichtet"
+      },
+      "buy": "{amount} kaufen",
+      "sell": "{amount} verkaufen",
+      "balanced": "—",
+      "allOf": "Alle {category}",
+      "holdingsCount": "{count, plural, one {# Position} other {# Positionen}}",
+      "missingHoldings": "{count, plural, one {# Position ist} other {# Positionen sind}} nicht mehr in deinem Portfolio"
+    },
+    "delete": {
+      "title": "Diesen Pie löschen?",
+      "description": "„{name}“ und seine Zielgewichtungen werden gelöscht. Deine Positionen bleiben unverändert.",
+      "confirm": "Pie löschen"
+    },
+    "toast": {
+      "created": "Pie „{name}“ erstellt",
+      "updated": "Pie „{name}“ aktualisiert",
+      "deleted": "Pie „{name}“ gelöscht"
+    },
+    "editor": {
+      "addTitle": "Neuer Pie",
+      "editTitle": "„{name}“ bearbeiten",
+      "description": "Gib jedem Slice eine Zielgewichtung. Die Gewichtungen müssen zusammen 100 % ergeben.",
+      "name": "Name",
+      "namePlaceholder": "z. B. Core & Satellite",
+      "descriptionLabel": "Beschreibung",
+      "optional": "Optional",
+      "slices": "Slices",
+      "slice": "Slice {number}",
+      "addSlice": "Slice hinzufügen",
+      "removeSlice": "Slice entfernen",
+      "splitEvenly": "Gleichmäßig verteilen",
+      "kind": "Ziel",
+      "kinds": {
+        "category": "Kategorie",
+        "holdings": "Bestimmte Positionen"
+      },
+      "category": "Kategorie",
+      "subcategory": "Unterkategorie",
+      "allSubcategories": "Alle Unterkategorien",
+      "holdings": "Positionen",
+      "noHoldings": "Du hast noch keine Positionen zur Auswahl.",
+      "holdingGone": "Nicht mehr in deinem Portfolio",
+      "label": "Bezeichnung",
+      "weight": "Zielgewichtung (%)",
+      "total": "Summe: {total} %",
+      "totalOff": "Summe: {total} %. Die Gewichtungen müssen zusammen 100 % ergeben."
+    }
+  }
+}

@@ -222,6 +222,10 @@ const data: Record<
 					url: "/settings/privacy",
 				},
 				{
+					titleKey: "notifications",
+					url: "/settings/notifications",
+				},
+				{
 					titleKey: "team",
 					url: "#",
 					feature: "teamSettings",

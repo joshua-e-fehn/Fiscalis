@@ -130,10 +130,15 @@ describe("netWorthChangeNotification", () => {
   });
 
   it("ignores small moves, partial snapshots, tiny bases and old comparisons", () => {
-    const run = (p: typeof previous | undefined, netWorth: number, partial?: boolean) =>
-      netWorthChangeNotification({ previous: p, current: { netWorth, partial }, today, nowMs: NOW });
+    const run = (
+      p: (typeof previous & { partial?: boolean }) | undefined,
+      netWorth: number,
+      partial?: boolean,
+    ) => netWorthChangeNotification({ previous: p, current: { netWorth, partial }, today, nowMs: NOW });
     expect(run(previous, 105_000)).toBeNull();
     expect(run(previous, 50_000, true)).toBeNull();
+    // Yesterday missed a provider: today's full row is not a jump
+    expect(run({ ...previous, partial: true }, 200_000)).toBeNull();
     expect(run({ netWorth: 500, timestamp: NOW - DAY }, 5_000)).toBeNull();
     expect(run({ netWorth: 100_000, timestamp: NOW - 8 * DAY }, 200_000)).toBeNull();
     expect(run(undefined, 200_000)).toBeNull();

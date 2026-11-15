@@ -289,17 +289,19 @@ export const NET_WORTH_COMPARE_MAX_AGE_MS = 7 * DAY_MS;
 /**
  * The net-worth alert for today's snapshot against the previous day's, or
  * null when the change is below NET_WORTH_CHANGE_THRESHOLD. A partial
- * snapshot (a provider failed, its holdings are stale) is never compared:
- * a missing provider would look like a crash.
+ * snapshot (a provider failed, its holdings are stale), today's or the
+ * previous one, is never compared: a missing provider would look like a
+ * crash or, once it is back, a jump.
  */
 export function netWorthChangeNotification(input: {
-  previous: { netWorth: number; timestamp: number } | undefined;
+  previous: { netWorth: number; timestamp: number; partial?: boolean } | undefined;
   current: { netWorth: number; partial?: boolean };
   today: string;
   nowMs: number;
 }): NotificationContent | null {
   const { previous, current, today, nowMs } = input;
-  if (!previous || current.partial) return null;
+  // Either side partial: a provider missing from one row is not a move
+  if (!previous || previous.partial || current.partial) return null;
   if (nowMs - previous.timestamp > NET_WORTH_COMPARE_MAX_AGE_MS) return null;
   const base = Math.abs(previous.netWorth);
   if (!Number.isFinite(base) || base < NET_WORTH_CHANGE_MIN_BASE) return null;

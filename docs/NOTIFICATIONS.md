@@ -12,7 +12,7 @@ owner sets up a sending domain (see "Turning on email" below).
 | `syncFailed` | A Plaid item, SnapTrade connection or Bitpanda connection gets the status `error` (`banking.updateItemStatus`, `brokers.updateConnectionStatus`, `bitpanda.updateConnectionStatus`). A `transient_error` does not notify because the next sync retries it. | One per connection per UTC day |
 | `connectionReauth` | SnapTrade `reauth_required` (sync or `connection_broken` webhook), Bitpanda `needs_reauth`, a Plaid `pending_reauth`, or a Plaid `error` with `ITEM_LOGIN_REQUIRED` (sync or webhook) | One per connection per UTC day |
 | `consentExpiring` | A Plaid item's end of consent (or expected disconnect) is within 14 days (`banking.updateItemConsent`: every balance sync and the `PENDING_EXPIRATION` / `PENDING_DISCONNECT` webhooks) | One per item and end date |
-| `netWorthChange` | Today's snapshot differs from the previous day's by 10% or more (`portfolioSnapshots.takeSnapshot`). Skipped for partial snapshots, when the previous net worth is below 1,000, or when the previous snapshot is more than 7 days old | One per UTC day |
+| `netWorthChange` | Today's snapshot differs from the previous day's by 10% or more (`portfolioSnapshots.takeSnapshot`). Skipped when either snapshot is partial, when the previous net worth is below 1,000, or when the previous snapshot is more than 7 days old | One per UTC day |
 | `billing` | Stripe webhook `customer.subscription.created`, `customer.subscription.deleted` or `invoice.payment_failed` (`http.ts`, `onEvent`). The user comes from the subscription metadata that checkout sets | One per Stripe object |
 
 The rules live in `services/notifications/notifications.ts` and are tested in

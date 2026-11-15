@@ -425,7 +425,7 @@ export const deleteConnectionData = internalMutation({
   args: { connectionId: v.id("brokerConnections") },
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
-    if (!connection) throw new Error("Connection not found");
+    if (!connection) return;
 
     // Get all accounts for this connection
     const accounts = await ctx.db

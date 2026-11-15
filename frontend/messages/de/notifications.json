@@ -1,0 +1,86 @@
+{
+  "bell": {
+    "label": "Benachrichtigungen",
+    "unread": "Benachrichtigungen, {count} ungelesen",
+    "viewAll": "Alle Benachrichtigungen anzeigen"
+  },
+  "center": {
+    "title": "Benachrichtigungen",
+    "subtitle": "Hinweise zu deinen Verbindungen, Bankfreigaben, deinem Nettovermögen und deinem Tarif.",
+    "markRead": "Als gelesen markieren",
+    "markAllRead": "Alle als gelesen markieren",
+    "empty": "Du bist auf dem neuesten Stand.",
+    "loadMore": "Mehr anzeigen",
+    "open": "Öffnen",
+    "settings": "Benachrichtigungseinstellungen",
+    "unreadLabel": "Ungelesen"
+  },
+  "preferences": {
+    "title": "Benachrichtigungseinstellungen",
+    "subtitle": "Wähle, welche Hinweise du in der App und per E-Mail bekommst.",
+    "alert": "Hinweis",
+    "inApp": "In der App",
+    "email": "E-Mail",
+    "emailUnavailable": "E-Mail-Hinweise sind noch nicht eingeschaltet. Deine Auswahl wird gespeichert und gilt, sobald sie verfügbar sind.",
+    "types": {
+      "syncFailed": {
+        "label": "Fehlgeschlagene Synchronisierung",
+        "description": "Eine Bank-, Broker- oder Krypto-Verbindung konnte nicht aktualisiert werden."
+      },
+      "connectionReauth": {
+        "label": "Erneute Anmeldung nötig",
+        "description": "Eine Verbindung braucht eine erneute Anmeldung, bevor sie synchronisieren kann."
+      },
+      "consentExpiring": {
+        "label": "Bankfreigabe läuft ab",
+        "description": "Deine Freigabe für eine Bankverbindung endet in den nächsten zwei Wochen."
+      },
+      "netWorthChange": {
+        "label": "Große Änderung des Nettovermögens",
+        "description": "Dein Nettovermögen hat sich seit dem Vortag um 10 % oder mehr verändert."
+      },
+      "billing": {
+        "label": "Tarif und Zahlungen",
+        "description": "Dein Pro-Tarif hat begonnen oder geendet, oder eine Zahlung ist fehlgeschlagen."
+      }
+    }
+  },
+  "messages": {
+    "syncFailed": {
+      "title": "{connection} konnte nicht aktualisiert werden",
+      "body": "Die letzte Synchronisierung von {connection} ist fehlgeschlagen. Sie wird mit der nächsten Synchronisierung wiederholt; öffne die Verbindung, wenn das öfter passiert."
+    },
+    "connectionReauth": {
+      "title": "{connection} neu verbinden",
+      "body": "{connection} braucht eine erneute Anmeldung. Bis dahin werden Salden und Positionen nicht aktualisiert."
+    },
+    "consentExpiring": {
+      "title": "Deine Freigabe für {connection} endet bald",
+      "body": "Deine Freigabe für {connection} endet am {at, date, medium}. Erneuere sie, damit die Verbindung weiter synchronisiert."
+    },
+    "netWorthUp": {
+      "title": "Dein Nettovermögen ist um {percent, number, percent} gestiegen",
+      "body": "Dein Nettovermögen ist {percent, number, percent} höher als am {since, date, medium}."
+    },
+    "netWorthDown": {
+      "title": "Dein Nettovermögen ist um {percent, number, percent} gesunken",
+      "body": "Dein Nettovermögen ist {percent, number, percent} niedriger als am {since, date, medium}. Prüfe deine Konten, wenn das unerwartet ist."
+    },
+    "billingPaymentFailed": {
+      "title": "Deine Zahlung ist fehlgeschlagen",
+      "body": "Wir konnten deine Zahlungsmethode für Fiscalis Pro nicht belasten. Aktualisiere sie unter Abrechnung, um Pro zu behalten."
+    },
+    "billingSubscriptionStarted": {
+      "title": "Willkommen bei Pro",
+      "body": "Dein Fiscalis-Pro-Tarif ist aktiv. Danke für deine Unterstützung."
+    },
+    "billingSubscriptionEnded": {
+      "title": "Dein Pro-Tarif ist beendet",
+      "body": "Du bist jetzt im Free-Tarif. Deine Daten bleiben erhalten; unter Abrechnung kannst du jederzeit wieder upgraden."
+    }
+  },
+  "email": {
+    "footer": "Du bekommst diese E-Mail, weil E-Mail-Hinweise in deinen Fiscalis-Benachrichtigungseinstellungen eingeschaltet sind.",
+    "open": "Fiscalis öffnen"
+  }
+}

@@ -7,6 +7,7 @@ import type { Messages } from "@/i18n/messages";
 
 import assets from "./assets.json";
 import billing from "./billing.json";
+import notifications from "./notifications.json";
 import calculators from "./calculators.json";
 import categories from "./categories.json";
 import common from "./common.json";
@@ -43,6 +44,7 @@ const ptPT = {
   strategies,
   docs,
   billing,
+  notifications,
 } satisfies Messages;
 
 export default ptPT;

@@ -1,0 +1,86 @@
+{
+  "bell": {
+    "label": "通知",
+    "unread": "通知，{count} 条未读",
+    "viewAll": "查看全部通知"
+  },
+  "center": {
+    "title": "通知",
+    "subtitle": "关于你的连接、银行授权、净资产和套餐的提醒。",
+    "markRead": "标为已读",
+    "markAllRead": "全部标为已读",
+    "empty": "暂无新通知。",
+    "loadMore": "显示更多",
+    "open": "打开",
+    "settings": "通知设置",
+    "unreadLabel": "未读"
+  },
+  "preferences": {
+    "title": "通知设置",
+    "subtitle": "选择在应用内和通过邮件接收哪些提醒。",
+    "alert": "提醒",
+    "inApp": "应用内",
+    "email": "邮件",
+    "emailUnavailable": "邮件提醒尚未开启。你的选择已保存，开启后即生效。",
+    "types": {
+      "syncFailed": {
+        "label": "同步失败",
+        "description": "某个银行、券商或加密货币连接无法更新。"
+      },
+      "connectionReauth": {
+        "label": "需要重新连接",
+        "description": "某个连接需要你重新登录后才能同步。"
+      },
+      "consentExpiring": {
+        "label": "银行授权即将到期",
+        "description": "你对某个银行连接的授权将在两周内到期。"
+      },
+      "netWorthChange": {
+        "label": "净资产大幅变动",
+        "description": "你的净资产较前一天变动了 10% 或更多。"
+      },
+      "billing": {
+        "label": "套餐与付款",
+        "description": "你的 Pro 套餐已开始或结束，或有一笔付款失败。"
+      }
+    }
+  },
+  "messages": {
+    "syncFailed": {
+      "title": "{connection} 无法更新",
+      "body": "{connection} 的最近一次同步失败。下次同步时会重试；如果反复出现，请打开该连接。"
+    },
+    "connectionReauth": {
+      "title": "重新连接 {connection}",
+      "body": "{connection} 需要你重新登录。在此之前，其余额和持仓不会更新。"
+    },
+    "consentExpiring": {
+      "title": "你对 {connection} 的授权即将到期",
+      "body": "你对 {connection} 的授权将于 {at, date, medium} 到期。请续期，以便连接继续同步。"
+    },
+    "netWorthUp": {
+      "title": "你的净资产上涨了 {percent, number, percent}",
+      "body": "你的净资产比 {since, date, medium} 高 {percent, number, percent}。"
+    },
+    "netWorthDown": {
+      "title": "你的净资产下跌了 {percent, number, percent}",
+      "body": "你的净资产比 {since, date, medium} 低 {percent, number, percent}。如有意外，请检查你的账户。"
+    },
+    "billingPaymentFailed": {
+      "title": "付款失败",
+      "body": "我们无法通过你的付款方式收取 Fiscalis Pro 费用。请在“账单”中更新，以保留 Pro。"
+    },
+    "billingSubscriptionStarted": {
+      "title": "欢迎使用 Pro",
+      "body": "你的 Fiscalis Pro 套餐已生效。感谢你的支持。"
+    },
+    "billingSubscriptionEnded": {
+      "title": "你的 Pro 套餐已结束",
+      "body": "你现在使用的是免费套餐。你的数据保持不变；可随时在“账单”中重新升级。"
+    }
+  },
+  "email": {
+    "footer": "你收到这封邮件，是因为你在 Fiscalis 通知设置中开启了邮件提醒。",
+    "open": "打开 Fiscalis"
+  }
+}

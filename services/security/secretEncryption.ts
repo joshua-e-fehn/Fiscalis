@@ -9,8 +9,10 @@
  * configured version decrypts.
  *
  * Ciphertext format: `v<version>:<iv>:<authTag>:<data>` (all base64). A
- * ciphertext without the version prefix (`<iv>:<authTag>:<data>`, written
- * before versioning) is version 1.
+ * ciphertext without the version prefix (`<iv>:<authTag>:<data>`) is
+ * version 1: written before versioning, or while version 1 is current (it
+ * is written unprefixed so a rollback can still read it). `v1:` is also
+ * accepted on read.
  *
  * Rotation: add ENCRYPTION_KEY_V<n+1>, run the re-encrypt migration
  * (convex/actions/secretRotation.ts) until it reports nothing left, then
@@ -91,12 +93,15 @@ export function encryptSecret(plaintext: string, keyring: Keyring): string {
   const cipher = createCipheriv(ALGORITHM, key, iv);
   const data = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const authTag = cipher.getAuthTag();
-  return [
-    `v${keyring.current}`,
+  const body = [
     iv.toString("base64"),
     authTag.toString("base64"),
     data.toString("base64"),
   ].join(":");
+  // Version 1 keeps the unprefixed legacy format, so code from before
+  // versioning can still read every secret written while v1 is current
+  // (rolling back this change stays safe until a second key is added)
+  return keyring.current === 1 ? body : `v${keyring.current}:${body}`;
 }
 
 /** Decrypts a ciphertext of any version the keyring holds. */

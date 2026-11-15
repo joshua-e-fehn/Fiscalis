@@ -16,14 +16,16 @@ Plaid access tokens (`plaidItems.accessToken`), SnapTrade user secrets
 - The **highest** version present encrypts every new secret. **Any**
   configured version decrypts.
 - Ciphertexts are `v<version>:<iv>:<authTag>:<data>`. One without the
-  `v<n>:` prefix was written before versioning and is version 1.
+  `v<n>:` prefix is version 1 (version 1 is always written unprefixed).
 - Code: `services/security/secretEncryption.ts` (format, keyring, tests),
   `frontend/convex/lib/encryption.ts` (reads the env),
   `frontend/convex/actions/secretRotation.ts` (re-encrypt migration).
 
-Once this change is deployed, new secrets are written as `v1:...`. Code from
-before ENG-240 cannot read that prefix, so rolling back past ENG-240 breaks
-secrets stored after the deploy (their users would have to reconnect).
+While version 1 is the newest key, secrets are still written in the
+unprefixed legacy format, so code from before ENG-240 can read everything and
+rolling back past ENG-240 is safe. Once `ENCRYPTION_KEY_V2` is added, new
+secrets are written as `v2:...`, which pre-ENG-240 code cannot read: do not
+roll back past ENG-240 after the first rotation.
 
 ## Rotating (prod: `handsome-gecko-941`)
 

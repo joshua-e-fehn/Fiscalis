@@ -91,7 +91,9 @@ describe("encryptSecret / decryptSecret", () => {
 
   it("decrypts an older version after a newer key is added", () => {
     const v1 = encryptSecret("old", keyringFromEnv({ CONVEX_ENCRYPTION_KEY: KEY_1 }));
-    expect(v1.startsWith("v1:")).toBe(true);
+    // Version 1 is written in the legacy format, which pre-versioning code reads
+    expect(v1.split(":")).toHaveLength(3);
+    expect(ciphertextVersion(v1)).toBe(1);
     const rotated = keyringFromEnv({ CONVEX_ENCRYPTION_KEY: KEY_1, ENCRYPTION_KEY_V2: KEY_2 });
     expect(decryptSecret(v1, rotated)).toBe("old");
   });
@@ -106,15 +108,23 @@ describe("encryptSecret / decryptSecret", () => {
   it("fails on a tampered ciphertext", () => {
     const keyring = keyringFromEnv({ CONVEX_ENCRYPTION_KEY: KEY_1 });
     const parts = encryptSecret("secret", keyring).split(":");
-    const data = Buffer.from(parts[3], "base64");
+    const last = parts.length - 1;
+    const data = Buffer.from(parts[last], "base64");
     data[0] ^= 1;
-    parts[3] = data.toString("base64");
+    parts[last] = data.toString("base64");
     expect(() => decryptSecret(parts.join(":"), keyring)).toThrow();
   });
 
   it("fails when a key is swapped under the same version", () => {
     const ciphertext = encryptSecret("secret", keyringFromEnv({ ENCRYPTION_KEY_V2: KEY_2 }));
     expect(() => decryptSecret(ciphertext, keyringFromEnv({ ENCRYPTION_KEY_V2: KEY_3 }))).toThrow();
+  });
+
+  it("still reads an explicit v1: prefix", () => {
+    const keyring = keyringFromEnv({ CONVEX_ENCRYPTION_KEY: KEY_1 });
+    const prefixed = `v1:${legacyEncrypt("prefixed", KEY_1)}`;
+    expect(ciphertextVersion(prefixed)).toBe(1);
+    expect(decryptSecret(prefixed, keyring)).toBe("prefixed");
   });
 
   it("rejects malformed ciphertexts", () => {

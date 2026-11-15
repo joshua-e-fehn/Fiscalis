@@ -1,4 +1,7 @@
+import { Migrations } from "@convex-dev/migrations";
 import { v } from "convex/values";
+import { components } from "./_generated/api";
+import type { DataModel } from "./_generated/dataModel";
 import { internalMutation } from "./_generated/server";
 import {
   isLegacyInterestOnlyThenPayment,
@@ -30,6 +33,24 @@ import {
   positionBaseFields,
 } from "../../services/finance/currency";
 import { describeError } from "../../services/security/providerError";
+
+/**
+ * New migrations use the @convex-dev/migrations component (convex.config.ts):
+ * `migrations.define` runs a per-document function over a table in batches,
+ * records progress so a failed or interrupted run resumes where it stopped,
+ * and refuses a duplicate concurrent run. The older one-transaction
+ * internalMutations below stay as they are; port one only when it is
+ * touched again (backfillLoanScenarioExtraPerPeriod is the worked example).
+ *
+ * Run one (dry run first: one batch, then rolled back):
+ *   npx convex run migrations:run '{"fn": "migrations:<name>", "dryRun": true}'
+ *   npx convex run migrations:run '{"fn": "migrations:<name>"}'
+ * Status: npx convex run --component migrations lib:getStatus --watch
+ */
+export const migrations = new Migrations<DataModel>(components.migrations);
+
+/** General-purpose runner: `migrations:run '{"fn": "migrations:<name>"}'`. */
+export const run = migrations.runner();
 
 /**
  * Migration: Update metalCatalog and vaultItems to use buyPremium/sellPremium
@@ -597,32 +618,19 @@ export const backfillVaultLedger = internalMutation({
  * Migration: loan scenarios stored their per-period extra as
  * `extraMonthlyPayment` (it was never monthly). Copies it to `extraPerPeriod`
  * where that is unset; the old field is kept and still read as a fallback.
- * Idempotent. Dry run first:
- *   npx convex run migrations:backfillLoanScenarioExtraPerPeriod '{"dryRun": true}'
+ * Idempotent. Component migration (see `migrations` above); dry run first:
+ *   npx convex run migrations:run '{"fn": "migrations:backfillLoanScenarioExtraPerPeriod", "dryRun": true}'
  */
-export const backfillLoanScenarioExtraPerPeriod = internalMutation({
-  args: { dryRun: v.optional(v.boolean()) },
-  handler: async (ctx, args) => {
-    const scenarios = await ctx.db.query("loanScenarios").collect();
-    const changed = [];
-    for (const scenario of scenarios) {
-      if (
-        scenario.extraPerPeriod !== undefined ||
-        scenario.extraMonthlyPayment === undefined
-      ) {
-        continue;
-      }
-      changed.push({
-        scenarioId: scenario._id,
-        extraPerPeriod: scenario.extraMonthlyPayment,
-      });
-      if (!args.dryRun) {
-        await ctx.db.patch(scenario._id, {
-          extraPerPeriod: scenario.extraMonthlyPayment,
-        });
-      }
+export const backfillLoanScenarioExtraPerPeriod = migrations.define({
+  table: "loanScenarios",
+  migrateOne: (_ctx, scenario) => {
+    if (
+      scenario.extraPerPeriod !== undefined ||
+      scenario.extraMonthlyPayment === undefined
+    ) {
+      return;
     }
-    return { scanned: scenarios.length, changed };
+    return { extraPerPeriod: scenario.extraMonthlyPayment };
   },
 });
 

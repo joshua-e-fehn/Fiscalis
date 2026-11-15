@@ -30,9 +30,20 @@
 - A framework-free calculation package (loan amortisation, interest, retirement
   projection, time-range vocabulary, and three portfolio-performance strategies
   — discrete/continuous/hybrid) is consumed by both the app and the server
-  functions, and holds the repo's only TypeScript tests (`ops/health-monitor`
-  has its own Python test). How a holding is valued, and the owner decisions
-  D1–D4 behind the numbers, are in `docs/adr/0001-valuation-resolution.md`.
+  functions, and holds the pure-logic tests (`ops/health-monitor` has its own
+  Python test). How a holding is valued, and the owner decisions D1–D4 behind
+  the numbers, are in `docs/adr/0001-valuation-resolution.md`.
+- Convex functions are tested in-memory with convex-test
+  (`frontend/convex/tests/*.test.ts`, run by `bun run test:convex`). The
+  ownership suite walks every public query, mutation and action and calls it
+  as a second user with the first user's ids, so a new public function is
+  covered automatically; extend its `ARG_OVERRIDES` when the generated
+  arguments don't fit. Seed data for tests and the dev demo user is
+  `convex/lib/demoData.ts`. Test helpers there are named `*.helpers.ts`: the
+  Convex bundler skips files with two dots, so they never deploy.
+- New data migrations use `@convex-dev/migrations` (`migrations.define` in
+  `convex/migrations.ts`, run with `migrations:run`); the older one-shot
+  internalMutations stay until they are touched.
 
 ## Non-obvious structure
 
@@ -83,10 +94,11 @@ cd frontend && bun install --frozen-lockfile && bunx convex dev   # codegen + de
 bun run dev                                     # app on :3000
 bun run build                                   # convex codegen, then webpack build
 bun run lint
-bun run check                                   # lint + tsc (app, convex) + services tests = CI
+bun run check                                   # lint + tsc (app, convex) + convex-test + services tests = CI
+bun run test:convex                             # convex-test suites only
 # (no manual backend deploy: Vercel production builds run `convex deploy`)
 
-cd services && bun install --frozen-lockfile && bun run test   # vitest
+cd services && bun install --frozen-lockfile && bun run test   # vitest — pure-logic tests
 ```
 
 ## Deployments

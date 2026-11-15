@@ -10,12 +10,14 @@
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p convex",
     "test:services": "cd ../services && bun run test --run",
-    "check": "bun run lint && bun run typecheck && bun run test:services"
+    "test:convex": "vitest run",
+    "check": "bun run lint && bun run typecheck && bun run test:convex && bun run test:services"
   },
   "dependencies": {
     "@clerk/backend": "^2.29.5",
     "@clerk/localizations": "3.35.2",
     "@clerk/nextjs": "^6.36.10",
+    "@convex-dev/migrations": "^0.3.8",
     "@convex-dev/rate-limiter": "^0.4.3",
     "@hono/clerk-auth": "^2.0.1",
     "@hono/zod-validator": "^0.9.1",
@@ -40,6 +42,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "~1.49.0",
+    "convex-helpers": "0.1.135",
     "framer-motion": "^11.18.2",
     "hono": "^4.11.5",
     "lucide": "^0.563.0",
@@ -62,16 +65,19 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@tanstack/eslint-plugin-query": "^5.91.3",
     "@tanstack/react-query-devtools": "^5.91.2",
     "@types/node": "^20.19.30",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
     "caniuse-lite": "^1.0.30001766",
+    "convex-test": "^0.0.71",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.4",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "4.1.8"
   }
 }

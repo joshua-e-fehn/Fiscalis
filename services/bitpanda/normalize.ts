@@ -340,6 +340,11 @@ function readTransactionDate(attrs: any): string {
   ).toString();
 }
 
+/** The ISO date of a raw transaction record from any Bitpanda list endpoint. */
+export function bitpandaRecordDate(record: any): string {
+  return readTransactionDate(record?.attributes ?? record);
+}
+
 function toNumber(raw: any): number {
   const n = typeof raw === "string" ? parseFloat(raw) : raw;
   return Number.isFinite(n) ? n : 0;

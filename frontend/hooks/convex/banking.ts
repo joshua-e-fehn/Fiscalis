@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toActionError } from "@/lib/actionError";
 import { useState, useCallback } from "react";
@@ -256,25 +256,20 @@ export function useUpdateAllInstitutionLogos() {
 // PLAID TRANSACTIONS HOOKS
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Hook to get transactions from the database
- */
-export function useTransactions(options?: { limit?: number }) {
-  return useQuery(api.banking.getTransactionsDb, options ?? {});
-}
+/** Transactions read per page by useTransactions. */
+export const TRANSACTIONS_PAGE_SIZE = 50;
 
 /**
- * Hook to get transactions with date filter
+ * The signed-in user's bank transactions, newest first and paginated,
+ * optionally for one account and an inclusive date range (YYYY-MM-DD).
  */
-export function useTransactionsByDate(
-  startDate?: string,
-  endDate?: string,
-  accountId?: string,
-) {
-  return useQuery(api.banking.getTransactions, {
-    startDate,
-    endDate,
-    accountId,
+export function useTransactions(filters?: {
+  accountId?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  return usePaginatedQuery(api.banking.listTransactions, filters ?? {}, {
+    initialNumItems: TRANSACTIONS_PAGE_SIZE,
   });
 }
 
@@ -287,11 +282,7 @@ export function useSyncTransactions() {
   const [error, setError] = useState<Error | null>(null);
 
   const mutate = useCallback(
-    async (params?: {
-      itemId?: string;
-      startDate?: string;
-      endDate?: string;
-    }) => {
+    async (params?: { itemId?: string }) => {
       setIsLoading(true);
       setError(null);
       try {

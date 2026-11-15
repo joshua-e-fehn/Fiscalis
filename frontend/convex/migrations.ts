@@ -12,6 +12,7 @@ import {
 } from "../../services/classification";
 import { loadFxRates } from "./fxRates";
 import { USER_DATA_TABLES } from "./onboarding";
+import { distinctUserIds, SYNC_SOURCE_TABLES } from "./lib/syncTargets";
 import {
   asLedgerTransaction,
   basePricePerUnit,
@@ -770,21 +771,10 @@ export const markExistingUsersOnboarded = internalMutation({
     const dryRun = args.dryRun ?? true;
     const now = Date.now();
 
-    // Distinct userIds via a skip scan over each by_user index: one read per
-    // (table, user) instead of a full .collect(), so large tables such as
-    // portfolioSnapshots stay well inside the per-transaction read limits.
-    const userIds = new Set<string>();
-    for (const table of [...USER_DATA_TABLES, "onboardingProgress"] as const) {
-      let row = await ctx.db.query(table).withIndex("by_user").first();
-      while (row) {
-        const userId = row.userId;
-        userIds.add(userId);
-        row = await ctx.db
-          .query(table)
-          .withIndex("by_user", (q) => q.gt("userId", userId))
-          .first();
-      }
-    }
+    const userIds = await distinctUserIds(ctx, [
+      ...USER_DATA_TABLES,
+      "onboardingProgress",
+    ]);
 
     const patched: string[] = [];
     const inserted: string[] = [];
@@ -835,5 +825,42 @@ export const markExistingUsersOnboarded = internalMutation({
       patched,
       inserted,
     };
+  },
+});
+
+/**
+ * Migration (ENG-230): register every user with a provider connection, a
+ * vault item or a loan in syncTargets, which the daily sync now reads
+ * instead of scanning those tables. Inserts only missing rows; idempotent.
+ * Run once on each deployment after the schema deploys, before the next
+ * 06:00 UTC cron (until then the cron finds no targets and skips users).
+ * Dry run is the default:
+ *   npx convex run migrations:backfillSyncTargets
+ *   npx convex run migrations:backfillSyncTargets '{"dryRun": false}'
+ */
+export const backfillSyncTargets = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const dryRun = args.dryRun ?? true;
+    const userIds = await distinctUserIds(ctx, SYNC_SOURCE_TABLES);
+
+    const inserted: string[] = [];
+    let alreadyRegistered = 0;
+    for (const userId of userIds) {
+      const existing = await ctx.db
+        .query("syncTargets")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      if (existing) {
+        alreadyRegistered++;
+        continue;
+      }
+      inserted.push(userId);
+      if (!dryRun) {
+        await ctx.db.insert("syncTargets", { userId, createdAt: Date.now() });
+      }
+    }
+
+    return { dryRun, users: userIds.size, alreadyRegistered, inserted };
   },
 });

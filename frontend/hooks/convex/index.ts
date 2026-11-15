@@ -12,7 +12,7 @@ export {
   useUpdateInstitutionLogo,
   useUpdateAllInstitutionLogos,
   useTransactions,
-  useTransactionsByDate,
+  TRANSACTIONS_PAGE_SIZE,
   useSyncTransactions,
 } from "./banking";
 

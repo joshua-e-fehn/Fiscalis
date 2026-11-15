@@ -1,7 +1,11 @@
 "use node";
 
 import { v } from "convex/values";
-import { action, internalAction } from "../_generated/server";
+import {
+  action,
+  internalAction,
+  type ActionCtx,
+} from "../_generated/server";
 import { internal } from "../_generated/api";
 import { scheduledSyncEnabled } from "../lib/scheduledSync";
 import { describeError } from "../../../services/security/providerError";
@@ -323,6 +327,36 @@ export const syncAllForUserInternal = internalAction({
   },
 });
 
+/** syncTargets read per page by the daily sync's discovery. */
+const SYNC_TARGET_PAGE_SIZE = 100;
+
+/**
+ * Every user the daily sync covers, read page by page from syncTargets
+ * (convex/syncTargets.ts); targets left without data are pruned.
+ */
+async function discoverSyncTargets(ctx: ActionCtx): Promise<string[]> {
+  const users: string[] = [];
+  let cursor: string | null = null;
+  for (;;) {
+    const page: {
+      active: string[];
+      stale: string[];
+      continueCursor: string;
+      isDone: boolean;
+    } = await ctx.runQuery(internal.syncTargets.getSyncTargetsPage, {
+      paginationOpts: { numItems: SYNC_TARGET_PAGE_SIZE, cursor },
+    });
+    users.push(...page.active);
+    if (page.stale.length > 0) {
+      await ctx.runMutation(internal.syncTargets.pruneSyncTargets, {
+        userIds: page.stale,
+      });
+    }
+    if (page.isDone) return users;
+    cursor = page.continueCursor;
+  }
+}
+
 /** Spacing between users' scheduled syncs, to be gentle on provider APIs. */
 const USER_SYNC_STAGGER_MS = 1_000;
 
@@ -358,9 +392,7 @@ export const scheduledDailySync = internalAction({
       );
       return { usersScheduled: 0, timestamp };
     }
-    const users: string[] = await ctx.runQuery(
-      internal.portfolioSnapshots.getUsersWithConnections,
-    );
+    const users = await discoverSyncTargets(ctx);
 
     if (users.length === 0) {
       // Nothing to sync is a successful run for GET /health/deep

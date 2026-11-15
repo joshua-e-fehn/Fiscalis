@@ -12,6 +12,11 @@ import {
 } from "../../services/bitpanda/holdingPrice";
 import { bitpandaOverridePatch } from "./lib/classificationOverride";
 import { getOwnedDoc, requireUserId } from "./lib/auth";
+import { ensureSyncTarget } from "./lib/syncTargets";
+import {
+  isInSyncWindow,
+  syncWindowIndexLowerBound,
+} from "../../services/banking/transactionSync";
 
 // ═══════════════════════════════════════════════════════════════
 // CONNECTION QUERIES
@@ -156,12 +161,23 @@ export const getHoldingsByCategory = query({
   },
 });
 
+/** Upper bound on the transactions getTransactions returns. */
+const MAX_TRANSACTIONS = 500;
+
 /**
- * Get Bitpanda transactions for the current user, optionally for one connection.
+ * The current user's newest Bitpanda transactions (at most `limit`, capped
+ * at MAX_TRANSACTIONS), optionally for one connection.
  */
 export const getTransactions = query({
-  args: { connectionId: v.optional(v.id("bitpandaConnections")) },
+  args: {
+    connectionId: v.optional(v.id("bitpandaConnections")),
+    limit: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
+    const requested = args.limit ?? MAX_TRANSACTIONS;
+    const limit = Number.isFinite(requested)
+      ? Math.min(Math.max(1, Math.floor(requested)), MAX_TRANSACTIONS)
+      : MAX_TRANSACTIONS;
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
 
@@ -173,16 +189,18 @@ export const getTransactions = query({
 
       return await ctx.db
         .query("bitpandaTransactions")
-        .withIndex("by_connection", (q) =>
+        .withIndex("by_connection_date", (q) =>
           q.eq("connectionId", args.connectionId!),
         )
-        .collect();
+        .order("desc")
+        .take(limit);
     }
 
     return await ctx.db
       .query("bitpandaTransactions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+      .withIndex("by_date", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(limit);
   },
 });
 
@@ -199,6 +217,7 @@ export const createConnection = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    await ensureSyncTarget(ctx, args.userId);
     return await ctx.db.insert("bitpandaConnections", {
       userId: args.userId,
       apiKey: args.apiKey,
@@ -383,11 +402,40 @@ export const syncHoldings = internalMutation({
   },
 });
 
-/** Replace a connection's transactions (insert new ones, dedup by id). */
+/**
+ * Where a connection's transaction sync stands: the newest stored
+ * transaction date and the last full sync (actions/bitpanda.ts).
+ */
+export const getTransactionSyncStateInternal = internalQuery({
+  args: { connectionId: v.id("bitpandaConnections") },
+  handler: async (ctx, { connectionId }) => {
+    const connection = await ctx.db.get(connectionId);
+    const newest = await ctx.db
+      .query("bitpandaTransactions")
+      .withIndex("by_connection_date", (q) => q.eq("connectionId", connectionId))
+      .order("desc")
+      .first();
+    return {
+      newestTransactionDate: newest?.transactionDate,
+      transactionsFullSyncAt: connection?.transactionsFullSyncAt,
+    };
+  },
+});
+
+/**
+ * Store a connection's transactions. Without `cutoff` (a full sync) the
+ * stored rows are replaced: the incoming list is already deduplicated by
+ * the normalizer, so a full replace both reflects the latest data and heals
+ * any duplicates stored by earlier syncs. With `cutoff` (an incremental
+ * sync, ENG-230) only the window from the cutoff on is replaced: incoming
+ * rows in it are upserted by id, stored rows in it that Bitpanda no longer
+ * lists are deleted, and older rows are left as they are.
+ */
 export const syncTransactions = internalMutation({
   args: {
     userId: v.string(),
     connectionId: v.id("bitpandaConnections"),
+    cutoff: v.optional(v.string()),
     transactions: v.array(
       v.object({
         bitpandaTransactionId: v.string(),
@@ -405,27 +453,80 @@ export const syncTransactions = internalMutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection || connection.userId !== args.userId) return;
 
-    // Replace the connection's transactions. The incoming list is already
-    // deduplicated by the normalizer, so a full replace both reflects the
-    // latest data and heals any duplicates stored by earlier syncs.
-    const existing = await ctx.db
-      .query("bitpandaTransactions")
-      .withIndex("by_connection", (q) =>
-        q.eq("connectionId", args.connectionId),
-      )
-      .collect();
-    for (const tx of existing) {
-      await ctx.db.delete(tx._id);
+    if (args.cutoff === undefined) {
+      const existing = await ctx.db
+        .query("bitpandaTransactions")
+        .withIndex("by_connection", (q) =>
+          q.eq("connectionId", args.connectionId),
+        )
+        .collect();
+      for (const tx of existing) {
+        await ctx.db.delete(tx._id);
+      }
+      for (const tx of args.transactions) {
+        await ctx.db.insert("bitpandaTransactions", {
+          userId: args.userId,
+          connectionId: args.connectionId,
+          ...tx,
+          createdAt: now,
+        });
+      }
+      await ctx.db.patch(args.connectionId, { transactionsFullSyncAt: now });
+      return;
     }
 
-    for (const tx of args.transactions) {
-      await ctx.db.insert("bitpandaTransactions", {
-        userId: args.userId,
-        connectionId: args.connectionId,
-        ...tx,
-        createdAt: now,
-      });
+    const cutoff = args.cutoff;
+    // Older incoming rows are skipped: their cross-endpoint copies may lie
+    // outside what this sync read, so they could not be deduplicated
+    const incoming = args.transactions.filter((tx) =>
+      isInSyncWindow(tx.transactionDate, cutoff),
+    );
+    const incomingIds = new Set(incoming.map((tx) => tx.bitpandaTransactionId));
+    // Stored dates carry UTC offsets (+02:00), so the index range is a
+    // superset and the window itself is decided by instant, exactly as for
+    // the incoming rows above
+    const nearWindow = await ctx.db
+      .query("bitpandaTransactions")
+      .withIndex("by_connection_date", (q) =>
+        q
+          .eq("connectionId", args.connectionId)
+          .gte("transactionDate", syncWindowIndexLowerBound(cutoff)),
+      )
+      .collect();
+    const storedById = new Map(
+      nearWindow.map((tx) => [tx.bitpandaTransactionId, tx]),
+    );
+    for (const tx of nearWindow) {
+      if (
+        isInSyncWindow(tx.transactionDate, cutoff) &&
+        !incomingIds.has(tx.bitpandaTransactionId)
+      ) {
+        await ctx.db.delete(tx._id);
+      }
+    }
+    for (const tx of incoming) {
+      const existing =
+        storedById.get(tx.bitpandaTransactionId) ??
+        (await ctx.db
+          .query("bitpandaTransactions")
+          .withIndex("by_bitpanda_id", (q) =>
+            q.eq("bitpandaTransactionId", tx.bitpandaTransactionId),
+          )
+          .filter((q) => q.eq(q.field("connectionId"), args.connectionId))
+          .first());
+      if (existing) {
+        await ctx.db.patch(existing._id, tx);
+      } else {
+        await ctx.db.insert("bitpandaTransactions", {
+          userId: args.userId,
+          connectionId: args.connectionId,
+          ...tx,
+          createdAt: now,
+        });
+      }
     }
   },
 });

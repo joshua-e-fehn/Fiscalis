@@ -119,11 +119,13 @@ async function bitpandaFetchRaw(
  * Fetch every page of a cursor-paginated list endpoint and return the
  * concatenated `data` arrays. Bitpanda list endpoints expose the next
  * cursor under `meta.next_cursor` (older responses used `links.next`).
+ * `stopAfterPage` ends the read early, after the page it returns true for
+ * (an incremental sync that has read back far enough).
  */
 async function bitpandaFetchAll(
   apiKey: string,
   path: string,
-  params: Record<string, string | number | undefined> = {},
+  options: ListOptions = {},
 ): Promise<any[]> {
   const items: any[] = [];
   let cursor: string | undefined;
@@ -131,11 +133,12 @@ async function bitpandaFetchAll(
   // Hard cap on pages as a runaway guard.
   for (let page = 0; page < 200; page++) {
     const json: any = await bitpandaFetchRaw(apiKey, path, {
-      params: { ...params, page_size: pageSize, cursor },
+      params: { page_size: pageSize, cursor },
     });
 
     const data = Array.isArray(json?.data) ? json.data : [];
     items.push(...data);
+    if (options.stopAfterPage?.(data)) break;
 
     const nextCursor: string | undefined =
       json?.meta?.next_cursor ?? json?.meta?.cursors?.after ?? undefined;
@@ -144,6 +147,11 @@ async function bitpandaFetchAll(
     cursor = nextCursor;
   }
   return items;
+}
+
+/** Options of a paginated list read. */
+export interface ListOptions {
+  stopAfterPage?: (page: any[]) => boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -176,22 +184,32 @@ export async function fetchFiatWallets(apiKey: string): Promise<any[]> {
   return Array.isArray(json?.data) ? json.data : [];
 }
 
-export async function fetchTrades(apiKey: string): Promise<any[]> {
-  return bitpandaFetchAll(apiKey, "/trades");
+export async function fetchTrades(
+  apiKey: string,
+  options?: ListOptions,
+): Promise<any[]> {
+  return bitpandaFetchAll(apiKey, "/trades", options);
 }
 
-export async function fetchCryptoTransactions(apiKey: string): Promise<any[]> {
-  return bitpandaFetchAll(apiKey, "/wallets/transactions");
+export async function fetchCryptoTransactions(
+  apiKey: string,
+  options?: ListOptions,
+): Promise<any[]> {
+  return bitpandaFetchAll(apiKey, "/wallets/transactions", options);
 }
 
-export async function fetchFiatTransactions(apiKey: string): Promise<any[]> {
-  return bitpandaFetchAll(apiKey, "/fiatwallets/transactions");
+export async function fetchFiatTransactions(
+  apiKey: string,
+  options?: ListOptions,
+): Promise<any[]> {
+  return bitpandaFetchAll(apiKey, "/fiatwallets/transactions", options);
 }
 
 export async function fetchCommodityTransactions(
   apiKey: string,
+  options?: ListOptions,
 ): Promise<any[]> {
-  return bitpandaFetchAll(apiKey, "/assets/transactions/commodity");
+  return bitpandaFetchAll(apiKey, "/assets/transactions/commodity", options);
 }
 
 /* eslint-enable @typescript-eslint/no-explicit-any */

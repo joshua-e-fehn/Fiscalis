@@ -987,6 +987,8 @@ export const receiveWebhook = internalAction({
           // No time in the payload: the balance sync reads it from Plaid
           await ctx.scheduler.runAfter(0, internal.actions.plaid.syncAccountsInternal, {
             itemId: event.itemId,
+            // Not user-initiated: a failure counts like a cron one
+            trigger: "scheduled",
           });
         }
         break;
@@ -999,11 +1001,13 @@ export const receiveWebhook = internalAction({
       case "login_repaired":
         await ctx.scheduler.runAfter(0, internal.actions.plaid.syncAccountsInternal, {
           itemId: event.itemId,
+          trigger: "scheduled",
         });
         break;
       case "sync_transactions":
         await ctx.scheduler.runAfter(0, internal.actions.plaid.syncItemTransactions, {
           itemId: event.itemId,
+          trigger: "scheduled",
         });
         break;
     }

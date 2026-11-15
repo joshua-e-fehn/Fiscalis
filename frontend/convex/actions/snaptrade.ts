@@ -1383,7 +1383,13 @@ export const syncConnectionInternal = internalAction({
   args: { userId: v.string(), connectionId: v.id("brokerConnections") },
   returns: v.null(),
   handler: async (ctx, { userId, connectionId }): Promise<null> => {
-    const result = await syncSnaptrade(ctx, userId, { kind: "connection", connectionId });
+    const result = await syncSnaptrade(
+      ctx,
+      userId,
+      { kind: "connection", connectionId },
+      // Not user-initiated: a failure counts like a cron one
+      "scheduled",
+    );
     if (result && result.errors.length > 0) {
       console.warn(
         `[SNAPTRADE WEBHOOK] Sync of ${connectionId} had ${result.errors.length} error(s)`,

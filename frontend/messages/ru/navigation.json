@@ -1,0 +1,75 @@
+{
+  "sidebar": {
+    "groups": {
+      "portfolio": "Портфель",
+      "tools": "Инструменты",
+      "integrations": "Интеграции",
+      "others": "Прочее"
+    },
+    "items": {
+      "dashboard": "Обзор",
+      "investments": "Инвестиции",
+      "equities": "Акции",
+      "commodities": "Сырьевые товары",
+      "bonds": "Облигации",
+      "realEstate": "Недвижимость",
+      "cash": "Деньги и денежный рынок",
+      "crypto": "Криптовалюта",
+      "collectibles": "Коллекционные предметы",
+      "liabilities": "Обязательства",
+      "liabilitiesOverview": "Все обязательства",
+      "loans": "Кредиты",
+      "investmentStrategies": "Инвестиционные стратегии",
+      "pies": "Пироги",
+      "banking": "Банки",
+      "brokers": "Брокеры",
+      "retirementPlanner": "Пенсионный план",
+      "interestCalculators": "Калькуляторы процентов",
+      "loanCalculators": "Кредитные калькуляторы",
+      "worldMap": "Карта мира",
+      "documentation": "Документация",
+      "introduction": "Введение",
+      "getStarted": "Начало работы",
+      "tutorials": "Руководства",
+      "changelog": "История изменений",
+      "settings": "Настройки",
+      "general": "Общие",
+      "apiKeys": "API-ключи",
+      "categories": "Категории",
+      "privacy": "Конфиденциальность",
+      "team": "Команда",
+      "billing": "Оплата",
+      "limits": "Лимиты"
+    }
+  },
+  "brand": {
+    "logoAlt": "Логотип Fiscalis"
+  },
+  "userMenu": {
+    "upgrade": "Перейти на Pro",
+    "account": "Аккаунт",
+    "billing": "Оплата",
+    "notifications": "Уведомления",
+    "logOut": "Выйти"
+  },
+  "header": {
+    "signIn": "Войти",
+    "joinWaitlist": "В лист ожидания",
+    "dashboard": "Обзор"
+  },
+  "sync": {
+    "syncAll": "Синхронизировать все счета",
+    "syncing": "Синхронизация всех счетов…",
+    "complete": "Синхронизация завершена",
+    "failed": "Ошибка синхронизации",
+    "synced": "Синхронизировано: {providers}",
+    "failedProviders": "С ошибкой: {providers}",
+    "partial": "Синхронизировано: {synced}. С ошибкой: {failed}",
+    "providerCount": "{provider} ({count})",
+    "providers": {
+      "plaid": "Банки",
+      "snaptrade": "Брокеры",
+      "bitpanda": "Bitpanda"
+    }
+  }
+}

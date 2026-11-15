@@ -4,11 +4,9 @@
  * without showing users links that go nowhere (ENG-227).
  *
  * Turn flags on per environment with a comma-separated list, e.g.
- * NEXT_PUBLIC_FEATURES="teamSettings,plannedCategories", or "all" for every flag.
+ * NEXT_PUBLIC_FEATURES="plannedCategories", or "all" for every flag.
  */
 export const FEATURE_FLAGS = [
-  /** Settings > Team */
-  "teamSettings",
   /** Drill-down cards for categories that are not built yet ("Coming soon") */
   "plannedCategories",
 ] as const;

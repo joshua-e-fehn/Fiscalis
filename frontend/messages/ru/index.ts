@@ -25,6 +25,7 @@ import strategies from "./strategies.json";
 import docs from "./docs.json";
 import billing from "./billing.json";
 import notifications from "./notifications.json";
+import teams from "./teams.json";
 
 export const ru = {
   common,
@@ -46,4 +47,5 @@ export const ru = {
   docs,
   billing,
   notifications,
+  teams,
 } satisfies Messages;

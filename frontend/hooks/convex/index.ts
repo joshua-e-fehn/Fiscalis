@@ -171,3 +171,20 @@ export {
   useNotificationPreferences,
   useSetNotificationPreference,
 } from "./notifications";
+
+// Re-export team hooks (Settings > Team, workspace switcher)
+export {
+  useMyTeams,
+  useTeam,
+  useInvitePreview,
+  useCreateTeam,
+  useRenameTeam,
+  useDeleteTeam,
+  useSetTeamSharing,
+  useLeaveTeam,
+  useRemoveTeamMember,
+  useChangeTeamRole,
+  useCreateTeamInvite,
+  useRevokeTeamInvite,
+  useAcceptTeamInvite,
+} from "./teams";

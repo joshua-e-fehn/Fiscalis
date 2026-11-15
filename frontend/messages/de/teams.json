@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Team",
+    "subtitle": "Teilt euer Nettovermögen als Haushalt. Alle behalten ihre eigenen Daten; die Daten der Mitglieder, die teilen, erscheinen im Team-Arbeitsbereich, nur lesbar."
+  },
+  "proRequired": {
+    "title": "Teams sind Teil von Pro",
+    "description": "Upgrade, um ein Team zu erstellen und Mitglieder einzuladen. Einem Team per Einladungslink beitreten geht mit jedem Plan.",
+    "upgrade": "Pläne ansehen"
+  },
+  "create": {
+    "title": "Team erstellen",
+    "description": "Du wirst Inhaber. Niemandes Daten werden geteilt, bevor die Person das Teilen einschaltet.",
+    "name": "Teamname",
+    "namePlaceholder": "z. B. Haushalt",
+    "submit": "Team erstellen"
+  },
+  "empty": "Du bist noch in keinem Team.",
+  "roles": {
+    "owner": "Inhaber",
+    "admin": "Admin",
+    "member": "Mitglied"
+  },
+  "team": {
+    "members": "Mitglieder",
+    "you": "du",
+    "unnamed": "Mitglied",
+    "joined": "Beigetreten am {date}",
+    "sharing": "Teilt",
+    "notSharing": "Teilt nicht"
+  },
+  "sharing": {
+    "title": "Meine Daten mit diesem Team teilen",
+    "description": "Mitglieder sehen dein Nettovermögen, deine Positionen und deinen Verlauf im Team-Arbeitsbereich, nur lesbar. Du kannst das jederzeit ausschalten."
+  },
+  "invite": {
+    "title": "Mitglieder einladen",
+    "description": "Einladungen per E-Mail gibt es noch nicht. Erstelle einen Link und schick ihn selbst. Er funktioniert einmal und 7 Tage lang.",
+    "role": "Rolle",
+    "create": "Einladungslink erstellen",
+    "linkTitle": "Einladungslink",
+    "linkDescription": "Kopiere den Link jetzt: Er wird nur einmal angezeigt.",
+    "copy": "Link kopieren",
+    "copied": "Kopiert",
+    "done": "Fertig",
+    "open": "Offene Einladungen",
+    "expires": "Läuft ab am {date}",
+    "revoke": "Widerrufen",
+    "none": "Keine offenen Einladungen."
+  },
+  "actions": {
+    "changeRole": "Rolle ändern",
+    "makeOwner": "Zum Inhaber machen",
+    "remove": "Entfernen",
+    "leave": "Team verlassen",
+    "rename": "Umbenennen",
+    "delete": "Team löschen",
+    "save": "Speichern"
+  },
+  "confirm": {
+    "removeTitle": "{name} entfernen?",
+    "removeDescription": "Die Person verliert den Zugriff auf den Team-Arbeitsbereich. Ihre eigenen Daten bleiben unberührt.",
+    "leaveTitle": "{team} verlassen?",
+    "leaveDescription": "Du verlierst den Zugriff auf den Team-Arbeitsbereich. Deine eigenen Daten bleiben unberührt.",
+    "deleteTitle": "{team} löschen?",
+    "deleteDescription": "Alle Mitglieder verlieren den Zugriff und offene Einladungen funktionieren nicht mehr. Niemandes eigene Daten werden gelöscht.",
+    "ownerTitle": "{name} zum Inhaber machen?",
+    "ownerDescription": "Du wirst Admin. Nur der neue Inhaber kann Rollen ändern oder das Team löschen.",
+    "confirm": "Bestätigen"
+  },
+  "join": {
+    "title": "Einem Team beitreten",
+    "loading": "Einladung wird geprüft…",
+    "invalid": "Dieser Einladungslink ist ungültig, abgelaufen oder schon benutzt. Bitte um einen neuen.",
+    "prompt": "Du wurdest eingeladen, {team} als {role} beizutreten.",
+    "alreadyMember": "Du bist schon Mitglied von {team}.",
+    "accept": "Team beitreten",
+    "joined": "Du bist {team} beigetreten. Schalte das Teilen unter Einstellungen > Team ein, wenn du so weit bist.",
+    "goToTeam": "Zu Einstellungen > Team"
+  },
+  "workspace": {
+    "label": "Arbeitsbereich",
+    "personal": "Persönlich",
+    "switchTo": "Arbeitsbereich wechseln",
+    "manage": "Teams verwalten",
+    "readOnlyBanner": "Du siehst {team}: die zusammengefassten Daten von {count, plural, one {# teilenden Mitglied} other {# teilenden Mitgliedern}}, nur lesbar. Wechsle zu Persönlich, um etwas zu ändern.",
+    "owner": "Inhaber"
+  }
+}

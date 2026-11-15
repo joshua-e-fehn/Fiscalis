@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Team",
+    "subtitle": "Condividi un patrimonio netto con la tua famiglia. Ognuno mantiene i propri dati; quelli dei membri che li condividono compaiono nello spazio del team, in sola lettura."
+  },
+  "proRequired": {
+    "title": "I team fanno parte di Pro",
+    "description": "Passa a Pro per creare un team e invitare membri. Unirsi a un team con un link di invito funziona con qualsiasi piano.",
+    "upgrade": "Vedi i piani"
+  },
+  "create": {
+    "title": "Crea un team",
+    "description": "Ne diventi il proprietario. I dati di nessuno vengono condivisi finché non attiva la condivisione.",
+    "name": "Nome del team",
+    "namePlaceholder": "es. Famiglia",
+    "submit": "Crea team"
+  },
+  "empty": "Non fai ancora parte di nessun team.",
+  "roles": {
+    "owner": "Proprietario",
+    "admin": "Admin",
+    "member": "Membro"
+  },
+  "team": {
+    "members": "Membri",
+    "you": "tu",
+    "unnamed": "Membro",
+    "joined": "Entrato il {date}",
+    "sharing": "Condivide",
+    "notSharing": "Non condivide"
+  },
+  "sharing": {
+    "title": "Condividi i miei dati con questo team",
+    "description": "I membri vedono il tuo patrimonio netto, le posizioni e lo storico nello spazio del team, in sola lettura. Puoi disattivarlo in qualsiasi momento."
+  },
+  "invite": {
+    "title": "Invita membri",
+    "description": "Gli inviti via email non sono ancora disponibili. Crea un link e invialo tu. Funziona una volta e per 7 giorni.",
+    "role": "Ruolo",
+    "create": "Crea link di invito",
+    "linkTitle": "Link di invito",
+    "linkDescription": "Copia il link adesso: viene mostrato una sola volta.",
+    "copy": "Copia link",
+    "copied": "Copiato",
+    "done": "Fatto",
+    "open": "Inviti aperti",
+    "expires": "Scade il {date}",
+    "revoke": "Revoca",
+    "none": "Nessun invito aperto."
+  },
+  "actions": {
+    "changeRole": "Cambia ruolo",
+    "makeOwner": "Rendi proprietario",
+    "remove": "Rimuovi",
+    "leave": "Lascia il team",
+    "rename": "Rinomina",
+    "delete": "Elimina team",
+    "save": "Salva"
+  },
+  "confirm": {
+    "removeTitle": "Rimuovere {name}?",
+    "removeDescription": "Perde l'accesso allo spazio del team. I suoi dati non vengono toccati.",
+    "leaveTitle": "Lasciare {team}?",
+    "leaveDescription": "Perdi l'accesso allo spazio del team. I tuoi dati non vengono toccati.",
+    "deleteTitle": "Eliminare {team}?",
+    "deleteDescription": "Tutti i membri perdono l'accesso e gli inviti aperti smettono di funzionare. I dati di nessuno vengono eliminati.",
+    "ownerTitle": "Rendere {name} proprietario?",
+    "ownerDescription": "Diventi admin. Solo il nuovo proprietario può cambiare i ruoli o eliminare il team.",
+    "confirm": "Conferma"
+  },
+  "join": {
+    "title": "Unisciti a un team",
+    "loading": "Verifica dell'invito…",
+    "invalid": "Questo link di invito non è valido, è scaduto o è già stato usato. Chiedine uno nuovo.",
+    "prompt": "Sei stato invitato a unirti a {team} come {role}.",
+    "alreadyMember": "Fai già parte di {team}.",
+    "accept": "Unisciti al team",
+    "joined": "Ti sei unito a {team}. Attiva la condivisione in Impostazioni > Team quando vuoi.",
+    "goToTeam": "Vai a Impostazioni > Team"
+  },
+  "workspace": {
+    "label": "Spazio",
+    "personal": "Personale",
+    "switchTo": "Cambia spazio",
+    "manage": "Gestisci team",
+    "readOnlyBanner": "Stai visualizzando {team}: i dati combinati di {count, plural, one {# membro che condivide} other {# membri che condividono}}, in sola lettura. Passa a Personale per apportare modifiche.",
+    "owner": "Proprietario"
+  }
+}

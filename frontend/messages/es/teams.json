@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Equipo",
+    "subtitle": "Comparte un patrimonio neto con tu hogar. Cada persona conserva sus propios datos; los datos de los miembros que los comparten aparecen en el espacio del equipo, solo lectura."
+  },
+  "proRequired": {
+    "title": "Los equipos forman parte de Pro",
+    "description": "Pasa a Pro para crear un equipo e invitar a miembros. Unirse a un equipo con un enlace de invitación funciona con cualquier plan.",
+    "upgrade": "Ver planes"
+  },
+  "create": {
+    "title": "Crear un equipo",
+    "description": "Serás su propietario. No se comparten datos de nadie hasta que active la opción de compartir.",
+    "name": "Nombre del equipo",
+    "namePlaceholder": "p. ej. Hogar",
+    "submit": "Crear equipo"
+  },
+  "empty": "Todavía no estás en ningún equipo.",
+  "roles": {
+    "owner": "Propietario",
+    "admin": "Administrador",
+    "member": "Miembro"
+  },
+  "team": {
+    "members": "Miembros",
+    "you": "tú",
+    "unnamed": "Miembro",
+    "joined": "Se unió el {date}",
+    "sharing": "Comparte",
+    "notSharing": "No comparte"
+  },
+  "sharing": {
+    "title": "Compartir mis datos con este equipo",
+    "description": "Los miembros ven tu patrimonio neto, posiciones e historial en el espacio del equipo, solo lectura. Puedes desactivarlo en cualquier momento."
+  },
+  "invite": {
+    "title": "Invitar a miembros",
+    "description": "Las invitaciones por correo aún no están disponibles. Crea un enlace y envíalo tú. Funciona una vez y durante 7 días.",
+    "role": "Rol",
+    "create": "Crear enlace de invitación",
+    "linkTitle": "Enlace de invitación",
+    "linkDescription": "Copia este enlace ahora: solo se muestra una vez.",
+    "copy": "Copiar enlace",
+    "copied": "Copiado",
+    "done": "Listo",
+    "open": "Invitaciones abiertas",
+    "expires": "Caduca el {date}",
+    "revoke": "Revocar",
+    "none": "No hay invitaciones abiertas."
+  },
+  "actions": {
+    "changeRole": "Cambiar rol",
+    "makeOwner": "Hacer propietario",
+    "remove": "Quitar",
+    "leave": "Salir del equipo",
+    "rename": "Renombrar",
+    "delete": "Eliminar equipo",
+    "save": "Guardar"
+  },
+  "confirm": {
+    "removeTitle": "¿Quitar a {name}?",
+    "removeDescription": "Pierde el acceso al espacio del equipo. Sus propios datos no se ven afectados.",
+    "leaveTitle": "¿Salir de {team}?",
+    "leaveDescription": "Pierdes el acceso al espacio del equipo. Tus propios datos no se ven afectados.",
+    "deleteTitle": "¿Eliminar {team}?",
+    "deleteDescription": "Todos los miembros pierden el acceso y las invitaciones abiertas dejan de funcionar. No se eliminan los datos propios de nadie.",
+    "ownerTitle": "¿Hacer propietario a {name}?",
+    "ownerDescription": "Pasarás a ser administrador. Solo el nuevo propietario puede cambiar roles o eliminar el equipo.",
+    "confirm": "Confirmar"
+  },
+  "join": {
+    "title": "Unirse a un equipo",
+    "loading": "Comprobando la invitación…",
+    "invalid": "Este enlace de invitación no es válido, ha caducado o ya se ha usado. Pide uno nuevo.",
+    "prompt": "Te han invitado a unirte a {team} como {role}.",
+    "alreadyMember": "Ya eres miembro de {team}.",
+    "accept": "Unirse al equipo",
+    "joined": "Te has unido a {team}. Activa la opción de compartir en Ajustes > Equipo cuando quieras.",
+    "goToTeam": "Ir a Ajustes > Equipo"
+  },
+  "workspace": {
+    "label": "Espacio",
+    "personal": "Personal",
+    "switchTo": "Cambiar de espacio",
+    "manage": "Gestionar equipos",
+    "readOnlyBanner": "Estás viendo {team}: los datos combinados de {count, plural, one {# miembro que comparte} other {# miembros que comparten}}, solo lectura. Cambia a Personal para hacer cambios.",
+    "owner": "Propietario"
+  }
+}

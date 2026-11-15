@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Equipa",
+    "subtitle": "Partilha um património líquido com o teu agregado. Cada pessoa mantém os seus dados; os dados dos membros que os partilham aparecem no espaço da equipa, só de leitura."
+  },
+  "proRequired": {
+    "title": "As equipas fazem parte do Pro",
+    "description": "Passa para Pro para criares uma equipa e convidares membros. Entrar numa equipa através de um link de convite funciona em qualquer plano.",
+    "upgrade": "Ver planos"
+  },
+  "create": {
+    "title": "Criar uma equipa",
+    "description": "Passas a ser o proprietário. Os dados de ninguém são partilhados até essa pessoa ativar a partilha.",
+    "name": "Nome da equipa",
+    "namePlaceholder": "p. ex. Casa",
+    "submit": "Criar equipa"
+  },
+  "empty": "Ainda não estás em nenhuma equipa.",
+  "roles": {
+    "owner": "Proprietário",
+    "admin": "Admin",
+    "member": "Membro"
+  },
+  "team": {
+    "members": "Membros",
+    "you": "tu",
+    "unnamed": "Membro",
+    "joined": "Entrou a {date}",
+    "sharing": "Partilha",
+    "notSharing": "Não partilha"
+  },
+  "sharing": {
+    "title": "Partilhar os meus dados com esta equipa",
+    "description": "Os membros veem o teu património líquido, posições e histórico no espaço da equipa, só de leitura. Podes desativar a qualquer momento."
+  },
+  "invite": {
+    "title": "Convidar membros",
+    "description": "Os convites por email ainda não estão disponíveis. Cria um link e envia-o tu. Funciona uma vez e durante 7 dias.",
+    "role": "Papel",
+    "create": "Criar link de convite",
+    "linkTitle": "Link de convite",
+    "linkDescription": "Copia este link agora: só é mostrado uma vez.",
+    "copy": "Copiar link",
+    "copied": "Copiado",
+    "done": "Concluído",
+    "open": "Convites abertos",
+    "expires": "Expira a {date}",
+    "revoke": "Revogar",
+    "none": "Sem convites abertos."
+  },
+  "actions": {
+    "changeRole": "Alterar papel",
+    "makeOwner": "Tornar proprietário",
+    "remove": "Remover",
+    "leave": "Sair da equipa",
+    "rename": "Mudar o nome",
+    "delete": "Eliminar equipa",
+    "save": "Guardar"
+  },
+  "confirm": {
+    "removeTitle": "Remover {name}?",
+    "removeDescription": "Perde o acesso ao espaço da equipa. Os seus dados não são afetados.",
+    "leaveTitle": "Sair de {team}?",
+    "leaveDescription": "Perdes o acesso ao espaço da equipa. Os teus dados não são afetados.",
+    "deleteTitle": "Eliminar {team}?",
+    "deleteDescription": "Todos os membros perdem o acesso e os convites abertos deixam de funcionar. Os dados de ninguém são eliminados.",
+    "ownerTitle": "Tornar {name} proprietário?",
+    "ownerDescription": "Passas a ser admin. Só o novo proprietário pode alterar papéis ou eliminar a equipa.",
+    "confirm": "Confirmar"
+  },
+  "join": {
+    "title": "Entrar numa equipa",
+    "loading": "A verificar o convite…",
+    "invalid": "Este link de convite é inválido, expirou ou já foi usado. Pede um novo.",
+    "prompt": "Foste convidado para entrar em {team} como {role}.",
+    "alreadyMember": "Já és membro de {team}.",
+    "accept": "Entrar na equipa",
+    "joined": "Entraste em {team}. Ativa a partilha em Definições > Equipa quando quiseres.",
+    "goToTeam": "Ir para Definições > Equipa"
+  },
+  "workspace": {
+    "label": "Espaço",
+    "personal": "Pessoal",
+    "switchTo": "Mudar de espaço",
+    "manage": "Gerir equipas",
+    "readOnlyBanner": "Estás a ver {team}: os dados combinados de {count, plural, one {# membro que partilha} other {# membros que partilham}}, só de leitura. Muda para Pessoal para fazer alterações.",
+    "owner": "Proprietário"
+  }
+}

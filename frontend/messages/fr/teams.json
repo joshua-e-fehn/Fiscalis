@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Équipe",
+    "subtitle": "Partage un patrimoine net avec ton foyer. Chacun garde ses propres données ; celles des membres qui les partagent apparaissent dans l'espace de l'équipe, en lecture seule."
+  },
+  "proRequired": {
+    "title": "Les équipes font partie de Pro",
+    "description": "Passe à Pro pour créer une équipe et inviter des membres. Rejoindre une équipe via un lien d'invitation fonctionne avec tous les forfaits.",
+    "upgrade": "Voir les forfaits"
+  },
+  "create": {
+    "title": "Créer une équipe",
+    "description": "Tu en deviens propriétaire. Les données de personne ne sont partagées tant qu'elle n'active pas le partage.",
+    "name": "Nom de l'équipe",
+    "namePlaceholder": "p. ex. Foyer",
+    "submit": "Créer l'équipe"
+  },
+  "empty": "Tu n'es encore dans aucune équipe.",
+  "roles": {
+    "owner": "Propriétaire",
+    "admin": "Admin",
+    "member": "Membre"
+  },
+  "team": {
+    "members": "Membres",
+    "you": "toi",
+    "unnamed": "Membre",
+    "joined": "A rejoint le {date}",
+    "sharing": "Partage",
+    "notSharing": "Ne partage pas"
+  },
+  "sharing": {
+    "title": "Partager mes données avec cette équipe",
+    "description": "Les membres voient ton patrimoine net, tes positions et ton historique dans l'espace de l'équipe, en lecture seule. Tu peux le désactiver à tout moment."
+  },
+  "invite": {
+    "title": "Inviter des membres",
+    "description": "Les invitations par e-mail ne sont pas encore disponibles. Crée un lien et envoie-le toi-même. Il fonctionne une fois et pendant 7 jours.",
+    "role": "Rôle",
+    "create": "Créer un lien d'invitation",
+    "linkTitle": "Lien d'invitation",
+    "linkDescription": "Copie ce lien maintenant : il n'est affiché qu'une fois.",
+    "copy": "Copier le lien",
+    "copied": "Copié",
+    "done": "Terminé",
+    "open": "Invitations ouvertes",
+    "expires": "Expire le {date}",
+    "revoke": "Révoquer",
+    "none": "Aucune invitation ouverte."
+  },
+  "actions": {
+    "changeRole": "Changer de rôle",
+    "makeOwner": "Nommer propriétaire",
+    "remove": "Retirer",
+    "leave": "Quitter l'équipe",
+    "rename": "Renommer",
+    "delete": "Supprimer l'équipe",
+    "save": "Enregistrer"
+  },
+  "confirm": {
+    "removeTitle": "Retirer {name} ?",
+    "removeDescription": "Cette personne perd l'accès à l'espace de l'équipe. Ses propres données ne sont pas touchées.",
+    "leaveTitle": "Quitter {team} ?",
+    "leaveDescription": "Tu perds l'accès à l'espace de l'équipe. Tes propres données ne sont pas touchées.",
+    "deleteTitle": "Supprimer {team} ?",
+    "deleteDescription": "Tous les membres perdent l'accès et les invitations ouvertes ne fonctionnent plus. Les données propres de personne ne sont supprimées.",
+    "ownerTitle": "Nommer {name} propriétaire ?",
+    "ownerDescription": "Tu deviens admin. Seul le nouveau propriétaire peut changer les rôles ou supprimer l'équipe.",
+    "confirm": "Confirmer"
+  },
+  "join": {
+    "title": "Rejoindre une équipe",
+    "loading": "Vérification de l'invitation…",
+    "invalid": "Ce lien d'invitation est invalide, expiré ou déjà utilisé. Demande-en un nouveau.",
+    "prompt": "Tu es invité à rejoindre {team} en tant que {role}.",
+    "alreadyMember": "Tu es déjà membre de {team}.",
+    "accept": "Rejoindre l'équipe",
+    "joined": "Tu as rejoint {team}. Active le partage dans Paramètres > Équipe quand tu es prêt.",
+    "goToTeam": "Aller à Paramètres > Équipe"
+  },
+  "workspace": {
+    "label": "Espace",
+    "personal": "Personnel",
+    "switchTo": "Changer d'espace",
+    "manage": "Gérer les équipes",
+    "readOnlyBanner": "Tu consultes {team} : les données combinées de {count, plural, one {# membre qui partage} other {# membres qui partagent}}, en lecture seule. Passe à Personnel pour faire des modifications.",
+    "owner": "Propriétaire"
+  }
+}

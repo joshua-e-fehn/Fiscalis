@@ -151,20 +151,8 @@ export const deleteUser = action({
       return { success: true, message: "User not registered with SnapTrade" };
     }
 
-    const snaptrade = getSnaptradeClient();
-    // Decrypting the stored secret fails fast (before any deletion) when the
-    // encryption key or secret is invalid; the plaintext itself is not needed.
-    decrypt(snaptradeUser.snaptradeUserSecret);
-
-    try {
-      // Delete user from SnapTrade
-      await snaptrade.authentication.deleteSnapTradeUser({
-        userId: snaptradeUser.snaptradeUserId,
-      });
-    } catch (error) {
-      console.error("SnapTrade user deletion error:", describeError(error));
-      // Continue to clean up our database even if SnapTrade call fails
-    }
+    // Continue to clean up our database even if the SnapTrade call fails
+    await deleteAtSnaptrade(snaptradeUser);
 
     // Delete all connections and their data
     const connections = await ctx.runQuery(
@@ -182,6 +170,46 @@ export const deleteUser = action({
     await ctx.runMutation(internal.brokers.deleteSnaptradeUser, { userId });
 
     return { success: true };
+  },
+});
+
+/**
+ * Delete a user at SnapTrade (`deleteSnapTradeUser`), which removes every
+ * brokerage authorization they have. True once SnapTrade no longer has the
+ * user, also when it was already gone; false (logged) on any other failure.
+ */
+async function deleteAtSnaptrade(
+  snaptradeUser: Doc<"snaptradeUsers">,
+): Promise<boolean> {
+  // Decrypting the stored secret fails fast (before any deletion) when the
+  // encryption key or secret is invalid; the plaintext itself is not needed.
+  decrypt(snaptradeUser.snaptradeUserSecret);
+  try {
+    await getSnaptradeClient().authentication.deleteSnapTradeUser({
+      userId: snaptradeUser.snaptradeUserId,
+    });
+    return true;
+  } catch (error) {
+    if (parseSnapTradeError(error).code === "USER_NOT_FOUND") return true;
+    console.error("SnapTrade user deletion error:", describeError(error));
+    return false;
+  }
+}
+
+/**
+ * Account deletion (convex/account.ts): delete the user at SnapTrade, which
+ * revokes all their brokerage authorizations. Local data is left to the
+ * purge.
+ */
+export const revokeUserInternal = internalAction({
+  args: { userId: v.string() },
+  handler: async (ctx, args): Promise<{ failed: boolean }> => {
+    const snaptradeUser = await ctx.runQuery(
+      internal.brokers.getSnaptradeUserInternal,
+      { userId: args.userId },
+    );
+    if (!snaptradeUser) return { failed: false };
+    return { failed: !(await deleteAtSnaptrade(snaptradeUser)) };
   },
 });
 

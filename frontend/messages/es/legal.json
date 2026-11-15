@@ -1,0 +1,178 @@
+{
+  "common": {
+    "home": "Inicio",
+    "lastUpdated": "Última actualización: {date}",
+    "placeholderNotice": "Algunas partes de esta página aún se están completando. Los marcadores resaltados indican datos que se rellenarán antes del lanzamiento.",
+    "placeholder": "MARCADOR: {text}",
+    "country": "Alemania"
+  },
+  "footer": {
+    "label": "Aviso legal",
+    "privacy": "Privacidad",
+    "terms": "Condiciones",
+    "impressum": "Impressum",
+    "contact": "Contacto",
+    "copyright": "© {year} Fiscalis"
+  },
+  "impressum": {
+    "metaTitle": "Impressum · Fiscalis",
+    "metaDescription": "Aviso legal de Fiscalis conforme al § 5 DDG",
+    "title": "Impressum (aviso legal)",
+    "sections": {
+      "provider": {
+        "title": "Información conforme al § 5 DDG",
+        "body": "Fiscalis lo ofrece:\n\n{name}\n{street}\n{postalCode} {city}\n{country}"
+      },
+      "contact": {
+        "title": "Contacto",
+        "body": "Teléfono: {phone}\nEmail: {email}"
+      },
+      "vat": {
+        "title": "NIF-IVA",
+        "body": "Número de identificación a efectos del IVA conforme al § 27a de la Ley alemana del IVA (UStG): {vatId}"
+      },
+      "responsible": {
+        "title": "Responsable del contenido conforme al § 18 (2) MStV",
+        "body": "{name}, dirección indicada arriba. [MARCADOR: confirmar que el operador es la persona responsable del contenido editorial]"
+      },
+      "disputes": {
+        "title": "Resolución de litigios de consumo",
+        "body": "No estamos dispuestos ni obligados a participar en procedimientos de resolución de litigios ante una junta de arbitraje de consumo (§ 36 VSBG)."
+      },
+      "liability": {
+        "title": "Responsabilidad por el contenido",
+        "body": "Como proveedor de servicios, somos responsables de nuestro propio contenido en estas páginas conforme a la legislación general. Fiscalis muestra activos, precios y cálculos solo a título informativo. No constituyen asesoramiento de inversión, fiscal ni jurídico. Los precios y las valoraciones proceden en parte de terceros y pueden estar retrasados, incompletos o ser incorrectos."
+      },
+      "links": {
+        "title": "Responsabilidad por los enlaces",
+        "body": "Nuestras páginas contienen enlaces a sitios web externos de terceros cuyo contenido no controlamos. El proveedor u operador correspondiente es siempre responsable del contenido de las páginas enlazadas. Si tenemos conocimiento de una infracción legal, eliminaremos esos enlaces sin demora."
+      }
+    }
+  },
+  "privacy": {
+    "metaTitle": "Política de privacidad · Fiscalis",
+    "metaDescription": "Cómo trata Fiscalis tus datos personales",
+    "title": "Política de privacidad",
+    "sections": {
+      "controller": {
+        "title": "1. Quién es el responsable",
+        "body": "El responsable del tratamiento conforme al Reglamento General de Protección de Datos de la UE (RGPD) es:\n\n{name}\n{street}\n{postalCode} {city}\n{country}\nEmail: {email}\n\nFiscalis lo gestiona una persona física. No se ha designado un delegado de protección de datos, porque no se alcanzan los umbrales legales para ello (art. 37 RGPD, § 38 BDSG). Para cualquier consulta sobre privacidad, escribe a {email}."
+      },
+      "overview": {
+        "title": "2. Qué hace Fiscalis con tus datos",
+        "body": "Fiscalis es una herramienta personal de seguimiento del patrimonio neto. Para mostrar tu patrimonio neto, trata:\n\n- datos de la cuenta: tu nombre, dirección de email, foto de perfil y datos de inicio de sesión;\n- datos financieros que conectas o introduces: cuentas bancarias, saldos y transacciones, cuentas de bróker, posiciones y operaciones, posiciones y transacciones cripto, préstamos, metales preciosos, planes de jubilación e historial de la cartera;\n- ajustes: idioma, moneda de visualización, tema, zona horaria y progreso de la configuración inicial;\n- datos técnicos: dirección IP, navegador, horas de las solicitudes y registros de errores, necesarios para prestar y proteger el servicio.\n\nUsamos estos datos solo para ofrecerte Fiscalis. No los vendemos, no los usamos para publicidad ni creamos perfiles de marketing. Fiscalis no tiene anuncios ni herramientas de analítica o seguimiento."
+      },
+      "hosting": {
+        "title": "3. Alojamiento (Vercel)",
+        "body": "El sitio web y la app los sirve Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, EE. UU. Cuando abres una página, Vercel trata tu dirección IP, la URL solicitada, la hora y el agente de usuario de tu navegador para servir la página, protegerla frente a ataques y guardar registros de corta duración. Base jurídica: art. 6(1)(f) RGPD (nuestro interés legítimo en un sitio web seguro y que funcione) y, una vez que tienes una cuenta, art. 6(1)(b) RGPD. Región de las funciones serverless: [MARCADOR: confirmar la región de las funciones de Vercel]. Política de privacidad: https://vercel.com/legal/privacy-policy"
+      },
+      "auth": {
+        "title": "4. Inicio de sesión y cuentas (Clerk)",
+        "body": "Las cuentas, el inicio de sesión y las sesiones los gestiona Clerk, Inc., 660 King Street, Unit 345, San Francisco, CA 94107, EE. UU. Clerk guarda tu dirección de email, nombre, foto de perfil, el hash de tu contraseña o los datos del inicio de sesión social que elijas, y metadatos de inicio de sesión como la dirección IP, el dispositivo y la hora. Clerk instala las cookies necesarias para mantener tu sesión iniciada (ver la sección 10). Actualmente el registro es por invitación desde una lista de espera; si te apuntas, Clerk guarda tu dirección de email hasta que recibas la invitación o nos pidas que la eliminemos. Base jurídica: art. 6(1)(b) RGPD. Política de privacidad: https://clerk.com/legal/privacy"
+      },
+      "database": {
+        "title": "5. Base de datos y tareas en segundo plano (Convex)",
+        "body": "Todo lo que tienes en Fiscalis (cuentas conectadas, posiciones, transacciones, préstamos, metales, ajustes e instantáneas de la cartera) se guarda en una base de datos gestionada por Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, EE. UU. Convex también ejecuta las tareas programadas que actualizan tus cuentas conectadas (una vez al día, y cada seis horas para Bitpanda) y registran una instantánea diaria de la cartera. Los tokens de acceso y las claves API de tus conexiones se guardan cifrados (AES-256-GCM). Región de despliegue: [MARCADOR: confirmar la región de despliegue de Convex]. Base jurídica: art. 6(1)(b) RGPD. Política de privacidad: https://www.convex.dev/legal/privacy"
+      },
+      "plaid": {
+        "title": "6. Conexiones bancarias (Plaid)",
+        "body": "Si conectas un banco, la conexión pasa por Plaid. Introduces tus credenciales bancarias en la propia ventana de Plaid; Fiscalis nunca las ve ni las guarda. Plaid nos transmite datos de solo lectura: nombres y tipos de cuenta, saldos y transacciones. Guardamos un token de acceso cifrado para poder actualizar estos datos. Plaid trata tus datos como responsable independiente conforme a su propia política de privacidad para usuarios finales: https://plaid.com/legal/#end-user-privacy-policy. Entidad de Plaid contratante para usuarios de la UE: [MARCADOR: confirmar la entidad de Plaid indicada en el contrato con Plaid]. Base jurídica: art. 6(1)(b) RGPD, a petición tuya. Puedes desconectar un banco en cualquier momento en Integraciones > Banca, lo que elimina sus cuentas y transacciones de Fiscalis."
+      },
+      "snaptrade": {
+        "title": "7. Conexiones con brókers (SnapTrade)",
+        "body": "Si conectas un bróker, la conexión pasa por SnapTrade (Passiv Inc., Canadá). Autorizas la conexión en el portal de SnapTrade; Fiscalis nunca ve la contraseña de tu bróker. SnapTrade nos transmite datos de solo lectura: cuentas, posiciones, saldos de efectivo e historial de operaciones. Guardamos un ID de usuario de SnapTrade y un secreto de usuario cifrado para poder actualizar estos datos. SnapTrade trata los datos conforme a su política de privacidad: https://snaptrade.com/privacy-policy. Base jurídica: art. 6(1)(b) RGPD, a petición tuya. Al desconectar un bróker en Integraciones > Brókers se eliminan de Fiscalis sus cuentas, posiciones y operaciones."
+      },
+      "bitpanda": {
+        "title": "8. Conexión cripto (Bitpanda)",
+        "body": "Si conectas Bitpanda, creas una clave API de solo lectura en tu cuenta de Bitpanda y la pegas en Fiscalis. Guardamos la clave cifrada (AES-256-GCM) y la usamos para leer tus monederos, posiciones y transacciones de Bitpanda GmbH, Stella-Klein-Löw-Weg 17, 1020 Viena, Austria. La clave no puede operar ni retirar fondos. Política de privacidad de Bitpanda: https://www.bitpanda.com/en/legal/privacy-policy. Base jurídica: art. 6(1)(b) RGPD, a petición tuya. Al eliminar la conexión se eliminan la clave y los datos importados."
+      },
+      "marketData": {
+        "title": "9. Datos de mercado y mapas",
+        "body": "Fiscalis obtiene datos de mercado públicos en sus servidores, sin enviar ningún dato personal:\n\n- precios de metales preciosos de gold.de;\n- tipos de cambio del Banco Central Europeo;\n- indicadores económicos de la API World Bank Open Data.\n\nEl mapa mundial es distinto: tu navegador carga las teselas del mapa directamente desde CARTO (CartoDB Inc., EE. UU.), que recibe tu dirección IP y los datos de tu navegador para servirlas, y la página Mapa mundial puede consultar la API del Banco Mundial (api.worldbank.org) desde tu navegador. Base jurídica: art. 6(1)(f) RGPD (nuestro interés en mostrarte el mapa y los datos que has pedido). Política de privacidad de CARTO: https://carto.com/privacy"
+      },
+      "cookies": {
+        "title": "10. Cookies y almacenamiento local",
+        "body": "Fiscalis usa solo cookies estrictamente necesarias para el servicio, por lo que no hace falta un banner de consentimiento (§ 25(2) n.º 2 TDDDG):\n\n- las cookies de sesión de Clerk (por ejemplo __session y __client_uat) mantienen tu sesión iniciada;\n- fiscalis-locale recuerda el idioma que elegiste (1 año);\n- fiscalis-tz guarda tu zona horaria para mostrar bien las fechas (1 año);\n- sidebar_state recuerda si la barra lateral está abierta (7 días).\n\nEl tema que elijas también puede guardarse en el almacenamiento local de tu navegador. No usamos cookies de publicidad, analítica ni seguimiento."
+      },
+      "transfers": {
+        "title": "11. Transferencias fuera de la UE",
+        "body": "Vercel, Clerk, Convex, Plaid y CARTO tienen su sede en EE. UU. y SnapTrade en Canadá, por lo que tus datos pueden tratarse allí. Las transferencias a EE. UU. se basan en el Marco de Privacidad de Datos UE-EE. UU. cuando el proveedor está certificado y, en caso contrario, en las Cláusulas Contractuales Tipo de la UE (art. 46(2)(c) RGPD). Canadá cuenta con una decisión de adecuación de la UE para organizaciones comerciales. [MARCADOR: confirmar el mecanismo de transferencia en el acuerdo de tratamiento de datos de cada proveedor]"
+      },
+      "retention": {
+        "title": "12. Cuánto tiempo conservamos los datos",
+        "body": "- Datos de la cuenta y financieros: mientras tengas una cuenta. Cuando desconectas un proveedor, sus datos se eliminan de Fiscalis de inmediato.\n- Cuando eliminas tu cuenta, eliminamos tus datos en un plazo de 30 días. La eliminación de la cuenta y la exportación de datos desde la app aún se están desarrollando; hasta entonces, escríbenos un email y eliminaremos o exportaremos tus datos a mano.\n- Instantáneas de la cartera: mientras tengas una cuenta, para que puedas ver tu historial.\n- Registros de servidor y de errores en Vercel y Convex: según lo establezcan esos proveedores, normalmente hasta 30 días.\n- Entradas de la lista de espera: hasta que recibas la invitación o nos pidas que te eliminemos.\n- Datos que debemos conservar por ley (por ejemplo, facturas, si se introducen planes de pago): durante el plazo legal."
+      },
+      "rights": {
+        "title": "13. Tus derechos",
+        "body": "Tienes derecho a:\n\n- acceder a los datos que tenemos sobre ti (art. 15 RGPD);\n- que se corrijan los datos erróneos (art. 16);\n- que se eliminen tus datos (art. 17);\n- limitar el tratamiento (art. 18);\n- recibir tus datos en un formato portable (art. 20);\n- oponerte al tratamiento basado en nuestros intereses legítimos (art. 21);\n- retirar cualquier consentimiento que hayas dado, con efecto para el futuro (art. 7(3)).\n\nPara ejercer cualquiera de estos derechos, escribe a {email}. Respondemos en el plazo de un mes."
+      },
+      "complaint": {
+        "title": "14. Derecho a reclamar",
+        "body": "Puedes presentar una reclamación ante una autoridad de control de protección de datos, en particular en el país de la UE donde vivas o trabajes. La autoridad competente para nosotros es el Bayerisches Landesamt für Datenschutzaufsicht (BayLDA), Promenade 18, 91522 Ansbach, Alemania, https://www.lda.bayern.de"
+      },
+      "security": {
+        "title": "15. Seguridad",
+        "body": "Las conexiones se cifran con TLS. Los tokens de acceso de los proveedores y las claves API se guardan cifrados. Las conexiones con bancos, brókers y Bitpanda son de solo lectura: Fiscalis no puede mover dinero ni dar órdenes de operación. Cada solicitud de tus datos se comprueba frente a tu cuenta con sesión iniciada."
+      },
+      "changes": {
+        "title": "16. Cambios en esta política",
+        "body": "Actualizamos esta política cuando cambian Fiscalis o la ley. La fecha de arriba indica la versión actual. Si un cambio afecta a cómo usamos datos que ya nos has dado, te lo diremos en la app o por email."
+      }
+    }
+  },
+  "terms": {
+    "metaTitle": "Condiciones del servicio · Fiscalis",
+    "metaDescription": "Condiciones de uso de Fiscalis",
+    "title": "Condiciones del servicio",
+    "sections": {
+      "scope": {
+        "title": "1. Ámbito",
+        "body": "Estas condiciones se aplican a tu uso de Fiscalis en fiscalis.joshua-fehn.de, ofrecido por {name}, {street}, {postalCode} {city}, {country} («nosotros»). Al crear una cuenta, las aceptas. Nuestra política de privacidad explica cómo tratamos tus datos."
+      },
+      "service": {
+        "title": "2. Qué es Fiscalis",
+        "body": "Fiscalis reúne tus cuentas bancarias, cuentas de bróker, posiciones cripto, metales preciosos, préstamos y otros activos para mostrar tu patrimonio neto. También ofrece calculadoras, un planificador de jubilación y datos económicos. Fiscalis es una herramienta informativa. No es un banco, un bróker ni un asesor de inversiones, y no puede mover dinero ni dar órdenes de operación."
+      },
+      "noAdvice": {
+        "title": "3. Sin asesoramiento financiero",
+        "body": "Nada de lo que hay en Fiscalis es asesoramiento de inversión, fiscal, jurídico o financiero. Las proyecciones, calculadoras y planes de jubilación son estimaciones basadas en supuestos que pueden no cumplirse. Toma tus propias decisiones y consulta con un asesor cualificado antes de actuar según cualquier cifra que muestre Fiscalis."
+      },
+      "data": {
+        "title": "4. Exactitud de los datos",
+        "body": "Los saldos, posiciones, precios y tipos de cambio proceden de terceros (Plaid, SnapTrade, Bitpanda, gold.de, el Banco Central Europeo y el Banco Mundial) o de lo que introduces. Pueden estar retrasados, incompletos o ser incorrectos, y las cuentas conectadas se actualizan según un calendario y no en tiempo real. No garantizamos que ningún valor sea correcto. Comprueba las cifras importantes con tu banco o tu bróker."
+      },
+      "account": {
+        "title": "5. Tu cuenta",
+        "body": "Debes tener al menos 18 años para usar Fiscalis. Actualmente el registro es por invitación desde una lista de espera. Mantén en secreto tus datos de acceso y avísanos en {email} si crees que otra persona ha usado tu cuenta. Solo puedes conectar cuentas que te pertenezcan o a las que estés autorizado a acceder."
+      },
+      "connections": {
+        "title": "6. Proveedores conectados",
+        "body": "Cuando conectas un banco, un bróker o Bitpanda, también usas el servicio de ese proveedor y aceptas sus condiciones. Puedes desconectar un proveedor en cualquier momento, lo que elimina sus datos de Fiscalis. No somos responsables de las interrupciones ni de los errores de esos proveedores."
+      },
+      "acceptableUse": {
+        "title": "7. Uso aceptable",
+        "body": "No hagas un uso indebido de Fiscalis. En particular, no:\n\n- intentes acceder a datos de otros usuarios ni eludir la seguridad;\n- sobrecargues el servicio, hagas scraping ni uses las claves API más allá de un uso personal normal;\n- uses Fiscalis para nada ilícito.\n\nPodemos suspender las cuentas que incumplan estas normas."
+      },
+      "availability": {
+        "title": "8. Disponibilidad y cambios",
+        "body": "Fiscalis se ofrece de forma gratuita y aún está en desarrollo. Intentamos mantenerlo en funcionamiento, pero no prometemos ningún nivel de disponibilidad. Podemos cambiar, añadir o eliminar funciones. Si se introducen planes de pago, requerirán tu aceptación por separado."
+      },
+      "liability": {
+        "title": "9. Responsabilidad",
+        "body": "Respondemos sin límite por dolo y negligencia grave, por daños a la vida, la integridad física o la salud, y conforme a la Ley alemana de responsabilidad por productos. En caso de negligencia leve, solo respondemos por el incumplimiento de una obligación contractual esencial (aquella cuyo cumplimiento hace posible el contrato y en la que puedes confiar), limitado al daño típico y previsible. En los demás casos, queda excluida la responsabilidad. Como el servicio es gratuito, los § 521 y § 599 del Código Civil alemán (BGB) se aplican por analogía cuando limitan aún más nuestra responsabilidad."
+      },
+      "termination": {
+        "title": "10. Fin del contrato",
+        "body": "Puedes dejar de usar Fiscalis y pedirnos que eliminemos tu cuenta en cualquier momento escribiendo a {email}. Podemos rescindir el contrato con un preaviso de 30 días, o de inmediato por causa justificada. Cuando tu cuenta termina, tus datos se eliminan como se describe en la política de privacidad."
+      },
+      "changes": {
+        "title": "11. Cambios en estas condiciones",
+        "body": "Podemos cambiar estas condiciones por un motivo justificado, por ejemplo nuevas funciones o cambios en la ley. Te informaremos de los cambios al menos 30 días antes de que entren en vigor. Si sigues usando Fiscalis después sin oponerte, se aplicarán las nuevas condiciones; te lo recordaremos cuando te avisemos."
+      },
+      "law": {
+        "title": "12. Legislación aplicable",
+        "body": "Se aplica el derecho alemán, con exclusión de la Convención de las Naciones Unidas sobre los Contratos de Compraventa Internacional de Mercaderías. Si eres consumidor y vives en otro país de la UE, se siguen aplicando las normas imperativas de protección del consumidor de ese país. No participamos en procedimientos de arbitraje de consumo."
+      }
+    }
+  }
+}

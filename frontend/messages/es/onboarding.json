@@ -1,0 +1,109 @@
+{
+  "steps": {
+    "welcome": "Bienvenida",
+    "profile": "Perfil",
+    "banking": "Banca",
+    "brokers": "Brókers",
+    "crypto": "Cripto",
+    "completion": "Listo"
+  },
+  "progress": {
+    "stepOf": "Paso {current} de {total}"
+  },
+  "shared": {
+    "skip": "Omitir por ahora",
+    "noConnections": "Aún no hay conexiones",
+    "accounts": "{count, plural, one {# cuenta} other {# cuentas}}"
+  },
+  "welcome": {
+    "logoAlt": "Logotipo de Fiscalis",
+    "title": "Te damos la bienvenida a <brand>Fiscalis</brand>",
+    "subtitle": "Tu patrimonio completo, en un solo lugar.",
+    "trackTitle": "Síguelo todo",
+    "trackDescription": "Acciones, cripto, inmuebles, efectivo, metales preciosos — todo en una sola vista",
+    "debtsTitle": "Conoce tus deudas",
+    "debtsDescription": "Préstamos, hipotecas y tarjetas de crédito de un vistazo",
+    "netWorthTitle": "Patrimonio neto real",
+    "netWorthDescription": "Activos menos pasivos, actualizado en tiempo real",
+    "mockupNetWorth": "Patrimonio neto total",
+    "mockupChange": "{change} este año",
+    "getStarted": "Empecemos"
+  },
+  "profile": {
+    "title": "Personaliza tu experiencia",
+    "subtitle": "Configura tus preferencias para sacar el máximo partido a Fiscalis",
+    "displayName": "Nombre visible",
+    "displayNamePlaceholder": "Tu nombre",
+    "birthDate": "Fecha de nacimiento",
+    "birthDateHint": "Se usa para personalizar herramientas de planificación como tu previsión de jubilación.",
+    "currency": "Moneda preferida",
+    "currencies": {
+      "EUR": "Euro (€)",
+      "USD": "Dólar estadounidense ($)",
+      "GBP": "Libra esterlina (£)",
+      "CHF": "Franco suizo (CHF)"
+    },
+    "theme": "Tema",
+    "themes": {
+      "light": "Claro",
+      "dark": "Oscuro",
+      "system": "Sistema"
+    },
+    "saveFailed": "No hemos podido guardar tu perfil. Inténtalo de nuevo."
+  },
+  "banking": {
+    "title": "Conecta tus cuentas bancarias",
+    "subtitle": "Ve tus cuentas corrientes, de ahorro y tarjetas de crédito en una sola vista",
+    "benefitBalances": "Saldos actualizados automáticamente",
+    "benefitTransactions": "Historial y categorización de transacciones",
+    "benefitCurrencies": "Soporte multidivisa",
+    "connected": "Cuentas conectadas",
+    "connecting": "Conectando…",
+    "addAnother": "Añadir otro banco",
+    "connect": "Conectar cuenta bancaria",
+    "security": "Cifrado de nivel bancario • Solo lectura",
+    "continueWithout": "Continuar sin banca"
+  },
+  "brokers": {
+    "title": "Conecta tus cuentas de inversión",
+    "subtitle": "Importa tus acciones, ETF y bonos automáticamente",
+    "benefitRealtime": "Cartera actualizada en tiempo real",
+    "benefitBrokerages": "Compatible con más de 15 brókers",
+    "benefitDividends": "Seguimiento de dividendos y rentabilidad",
+    "connected": "Brókers conectados",
+    "supported": "Brókers compatibles",
+    "opening": "Abriendo la conexión…",
+    "addAnother": "Añadir otro bróker",
+    "connect": "Conectar cuenta de bróker",
+    "newWindow": "Se debería haber abierto una ventana nueva. Completa allí la conexión.",
+    "security": "Conexión segura con SnapTrade • Solo lectura",
+    "continueWithout": "Continuar sin brókers"
+  },
+  "crypto": {
+    "title": "Conecta Bitpanda",
+    "subtitle": "Sigue Bitcoin, Ethereum y más de 100 activos — además de metales, acciones y efectivo",
+    "benefitAssets": "Cripto, metales preciosos, materias primas y acciones en un solo lugar",
+    "benefitApiKey": "Conecta con una clave API de solo lectura",
+    "benefitValuation": "Valoración automática en tu moneda base",
+    "connected": "Conectado",
+    "addAnother": "Añadir otra cuenta",
+    "connect": "Conectar Bitpanda",
+    "security": "Clave API de solo lectura • Cifrada en reposo",
+    "continueWithout": "Continuar sin Bitpanda"
+  },
+  "completion": {
+    "title": "¡Todo listo! 🎉",
+    "subtitle": "Tu panel de patrimonio está listo para explorar",
+    "summaryConnected": "Lo que has conectado",
+    "summaryEmpty": "Resumen de la configuración",
+    "bankAccounts": "Cuentas bancarias",
+    "brokerageAccounts": "Cuentas de bróker",
+    "cryptoWallets": "Monederos cripto",
+    "notConnected": "Sin conectar",
+    "connectLater": "Puedes conectar tus cuentas cuando quieras en Ajustes",
+    "syncing": "Tus cuentas se están sincronizando. Ve a tu panel para ver tu patrimonio completo.",
+    "goToDashboard": "Ir al panel",
+    "goBack": "Volver",
+    "addAccounts": "Añadir cuentas"
+  }
+}

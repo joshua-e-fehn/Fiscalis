@@ -1,0 +1,272 @@
+{
+  "years": "{count, plural, one {# año} other {# años}}",
+  "yearsDative": "{count, plural, one {# año} other {# años}}",
+  "perMonth": "{amount}/mes",
+  "perMonthUnit": "/ mes",
+  "pensions": "Pensiones",
+  "steps": {
+    "intro": "Inicio",
+    "personal": "Edad",
+    "expenses": "Gastos",
+    "housing": "Vivienda",
+    "pensions": "Pensiones",
+    "portfolio": "Cartera",
+    "assumptions": "Supuestos",
+    "results": "Resultados"
+  },
+  "stepShell": {
+    "saving": "Guardando…"
+  },
+  "progress": {
+    "stepOf": "Paso {current} de {total}"
+  },
+  "wizard": {
+    "defaultPensionLabel": "Pensión pública",
+    "editingBanner": "Estás editando tu plan guardado. Los cambios se aplican al guardar.",
+    "discardChanges": "Descartar cambios",
+    "currencyChanged": "Tu moneda de visualización ha cambiado a {display}. Los importes de este formulario siguen en {form} y se guardan en {form}.",
+    "reloadInCurrency": "Recargar en {currency}",
+    "storedCurrency": "Tu plan se introdujo en {stored}. Sus importes se muestran en {shown} al tipo de cambio de hoy, y al guardar de nuevo se conservan en {shown}.",
+    "birthDateRequired": "La fecha de nacimiento es obligatoria",
+    "saveFailed": "No hemos podido guardar tu plan. Inténtalo de nuevo."
+  },
+  "dashboard": {
+    "title": "Plan de jubilación",
+    "subtitle": "Objetivo: jubilarte a los {age} años. Este plan se actualiza automáticamente cuando cambia tu cartera.",
+    "subtitleFallback": "Tu plan de jubilación guardado.",
+    "editPlan": "Editar plan",
+    "startOver": {
+      "button": "Empezar de nuevo",
+      "title": "¿Empezar de nuevo con un plan nuevo?",
+      "description": "Se eliminarán tu plan de jubilación guardado y todas sus respuestas. Tu fecha de nacimiento se queda en tu perfil. Esta acción no se puede deshacer.",
+      "confirm": "Eliminar plan",
+      "resetting": "Eliminando…",
+      "failed": "No hemos podido eliminar tu plan. Inténtalo de nuevo."
+    }
+  },
+  "results": {
+    "timelineTitle": "Revisa tu edad de jubilación",
+    "timelineBody": "Tu edad de jubilación debe ser posterior a tu edad actual para crear un plan.",
+    "assumptionsTitle": "Revisa tus supuestos",
+    "editHint": "Edita tu plan para ajustarlo.",
+    "backHint": "Vuelve atrás y ajústalo."
+  },
+  "progressCard": {
+    "title": "Tu objetivo de jubilación",
+    "target": "Cartera objetivo necesaria",
+    "in": "En",
+    "progressToday": "Progreso actual (conservador)",
+    "growth": "Tus <b>{current}</b> actuales crecen hasta <b>{projected}</b> al jubilarte con un prudente {rate} anual: eso es el <b>{pct} %</b> del objetivo de arriba (antes de sumar el ahorro mensual). Con el {expectedRate} esperado sería el {expectedPct} %.",
+    "netDebt": "Tus pasivos superan a tus activos en {debt}. Tu plan parte de {zero}, así que amortizar esa deuda se suma al ahorro mensual que calculamos.",
+    "pensionsCoverAll": "Tus pensiones ya cubren los gastos previstos: no hace falta retirar dinero de la cartera."
+  },
+  "savingsCard": {
+    "title": "Cuánto ahorrar cada mes",
+    "pensionsCoverAll": "Tus pensiones cubren los gastos previstos, así que no necesitas ahorrar para una cartera de jubilación.",
+    "onTrack": "Con tus activos actuales y el crecimiento esperado, vas bien encaminado para alcanzar tu objetivo sin ahorrar nada extra. ¡Sigue así!",
+    "expectedCase": "Escenario esperado",
+    "conservativeCase": "Escenario conservador",
+    "expectedHint": "supone un {rate} anual: una cartera que se duplica aproximadamente cada {years, plural, one {# año} other {# años}}",
+    "expectedHintNoGrowth": "supone un {rate} anual",
+    "conservativeHint": "supone un prudente {rate} anual",
+    "indexed": "Importe del primer mes, que sube con la inflación hasta {amount} (esperado) al jubilarte.",
+    "flat": "Un importe nominal fijo cada mes hasta la jubilación; la inflación hace que los pagos posteriores valgan menos.",
+    "netDebt": "Estos importes parten de {zero} y no incluyen amortizar tu deuda actual.",
+    "mortgageNotProjected": "El saldo completo de {balance} de tu hipoteca cuenta como pendiente al jubilarte y forma parte de tu objetivo: añade su tipo y su cuota en el plan para proyectarlo.",
+    "mortgageOwedAtRetirement": "Además, las cuotas de tu hipoteca de {payment}/mes siguen saliendo de tus ingresos; los {balance} pendientes al jubilarte forman parte de tu objetivo.",
+    "mortgageRepaidBefore": "Además, las cuotas de tu hipoteca de {payment}/mes siguen saliendo de tus ingresos hasta que termines de pagar el préstamo."
+  },
+  "coverage": {
+    "title": "Gastos mensuales en la jubilación",
+    "expensesGrow": "Tus <b>{today}/mes</b> de gastos actuales pasan a <b>{future}/mes</b> en {years} por la inflación.",
+    "pensions": "Tus pensiones de <b>{today}/mes</b> en dinero de hoy equivalen a <b>{future}/mes</b>.",
+    "pensionsAfterDeductions": "Tus pensiones de <b>{today}/mes</b> en dinero de hoy (tras {deductions}/mes de impuestos y seguro médico) equivalen a <b>{future}/mes</b>.",
+    "coveredByPensions": "Cubierto por pensiones",
+    "fundedByPortfolio": "Financiado por la cartera"
+  },
+  "chart": {
+    "title": "Crecimiento previsto de la cartera",
+    "age": "{age} años",
+    "target": "Objetivo",
+    "expectedSaving": "Esperado + ahorro",
+    "conservativeSaving": "Conservador + ahorro",
+    "expectedNoSaving": "Esperado, sin ahorro",
+    "conservativeNoSaving": "Conservador, sin ahorro",
+    "footnote": "Cuatro trayectorias: tu rentabilidad esperada y la conservadora, cada una con tu plan de ahorro mensual y con tu cartera actual creciendo por sí sola. La línea discontinua es tu objetivo."
+  },
+  "explainer": {
+    "trigger": "¿Por qué estas cifras? La regla del 4 %, explicada",
+    "rule": "La <b>regla del 4 %</b> es una pauta sencilla: cada año puedes retirar aproximadamente el 4 % de tu cartera sin agotarla durante una jubilación larga. Dicho al revés, tu cartera debe ser <b>25×</b> la cantidad anual que tiene que cubrir.",
+    "customRate": "Tu plan usa <b>{rate}</b> en su lugar, así que tu cartera debe ser <b>{multiple}×</b> esa cantidad.",
+    "whereFrom": "¿De dónde sale el 4 %?",
+    "marketReturn": "<b>≈ 7–8 %</b> de rentabilidad anual esperada del mercado a largo plazo",
+    "inflation": "<b>− ~2 %</b> de inflación, para que tu dinero mantenga su poder adquisitivo",
+    "buffer": "<b>− un margen</b> para estar a salvo en los años malos del mercado",
+    "result": "= aproximadamente un 4 % que puedes gastar cada año",
+    "inflationHandlingRate": "Como la tasa de retirada ya tiene en cuenta la inflación durante la jubilación, no la sumamos dos veces. Antes de la jubilación aumentamos tus gastos y pensiones un {rate} al año y hacemos crecer cada parte de tu cartera a su propia rentabilidad esperada, para que todo sea coherente.",
+    "inflationHandling": "Como la tasa de retirada ya tiene en cuenta la inflación durante la jubilación, no la sumamos dos veces. Antes de la jubilación aumentamos tus gastos y pensiones según la tasa de inflación y hacemos crecer cada parte de tu cartera a su propia rentabilidad esperada, para que todo sea coherente.",
+    "simpleTarget": "Para tu plan, con los gastos y las pensiones de hoy (sin inflación), el objetivo sería <b>{target}</b>.",
+    "adjustedTargetRate": "Ajustado a {years} de inflación del {rate}, el objetivo realista es <b>{target}</b>.",
+    "adjustedTarget": "Ajustado a {years} de inflación, el objetivo realista es <b>{target}</b>.",
+    "difference": "{reason, select, fixedPensionsAndMortgage {La diferencia es la inflación, a la que no se ajustan tus pensiones fijas, más la hipoteca pendiente al jubilarte.} fixedPensions {La diferencia es la inflación, a la que no se ajustan tus pensiones fijas.} mortgage {La diferencia es la inflación, más la hipoteca pendiente al jubilarte.} other {La diferencia es la inflación.}}",
+    "taxIncluded": "Ambos incluyen un {rate} de impuestos sobre las retiradas.",
+    "taxExcluded": "Ambos son antes de impuestos: no se incluyen los impuestos sobre las retiradas."
+  },
+  "teaser": {
+    "titleActive": "Tu plan de jubilación",
+    "titleDraft": "Termina tu plan de jubilación",
+    "titleNew": "Planifica tu jubilación",
+    "needsReview": "Tu plan necesita una revisión rápida: ábrelo para ajustar tu edad de jubilación o tus supuestos.",
+    "pensionsCoverAll": "Tus pensiones ya cubren los gastos previstos.",
+    "netDebt": "Ahora mismo tus pasivos superan a tus activos: amortizarlos es el primer paso.",
+    "onTrack": "Vas bien encaminado hacia tu objetivo de {target}.",
+    "onTrackExpected": "Vas bien con la rentabilidad esperada del {rate}; ahorrar {amount}/mes cubre el escenario conservador.",
+    "progress": "Llevas el {pct} % del camino hacia tu objetivo de {target}.",
+    "draft": "Sigue donde lo dejaste y descubre tu cifra.",
+    "new": "Convierte tu objetivo de jubilación en un plan de ahorro mensual en un par de minutos.",
+    "viewPlan": "Ver plan",
+    "getStarted": "Empezar"
+  },
+  "introStep": {
+    "title": "Planifica tu jubilación",
+    "body": "Unas preguntas rápidas para convertir tu objetivo de jubilación en un plan de ahorro concreto y medible, basado en tu cartera real.",
+    "points": {
+      "age": {
+        "title": "Elige tu edad de jubilación",
+        "body": "Dinos cuándo te gustaría dejar de trabajar y el estilo de vida que quieres."
+      },
+      "pensions": {
+        "title": "Añade tus ingresos por pensiones",
+        "body": "Las pensiones públicas, de empresa o privadas cubren parte de tus gastos mensuales."
+      },
+      "number": {
+        "title": "Descubre tu cifra",
+        "body": "Usamos la regla del 4 % para calcular la cartera que necesitas y cuánto ahorrar cada mes para llegar a ella."
+      }
+    },
+    "reviewPlan": "Revisar mi plan",
+    "getStarted": "Empezar"
+  },
+  "personalStep": {
+    "title": "Tu horizonte temporal",
+    "description": "¿Cuándo naciste y cuándo quieres jubilarte?",
+    "birthDate": "Fecha de nacimiento",
+    "retirementAge": "Edad de jubilación",
+    "currentAge": "{age, plural, one {Tienes <b>#</b> año.} other {Tienes <b>#</b> años.}}",
+    "yearsLeft": "Tienes <b>{years}</b> para construir tu cartera de jubilación.",
+    "enterBirthDate": "Introduce tu fecha de nacimiento para que podamos calcular tu edad."
+  },
+  "expensesStep": {
+    "title": "Estilo de vida deseado",
+    "description": "Los ingresos mensuales mínimos que querrías en la jubilación, en dinero de hoy.",
+    "label": "Gastos mensuales de vida (hoy)",
+    "hint": "Si tu vivienda es tuya, no incluyas el alquiler: ser propietario ya reduce esta cifra.",
+    "future": "Tras {years} de inflación del {rate}, eso son unos <b>{amount}</b> al jubilarte: el mismo estilo de vida simplemente cuesta más."
+  },
+  "housingStep": {
+    "title": "Tu vivienda",
+    "description": "Los inmuebles se tratan de forma distinta a las inversiones: hagámoslo bien.",
+    "ownsHome": "Soy propietario de la vivienda en la que vivo",
+    "ownsHomeHint": "Una vivienda habitual en propiedad no cuenta como financiación de la jubilación.",
+    "homeNotCounted": "<b>No</b> contamos tu vivienda en la cartera que financia la jubilación: no puedes venderla y seguir viviendo en ella. Su beneficio real ya se refleja en tus gastos mensuales más bajos (sin alquiler).",
+    "mortgageLabel": "Hipoteca de esta vivienda <muted>(opcional)</muted>",
+    "noMortgage": "Sin hipoteca / sin seguimiento",
+    "trackedLoans": "Préstamos con seguimiento",
+    "bankMortgages": "Cuentas hipotecarias del banco",
+    "mortgageOption": "{name} — {balance}",
+    "mortgageHint": "Su saldo no se resta de la financiación de tu jubilación: pagas las cuotas con tus ingresos hasta jubilarte, como un alquiler. Cualquier saldo pendiente al jubilarte se suma a tu objetivo.",
+    "bankBalanceOnly": "Tu banco solo informa del saldo. Añade el tipo de interés y la cuota mensual para proyectar lo que quedará pendiente al jubilarte.",
+    "interestRate": "Tipo de interés (% anual)",
+    "monthlyRepayment": "Cuota mensual ({symbol})",
+    "withoutTerms": "Sin ambos datos, el saldo actual completo cuenta como pendiente al jubilarte.",
+    "equityLabel": "Patrimonio inmobiliario vendible para financiar la jubilación <muted>(opcional)</muted>",
+    "equityHint": "Para un inmueble en alquiler o una segunda vivienda que pienses vender: su valor menos cualquier préstamo sobre él que no tenga seguimiento en Fiscalis (los préstamos con seguimiento ya se restan de tu patrimonio neto). Déjalo en 0 si no tienes."
+  },
+  "pensionsStep": {
+    "title": "Ingresos por pensiones",
+    "description": "Ingresos mensuales que recibirás en la jubilación, antes de tocar tu cartera. Introdúcelos en dinero de hoy, p. ej., el importe bruto de tu informe de pensiones (Renteninformation). Restamos impuestos y seguro médico a los importes brutos y ajustamos las pensiones indexadas a la inflación, como tus gastos.",
+    "source": "Origen",
+    "sourcePlaceholder": "p. ej., pensión pública",
+    "amountLabel": "{symbol} / mes (hoy)",
+    "removeSource": "Quitar origen",
+    "gross": "Bruto (antes de impuestos y seguro médico)",
+    "net": "Neto (ya descontadas las deducciones)",
+    "indexed": "Sube con la inflación",
+    "fixed": "Importe fijo (p. ej., muchas pensiones de empresa)",
+    "addSource": "Añadir fuente de ingresos",
+    "deductionLabel": "Impuestos y seguro médico sobre pensiones brutas",
+    "deductionHint": "Un porcentaje fijo de seguro médico y de dependencia (≈ 11–12 % en la KVdR) más el impuesto sobre la renta. El {rate} predeterminado convierte {gross} brutos en unos {net} netos.",
+    "totalNet": "Ingresos totales por pensiones, netos (dinero de hoy)",
+    "asEntered": "{amount} según lo introducido"
+  },
+  "portfolioStep": {
+    "title": "Tu cartera hoy",
+    "description": "Es el punto de partida que hacemos crecer hacia tu objetivo. Elige cómo se espera que crezca cada parte, o excluye el dinero que no vayas a invertir, como un fondo de emergencia.",
+    "noAssets": "Aún no hay activos con seguimiento: tu plan parte de {zero}.",
+    "growthLabel": "{category}: crecimiento",
+    "categories": {
+      "equities": "Acciones",
+      "real-estate": "Fondos inmobiliarios",
+      "crypto": "Cripto",
+      "bonds": "Bonos",
+      "commodities": "Materias primas y metales",
+      "cash": "Efectivo y ahorro",
+      "collectibles": "Coleccionables",
+      "property": "Inmuebles vendibles"
+    },
+    "treatments": {
+      "growth": "Crece a la rentabilidad del escenario",
+      "moderate": "A medio camino entre rentabilidad e inflación",
+      "inflation": "Sigue el ritmo de la inflación",
+      "exclude": "No cuenta (p. ej., fondo de emergencia)"
+    },
+    "fundable": "Activos computables",
+    "expectedGrowth": "Crecimiento esperado {expected} / año (conservador {conservative})",
+    "netDebt": "Tus pasivos superan a tus activos en <b>{debt}</b>. Tu plan parte de {zero} —la deuda no crece a la rentabilidad de la inversión—, así que amortizarla se suma al ahorro que calculamos.",
+    "mortgageWithPayment": "La hipoteca de <b>{balance}</b> de tu vivienda no se resta aquí: sus cuotas de {payment} salen de tus ingresos hasta la jubilación.",
+    "mortgage": "La hipoteca de <b>{balance}</b> de tu vivienda no se resta aquí: sus cuotas salen de tus ingresos hasta la jubilación.",
+    "mortgageNotProjected": "Sin su tipo y su cuota, el saldo completo cuenta como pendiente al jubilarte.",
+    "footnote": "Los valores de los activos se actualizan automáticamente al sincronizarse tus cuentas, así que tu progreso está siempre al día. Cada parte crece a su propio ritmo; el ahorro nuevo crece a la rentabilidad del escenario. No se incluye la vivienda en la que vives."
+  },
+  "assumptionsStep": {
+    "title": "Supuestos",
+    "description": "Hay valores predeterminados razonables: ajústalos solo si sabes lo que haces.",
+    "seePlan": "Ver mi plan",
+    "fields": {
+      "optimisticReturn": {
+        "label": "Rentabilidad anual esperada",
+        "hint": "Crecimiento del mercado a largo plazo. El {rate} predeterminado duplica una cartera cada 10 años."
+      },
+      "conservativeReturn": {
+        "label": "Rentabilidad anual conservadora",
+        "hint": "Un supuesto de crecimiento prudente para la estimación más segura."
+      },
+      "inflationRate": {
+        "label": "Tasa de inflación",
+        "hint": "A qué ritmo suben los precios; eleva tu objetivo de gastos futuros."
+      },
+      "withdrawalRate": {
+        "label": "Tasa de retirada segura",
+        "hint": "La regla del 4 %. Más baja = más segura, pero requiere una cartera mayor."
+      }
+    },
+    "withdrawalTax": "Impuestos sobre las retiradas",
+    "withdrawalTaxHint": "Impuesto efectivo sobre lo que retiras (p. ej., impuesto sobre plusvalías en la parte de ganancias). Con un 0 % el objetivo es una cifra antes de impuestos.",
+    "indexContributions": "Subir mi ahorro con la inflación",
+    "indexContributionsHint": "Desactivado: un importe fijo en dinero de hoy, que vale menos cada año. Activado: un primer importe más bajo que crece con la inflación.",
+    "reset": "Restablecer los valores recomendados"
+  },
+  "resultsStep": {
+    "save": "Guardar mi plan",
+    "fixToSave": "{reason}. Corrígelo para guardar tu plan."
+  },
+  "validation": {
+    "ageRange": "{field, select, currentAge {La edad actual debe} retirementAge {La edad de jubilación debe} other {Las edades deben}} ser un número entero entre {min} y {max}",
+    "retirementNotAfterCurrent": "La edad de jubilación debe ser posterior a tu edad actual",
+    "rateRange": "{field, select, optimisticReturn {La rentabilidad esperada} conservativeReturn {La rentabilidad conservadora} inflationRate {La tasa de inflación} primaryResidenceMortgageRate {El tipo de la hipoteca} pensionDeductionRate {Los impuestos y el seguro médico de la pensión} withdrawalTaxRate {Los impuestos sobre las retiradas} other {El porcentaje}} debe estar entre el 0 % y el {max} %",
+    "withdrawalRateRange": "La tasa de retirada debe ser mayor que el 0 % y como máximo del {max} %",
+    "conservativeAboveExpected": "La rentabilidad conservadora no puede ser mayor que la esperada",
+    "amountNegative": "{field, select, monthlyExpensesToday {Los gastos mensuales deben ser cero o más} fundableRealEstateEquity {El valor del inmueble debe ser cero o más} primaryResidenceMortgagePayment {La cuota de la hipoteca debe ser cero o más} other {Los importes de las pensiones deben ser cero o más}}",
+    "expensesNotPositive": "Los gastos mensuales deben ser mayores que cero"
+  }
+}

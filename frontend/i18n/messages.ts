@@ -44,6 +44,24 @@ import docsEn from "@/messages/en/docs.json";
 import docsDe from "@/messages/de/docs.json";
 import billingEn from "@/messages/en/billing.json";
 import billingDe from "@/messages/de/billing.json";
+import commonEs from "@/messages/es/common.json";
+import worldMapEs from "@/messages/es/worldMap.json";
+import calculatorsEs from "@/messages/es/calculators.json";
+import retirementEs from "@/messages/es/retirement.json";
+import integrationsEs from "@/messages/es/integrations.json";
+import categoriesEs from "@/messages/es/categories.json";
+import dashboardEs from "@/messages/es/dashboard.json";
+import legalEs from "@/messages/es/legal.json";
+import onboardingEs from "@/messages/es/onboarding.json";
+import landingEs from "@/messages/es/landing.json";
+import navigationEs from "@/messages/es/navigation.json";
+import loansEs from "@/messages/es/loans.json";
+import metalsEs from "@/messages/es/metals.json";
+import assetsEs from "@/messages/es/assets.json";
+import settingsEs from "@/messages/es/settings.json";
+import strategiesEs from "@/messages/es/strategies.json";
+import docsEs from "@/messages/es/docs.json";
+import billingEs from "@/messages/es/billing.json";
 
 import type { Language } from "./locales";
 
@@ -91,7 +109,28 @@ const de = {
   billing: billingDe,
 } satisfies Messages;
 
-const MESSAGES: Record<Language, Messages> = { en, de };
+const es = {
+  common: commonEs,
+  worldMap: worldMapEs,
+  calculators: calculatorsEs,
+  retirement: retirementEs,
+  integrations: integrationsEs,
+  categories: categoriesEs,
+  dashboard: dashboardEs,
+  legal: legalEs,
+  onboarding: onboardingEs,
+  landing: landingEs,
+  navigation: navigationEs,
+  loans: loansEs,
+  metals: metalsEs,
+  assets: assetsEs,
+  settings: settingsEs,
+  strategies: strategiesEs,
+  docs: docsEs,
+  billing: billingEs,
+} satisfies Messages;
+
+const MESSAGES: Record<Language, Messages> = { en, de, es };
 
 export function messagesFor(language: Language): Messages {
   return MESSAGES[language];

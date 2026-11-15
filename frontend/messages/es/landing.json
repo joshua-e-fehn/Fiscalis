@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "subheadline": "Sigue todas tus inversiones, activos y pasivos. Conoce tu patrimonio neto real con actualizaciones automáticas de cuentas bancarias, acciones, cripto, metales preciosos y mucho más.",
+    "badge": "Tu patrimonio, simplificado",
+    "headline": "Tu <highlight>patrimonio completo</highlight><br></br>en un solo lugar",
+    "tagline": "Como Finanzguru, pero para todo tu patrimonio neto."
+  },
+  "trust": {
+    "readOnly": "Conexiones de solo lectura",
+    "dailySync": "Sincronización diaria automática",
+    "multiCurrency": "Multidivisa"
+  },
+  "features": {
+    "cryptoDescription": "Importa tus posiciones de Bitpanda automáticamente con una clave API de solo lectura.",
+    "metalsTitle": "Metales preciosos",
+    "metalsDescription": "Sigue tus lingotes y monedas de oro y plata, valorados a precios actuales de distribuidor.",
+    "liabilitiesDescription": "Sigue tus préstamos y sus planes de amortización. Descubre tu patrimonio neto real.",
+    "headline": "Todo lo que necesitas para <highlight>dominar tu patrimonio</highlight>",
+    "subheadline": "Desde cuentas bancarias hasta monederos cripto: sigue todos tus activos en un único panel.",
+    "banksTitle": "Cuentas bancarias",
+    "banksDescription": "Conecta tus cuentas bancarias de forma segura con Plaid. Sigue cuentas corrientes, de ahorro y tarjetas de crédito.",
+    "investmentsTitle": "Carteras de inversión",
+    "investmentsDescription": "Importa automáticamente acciones, ETF, bonos y fondos de inversión de los principales brókers.",
+    "cryptoTitle": "Criptomonedas",
+    "liabilitiesTitle": "Deudas y pasivos",
+    "netWorthTitle": "Seguimiento del patrimonio neto",
+    "netWorthDescription": "Mira cómo crece tu patrimonio con gráficos y análisis claros."
+  },
+  "steps": {
+    "createDescription": "Regístrate con tu email o una cuenta social. El acceso se abre poco a poco mediante una lista de espera. Sin tarjeta de crédito.",
+    "netWorthDescription": "Mira cómo se completa la imagen de tu patrimonio, actualizada automáticamente cada día.",
+    "headline": "Empieza en <highlight>minutos</highlight>",
+    "subheadline": "Tres pasos sencillos para ver tu situación financiera completa.",
+    "createTitle": "Crea tu cuenta",
+    "connectTitle": "Conecta tus cuentas",
+    "connectDescription": "Vincula de forma segura tus bancos, brókers y exchanges de cripto. Solo acceso de lectura.",
+    "netWorthTitle": "Descubre tu patrimonio neto"
+  },
+  "security": {
+    "description": "Nunca vemos tus credenciales bancarias. Los tokens de acceso y las claves API se guardan cifrados, y todas las conexiones son de solo lectura.",
+    "badge": "Seguridad desde el diseño",
+    "headline": "Tus datos están <highlight>seguros con nosotros</highlight>",
+    "encryption": "Cifrado AES-256-GCM para todos los tokens sensibles",
+    "readOnly": "Acceso de solo lectura: nunca podemos mover tu dinero",
+    "credentials": "Tus credenciales bancarias nunca pasan por nuestros servidores",
+    "providers": "Proveedores de confianza: Plaid, SnapTrade, Bitpanda",
+    "ownership": "Tus datos son tuyos: nunca los vendemos"
+  },
+  "cta": {
+    "description": "Reúne tus cuentas, posiciones y préstamos y ve todo tu patrimonio neto en un solo lugar.",
+    "headline": "¿Listo para tomar el control de <highlight>tu patrimonio?</highlight>"
+  },
+  "nav": {
+    "features": "Funciones",
+    "howItWorks": "Cómo funciona",
+    "security": "Seguridad",
+    "signIn": "Iniciar sesión",
+    "joinWaitlist": "Únete a la lista de espera",
+    "dashboard": "Panel",
+    "goToDashboard": "Ir al panel"
+  },
+  "logoAlt": "Logotipo de Fiscalis",
+  "mockup": {
+    "totalNetWorth": "Patrimonio neto total",
+    "yearChange": "{change} este año",
+    "banks": "{count, plural, one {# banco} other {# bancos}}",
+    "brokers": "{count, plural, one {# bróker} other {# brókers}}",
+    "wallets": "{count, plural, one {# monedero} other {# monederos}}",
+    "equities": "Acciones",
+    "crypto": "Cripto",
+    "cash": "Efectivo",
+    "realEstate": "Inmuebles"
+  },
+  "languageToggle": {
+    "label": "Idioma"
+  }
+}

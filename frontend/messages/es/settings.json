@@ -1,0 +1,98 @@
+{
+  "general": {
+    "title": "General",
+    "subtitle": "Tu perfil, moneda de visualización, idioma y tema.",
+    "profile": {
+      "title": "Perfil",
+      "description": "Cómo se dirige a ti Fiscalis.",
+      "displayName": "Nombre visible",
+      "displayNamePlaceholder": "Tu nombre",
+      "birthDate": "Fecha de nacimiento",
+      "birthDateHint": "Opcional. Lo usan herramientas de planificación como el planificador de jubilación."
+    },
+    "region": {
+      "title": "Región",
+      "description": "Moneda e idioma.",
+      "currency": "Moneda de visualización",
+      "currencyHint": "Los totales, gráficos y rentabilidades se convierten al último tipo de cambio, y el historial al tipo de cada día. Los préstamos y las filas de cuentas mantienen su propia moneda."
+    },
+    "appearance": {
+      "title": "Apariencia",
+      "description": "Sistema sigue el ajuste de tu dispositivo.",
+      "theme": "Tema"
+    },
+    "saveFailed": "No hemos podido guardar tus ajustes. Inténtalo de nuevo."
+  },
+  "apiKeys": {
+    "title": "Claves API",
+    "subtitle": "Consulta tu patrimonio neto de forma programática. Las claves son privadas y están limitadas a tu cuenta.",
+    "create": {
+      "title": "Crear una clave",
+      "description": "Una clave da acceso de solo lectura a tu patrimonio neto actual. Trátala como una contraseña: nunca la subas a un repositorio ni la uses en código del navegador.",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej., panel de casa",
+      "expires": "Caduca",
+      "submit": "Crear clave"
+    },
+    "expiry": {
+      "30": "30 días",
+      "90": "90 días",
+      "365": "1 año",
+      "never": "Nunca"
+    },
+    "list": {
+      "title": "Tus claves",
+      "empty": "Aún no hay claves API.",
+      "name": "Nombre",
+      "key": "Clave",
+      "status": "Estado",
+      "created": "Creada",
+      "expires": "Caduca",
+      "lastUsed": "Último uso",
+      "never": "Nunca",
+      "none": "—"
+    },
+    "status": {
+      "active": "Activa",
+      "revoked": "Revocada",
+      "expired": "Caducada"
+    },
+    "revoke": {
+      "button": "Revocar",
+      "title": "¿Revocar «{name}»?",
+      "description": "Las solicitudes con esta clave se rechazarán de inmediato. Esta acción no se puede deshacer.",
+      "confirm": "Revocar"
+    },
+    "usage": {
+      "title": "Uso",
+      "description": "Envía la clave en la cabecera Authorization. No se aceptan claves en las URL. Cada clave está limitada a {limit} solicitudes por minuto. Los importes están en EUR; añade <code>?currency=USD</code>, <code>GBP</code> o <code>CHF</code> para convertirlos al último tipo de cambio."
+    },
+    "newKey": {
+      "title": "Copia tu nueva clave API",
+      "description": "Es la única vez que se mostrará la clave. Guárdala en un lugar seguro, como un gestor de contraseñas o de secretos.",
+      "copy": "Copiar clave API",
+      "done": "Hecho"
+    }
+  },
+  "privacy": {
+    "title": "Privacidad",
+    "subtitle": "Descarga todo lo que Fiscalis guarda sobre ti o elimina tu cuenta.",
+    "export": {
+      "title": "Descargar mis datos",
+      "description": "Un archivo JSON con todos los registros de tu cuenta, agrupados por tabla. Se excluyen las credenciales cifradas de los proveedores y los hashes de las claves API.",
+      "button": "Descargar mis datos",
+      "preparing": "Preparando…",
+      "failed": "No hemos podido preparar tus datos. Inténtalo de nuevo."
+    },
+    "delete": {
+      "title": "Eliminar mi cuenta",
+      "description": "Desconecta tus bancos y brókers en Plaid y SnapTrade, elimina todos tus datos y después tu acceso. Esta acción no se puede deshacer.",
+      "button": "Eliminar mi cuenta",
+      "dialogTitle": "¿Eliminar tu cuenta?",
+      "dialogDescription": "Primero se revocan tus conexiones. Después se eliminan todas las cuentas, posiciones, transacciones, préstamos, piezas de la caja fuerte, instantáneas y ajustes y, por último, tu acceso. Descarga antes tus datos si quieres una copia.",
+      "confirmLabel": "Escribe {phrase} para confirmar",
+      "confirm": "Eliminar la cuenta para siempre",
+      "deleting": "Eliminando…"
+    }
+  }
+}

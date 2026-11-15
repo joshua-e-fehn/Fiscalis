@@ -1,8 +1,8 @@
-import { deDE, enGB } from "@clerk/localizations";
+import { deDE, enGB, esES } from "@clerk/localizations";
 
 import type { Language } from "./locales";
 
-const CLERK_LOCALIZATIONS = { en: enGB, de: deDE } satisfies Record<
+const CLERK_LOCALIZATIONS = { en: enGB, de: deDE, es: esES } satisfies Record<
   Language,
   unknown
 >;

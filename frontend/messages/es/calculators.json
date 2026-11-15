@@ -1,0 +1,295 @@
+{
+  "index": {
+    "title": "Calculadoras",
+    "subtitle": "Herramientas financieras para ayudarte a tomar mejores decisiones de inversión y endeudamiento.",
+    "interestDescription": "Tipos de interés, duración del crecimiento, valores futuros y actuales con interés simple o compuesto.",
+    "loanDescription": "Cuotas, intereses totales y amortización de préstamos francés, de cuota decreciente, solo intereses y bullet, con amortizaciones anticipadas."
+  },
+  "intervals": {
+    "label": {
+      "minute": "Minuto",
+      "hour": "Hora",
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes",
+      "quarter": "Trimestre",
+      "year": "Año"
+    },
+    "unitPlural": {
+      "minute": "minutos",
+      "hour": "horas",
+      "day": "días",
+      "week": "semanas",
+      "month": "meses",
+      "quarter": "trimestres",
+      "year": "años"
+    },
+    "per": {
+      "minute": "Por minuto",
+      "hour": "Por hora",
+      "day": "Por día",
+      "week": "Por semana",
+      "month": "Por mes",
+      "quarter": "Por trimestre",
+      "year": "Por año"
+    },
+    "count": {
+      "minute": "{count, plural, one {# minuto} other {# minutos}}",
+      "hour": "{count, plural, one {# hora} other {# horas}}",
+      "day": "{count, plural, one {# día} other {# días}}",
+      "week": "{count, plural, one {# semana} other {# semanas}}",
+      "month": "{count, plural, one {# mes} other {# meses}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestres}}",
+      "year": "{count, plural, one {# año} other {# años}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, one {# minuto} other {# minutos}}",
+      "hour": "{count, plural, one {# hora} other {# horas}}",
+      "day": "{count, plural, one {# día} other {# días}}",
+      "week": "{count, plural, one {# semana} other {# semanas}}",
+      "month": "{count, plural, one {# mes} other {# meses}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestres}}",
+      "year": "{count, plural, one {# año} other {# años}}"
+    }
+  },
+  "interest": {
+    "title": "Calculadoras de interés",
+    "subtitle": "Potentes herramientas financieras para ayudarte a tomar mejores decisiones de inversión. Calcula el interés compuesto, las tasas de crecimiento, los valores futuros y más.",
+    "tabs": {
+      "rate": "Tipo de interés",
+      "duration": "Duración",
+      "futureValue": "Valor futuro",
+      "startingValue": "Valor inicial"
+    },
+    "fields": {
+      "initialValue": "Valor inicial",
+      "finalValue": "Valor final",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "interval": "Periodo de interés",
+      "intervalPlaceholder": "Elige un periodo",
+      "startingCapital": "Capital inicial",
+      "targetCapital": "Capital objetivo",
+      "interestRate": "Tipo de interés (%)",
+      "timePeriod": "Plazo ({unit})"
+    },
+    "calculate": "Calcular",
+    "results": "Resultados",
+    "empty": "Introduce valores y calcula para ver los resultados",
+    "compoundInterest": "Interés compuesto",
+    "simpleInterest": "Interés simple",
+    "withCompound": "Con interés compuesto",
+    "withSimple": "Con interés simple",
+    "gainAfter": "Ganancia: {amount} tras {duration}",
+    "growthAfter": "Crecimiento: {amount} tras {duration}",
+    "rate": {
+      "title": "Calcular el tipo de interés",
+      "description": "Halla el tipo de interés medio entre dos fechas, tanto con interés compuesto como simple",
+      "resultsHint": "Según tus datos, estos son los tipos de interés calculados"
+    },
+    "duration": {
+      "title": "Calcular la duración",
+      "description": "Descubre cuánto tardarás en alcanzar tu capital objetivo según el valor inicial y el tipo de interés",
+      "resultsHint": "Tiempo necesario para alcanzar tu capital objetivo"
+    },
+    "futureValue": {
+      "title": "Calcular el valor futuro",
+      "description": "Descubre cuánto valdrá tu inversión en el futuro según el tipo de interés y el tiempo",
+      "resultsHint": "Valor futuro previsto de tu inversión"
+    },
+    "startingValue": {
+      "title": "Calcular el valor inicial",
+      "description": "Descubre cuánto necesitas invertir ahora para alcanzar tu objetivo en el futuro",
+      "resultsHint": "Inversión inicial necesaria para alcanzar tu objetivo"
+    }
+  },
+  "loan": {
+    "title": "Calculadora de préstamos",
+    "subtitle": "Entiende los distintos tipos de préstamo, visualiza tus cuotas y encuentra la mejor opción para tu situación. Te mostramos exactamente adónde va tu dinero.",
+    "tabs": {
+      "calculate": "Calcular préstamo",
+      "compare": "Comparar todos"
+    },
+    "chooseType": "1. Elige el tipo de préstamo",
+    "calculateSection": "2. Calcula tu préstamo",
+    "understanding": "{name} en detalle",
+    "howItWorks": "Cómo funciona",
+    "bestFor": "Ideal para",
+    "watchOut": "Ten en cuenta",
+    "intervals": {
+      "MONTHLY": {
+        "label": "Mensual",
+        "payment": "Cuota mensual",
+        "perPeriod": "al mes",
+        "recurring": "Amortización adicional (cada mes)"
+      },
+      "QUARTERLY": {
+        "label": "Trimestral",
+        "payment": "Cuota trimestral",
+        "perPeriod": "al trimestre",
+        "recurring": "Amortización adicional (cada trimestre)"
+      },
+      "SEMI_ANNUAL": {
+        "label": "Semestral",
+        "payment": "Cuota semestral",
+        "perPeriod": "al semestre",
+        "recurring": "Amortización adicional (cada semestre)"
+      },
+      "ANNUAL": {
+        "label": "Anual",
+        "payment": "Cuota anual",
+        "perPeriod": "al año",
+        "recurring": "Amortización adicional (cada año)"
+      }
+    },
+    "types": {
+      "ANNUITY": {
+        "name": "Préstamo de cuota fija",
+        "shortName": "Cuota fija",
+        "shortDescription": "La misma cuota en cada periodo, el tipo más habitual",
+        "calculatorTitle": "Calculadora de préstamo de cuota fija",
+        "calculatorDescription": "Calcula tu cuota periódica y mira cómo se reparte a lo largo del tiempo.",
+        "howItWorks1": "Pagas la misma cantidad en cada periodo durante todo el plazo del préstamo",
+        "howItWorks2": "Las primeras cuotas son sobre todo intereses; las últimas, sobre todo capital",
+        "howItWorks3": "La deuda total disminuye de forma constante con el tiempo",
+        "bestFor1": "Compradores de vivienda que quieren un presupuesto previsible",
+        "bestFor2": "Préstamos a largo plazo (15-30 años)",
+        "bestFor3": "Quienes prefieren estabilidad a flexibilidad",
+        "watchOut1": "Pagas más intereses en los primeros años",
+        "watchOut2": "Menos flexibilidad si cambian tus ingresos"
+      },
+      "CONSTANT_PRINCIPAL": {
+        "name": "Préstamo de cuota decreciente",
+        "shortName": "Cuota decreciente",
+        "shortDescription": "Las cuotas empiezan altas y bajan con el tiempo",
+        "calculatorTitle": "Calculadora de préstamo de cuota decreciente",
+        "calculatorDescription": "Mira cómo bajan tus cuotas a medida que amortizas el capital.",
+        "howItWorks1": "Pagas una cantidad fija de capital en cada periodo, más los intereses",
+        "howItWorks2": "Al bajar la deuda, bajan los intereses y las cuotas se reducen",
+        "howItWorks3": "Los intereses totales son menores que en un préstamo de cuota fija",
+        "bestFor1": "Quienes esperan ingresos más bajos en el futuro (cerca de la jubilación)",
+        "bestFor2": "Quienes pueden asumir cuotas iniciales más altas",
+        "bestFor3": "Prestatarios que quieren minimizar los intereses totales",
+        "watchOut1": "Las primeras cuotas pueden ser un 20-30 % más altas que en un préstamo de cuota fija",
+        "watchOut2": "Puede que no te lo concedan si tus ingresos apenas cubren la primera cuota"
+      },
+      "INTEREST_ONLY": {
+        "name": "Préstamo solo intereses",
+        "shortName": "Solo intereses",
+        "shortDescription": "Pagas solo intereses y el capital más adelante",
+        "calculatorTitle": "Calculadora de préstamo solo intereses",
+        "calculatorDescription": "Paga solo intereses durante un periodo y después empieza a amortizar capital.",
+        "howItWorks1": "Durante un periodo fijo solo pagas intereses: la deuda no disminuye",
+        "howItWorks2": "Tras el periodo de solo intereses, empiezas a pagar también capital",
+        "howItWorks3": "Las cuotas suben mucho cuando empieza la amortización del capital",
+        "bestFor1": "Inversores inmobiliarios que prevén vender antes de amortizar capital",
+        "bestFor2": "Quienes esperan ingresos más altos en el futuro",
+        "bestFor3": "Necesidades de financiación a corto plazo",
+        "watchOut1": "No acumulas patrimonio durante el periodo de solo intereses",
+        "watchOut2": "Subida brusca de la cuota cuando empiezan los pagos normales",
+        "watchOut3": "Riesgo de deber más de lo que vale el activo"
+      },
+      "BULLET": {
+        "name": "Préstamo bullet / globo",
+        "shortName": "Bullet",
+        "shortDescription": "Solo intereses; todo el capital se paga al final",
+        "calculatorTitle": "Calculadora de préstamo bullet / globo",
+        "calculatorDescription": "Paga solo intereses durante todo el plazo y el capital completo al final.",
+        "howItWorks1": "Pagas solo intereses durante todo el plazo del préstamo",
+        "howItWorks2": "El capital completo vence en un único pago al final",
+        "howItWorks3": "Las cuotas periódicas son muy bajas, pero necesitas un plan para el pago final",
+        "bestFor1": "Financiación puente (préstamos a corto plazo hasta tener financiación definitiva)",
+        "bestFor2": "Inversores que prevén vender el activo antes del vencimiento",
+        "bestFor3": "Préstamos para obra o proyectos de promoción",
+        "watchOut1": "Riesgo alto: necesitas un plan para pagar o refinanciar",
+        "watchOut2": "Si no puedes hacer el pago final, podrías perder el activo",
+        "watchOut3": "No acumulas patrimonio durante el plazo del préstamo"
+      }
+    },
+    "fields": {
+      "loanAmount": "Importe del préstamo",
+      "annualInterestRate": "Tipo de interés anual (%)",
+      "interestRate": "Tipo de interés (%)",
+      "termYears": "Plazo del préstamo (años)",
+      "termYearsShort": "Plazo (años)",
+      "paymentSchedule": "Frecuencia de pago",
+      "interestOnlyYears": "Periodo de solo intereses (años)",
+      "interestOnlyHint": "¿Cuántos años pasan antes de empezar a pagar capital?"
+    },
+    "prepayments": {
+      "title": "Amortizaciones anticipadas",
+      "enabled": "Activadas",
+      "disabled": "Desactivadas",
+      "recurringHint": "Este importe se sumará a cada cuota ordinaria.",
+      "oneTime": "Amortizaciones puntuales",
+      "add": "Añadir amortización",
+      "oneTimeHint": "Programa amortizaciones concretas en determinados años (p. ej., paga extra anual, herencia).",
+      "year": "Año",
+      "amountPlaceholder": "Importe",
+      "fixedAmount": "Importe fijo",
+      "percentOfBalance": "% del saldo",
+      "remove": "Quitar amortización"
+    },
+    "calculate": "Calcular mi préstamo",
+    "yourResults": "Tus resultados",
+    "summary": {
+      "totalInterest": "Intereses totales",
+      "totalCost": "Coste total",
+      "interestToPrincipal": "Intereses / capital",
+      "savingsTitle": "Ahorro por amortización anticipada",
+      "interestSaved": "Intereses ahorrados",
+      "periodsSaved": "Periodos ahorrados",
+      "originalTerm": "Plazo original",
+      "newTerm": "Nuevo plazo",
+      "payments": "{count, plural, one {# cuota} other {# cuotas}}"
+    },
+    "charts": {
+      "principal": "Capital",
+      "interest": "Intereses",
+      "balance": "Saldo pendiente",
+      "payment": "Cuota",
+      "yearTick": "A{year}",
+      "principalValue": "Capital: {amount}",
+      "interestValue": "Intereses: {amount}",
+      "totalValue": "Total: {amount}",
+      "balanceValue": "Saldo: {amount}",
+      "breakdownByYear": "Desglose de cuotas por año",
+      "breakdownHint": "Capital (verde) frente a intereses (naranja) a lo largo del tiempo.",
+      "balanceOverTime": "Evolución del saldo pendiente",
+      "balanceHint": "Mira cómo baja tu deuda a medida que pagas.",
+      "breakdown": "Desglose de la cuota"
+    },
+    "schedule": {
+      "view": "Ver el cuadro de amortización completo",
+      "period": "#",
+      "payment": "Cuota",
+      "principal": "Capital",
+      "interest": "Intereses",
+      "extra": "Extra",
+      "balance": "Saldo",
+      "showAll": "{count, plural, one {Mostrar # cuota} other {Mostrar las # cuotas}}"
+    },
+    "warnings": {
+      "savingsTitle": "💰 Ahorro en la cuota",
+      "savingsBody": "Tu cuota baja de {first} a {last}: ¡al final pagas {difference} menos por periodo!",
+      "shockTitle": "⚠️ Aviso de subida de cuota",
+      "shockBody": "Tras {years, plural, one {# año} other {# años}}, tu cuota subirá de {from} a {to}: un aumento de {difference} ({percent} % más). ¡Asegúrate de que puedes asumirlo!",
+      "balloonTitle": "🚨 Aviso de pago final",
+      "balloonBody": "Al final de {years, plural, one {# año} other {# años}}, debes pagar {amount} de una sola vez. Es lo que se llama un \"pago globo\".",
+      "balloonOptions": "<strong>Tus opciones cuando vence el pago final:</strong> refinanciar con un nuevo préstamo, vender el activo o pagar con tus ahorros. Si no puedes hacer nada de esto, corres el riesgo de perder el activo."
+    },
+    "compare": {
+      "title": "Comparación lado a lado",
+      "description": "Mira cómo se comparan los distintos tipos de préstamo con el mismo importe, tipo y plazo.",
+      "button": "Comparar todos los tipos",
+      "loanType": "Tipo de préstamo",
+      "firstPayment": "Primera cuota",
+      "totalInterest": "Intereses totales",
+      "totalCost": "Coste total",
+      "interestChart": "Comparación de intereses totales",
+      "byType": "Desglose de cuotas y saldo por tipo de préstamo",
+      "insightTitle": "💡 Idea clave",
+      "insightBody": "El <strong>préstamo de cuota decreciente</strong> te ahorra {saved} en intereses frente a un préstamo de cuota fija, pero tu primera cuota es {extra} más alta. Elige según tu presupuesto actual y tus expectativas de ingresos."
+    }
+  }
+}

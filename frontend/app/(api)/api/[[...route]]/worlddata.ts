@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 
@@ -105,6 +106,26 @@ const dynamicIndicatorParamSchema = z.object({
   code: z.string().min(1, "Indicator code is required"),
 });
 
+/**
+ * Validation failure -> `{ error: string }` with 400, the same shape every
+ * other error in this router has (lib/api/worldbank.ts reads `error` as a
+ * message). Without it zod-validator returns the raw ZodError, whose JSON
+ * shape changed in zod 4.
+ */
+function rejectInvalid(
+  result:
+    | { success: true }
+    | { success: false; error: { issues: ReadonlyArray<{ message: string }> } },
+  c: Context,
+) {
+  if (!result.success) {
+    return c.json(
+      { error: result.error.issues[0]?.message ?? "Invalid request" },
+      400,
+    );
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Hono App Definition
 // ═══════════════════════════════════════════════════════════════
@@ -117,23 +138,27 @@ const app = new Hono()
    *   - q: string (search query, min 2 chars)
    *   - limit: number (default: 50, max: 100)
    */
-  .get("/search", zValidator("query", searchQuerySchema), async (c) => {
-    const { q, limit } = c.req.valid("query");
+  .get(
+    "/search",
+    zValidator("query", searchQuerySchema, rejectInvalid),
+    async (c) => {
+      const { q, limit } = c.req.valid("query");
 
-    try {
-      const results = await searchIndicators(q, limit);
-      return c.json<{ indicators: SearchedIndicator[]; query: string }>({
-        indicators: results,
-        query: q,
-      });
-    } catch (error) {
-      console.error("Search error:", describeError(error));
-      return c.json(
-        { error: "Failed to search indicators", indicators: [] },
-        500,
-      );
-    }
-  })
+      try {
+        const results = await searchIndicators(q, limit);
+        return c.json<{ indicators: SearchedIndicator[]; query: string }>({
+          indicators: results,
+          query: q,
+        });
+      } catch (error) {
+        console.error("Search error:", describeError(error));
+        return c.json(
+          { error: "Failed to search indicators", indicators: [] },
+          500,
+        );
+      }
+    },
+  )
 
   /**
    * GET /api/world-data/indicators
@@ -141,21 +166,25 @@ const app = new Hono()
    * Query params:
    *   - grouped: boolean (default: false) - Return indicators grouped by category
    */
-  .get("/indicators", zValidator("query", indicatorsQuerySchema), async (c) => {
-    const { grouped } = c.req.valid("query");
+  .get(
+    "/indicators",
+    zValidator("query", indicatorsQuerySchema, rejectInvalid),
+    async (c) => {
+      const { grouped } = c.req.valid("query");
 
-    if (grouped) {
-      const groupedIndicators = getIndicatorsByCategory();
-      return c.json<{
-        grouped: Record<IndicatorCategory, IndicatorMetadata[]>;
-      }>({
-        grouped: groupedIndicators,
-      });
-    }
+      if (grouped) {
+        const groupedIndicators = getIndicatorsByCategory();
+        return c.json<{
+          grouped: Record<IndicatorCategory, IndicatorMetadata[]>;
+        }>({
+          grouped: groupedIndicators,
+        });
+      }
 
-    const indicators = getAllIndicatorsMetadata();
-    return c.json<{ indicators: IndicatorMetadata[] }>({ indicators });
-  })
+      const indicators = getAllIndicatorsMetadata();
+      return c.json<{ indicators: IndicatorMetadata[] }>({ indicators });
+    },
+  )
 
   /**
    * GET /api/world-data/dynamic/:code
@@ -167,8 +196,8 @@ const app = new Hono()
    */
   .get(
     "/dynamic/:code",
-    zValidator("param", dynamicIndicatorParamSchema),
-    zValidator("query", yearQuerySchema),
+    zValidator("param", dynamicIndicatorParamSchema, rejectInvalid),
+    zValidator("query", yearQuerySchema, rejectInvalid),
     async (c) => {
       const { code } = c.req.valid("param");
       const { year } = c.req.valid("query");
@@ -217,7 +246,7 @@ const app = new Hono()
    */
   .get(
     "/info/:code",
-    zValidator("param", dynamicIndicatorParamSchema),
+    zValidator("param", dynamicIndicatorParamSchema, rejectInvalid),
     async (c) => {
       const { code } = c.req.valid("param");
 
@@ -247,8 +276,8 @@ const app = new Hono()
    */
   .get(
     "/:indicator",
-    zValidator("param", indicatorParamSchema),
-    zValidator("query", yearQuerySchema),
+    zValidator("param", indicatorParamSchema, rejectInvalid),
+    zValidator("query", yearQuerySchema, rejectInvalid),
     async (c) => {
       const { indicator } = c.req.valid("param");
       const { year } = c.req.valid("query");

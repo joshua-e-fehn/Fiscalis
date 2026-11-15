@@ -31,7 +31,7 @@
       },
       "currency": {
         "title": "Anzeigewährung und Sprache",
-        "body": "Alles wird in Euro gespeichert. Deine Summen kannst du in EUR, USD, GBP oder CHF anzeigen: Summen werden zum letzten Tageskurs umgerechnet, dein Verlauf zum Kurs des jeweiligen Tages. Kredite und einzelne Kontozeilen behalten ihre eigene Währung.\n\nFiscalis gibt es auf Deutsch, Englisch, Spanisch und Französisch. Anzeigewährung und Sprache änderst du unter Einstellungen > Allgemein.",
+        "body": "Alles wird in Euro gespeichert. Deine Summen kannst du in EUR, USD, GBP oder CHF anzeigen: Summen werden zum letzten Tageskurs umgerechnet, dein Verlauf zum Kurs des jeweiligen Tages. Kredite und einzelne Kontozeilen behalten ihre eigene Währung.\n\nFiscalis gibt es auf Deutsch, Englisch, Spanisch, Französisch und Italienisch. Anzeigewährung und Sprache änderst du unter Einstellungen > Allgemein.",
         "linkLabel": "Einstellungen > Allgemein öffnen"
       },
       "sync": {

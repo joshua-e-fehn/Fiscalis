@@ -31,7 +31,7 @@
       },
       "currency": {
         "title": "Devise d’affichage et langue",
-        "body": "Tout est enregistré en euros. Tu peux afficher tes totaux en EUR, USD, GBP ou CHF : les totaux sont convertis au dernier taux de change quotidien et ton historique au taux de chaque jour. Les prêts et les lignes de comptes individuelles gardent leur propre devise.\n\nFiscalis est disponible en anglais, allemand, espagnol et français. Change la devise d’affichage et la langue sous Paramètres > Général.",
+        "body": "Tout est enregistré en euros. Tu peux afficher tes totaux en EUR, USD, GBP ou CHF : les totaux sont convertis au dernier taux de change quotidien et ton historique au taux de chaque jour. Les prêts et les lignes de comptes individuelles gardent leur propre devise.\n\nFiscalis est disponible en anglais, allemand, espagnol, français et italien. Change la devise d’affichage et la langue sous Paramètres > Général.",
         "linkLabel": "Ouvrir Paramètres > Général"
       },
       "sync": {

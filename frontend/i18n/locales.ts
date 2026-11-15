@@ -61,6 +61,7 @@ export const INTL_TAGS = {
   de: "de-DE",
   es: "es-ES",
   fr: "fr-FR",
+  it: "it-IT",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -71,6 +72,7 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   de: "Deutsch",
   es: "Español",
   fr: "Français",
+  it: "Italiano",
 };
 
 /**
@@ -78,7 +80,6 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
 export const PLANNED_LOCALES = [
-  "it",
   "pt-PT",
   "ru",
   "zh-Hans",

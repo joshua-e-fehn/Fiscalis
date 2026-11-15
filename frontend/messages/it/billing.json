@@ -1,0 +1,80 @@
+{
+  "plans": {
+    "free": "Free",
+    "pro": "Pro"
+  },
+  "billing": {
+    "title": "Fatturazione",
+    "subtitle": "Il tuo piano, l'abbonamento e le fatture.",
+    "current": {
+      "title": "Piano attuale",
+      "description": "Il piano che hai e come si rinnova.",
+      "sourceSubscription": "Abbonamento a pagamento",
+      "sourceGrant": "Incluso senza costi",
+      "sourceDefault": "Gratis per sempre",
+      "renews": "Si rinnova il {date}",
+      "endsOn": "Termina il {date}",
+      "pastDue": "L'ultimo pagamento non è andato a buon fine. Aggiorna il metodo di pagamento per mantenere Pro.",
+      "ended": "Il tuo abbonamento Pro è terminato.",
+      "intervalMonth": "Fatturato mensilmente",
+      "intervalYear": "Fatturato annualmente",
+      "manage": "Gestisci abbonamento",
+      "manageHint": "Nel portale clienti di Stripe puoi cambiare o disdire il piano, aggiornare il metodo di pagamento e scaricare le fatture."
+    },
+    "upgrade": {
+      "title": "Passa a Pro",
+      "description": "Connessioni illimitate, accesso API e Pies.",
+      "perMonth": "{price} al mese",
+      "perYear": "{price} all'anno",
+      "month": "Mensile",
+      "year": "Annuale",
+      "submit": "Passa a Pro",
+      "unavailable": "L'upgrade non è ancora disponibile. Riprova tra poco.",
+      "grantNote": "Pro è già incluso per te. Puoi comunque abbonarti per sostenere Fiscalis.",
+      "features": {
+        "connections": "Connessioni illimitate a banche, broker e cripto",
+        "apiKeys": "Chiavi API per l'API del patrimonio netto",
+        "pies": "Pies (strategie di investimento)"
+      }
+    },
+    "checkout": {
+      "success": "Grazie per l'upgrade! Il tuo piano si aggiorna non appena Stripe conferma il pagamento.",
+      "canceled": "Il checkout è stato annullato. Non ti è stato addebitato nulla."
+    },
+    "invoices": {
+      "title": "Fatture",
+      "description": "Le tue fatture più recenti. Il portale clienti contiene lo storico completo e i PDF.",
+      "empty": "Ancora nessuna fattura.",
+      "date": "Data",
+      "amount": "Importo",
+      "status": "Stato",
+      "statuses": {
+        "draft": "Bozza",
+        "open": "Aperta",
+        "paid": "Pagata",
+        "void": "Annullata",
+        "uncollectible": "Inesigibile",
+        "failed": "Non riuscita",
+        "other": "Altro"
+      }
+    }
+  },
+  "limits": {
+    "title": "Limiti",
+    "subtitle": "Cosa include il tuo piano e quanto ne usi.",
+    "card": {
+      "title": "Utilizzo",
+      "description": "Hai il piano {plan}."
+    },
+    "rows": {
+      "connections": "Connessioni ai provider",
+      "apiKeys": "Chiavi API",
+      "pies": "Pies"
+    },
+    "notIncluded": "Non incluso",
+    "usedOf": "{used} di {limit}",
+    "usedUnlimited": "{used} in uso · Illimitato",
+    "upgradeHint": "Ti serve di più? Pro non ha limiti.",
+    "upgrade": "Scopri Pro"
+  }
+}

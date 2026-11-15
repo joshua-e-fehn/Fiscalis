@@ -1,0 +1,153 @@
+{
+  "actions": {
+    "connectBroker": "Collega broker",
+    "connectBank": "Collega banca",
+    "connectCrypto": "Collega cripto",
+    "addItem": "Aggiungi voce",
+    "addProperty": "Aggiungi immobile",
+    "viewHoldings": "Vedi posizioni",
+    "viewAccounts": "Vedi conti",
+    "viewPortfolio": "Vedi portafoglio",
+    "viewProperties": "Vedi immobili",
+    "viewCollection": "Vedi collezione"
+  },
+  "bonds": {
+    "subtitle": "Segui i tuoi investimenti a reddito fisso: titoli di Stato, obbligazioni societarie e fondi obbligazionari.",
+    "categories": "Categorie di obbligazioni"
+  },
+  "cash": {
+    "title": "Liquidità e mercato monetario",
+    "subtitle": "Segui le tue attività liquide: conti di risparmio, fondi monetari, depositi vincolati e valute estere.",
+    "balanceHistory": "Storico della liquidità",
+    "categories": "Categorie di liquidità"
+  },
+  "equities": {
+    "subtitle": "Segui il tuo portafoglio azionario, ETF, fondi comuni e investimenti in private equity.",
+    "publicMarkets": "Mercati quotati",
+    "privateMarkets": "Mercati privati"
+  },
+  "realEstate": {
+    "subtitle": "Segui i tuoi investimenti immobiliari: immobili residenziali, commerciali, REIT e altro ancora.",
+    "categories": "Categorie di immobili"
+  },
+  "collectibles": {
+    "subtitle": "Segui i tuoi beni da collezione: arte, vino, orologi, auto d'epoca e altro ancora.",
+    "categories": "Categorie di collezionabili"
+  },
+  "commodities": {
+    "subtitle": "Segui i prezzi in tempo reale e gestisci le tue posizioni nei diversi tipi di materie prime",
+    "categories": "Categorie di materie prime"
+  },
+  "metals": {
+    "signIn": "Accedi per vedere il tuo portafoglio di metalli."
+  },
+  "crypto": {
+    "title": "Asset cripto",
+    "subtitle": "Segui i tuoi investimenti in criptovalute e il rendimento del portafoglio",
+    "tabs": {
+      "overview": "Panoramica",
+      "holdings": "Posizioni",
+      "transactions": "Transazioni"
+    },
+    "categories": "Categorie cripto",
+    "holdings": {
+      "title": "Tutte le posizioni cripto",
+      "description": "Elenco completo delle tue criptovalute su tutti gli exchange e wallet collegati",
+      "emptyTitle": "Nessun account cripto collegato",
+      "emptyDescription": "Collega i tuoi exchange e wallet cripto per vedere tutte le tue posizioni",
+      "connect": "Collega account cripto"
+    },
+    "transactions": {
+      "title": "Storico delle transazioni",
+      "connectDescription": "Collega i tuoi account cripto per vedere lo storico delle transazioni",
+      "notConnected": "Ancora nessun account cripto collegato. Collega i tuoi exchange e wallet per vedere lo storico delle transazioni.",
+      "description": "Tutte le transazioni sui tuoi account cripto collegati",
+      "empty": "Nessuna transazione trovata. Lo storico delle transazioni apparirà qui dopo la sincronizzazione.",
+      "justNow": "proprio ora",
+      "unknownDate": "Data sconosciuta",
+      "types": {
+        "buy": "Acquisto",
+        "sell": "Vendita",
+        "deposit": "Deposito",
+        "withdraw": "Prelievo",
+        "withdrawal": "Prelievo",
+        "receive": "Ricezione",
+        "send": "Invio",
+        "transfer": "Trasferimento",
+        "reward": "Ricompensa",
+        "staking": "Staking",
+        "dividend": "Dividendo",
+        "interest": "Interessi",
+        "fee": "Commissione"
+      }
+    },
+    "allocation": {
+      "title": "Allocazione per posizione",
+      "empty": "Ancora nessuna posizione",
+      "other": "Altro (<2%)",
+      "otherShort": "Altro"
+    },
+    "positions": {
+      "title": "Tutte le posizioni",
+      "count": "{shown} di {total, plural, one {# posizione} other {# posizioni}}",
+      "search": "Cerca per token...",
+      "loading": "Caricamento posizioni…",
+      "noMatch": "Nessuna posizione corrisponde alla ricerca",
+      "empty": "Nessuna posizione trovata",
+      "token": "Token",
+      "quantity": "Quantità",
+      "value": "Valore",
+      "category": "Categoria",
+      "priceUnavailable": "Prezzo non disponibile",
+      "staleHint": "Bitpanda non aveva un prezzo aggiornato; viene mostrato l'ultimo prezzo noto",
+      "priceAsOf": "Prezzo al {date}",
+      "lastKnownPrice": "Ultimo prezzo noto"
+    }
+  },
+  "manualAssets": {
+    "add": "Aggiungi bene",
+    "emptyHint": "Aggiungi un bene per seguirlo qui. Conta nel tuo patrimonio netto alla sua ultima valutazione.",
+    "addTitle": "Aggiungi un bene",
+    "editTitle": "Modifica {name}",
+    "description": "Registra qualcosa che nessun conto collegato riporta. Conta nel tuo patrimonio netto alla sua ultima valutazione.",
+    "actionsLabel": "Azioni per {name}",
+    "fields": {
+      "category": "Categoria",
+      "subcategory": "Sottocategoria",
+      "name": "Nome",
+      "namePlaceholder": "es. Appartamento a Milano, Rolex Submariner",
+      "currency": "Valuta",
+      "valuations": "Valutazioni",
+      "valuationsHint": "Quanto valeva il bene in ciascuna data. Conta la più recente.",
+      "date": "Data",
+      "value": "Valore",
+      "addValuation": "Aggiungi valutazione",
+      "removeValuation": "Rimuovi valutazione",
+      "costBasis": "Prezzo d'acquisto",
+      "optional": "Facoltativo",
+      "costBasisHint": "Con un prezzo d'acquisto viene mostrato l'utile o la perdita. Collega il prestito che ha finanziato il bene, se presente.",
+      "linkedLoan": "Finanziato da",
+      "noLoan": "Nessun prestito"
+    },
+    "attributes": {
+      "artist": "Artista",
+      "brand": "Marca",
+      "model": "Modello",
+      "referenceNumber": "N. di referenza",
+      "producer": "Produttore",
+      "vintage": "Annata",
+      "year": "Anno",
+      "address": "Indirizzo",
+      "grade": "Grado"
+    },
+    "toast": {
+      "created": "{name} aggiunto",
+      "updated": "{name} salvato",
+      "deleted": "{name} eliminato"
+    },
+    "deleteDialog": {
+      "title": "Eliminare {name}?",
+      "description": "Il bene e tutte le sue valutazioni vengono rimossi e non contano più nel tuo patrimonio netto. L'operazione non può essere annullata."
+    }
+  }
+}

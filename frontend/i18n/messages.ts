@@ -80,6 +80,24 @@ import settingsFr from "@/messages/fr/settings.json";
 import strategiesFr from "@/messages/fr/strategies.json";
 import docsFr from "@/messages/fr/docs.json";
 import billingFr from "@/messages/fr/billing.json";
+import commonIt from "@/messages/it/common.json";
+import worldMapIt from "@/messages/it/worldMap.json";
+import calculatorsIt from "@/messages/it/calculators.json";
+import retirementIt from "@/messages/it/retirement.json";
+import integrationsIt from "@/messages/it/integrations.json";
+import categoriesIt from "@/messages/it/categories.json";
+import dashboardIt from "@/messages/it/dashboard.json";
+import legalIt from "@/messages/it/legal.json";
+import onboardingIt from "@/messages/it/onboarding.json";
+import landingIt from "@/messages/it/landing.json";
+import navigationIt from "@/messages/it/navigation.json";
+import loansIt from "@/messages/it/loans.json";
+import metalsIt from "@/messages/it/metals.json";
+import assetsIt from "@/messages/it/assets.json";
+import settingsIt from "@/messages/it/settings.json";
+import strategiesIt from "@/messages/it/strategies.json";
+import docsIt from "@/messages/it/docs.json";
+import billingIt from "@/messages/it/billing.json";
 
 import type { Language } from "./locales";
 
@@ -169,7 +187,29 @@ const fr = {
   billing: billingFr,
 } satisfies Messages;
 
-const MESSAGES: Record<Language, Messages> = { en, de, es, fr };
+
+const it = {
+  common: commonIt,
+  worldMap: worldMapIt,
+  calculators: calculatorsIt,
+  retirement: retirementIt,
+  integrations: integrationsIt,
+  categories: categoriesIt,
+  dashboard: dashboardIt,
+  legal: legalIt,
+  onboarding: onboardingIt,
+  landing: landingIt,
+  navigation: navigationIt,
+  loans: loansIt,
+  metals: metalsIt,
+  assets: assetsIt,
+  settings: settingsIt,
+  strategies: strategiesIt,
+  docs: docsIt,
+  billing: billingIt,
+} satisfies Messages;
+
+const MESSAGES: Record<Language, Messages> = { en, de, es, fr, it };
 
 export function messagesFor(language: Language): Messages {
   return MESSAGES[language];

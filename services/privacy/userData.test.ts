@@ -80,6 +80,7 @@ describe("user data registry", () => {
         "bitpandaConnections.apiKey",
         "plaidItems.accessToken",
         "snaptradeUsers.snaptradeUserSecret",
+        "teamInvites.tokenHash",
       ].sort(),
     );
   });

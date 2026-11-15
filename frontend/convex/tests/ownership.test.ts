@@ -143,6 +143,8 @@ const ARG_OVERRIDES: Record<string, (ids: SeedIds) => Args> = {
   "goals:entries": (ids) => ({ trackerId: ids.goalTrackers[1] }),
   "retirement:saveRetirementPlan": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
   "retirement:getFundingBase": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
+  // The owner of a team cannot leave it: leave the partner's team instead
+  "teams:leaveTeam": (ids) => ({ teamId: ids.teams[1] }),
 };
 
 /**
@@ -157,6 +159,60 @@ const OWNER_NOOP = new Set<string>([
 
 /** Owner document ids by table, plus `metalCatalog` and the Plaid `plaidItemId`. */
 type SeedIds = Record<string, string[]>;
+
+// ── Teams (ENG-197) ───────────────────────────────────────────
+
+/** A third user, in the owner's teams; never the intruder. */
+const PARTNER = "user_partner";
+
+/**
+ * The owner's team (owner sharing, PARTNER a plain member, one open
+ * invite) and a team PARTNER owns with the owner as admin (for leaveTeam:
+ * an owner cannot leave). The id pools name the partner's membership,
+ * since the owner can remove or promote it but not their own.
+ */
+async function seedTeams(t: TestConvex): Promise<SeedIds> {
+  return await t.run(async (ctx) => {
+    const team = await ctx.db.insert("teams", {
+      userId: OWNER,
+      name: "Household",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    const member = (teamId: typeof team, userId: string, role: "owner" | "admin" | "member") =>
+      ctx.db.insert("teamMembers", {
+        teamId,
+        userId,
+        role,
+        displayName: null,
+        sharing: true,
+        joinedAt: NOW,
+      });
+    await member(team, OWNER, "owner");
+    const partnerMembership = await member(team, PARTNER, "member");
+    const invite = await ctx.db.insert("teamInvites", {
+      teamId: team,
+      userId: OWNER,
+      tokenHash: "0".repeat(64),
+      role: "member",
+      createdAt: NOW,
+      expiresAt: NOW + 86_400_000,
+    });
+    const partnersTeam = await ctx.db.insert("teams", {
+      userId: PARTNER,
+      name: "Partner's",
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    await member(partnersTeam, PARTNER, "owner");
+    await member(partnersTeam, OWNER, "admin");
+    return {
+      teams: [team, partnersTeam],
+      teamMembers: [partnerMembership],
+      teamInvites: [invite],
+    };
+  });
+}
 
 // ── Argument generation ──────────────────────────────────────────
 
@@ -283,6 +339,7 @@ async function seededTest(): Promise<{ t: TestConvex; ids: SeedIds }> {
       grantedAt: NOW,
     }),
   );
+  const teams = await seedTeams(t);
   const plaidItemId = await t.run(async (ctx) => {
     const item = await ctx.db.get(owner.plaidItems![0]);
     return item!.itemId;
@@ -291,6 +348,7 @@ async function seededTest(): Promise<{ t: TestConvex; ids: SeedIds }> {
     ...(owner as SeedIds),
     metalCatalog: [catalogId],
     plaidItemId: [plaidItemId],
+    ...teams,
   };
   return { t, ids };
 }

@@ -1312,4 +1312,41 @@ export default defineSchema({
 	})
 		.index("by_user", ["userId"])
 		.index("by_key_hash", ["keyHash"]),
+
+	// ─── Teams (ENG-197, docs/adr/0002-teams.md) ─────────────────
+	// Data stays owned by each user; a team lets members read the aggregate
+	// of the members who share (teamMembers.sharing), never write.
+
+	teams: defineTable({
+		userId: v.string(), // Clerk user ID of the current owner
+		name: v.string(),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	}).index("by_user", ["userId"]),
+
+	teamMembers: defineTable({
+		teamId: v.id("teams"),
+		userId: v.string(), // Clerk user ID of the member
+		role: v.union(v.literal("owner"), v.literal("admin"), v.literal("member")),
+		// The name other members see (identity at join time); null = generic label
+		displayName: v.union(v.string(), v.null()),
+		// Opt-in: this member's data counts in the team aggregate
+		sharing: v.boolean(),
+		joinedAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_team", ["teamId"])
+		.index("by_team_user", ["teamId", "userId"]),
+
+	teamInvites: defineTable({
+		teamId: v.id("teams"),
+		userId: v.string(), // Clerk user ID of the member who created the invite
+		tokenHash: v.string(), // Hex SHA-256 of the invite token (services/teams/teams.ts)
+		role: v.union(v.literal("admin"), v.literal("member")),
+		createdAt: v.number(),
+		expiresAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_team", ["teamId"])
+		.index("by_token_hash", ["tokenHash"]),
 });

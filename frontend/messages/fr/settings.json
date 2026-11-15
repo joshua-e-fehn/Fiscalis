@@ -1,0 +1,98 @@
+{
+  "general": {
+    "title": "Général",
+    "subtitle": "Ton profil, ta devise d’affichage, ta langue et ton thème.",
+    "profile": {
+      "title": "Profil",
+      "description": "Comment Fiscalis s’adresse à toi.",
+      "displayName": "Nom affiché",
+      "displayNamePlaceholder": "Ton nom",
+      "birthDate": "Date de naissance",
+      "birthDateHint": "Facultatif. Utilisée par les outils de planification comme le planificateur retraite."
+    },
+    "region": {
+      "title": "Région",
+      "description": "Devise et langue.",
+      "currency": "Devise d’affichage",
+      "currencyHint": "Les totaux, graphiques et rendements sont convertis au dernier taux de change, l’historique au taux de chaque jour. Les prêts et les lignes de compte gardent leur propre devise."
+    },
+    "appearance": {
+      "title": "Apparence",
+      "description": "Système suit le réglage de ton appareil.",
+      "theme": "Thème"
+    },
+    "saveFailed": "Impossible d’enregistrer tes paramètres. Réessaie."
+  },
+  "apiKeys": {
+    "title": "Clés API",
+    "subtitle": "Lis ton patrimoine net par programme. Les clés sont privées et limitées à ton compte.",
+    "create": {
+      "title": "Créer une clé",
+      "description": "Une clé donne un accès en lecture seule à ton patrimoine net actuel. Traite-la comme un mot de passe : ne la commite jamais et ne l’utilise jamais dans du code côté navigateur.",
+      "name": "Nom",
+      "namePlaceholder": "p. ex. Tableau de bord maison",
+      "expires": "Expiration",
+      "submit": "Créer la clé"
+    },
+    "expiry": {
+      "30": "30 jours",
+      "90": "90 jours",
+      "365": "1 an",
+      "never": "Jamais"
+    },
+    "list": {
+      "title": "Tes clés",
+      "empty": "Aucune clé API pour l’instant.",
+      "name": "Nom",
+      "key": "Clé",
+      "status": "Statut",
+      "created": "Créée le",
+      "expires": "Expire le",
+      "lastUsed": "Dernière utilisation",
+      "never": "Jamais",
+      "none": "—"
+    },
+    "status": {
+      "active": "Active",
+      "revoked": "Révoquée",
+      "expired": "Expirée"
+    },
+    "revoke": {
+      "button": "Révoquer",
+      "title": "Révoquer « {name} » ?",
+      "description": "Les requêtes utilisant cette clé seront refusées immédiatement. Cette action est irréversible.",
+      "confirm": "Révoquer"
+    },
+    "usage": {
+      "title": "Utilisation",
+      "description": "Envoie la clé dans l’en-tête Authorization. Les clés dans les URL ne sont pas acceptées. Chaque clé est limitée à {limit} requêtes par minute. Les montants sont en EUR ; ajoute <code>?currency=USD</code>, <code>GBP</code> ou <code>CHF</code> pour les convertir au dernier taux de change."
+    },
+    "newKey": {
+      "title": "Copie ta nouvelle clé API",
+      "description": "C’est la seule fois où la clé sera affichée. Conserve-la en lieu sûr, par exemple dans un gestionnaire de mots de passe ou un coffre à secrets.",
+      "copy": "Copier la clé API",
+      "done": "Terminé"
+    }
+  },
+  "privacy": {
+    "title": "Confidentialité",
+    "subtitle": "Télécharge tout ce que Fiscalis stocke sur toi, ou supprime ton compte.",
+    "export": {
+      "title": "Télécharger mes données",
+      "description": "Un fichier JSON avec chaque enregistrement de ton compte, regroupés par table. Les identifiants chiffrés des fournisseurs et les empreintes des clés API sont exclus.",
+      "button": "Télécharger mes données",
+      "preparing": "Préparation…",
+      "failed": "Impossible de préparer tes données. Réessaie."
+    },
+    "delete": {
+      "title": "Supprimer mon compte",
+      "description": "Déconnecte tes banques et courtiers chez Plaid et SnapTrade, supprime toutes tes données puis ton identifiant de connexion. Cette action est irréversible.",
+      "button": "Supprimer mon compte",
+      "dialogTitle": "Supprimer ton compte ?",
+      "dialogDescription": "Tes connexions sont d’abord révoquées. Ensuite, chaque compte, position, transaction, prêt, article du coffre, instantané et paramètre est supprimé, puis enfin ton identifiant de connexion. Télécharge d’abord tes données si tu veux en garder une copie.",
+      "confirmLabel": "Saisis {phrase} pour confirmer",
+      "confirm": "Supprimer définitivement",
+      "deleting": "Suppression…"
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "page": {
+    "title": "Tableau de bord",
+    "subtitle": "Ta vue financière complète",
+    "performanceTitle": "Évolution du portefeuille",
+    "investmentCategories": "Catégories d’investissement"
+  },
+  "netWorth": {
+    "title": "Patrimoine net total",
+    "unrealized": "({percent}) latent",
+    "unrealizedCoverage": "({percent}) latent sur {covered} % des actifs"
+  },
+  "kpi": {
+    "totalAssets": "Total des actifs",
+    "totalLiabilities": "Total des passifs"
+  },
+  "ytdNetWorth": {
+    "title": "Patrimoine net depuis janv.",
+    "changeSinceJan1": "{percent} de variation depuis le 1er janvier",
+    "fxEffectHint": "Mesuré en {currency} : inclut la variation du taux de change de l’euro depuis le 1er janvier.",
+    "partial": "Partiel : une synchronisation a échoué ou un prix manque",
+    "trackingSince": "Historique insuffisant (suivi depuis le {date})",
+    "noData": "Aucune donnée pour cette année"
+  },
+  "allocation": {
+    "title": "Répartition des actifs",
+    "description": "Répartition entre les catégories d’investissement",
+    "empty": "Aucun actif à afficher",
+    "emptyHint": "Ajoute des investissements pour voir ta répartition"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, one {# avoir} other {# avoirs}}",
+    "noHoldings": "Aucun avoir",
+    "comingSoon": "Bientôt disponible"
+  },
+  "liabilitiesCard": {
+    "title": "Passifs",
+    "accounts": "{accounts, plural, one {# compte} other {# comptes}}",
+    "loans": "{loans, plural, one {# prêt} other {# prêts}}",
+    "accountsAndLoans": "{accounts, plural, one {# compte} other {# comptes}} · {loans, plural, one {# prêt} other {# prêts}}",
+    "monthlyPayments": "{amount}/mois de remboursements"
+  },
+  "section": {
+    "totalValue": "Valeur totale du portefeuille",
+    "totalCash": "Total des liquidités",
+    "profitLoss": "Plus- ou moins-value totale",
+    "profitLossSinceTracking": "Plus- ou moins-value depuis le début du suivi",
+    "changeSinceTracking": "Variation depuis le début du suivi",
+    "since": "Depuis le {date}",
+    "sinceNetOfFlows": "Depuis le {date}, hors achats et dépôts",
+    "coverage": "Sur {percent} % de la valeur : les avoirs sans prix de revient sont exclus",
+    "addCostData": "Ajoute des prix de revient pour suivre la performance",
+    "noHoldings": "Aucun avoir pour l’instant",
+    "ytdChange": "Variation depuis janv.",
+    "ytdReturn": "Rendement depuis janv.",
+    "ytdReturnEstimated": "Rendement depuis janv. (est.)",
+    "sincePartial": "Depuis le {date} · partiel : une synchronisation a échoué ou un prix manque",
+    "trackedSince": "Historique insuffisant (suivi depuis le {date})",
+    "noDataThisYear": "Pas encore de données pour cette année",
+    "portfolioAllocation": "Répartition du portefeuille",
+    "highCash": "Part de liquidités élevée (prudent)",
+    "lowCash": "Réserve de liquidités faible",
+    "ofTotalPortfolio": "du portefeuille total",
+    "addAssets": "Ajoute des actifs pour voir la répartition",
+    "activeAccounts": "Comptes actifs",
+    "accountsLinked": "{count, plural, one {compte relié} other {comptes reliés}}",
+    "historyHint": "L’historique apparaît après le prochain instantané quotidien"
+  },
+  "allocationChart": {
+    "title": "Répartition",
+    "empty": "Aucun avoir pour l’instant",
+    "other": "Autres (<2 %)"
+  },
+  "performanceChart": {
+    "portfolioTitle": "Performance du portefeuille",
+    "netWorthTitle": "Évolution du patrimoine net",
+    "portfolio": "Portefeuille",
+    "netWorth": "Patrimoine net",
+    "value": "Valeur",
+    "costBasis": "Prix de revient",
+    "empty": "Pas encore de données de performance",
+    "emptyHint": "Ajoute des avoirs pour suivre la performance du portefeuille",
+    "tooltipRow": "{series} : {amount}",
+    "partial": "Partiel : une synchronisation a échoué ou un prix manque"
+  },
+  "topHoldings": {
+    "title": "Principaux avoirs",
+    "empty": "Aucun avoir pour l’instant",
+    "count": "({count, plural, one {# avoir} other {# avoirs}})"
+  },
+  "positions": {
+    "title": "Toutes les positions",
+    "description": "Vue unifiée de tous les fournisseurs financiers",
+    "empty": "Aucune position trouvée",
+    "emptyHint": "Connecte tes comptes pour voir tes avoirs",
+    "shownOfTotal": "{shown} sur {total, plural, one {# position} other {# positions}}",
+    "showLess": "Afficher moins",
+    "viewAll": "Tout afficher",
+    "searchPlaceholder": "Rechercher des positions...",
+    "provider": "Fournisseur",
+    "allProviders": "Tous les fournisseurs",
+    "category": "Catégorie",
+    "allCategories": "Toutes les catégories",
+    "providers": {
+      "plaid": "Banque",
+      "snaptrade": "Courtier",
+      "bitpanda": "Bitpanda",
+      "manual": "Manuel"
+    },
+    "providerFilter": {
+      "plaid": "Banques",
+      "snaptrade": "Courtiers",
+      "bitpanda": "Bitpanda",
+      "manual": "Manuel"
+    },
+    "columns": {
+      "source": "Source",
+      "position": "Position",
+      "category": "Catégorie",
+      "quantity": "Quantité",
+      "value": "Valeur",
+      "profitLoss": "+/- value",
+      "actions": "Actions"
+    },
+    "shown": "{count, plural, one {# position affichée} other {# positions affichées}}",
+    "total": "Total : {amount}",
+    "costFxEstimated": "(est.)",
+    "costFxEstimatedHint": "Coût converti au taux de change du jour : les dates d’achat sont inconnues"
+  },
+  "cashHoldings": {
+    "bankAccount": "Compte bancaire",
+    "cashPosition": "Position en liquidités",
+    "brokerCash": "{account} - Liquidités"
+  },
+  "emptyState": {
+    "title": "Connecte ton premier compte",
+    "description": "Ton tableau de bord se remplit dès que Fiscalis sait ce que tu possèdes. Connecte une banque ou un courtier, importe Bitpanda, ou ajoute à la main des métaux précieux et des prêts.",
+    "bank": "Connecter une banque",
+    "broker": "Connecter un courtier",
+    "metals": "Ajouter des métaux précieux",
+    "loan": "Ajouter un prêt"
+  }
+}

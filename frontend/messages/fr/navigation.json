@@ -1,0 +1,75 @@
+{
+  "sidebar": {
+    "groups": {
+      "portfolio": "Portefeuille",
+      "tools": "Outils",
+      "integrations": "Intégrations",
+      "others": "Autres"
+    },
+    "items": {
+      "dashboard": "Tableau de bord",
+      "investments": "Investissements",
+      "equities": "Actions",
+      "commodities": "Matières premières",
+      "bonds": "Obligations",
+      "realEstate": "Immobilier",
+      "cash": "Liquidités et monétaire",
+      "crypto": "Crypto",
+      "collectibles": "Objets de collection",
+      "liabilities": "Passifs",
+      "liabilitiesOverview": "Tous les passifs",
+      "loans": "Prêts",
+      "investmentStrategies": "Stratégies d’investissement",
+      "pies": "Pies",
+      "banking": "Banques",
+      "brokers": "Courtiers",
+      "retirementPlanner": "Planificateur retraite",
+      "interestCalculators": "Calculateurs d’intérêts",
+      "loanCalculators": "Calculateurs de prêt",
+      "worldMap": "Carte du monde",
+      "documentation": "Documentation",
+      "introduction": "Introduction",
+      "getStarted": "Premiers pas",
+      "tutorials": "Tutoriels",
+      "changelog": "Nouveautés",
+      "settings": "Paramètres",
+      "general": "Général",
+      "apiKeys": "Clés API",
+      "categories": "Catégories",
+      "privacy": "Confidentialité",
+      "team": "Équipe",
+      "billing": "Facturation",
+      "limits": "Limites"
+    }
+  },
+  "brand": {
+    "logoAlt": "Logo Fiscalis"
+  },
+  "userMenu": {
+    "upgrade": "Passer à Pro",
+    "account": "Compte",
+    "billing": "Facturation",
+    "notifications": "Notifications",
+    "logOut": "Se déconnecter"
+  },
+  "header": {
+    "signIn": "Se connecter",
+    "joinWaitlist": "Rejoindre la liste d’attente",
+    "dashboard": "Tableau de bord"
+  },
+  "sync": {
+    "syncAll": "Synchroniser tous les comptes",
+    "syncing": "Synchronisation de tous les comptes…",
+    "complete": "Synchronisation terminée",
+    "failed": "Échec de la synchronisation",
+    "synced": "Synchronisés : {providers}",
+    "failedProviders": "Échecs : {providers}",
+    "partial": "Synchronisés : {synced}. Échecs : {failed}",
+    "providerCount": "{provider} ({count})",
+    "providers": {
+      "plaid": "Banques",
+      "snaptrade": "Courtiers",
+      "bitpanda": "Bitpanda"
+    }
+  }
+}

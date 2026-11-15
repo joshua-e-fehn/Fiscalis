@@ -318,12 +318,21 @@ const GemRingIcon = ({ className }: { className?: string }) => (
  * Where a card for a provider-fed subcategory leads (ENG-227). There are no
  * per-subcategory pages yet, so each card opens the page that already lists
  * that data: Plaid accounts, SnapTrade/Bitpanda broker accounts, or the
- * Bitpanda crypto holdings table. Subcategories no provider fills stay
- * `implemented: false` and are hidden unless the plannedCategories flag is on.
+ * Bitpanda crypto holdings table. Subcategories no provider fills take
+ * manual assets (services/portfolio/manualAssets.ts) and open the one
+ * generic subcategory page, app/(root)/assets/[category]/[subcategory]
+ * (ENG-229). Liabilities lead to the liabilities and loans pages.
  */
 const BANK_ACCOUNTS_ROUTE = "/integrations/banking";
 const BROKER_ACCOUNTS_ROUTE = "/integrations/brokers";
 const CRYPTO_HOLDINGS_ROUTE = "/assets/crypto/holdings";
+const LIABILITIES_ROUTE = "/liabilities";
+const LOANS_ROUTE = "/liabilities/loans";
+
+/** The generic page of a subcategory that takes manual assets. */
+export function manualAssetRoute(category: InvestmentCategory, slug: string) {
+  return `/assets/${category}/${slug}`;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SUBCATEGORY UI DEFINITIONS (Exhaustive Records)
@@ -360,8 +369,8 @@ export const cashSubcategoryUI = labelled("cash", {
   "treasury-bills": {
     icon: Banknote,
     color: cashColors["treasury-bills"],
-    href: "/cash/tbills",
-    implemented: false,
+    href: manualAssetRoute("cash", "treasury-bills"),
+    implemented: true,
   },
   forex: {
     icon: ArrowRightLeft,
@@ -412,8 +421,8 @@ export const equitiesSubcategoryUI = labelled("equities", {
   private: {
     icon: Briefcase,
     color: equitiesColors.private,
-    href: "/equities/private",
-    implemented: false,
+    href: manualAssetRoute("equities", "private"),
+    implemented: true,
     section: "private",
   },
 });
@@ -425,8 +434,8 @@ export const bondsSubcategoryUI = labelled("bonds", {
   government: {
     icon: Landmark,
     color: bondsColors.government,
-    href: "/bonds/government",
-    implemented: false,
+    href: manualAssetRoute("bonds", "government"),
+    implemented: true,
   },
   corporate: {
     icon: Building,
@@ -437,20 +446,20 @@ export const bondsSubcategoryUI = labelled("bonds", {
   municipal: {
     icon: Building2,
     color: bondsColors.municipal,
-    href: "/bonds/municipal",
-    implemented: false,
+    href: manualAssetRoute("bonds", "municipal"),
+    implemented: true,
   },
   savings: {
     icon: PiggyBank,
     color: bondsColors.savings,
-    href: "/bonds/savings",
-    implemented: false,
+    href: manualAssetRoute("bonds", "savings"),
+    implemented: true,
   },
   funds: {
     icon: BarChart3,
     color: bondsColors.funds,
-    href: "/bonds/funds",
-    implemented: false,
+    href: manualAssetRoute("bonds", "funds"),
+    implemented: true,
   },
 });
 
@@ -487,8 +496,8 @@ export const cryptoSubcategoryUI = labelled("crypto", {
     defi: {
       icon: Layers,
       color: cryptoColors.defi,
-      href: "/assets/crypto/defi",
-      implemented: false,
+      href: manualAssetRoute("crypto", "defi"),
+      implemented: true,
     },
   });
 
@@ -516,32 +525,32 @@ export const commoditiesSubcategoryUI = labelled("commodities", {
   energy: {
     icon: Fuel,
     color: commoditiesColors.energy,
-    href: "/assets/commodities/energy",
-    implemented: false,
+    href: manualAssetRoute("commodities", "energy"),
+    implemented: true,
   },
   industrial: {
     icon: Factory,
     color: commoditiesColors.industrial,
-    href: "/assets/commodities/industrial",
-    implemented: false,
+    href: manualAssetRoute("commodities", "industrial"),
+    implemented: true,
   },
   agricultural: {
     icon: Wheat,
     color: commoditiesColors.agricultural,
-    href: "/assets/commodities/agricultural",
-    implemented: false,
+    href: manualAssetRoute("commodities", "agricultural"),
+    implemented: true,
   },
   "rare-earth": {
     icon: Atom,
     color: commoditiesColors["rare-earth"],
-    href: "/assets/commodities/rare-earth",
-    implemented: false,
+    href: manualAssetRoute("commodities", "rare-earth"),
+    implemented: true,
   },
   gemstones: {
     icon: Gem,
     color: commoditiesColors.gemstones,
-    href: "/assets/commodities/gemstones",
-    implemented: false,
+    href: manualAssetRoute("commodities", "gemstones"),
+    implemented: true,
   },
 });
 
@@ -552,32 +561,32 @@ export const realEstateSubcategoryUI = labelled("real-estate", {
   residential: {
     icon: Home,
     color: realEstateColors.residential,
-    href: "/real-estate/residential",
-    implemented: false,
+    href: manualAssetRoute("real-estate", "residential"),
+    implemented: true,
   },
   commercial: {
     icon: Building2,
     color: realEstateColors.commercial,
-    href: "/real-estate/commercial",
-    implemented: false,
+    href: manualAssetRoute("real-estate", "commercial"),
+    implemented: true,
   },
   reits: {
     icon: BarChart3,
     color: realEstateColors.reits,
-    href: "/real-estate/reits",
-    implemented: false,
+    href: BROKER_ACCOUNTS_ROUTE,
+    implemented: true,
   },
   crowdfunding: {
     icon: Users,
     color: realEstateColors.crowdfunding,
-    href: "/real-estate/crowdfunding",
-    implemented: false,
+    href: manualAssetRoute("real-estate", "crowdfunding"),
+    implemented: true,
   },
   land: {
     icon: TreePine,
     color: realEstateColors.land,
-    href: "/real-estate/land",
-    implemented: false,
+    href: manualAssetRoute("real-estate", "land"),
+    implemented: true,
   },
 });
 
@@ -588,56 +597,56 @@ export const collectiblesSubcategoryUI = labelled("collectibles", {
   art: {
     icon: Palette,
     color: collectiblesColors.art,
-    href: "/assets/collectibles/art",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "art"),
+    implemented: true,
   },
   watches: {
     icon: Watch,
     color: collectiblesColors.watches,
-    href: "/assets/collectibles/watches",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "watches"),
+    implemented: true,
   },
   wine: {
     icon: Wine,
     color: collectiblesColors.wine,
-    href: "/assets/collectibles/wine",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "wine"),
+    implemented: true,
   },
   cars: {
     icon: Car,
     color: collectiblesColors.cars,
-    href: "/assets/collectibles/cars",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "cars"),
+    implemented: true,
   },
   jewelry: {
     icon: GemRingIcon,
     color: collectiblesColors.jewelry,
-    href: "/assets/collectibles/jewelry",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "jewelry"),
+    implemented: true,
   },
   "trading-cards": {
     icon: IdCardLanyard,
     color: collectiblesColors["trading-cards"],
-    href: "/assets/collectibles/cards",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "trading-cards"),
+    implemented: true,
   },
   memorabilia: {
     icon: Stamp,
     color: collectiblesColors.memorabilia,
-    href: "/assets/collectibles/memorabilia",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "memorabilia"),
+    implemented: true,
   },
   nfts: {
     icon: Image,
     color: collectiblesColors.nfts,
-    href: "/assets/collectibles/nfts",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "nfts"),
+    implemented: true,
   },
   other: {
     icon: Package,
     color: collectiblesColors.other,
-    href: "/assets/collectibles/other",
-    implemented: false,
+    href: manualAssetRoute("collectibles", "other"),
+    implemented: true,
   },
 });
 
@@ -648,25 +657,25 @@ export const liabilitiesSubcategoryUI = labelled("liabilities", {
   mortgages: {
     icon: Home,
     color: liabilitiesColors.mortgages,
-    href: "/liabilities/mortgages",
+    href: LOANS_ROUTE,
     implemented: false,
   },
   loans: {
     icon: Banknote,
     color: liabilitiesColors.loans,
-    href: "/liabilities/loans",
+    href: LOANS_ROUTE,
     implemented: false,
   },
   "credit-cards": {
     icon: CreditCard,
     color: liabilitiesColors["credit-cards"],
-    href: "/liabilities/credit-cards",
+    href: LIABILITIES_ROUTE,
     implemented: false,
   },
   "margin-loans": {
     icon: TrendingDown,
     color: liabilitiesColors["margin-loans"],
-    href: "/liabilities/margin",
+    href: LIABILITIES_ROUTE,
     implemented: false,
   },
 });

@@ -10,9 +10,6 @@ import {
   manualAssetGainLoss,
   manualAssetInBase,
   normalizeValuations,
-  localeDecimalMark,
-  parseTypedAmount,
-  typedAmountText,
   validateManualAsset,
   type ManualAssetInput,
 } from "./manualAssets";
@@ -265,76 +262,5 @@ describe("helpers", () => {
   it("stores currency codes in upper case", () => {
     expect(manualAssetCurrency("chf")).toBe("CHF");
     expect(manualAssetCurrency("")).toBeNull();
-  });
-});
-
-describe("parseTypedAmount", () => {
-  it("is undefined when blank and NaN when not a number", () => {
-    expect(parseTypedAmount("  ", "en")).toBeUndefined();
-    expect(parseTypedAmount("12a", "en")).toBeNaN();
-    expect(parseTypedAmount("1,2,3.4.5", "en")).toBeNaN();
-  });
-
-  it("reads German and Italian input", () => {
-    expect(parseTypedAmount("250.000", "de")).toBe(250_000);
-    expect(parseTypedAmount("1.250,50", "de")).toBe(1250.5);
-    expect(parseTypedAmount("1250,5", "de")).toBe(1250.5);
-    expect(parseTypedAmount("1500.50", "de")).toBe(1500.5);
-    expect(parseTypedAmount("1.250.000", "de")).toBe(1_250_000);
-    expect(parseTypedAmount("250.000", "it-IT")).toBe(250_000);
-    expect(parseTypedAmount("1.250,50", "it-IT")).toBe(1250.5);
-    expect(parseTypedAmount("1250,5", "it")).toBe(1250.5);
-  });
-
-  it("reads Spanish input", () => {
-    expect(parseTypedAmount("250.000", "es")).toBe(250_000);
-    expect(parseTypedAmount("1.250,50", "es-ES")).toBe(1250.5);
-    expect(parseTypedAmount("1250,5", "es")).toBe(1250.5);
-  });
-
-  it("reads French input", () => {
-    expect(parseTypedAmount("250.000", "fr-FR")).toBe(250_000);
-    expect(parseTypedAmount("1 250,50", "fr-FR")).toBe(1250.5);
-    expect(parseTypedAmount("1\u202f250,5", "fr")).toBe(1250.5);
-    expect(parseTypedAmount("1,500", "fr")).toBe(1.5);
-  });
-
-  it("shows stored amounts with the locale's decimal mark", () => {
-    expect(typedAmountText(1250.5, "de-DE")).toBe("1250,5");
-    expect(typedAmountText(1250.5, "pt-PT")).toBe("1250,5");
-    expect(typedAmountText(1250.5, "en-GB")).toBe("1250.5");
-  });
-
-  it("reads input in other comma-decimal locales", () => {
-    expect(parseTypedAmount("250.000", "pt-PT")).toBe(250_000);
-    expect(parseTypedAmount("1 250,50", "pt-PT")).toBe(1250.5);
-    expect(parseTypedAmount("1,5", "pt-PT")).toBe(1.5);
-  });
-
-  it("reads Russian input with a comma decimal mark", () => {
-    expect(parseTypedAmount("1,500", "ru-RU")).toBe(1.5);
-    expect(parseTypedAmount("1 250,50", "ru-RU")).toBe(1250.5);
-  });
-
-  it("reads English input", () => {
-    expect(parseTypedAmount("1,500", "en")).toBe(1500);
-    expect(parseTypedAmount("1,250.50", "en")).toBe(1250.5);
-    expect(parseTypedAmount("1.5", "en")).toBe(1.5);
-    expect(parseTypedAmount("1,5", "en")).toBe(1.5);
-    expect(parseTypedAmount("1 250 000", "en")).toBe(1_250_000);
-  });
-});
-
-describe("localeDecimalMark", () => {
-  it("follows the locale", () => {
-    expect(localeDecimalMark("en")).toBe(".");
-    expect(localeDecimalMark("en-GB")).toBe(".");
-    expect(localeDecimalMark("de")).toBe(",");
-    expect(localeDecimalMark("de-DE")).toBe(",");
-    expect(localeDecimalMark("es-ES")).toBe(",");
-    expect(localeDecimalMark("fr-FR")).toBe(",");
-    expect(localeDecimalMark("it-IT")).toBe(",");
-    expect(localeDecimalMark("ru-RU")).toBe(",");
-    expect(localeDecimalMark("not a locale")).toBe(".");
   });
 });

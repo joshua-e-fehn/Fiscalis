@@ -46,13 +46,15 @@ import {
   attributesFor,
   MANUAL_ASSET_ATTRIBUTE_KINDS,
   MANUAL_ASSET_SUBCATEGORIES,
-  parseTypedAmount,
-  typedAmountText,
   validateManualAsset,
   type ManualAssetAttribute,
   type ManualAssetAttributes,
   type ManualAssetCategory,
 } from "@/../services/portfolio/manualAssets";
+import {
+  parseTypedAmount,
+  typedAmountText,
+} from "@/../services/i18n/typedAmount";
 import {
   BASE_CURRENCY,
   MIRRORED_CURRENCIES,

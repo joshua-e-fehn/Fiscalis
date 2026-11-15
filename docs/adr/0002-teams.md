@@ -140,5 +140,7 @@ vault, settings) stays personal.
   series takes, per day, each member's latest snapshot on or before it
   (carried forward), so a day is never missing a member who has history.
 - A member sees other members' display names (from their Clerk profile at
-  join time), never their Clerk ids or emails beyond the local part used as
-  a fallback name.
+  join time; the email's local part as a fallback). The membership list
+  never returns user ids; row documents in the team views keep their
+  `userId` field (the same shape as the personal views), so members of a
+  team can see each other's Clerk ids, which are identifiers, not secrets.

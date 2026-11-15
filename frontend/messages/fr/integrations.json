@@ -1,0 +1,244 @@
+{
+  "status": {
+    "connected": "Connecté",
+    "syncing": "Synchronisation",
+    "error": "Erreur",
+    "reauthRequired": "Reconnexion requise",
+    "pending": "En attente",
+    "retrying": "Nouvel essai",
+    "disconnected": "Déconnecté"
+  },
+  "connection": {
+    "openMenu": "Ouvrir le menu",
+    "sync": "Synchroniser",
+    "syncing": "Synchronisation…",
+    "disconnect": "Déconnecter",
+    "disconnecting": "Déconnexion…",
+    "disconnectTitle": "Déconnecter {name} ?",
+    "disconnectInfo": "Cela supprimera {info} et leurs données de ton tableau de bord.",
+    "disconnectDefault": "Cela supprimera cette connexion et toutes les données associées de ton tableau de bord.",
+    "notAffected": "Ton compte réel ne sera pas affecté. Tu peux te reconnecter à tout moment.",
+    "cash": "{amount} de liquidités",
+    "syncedJustNow": "à l’instant"
+  },
+  "banking": {
+    "title": "Comptes bancaires",
+    "subtitle": "Connecte tes comptes bancaires pour suivre automatiquement soldes et transactions.",
+    "connectBank": "Connecter une banque",
+    "unknownBank": "Banque inconnue",
+    "accounts": "{count, plural, one {# compte} other {# comptes}}",
+    "stats": {
+      "netBalance": "Solde net",
+      "netBalanceDescription": "{accounts, plural, one {# compte} other {# comptes}}, après dettes",
+      "netBalanceDescriptionUnconverted": "{accounts, plural, one {# compte} other {# comptes}}, après dettes · {unconverted} sans taux de change",
+      "checking": "Courant",
+      "savings": "Épargne",
+      "owed": "Dû",
+      "cards": "{cards, plural, one {# carte} other {# cartes}}",
+      "cardsAndLoans": "{cards, plural, one {# carte} other {# cartes}}, {loans, plural, one {# prêt} other {# prêts}}"
+    },
+    "empty": {
+      "loadFailedTitle": "Échec du chargement des comptes",
+      "loadFailedDescription": "Impossible de charger tes comptes bancaires. Essaie d’actualiser la page.",
+      "refreshPage": "Actualiser la page",
+      "syncTitle": "Synchronise tes comptes",
+      "syncDescription": "{count, plural, one {Tu as # connexion bancaire, mais aucun compte n’est encore synchronisé.} other {Tu as # connexions bancaires, mais aucun compte n’est encore synchronisé.}} Clique ci-dessous pour récupérer les données de tes comptes.",
+      "syncAccounts": "Synchroniser les comptes",
+      "noAccountsTitle": "Aucun compte relié",
+      "noAccountsDescription": "Connecte tes comptes bancaires pour suivre tes finances, voir tes soldes et surveiller tes transactions en un seul endroit."
+    },
+    "accountTypes": {
+      "checking": "Compte courant",
+      "savings": "Compte d’épargne",
+      "moneyMarket": "Compte monétaire",
+      "cd": "Compte à terme",
+      "cashManagement": "Gestion de trésorerie",
+      "prepaid": "Prépayé",
+      "paypal": "PayPal",
+      "depository": "Compte bancaire",
+      "creditCard": "Carte de crédit",
+      "credit": "Crédit",
+      "loan": "Prêt",
+      "mortgage": "Crédit immobilier",
+      "student": "Prêt étudiant",
+      "auto": "Crédit auto",
+      "investment": "Investissement",
+      "brokerage": "Compte-titres"
+    },
+    "account": {
+      "fallbackName": "Compte bancaire",
+      "available": "Disponible : {amount}"
+    },
+    "link": {
+      "connecting": "Connexion…",
+      "connectAnother": "Connecter une autre banque",
+      "connectFirst": "Connecte ta banque",
+      "connected": "Banque connectée avec succès"
+    },
+    "reauth": {
+      "needsReauth": "Cette connexion doit être réauthentifiée",
+      "disconnectBank": "Déconnecter la banque",
+      "expiredTitle": "Connexion expirée",
+      "expiredDescription": "Ta banque te demande de te reconnecter pour des raisons de sécurité. Clique sur Reconnecter pour rétablir l’accès à tes comptes.",
+      "disconnectDescription": "Cela supprimera entièrement la connexion de ton tableau de bord.",
+      "notAffected": "Ton compte bancaire réel ne sera pas affecté. Tu peux te reconnecter à tout moment.",
+      "reconnect": "Reconnecter",
+      "reconnecting": "Reconnexion…",
+      "alertTitle": "{count, plural, one {Une connexion bancaire requiert ton attention} other {Des connexions bancaires requièrent ton attention}}",
+      "alertOne": "Ta connexion à {name} doit être réauthentifiée.",
+      "alertOneUnnamed": "Ta connexion à une banque doit être réauthentifiée.",
+      "alertMany": "{count, plural, one {# connexion bancaire doit être réauthentifiée.} other {# connexions bancaires doivent être réauthentifiées.}}"
+    },
+    "transactions": {
+      "title": "Transactions",
+      "subtitle": "Tes transactions bancaires sur tous tes comptes connectés.",
+      "open": "Transactions",
+      "sync": "Synchroniser les transactions",
+      "syncing": "Synchronisation des transactions…",
+      "syncDone": "{count, plural, =0 {À jour : aucune nouvelle transaction.} one {# transaction mise à jour.} other {# transactions mises à jour.}}",
+      "syncPartial": "{failed, plural, one {# banque n’a pas pu être synchronisée.} other {# banques n’ont pas pu être synchronisées.}} Réessaie plus tard.",
+      "syncFailed": "Les transactions n’ont pas pu être synchronisées. Réessaie plus tard.",
+      "filters": {
+        "account": "Compte",
+        "allAccounts": "Tous les comptes",
+        "from": "Du",
+        "to": "Au",
+        "search": "Recherche",
+        "searchPlaceholder": "Rechercher dans les libellés…",
+        "clear": "Effacer les filtres"
+      },
+      "columns": {
+        "date": "Date",
+        "description": "Libellé",
+        "account": "Compte",
+        "amount": "Montant"
+      },
+      "pending": "En attente",
+      "moneyIn": "Entrées",
+      "moneyOut": "Sorties",
+      "loadMore": "Charger plus",
+      "loadingMore": "Chargement…",
+      "searchOrder": "Les résultats sont triés par pertinence.",
+      "empty": {
+        "noBankTitle": "Aucune banque connectée",
+        "noBankDescription": "Connecte une banque pour voir ses transactions ici.",
+        "noTransactionsTitle": "Aucune transaction pour l’instant",
+        "noTransactionsDescription": "Synchronise tes transactions pour les récupérer auprès de ta banque. Les nouvelles arrivent aussi avec la synchronisation quotidienne.",
+        "noMatchesTitle": "Aucune transaction correspondante",
+        "noMatchesDescription": "Essaie un autre compte, une autre période ou un autre terme de recherche."
+      }
+    },
+    "consent": {
+      "expiringTitle": "{days, plural, one {Ton consentement pour cette banque expire dans # jour} other {Ton consentement pour cette banque expire dans # jours}}",
+      "expiringDescription": "Renouvelle-le avant le {date} pour que tes soldes continuent de se synchroniser.",
+      "expiredTitle": "Ton consentement pour cette banque a expiré",
+      "expiredDescription": "Renouvelle-le pour synchroniser à nouveau tes soldes."
+    }
+  },
+  "brokers": {
+    "title": "Courtiers",
+    "subtitle": "Connecte tes courtiers et plateformes. Aujourd’hui : courtiers SnapTrade et Bitpanda — d’autres arrivent.",
+    "refresh": "Actualiser",
+    "connectBroker": "Connecter un courtier",
+    "stats": {
+      "totalValue": "Valeur totale",
+      "positions": "{count, plural, one {# position} other {# positions}}",
+      "brokers": "Courtiers",
+      "connectedBrokers": "Courtiers connectés",
+      "accounts": "Comptes",
+      "tradingAccounts": "Comptes-titres",
+      "cash": "Liquidités",
+      "availableCash": "Liquidités disponibles"
+    },
+    "connect": {
+      "connectFirst": "Connecte ton courtier",
+      "connectAnother": "Connecter un autre courtier",
+      "add": "Ajouter un courtier",
+      "preparing": "Préparation…",
+      "connecting": "Connexion…",
+      "connected": "Courtier connecté",
+      "connectingAccount": "Connexion de ton compte courtier…",
+      "portalTitle": "Portail de connexion SnapTrade",
+      "failed": "Impossible de connecter ton courtier. Réessaie."
+    },
+    "connection": {
+      "unknownBroker": "Courtier inconnu",
+      "fallbackName": "Courtier",
+      "accounts": "{count, plural, one {# compte} other {# comptes}}",
+      "status": "Statut",
+      "accountId": "ID du compte",
+      "username": "Nom d’utilisateur",
+      "lastSynced": "Dernière synchro",
+      "never": "Jamais",
+      "pendingNotice": "Intégration API en attente. Les données se synchroniseront une fois la connexion établie.",
+      "transientNotice": "Problème temporaire chez le courtier. Un nouvel essai aura lieu automatiquement.",
+      "disconnectTitle": "Déconnecter le courtier",
+      "disconnectDescription": "Veux-tu vraiment déconnecter « {name} » ? Cela supprime la connexion au courtier et toutes ses données de positions de ton compte. Cette action est irréversible."
+    },
+    "connections": {
+      "title": "Connexions courtier",
+      "description": "Gère tes connexions courtier",
+      "loadFailed": "Échec du chargement des connexions courtier. Réessaie plus tard.",
+      "connectedCount": "{count, plural, one {# courtier connecté} other {# courtiers connectés}}",
+      "connectPrompt": "Connecte tes comptes courtier pour suivre tes investissements",
+      "emptyTitle": "Aucun courtier connecté",
+      "emptyDescription": "Connecte ton compte courtier pour suivre automatiquement tes investissements et la performance de ton portefeuille."
+    },
+    "account": {
+      "fallbackType": "Investissement",
+      "accountNumber": "Compte {number}",
+      "totalValue": "Valeur totale",
+      "cash": "Liquidités",
+      "invested": "Investi"
+    },
+    "empty": {
+      "syncTitle": "Synchronise tes comptes",
+      "syncDescription": "{count, plural, one {Tu as # connexion courtier, mais aucun compte n’est encore synchronisé.} other {Tu as # connexions courtier, mais aucun compte n’est encore synchronisé.}} Clique ci-dessous pour récupérer les données de tes comptes.",
+      "syncAccounts": "Synchroniser les comptes",
+      "noBrokersTitle": "Aucun courtier connecté",
+      "noBrokersDescription": "Connecte tes comptes courtier pour suivre tes investissements, positions et la performance de ton portefeuille en un seul endroit."
+    },
+    "reauth": {
+      "needsAttention": "La connexion requiert ton attention",
+      "description": "Cette connexion a expiré ou doit être réauthentifiée. Reconnecte-toi pour continuer à synchroniser tes données.",
+      "reconnect": "Reconnecter",
+      "dialogTitle": "Reconnecter {name}",
+      "dialogDescription": "Réauthentifie ta connexion pour continuer à synchroniser tes données.",
+      "completing": "Finalisation de la réauthentification…",
+      "success": "Réauthentification réussie !",
+      "failedTitle": "Échec de la connexion",
+      "failed": "La reconnexion a échoué. Réessaie.",
+      "portalTitle": "Reconnexion SnapTrade"
+    }
+  },
+  "bitpanda": {
+    "title": "Bitpanda",
+    "subtitle": "Cryptos, métaux, matières premières, actions et liquidités via une clé API en lecture seule.",
+    "holdings": "{count, plural, one {# avoir} other {# avoirs}}",
+    "emptyDescription": "Connecte ton compte Bitpanda avec une clé API en lecture seule pour suivre tous tes avoirs.",
+    "fallbackLabel": "Compte Bitpanda",
+    "keyRejected": "Clé API refusée — reconnecte-toi avec une nouvelle clé en lecture seule",
+    "syncFailed": "Échec de la synchronisation — réessaie",
+    "transient": "Problème temporaire chez Bitpanda — nouvel essai automatique",
+    "lastSynced": "dernière synchro le {date}",
+    "syncNow": "Synchroniser",
+    "addAnother": "Ajouter une autre clé Bitpanda",
+    "connect": {
+      "button": "Connecter Bitpanda",
+      "title": "Connecter Bitpanda",
+      "description": "Colle une clé API Bitpanda <strong>en lecture seule</strong>. Fiscalis l’utilise pour synchroniser tes avoirs en cryptos, métaux, matières premières, actions et liquidités. La clé est chiffrée et n’est jamais partagée.",
+      "apiKey": "Clé API",
+      "apiKeyPlaceholder": "Ta clé API Bitpanda en lecture seule",
+      "createKey": "Créer une clé en lecture seule dans Bitpanda",
+      "label": "Libellé (facultatif)",
+      "labelPlaceholder": "p. ex. Mon Bitpanda",
+      "submit": "Connecter",
+      "connecting": "Connexion…",
+      "keyMissing": "Colle ta clé API Bitpanda."
+    }
+  },
+  "connectionNotices": {
+    "disconnectFailed": "Impossible de déconnecter. Rien n’a été supprimé ; réessaie.",
+    "transientError": "Problème temporaire chez le fournisseur. Ta connexion est valide ; un nouvel essai aura lieu automatiquement."
+  }
+}

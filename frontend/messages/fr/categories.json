@@ -1,0 +1,361 @@
+{
+  "equities": {
+    "name": "Actions",
+    "subcategories": {
+      "stocks": {
+        "name": "Actions cotées",
+        "description": "Actions de sociétés individuelles négociées en bourse",
+        "examples": "Apple, Microsoft, Tesla, Amazon"
+      },
+      "etfs": {
+        "name": "ETF et fonds indiciels",
+        "description": "Fonds passifs répliquant des indices de marché pour une exposition diversifiée",
+        "examples": "S&P 500, MSCI World, NASDAQ-100, CAC 40"
+      },
+      "funds": {
+        "name": "Fonds communs de placement",
+        "description": "Fonds d’investissement gérés activement par des professionnels",
+        "examples": "Fonds de croissance, fonds value, fonds sectoriels, fonds équilibrés"
+      },
+      "options": {
+        "name": "Options",
+        "description": "Contrats dérivés pour se couvrir ou obtenir une exposition avec effet de levier",
+        "examples": "Options d’achat, options de vente, spreads, calls couverts"
+      },
+      "private": {
+        "name": "Private equity",
+        "description": "Investissements dans des sociétés non cotées, des startups et en business angel",
+        "examples": "Startups, capital-risque, business angels, fonds de PE"
+      }
+    }
+  },
+  "commodities": {
+    "name": "Matières premières",
+    "subcategories": {
+      "metals": {
+        "name": "Métaux précieux",
+        "description": "Suis les prix de l’or, de l’argent, du platine et du palladium avec des graphiques en temps réel",
+        "examples": "Or, argent, platine, palladium"
+      },
+      "energy": {
+        "name": "Énergie",
+        "description": "Prix du pétrole, du gaz naturel et d’autres matières premières énergétiques",
+        "examples": "Pétrole brut, gaz naturel, fioul, essence"
+      },
+      "industrial": {
+        "name": "Métaux industriels",
+        "description": "Métaux de base utilisés dans l’industrie et la construction",
+        "examples": "Cuivre, aluminium, zinc, nickel"
+      },
+      "agricultural": {
+        "name": "Agricoles",
+        "description": "Céréales, produits tropicaux et autres matières premières agricoles",
+        "examples": "Blé, maïs, soja, café"
+      },
+      "rare-earth": {
+        "name": "Terres rares",
+        "description": "Éléments stratégiques de terres rares utilisés dans la technologie et la défense",
+        "examples": "Néodyme, dysprosium, lithium, cobalt"
+      },
+      "gemstones": {
+        "name": "Pierres précieuses",
+        "description": "Diamants, rubis, saphirs et autres pierres précieuses",
+        "examples": "Diamants, rubis, saphirs, émeraudes"
+      }
+    }
+  },
+  "bonds": {
+    "name": "Obligations",
+    "subcategories": {
+      "government": {
+        "name": "Obligations d’État",
+        "description": "Bons, notes et obligations émis par des États, y compris les titres indexés sur l’inflation",
+        "examples": "Bons du Trésor US, Bunds allemands, OAT, Gilts britanniques, TIPS/I-Bonds"
+      },
+      "corporate": {
+        "name": "Obligations d’entreprise",
+        "description": "Obligations investment grade et à haut rendement émises par des entreprises",
+        "examples": "Investment grade, haut rendement, obligations convertibles, obligations vertes"
+      },
+      "municipal": {
+        "name": "Obligations municipales",
+        "description": "Obligations fiscalement avantageuses émises par des États fédérés, villes et collectivités locales",
+        "examples": "General Obligation, Revenue Bonds, Munis exonérées, Build America"
+      },
+      "savings": {
+        "name": "Bons d’épargne",
+        "description": "Certificats d’épargne garantis par l’État et obligations pour particuliers",
+        "examples": "Series I Bonds, Series EE Bonds, Premium Bonds, bons d’épargne"
+      },
+      "funds": {
+        "name": "Fonds et ETF obligataires",
+        "description": "Exposition diversifiée au revenu fixe via des fonds et des ETF",
+        "examples": "Aggregate, court terme, long terme, international"
+      }
+    }
+  },
+  "real-estate": {
+    "name": "Immobilier",
+    "subcategories": {
+      "residential": {
+        "name": "Résidentiel",
+        "description": "Maisons individuelles, appartements, copropriétés et résidences secondaires",
+        "examples": "Résidence principale, biens locatifs, résidences de vacances, appartements"
+      },
+      "commercial": {
+        "name": "Commercial",
+        "description": "Immeubles de bureaux, commerces, entrepôts et biens industriels",
+        "examples": "Bureaux, commerces, entrepôts, usage mixte"
+      },
+      "reits": {
+        "name": "REIT / SCPI",
+        "description": "Sociétés d’investissement immobilier – titres immobiliers négociés en bourse",
+        "examples": "REIT d’actions, REIT hypothécaires, REIT hybrides, ETF de REIT"
+      },
+      "crowdfunding": {
+        "name": "Crowdfunding",
+        "description": "Investissements immobiliers via des plateformes de financement participatif",
+        "examples": "Fundrise, CrowdStreet, RealtyMogul, Groundfloor"
+      },
+      "land": {
+        "name": "Terrains",
+        "description": "Terrains nus, terres agricoles et terrains non aménagés",
+        "examples": "Terrains nus, terres agricoles, forêts, terrains à bâtir"
+      }
+    }
+  },
+  "cash": {
+    "name": "Liquidités et épargne",
+    "subcategories": {
+      "checking-accounts": {
+        "name": "Comptes courants",
+        "description": "Comptes du quotidien reliés via des connexions bancaires",
+        "examples": "Compte personnel, compte professionnel, compte joint"
+      },
+      "savings-accounts": {
+        "name": "Comptes d’épargne",
+        "description": "Comptes d’épargne à haut rendement et épargne bancaire classique",
+        "examples": "Épargne à haut rendement, épargne classique, épargne en ligne, épargne professionnelle"
+      },
+      "money-market": {
+        "name": "Fonds monétaires",
+        "description": "Fonds d’investissement à court terme, peu risqués et très liquides",
+        "examples": "Fonds monétaires d’État, prime, exonérés, grand public"
+      },
+      "cds": {
+        "name": "Comptes à terme",
+        "description": "Dépôts à durée fixe avec taux d’intérêt garanti",
+        "examples": "CAT 3 mois, CAT 6 mois, CAT 1 an, échelle de CAT"
+      },
+      "treasury-bills": {
+        "name": "Bons du Trésor",
+        "description": "Titres d’État à court terme d’une échéance inférieure à un an",
+        "examples": "T-Bill 4 semaines, 8 semaines, 13 semaines, 26 semaines"
+      },
+      "forex": {
+        "name": "Devises étrangères (Forex)",
+        "description": "Avoirs en devises étrangères et positions de change",
+        "examples": "EUR, GBP, JPY, CHF"
+      },
+      "broker-cash": {
+        "name": "Liquidités chez le courtier",
+        "description": "Liquidités non investies sur des comptes-titres, détectées automatiquement via les connexions courtier",
+        "examples": "Liquidités de règlement, comptes sweep, liquidités sur marge"
+      }
+    }
+  },
+  "crypto": {
+    "name": "Cryptomonnaies",
+    "subcategories": {
+      "bitcoin": {
+        "name": "Bitcoin",
+        "description": "Bitcoin et tokens Bitcoin wrappés",
+        "examples": "BTC, WBTC"
+      },
+      "ethereum": {
+        "name": "Ethereum",
+        "description": "Ethereum et tokens de staking liquide",
+        "examples": "ETH, stETH, rETH, WETH"
+      },
+      "altcoins": {
+        "name": "Altcoins",
+        "description": "Cryptomonnaies alternatives au-delà de BTC et ETH",
+        "examples": "SOL, ADA, AVAX, DOT, MATIC"
+      },
+      "stablecoins": {
+        "name": "Stablecoins",
+        "description": "Cryptomonnaies à prix stable indexées sur des monnaies fiduciaires",
+        "examples": "USDT, USDC, DAI, FRAX"
+      },
+      "defi": {
+        "name": "DeFi",
+        "description": "Positions de finance décentralisée, y compris staking et liquidité",
+        "examples": "Staking, positions LP, yield farming, prêt"
+      }
+    },
+    "groups": {
+      "btc-eth": {
+        "name": "Bitcoin et Ethereum",
+        "description": "Les deux plus grandes cryptomonnaies et les tokens de leur écosystème",
+        "examples": "BTC, WBTC, ETH, stETH, rETH, WETH"
+      }
+    }
+  },
+  "collectibles": {
+    "name": "Objets de collection",
+    "subcategories": {
+      "art": {
+        "name": "Art",
+        "description": "Beaux-arts, peintures, sculptures et objets d’art",
+        "examples": "Peintures, sculptures, estampes, photographie"
+      },
+      "watches": {
+        "name": "Montres",
+        "description": "Montres de luxe et collections de montres vintage",
+        "examples": "Rolex, Patek Philippe, Audemars Piguet, Omega"
+      },
+      "wine": {
+        "name": "Vin",
+        "description": "Grands vins et millésimes comme actifs d’investissement",
+        "examples": "Bordeaux, Bourgogne, Champagne, Napa Valley"
+      },
+      "cars": {
+        "name": "Voitures de collection",
+        "description": "Automobiles anciennes et véhicules de collection",
+        "examples": "Porsche, Ferrari, Mercedes-Benz, muscle cars"
+      },
+      "jewelry": {
+        "name": "Bijoux",
+        "description": "Bijoux précieux, pierres précieuses et pièces de créateurs",
+        "examples": "Diamants, pierres de couleur, bijoux anciens, pièces de créateurs"
+      },
+      "trading-cards": {
+        "name": "Cartes à collectionner",
+        "description": "Cartes de sport, Pokémon, Magic: The Gathering et autres cartes de collection",
+        "examples": "Cartes de sport, Pokémon, Magic: The Gathering, Yu-Gi-Oh!"
+      },
+      "memorabilia": {
+        "name": "Souvenirs et éphémères",
+        "description": "Pièces de numismatique, timbres, cartes postales et objets historiques (hors métal d’investissement)",
+        "examples": "Pièces de numismatique, timbres, cartes postales, objets historiques"
+      },
+      "nfts": {
+        "name": "NFT",
+        "description": "Jetons non fongibles et objets de collection numériques",
+        "examples": "NFT artistiques, collections PFP, NFT de jeux, NFT musicaux"
+      },
+      "other": {
+        "name": "Autres objets de collection",
+        "description": "Tout objet de collection non couvert par les autres catégories",
+        "examples": "Jouets, souvenirs, antiquités, livres rares"
+      }
+    }
+  },
+  "liabilities": {
+    "name": "Passifs",
+    "subcategories": {
+      "mortgages": {
+        "name": "Crédits immobiliers",
+        "description": "Prêts immobiliers et hypothèques",
+        "examples": "Résidence principale, bien locatif, résidence secondaire"
+      },
+      "loans": {
+        "name": "Prêts",
+        "description": "Prêts personnels, auto, étudiants et autres",
+        "examples": "Crédits auto, prêts étudiants, prêts personnels"
+      },
+      "credit-cards": {
+        "name": "Cartes de crédit",
+        "description": "Soldes de cartes de crédit et crédit renouvelable",
+        "examples": "Visa, Mastercard, Amex, cartes de magasin"
+      },
+      "margin-loans": {
+        "name": "Prêts sur marge",
+        "description": "Fonds empruntés sur des comptes-titres",
+        "examples": "Marge courtier, prêt de titres"
+      }
+    }
+  },
+  "unclassified": {
+    "name": "Non classé"
+  },
+  "card": {
+    "comingSoon": "Bientôt disponible",
+    "comingSoonButton": "Bientôt",
+    "viewPortfolio": "Voir le portefeuille"
+  },
+  "override": {
+    "action": "Changer de catégorie",
+    "reset": "Revenir à l’automatique",
+    "manual": "Manuel",
+    "manualHint": "Tu as choisi cette catégorie. Elle est conservée lors de la synchronisation du fournisseur.",
+    "actionsLabel": "Actions pour {name}",
+    "dialog": {
+      "title": "Changer de catégorie",
+      "description": "Choisis où {name} compte dans tes totaux. Ton choix est conservé lors de la synchronisation du fournisseur.",
+      "category": "Catégorie",
+      "subcategory": "Sous-catégorie",
+      "bankHint": "Un compte bancaire peut compter comme liquidités ou comme passif.",
+      "saveFailed": "Impossible d’enregistrer la catégorie. Réessaie.",
+      "resetFailed": "Impossible de réinitialiser la catégorie. Réessaie."
+    },
+    "list": {
+      "title": "Catégories",
+      "subtitle": "Comptes et avoirs que tu as classés toi-même dans une catégorie.",
+      "cardTitle": "Catégories manuelles",
+      "count": "{count, plural, one {# élément} other {# éléments}}",
+      "empty": "Tu n’as encore changé aucune catégorie. Utilise « Changer de catégorie » sur une position ou un compte bancaire.",
+      "columns": {
+        "name": "Nom",
+        "source": "Source",
+        "category": "Catégorie",
+        "automatic": "Automatique"
+      },
+      "sources": {
+        "plaid": "Compte bancaire",
+        "broker": "Courtier",
+        "bitpanda": "Bitpanda"
+      },
+      "edit": "Modifier"
+    }
+  },
+  "valuation": {
+    "action": "Fixer le prix",
+    "reset": "Utiliser le prix du fournisseur",
+    "badges": {
+      "live": "En direct",
+      "manualPrice": "Prix manuel",
+      "markToModel": "Modèle"
+    },
+    "badgeHints": {
+      "live": "Le prix de ton fournisseur, actualisé pendant la journée entre les synchronisations.",
+      "manualPrice": "Valorisé au prix que tu as saisi, pas à celui du fournisseur.",
+      "markToModel": "Valorisé selon ton modèle : le prix de départ augmenté de ton taux annuel."
+    },
+    "kinds": {
+      "manualPrice": "Prix manuel",
+      "markToModel": "Valorisation par modèle"
+    },
+    "kindHints": {
+      "manualPrice": "Un prix fixe par unité que tu mets à jour toi-même.",
+      "markToModel": "Un prix de départ qui augmente (ou baisse) à un taux annuel fixe, pour les avoirs sans prix de marché."
+    },
+    "dialog": {
+      "title": "Fixer le prix",
+      "description": "Valorise {name} à ton propre prix. Ton prix est conservé lors des synchronisations du fournisseur ; la quantité vient toujours du fournisseur.",
+      "kind": "Méthode",
+      "price": "Prix par unité",
+      "modelPrice": "Prix par unité à la date de départ",
+      "currency": "Devise",
+      "date": "Date du prix",
+      "modelDate": "Date de départ",
+      "rate": "Taux annuel (%)",
+      "rateHint": "Utilise un taux négatif pour une valeur qui baisse avec le temps.",
+      "preview": "Aujourd’hui : {price} par unité, {value} au total"
+    },
+    "toast": {
+      "saved": "Prix enregistré pour {name}",
+      "reset": "{name} utilise de nouveau le prix du fournisseur"
+    }
+  }
+}

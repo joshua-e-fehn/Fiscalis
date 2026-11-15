@@ -62,6 +62,24 @@ import settingsEs from "@/messages/es/settings.json";
 import strategiesEs from "@/messages/es/strategies.json";
 import docsEs from "@/messages/es/docs.json";
 import billingEs from "@/messages/es/billing.json";
+import commonFr from "@/messages/fr/common.json";
+import worldMapFr from "@/messages/fr/worldMap.json";
+import calculatorsFr from "@/messages/fr/calculators.json";
+import retirementFr from "@/messages/fr/retirement.json";
+import integrationsFr from "@/messages/fr/integrations.json";
+import categoriesFr from "@/messages/fr/categories.json";
+import dashboardFr from "@/messages/fr/dashboard.json";
+import legalFr from "@/messages/fr/legal.json";
+import onboardingFr from "@/messages/fr/onboarding.json";
+import landingFr from "@/messages/fr/landing.json";
+import navigationFr from "@/messages/fr/navigation.json";
+import loansFr from "@/messages/fr/loans.json";
+import metalsFr from "@/messages/fr/metals.json";
+import assetsFr from "@/messages/fr/assets.json";
+import settingsFr from "@/messages/fr/settings.json";
+import strategiesFr from "@/messages/fr/strategies.json";
+import docsFr from "@/messages/fr/docs.json";
+import billingFr from "@/messages/fr/billing.json";
 
 import type { Language } from "./locales";
 
@@ -130,7 +148,28 @@ const es = {
   billing: billingEs,
 } satisfies Messages;
 
-const MESSAGES: Record<Language, Messages> = { en, de, es };
+const fr = {
+  common: commonFr,
+  worldMap: worldMapFr,
+  calculators: calculatorsFr,
+  retirement: retirementFr,
+  integrations: integrationsFr,
+  categories: categoriesFr,
+  dashboard: dashboardFr,
+  legal: legalFr,
+  onboarding: onboardingFr,
+  landing: landingFr,
+  navigation: navigationFr,
+  loans: loansFr,
+  metals: metalsFr,
+  assets: assetsFr,
+  settings: settingsFr,
+  strategies: strategiesFr,
+  docs: docsFr,
+  billing: billingFr,
+} satisfies Messages;
+
+const MESSAGES: Record<Language, Messages> = { en, de, es, fr };
 
 export function messagesFor(language: Language): Messages {
   return MESSAGES[language];

@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "subheadline": "Suis tous tes investissements, actifs et passifs. Connais ton vrai patrimoine net grâce aux mises à jour automatiques de tes comptes bancaires, actions, cryptos, métaux précieux et plus encore.",
+    "badge": "Ton patrimoine, simplifié",
+    "headline": "Ton <highlight>patrimoine complet</highlight><br></br>en un seul endroit",
+    "tagline": "Comme Finanzguru, mais pour tout ton patrimoine net."
+  },
+  "trust": {
+    "readOnly": "Connexions en lecture seule",
+    "dailySync": "Synchronisation quotidienne automatique",
+    "multiCurrency": "Multidevise"
+  },
+  "features": {
+    "cryptoDescription": "Importe automatiquement tes avoirs Bitpanda avec une clé API en lecture seule.",
+    "metalsTitle": "Métaux précieux",
+    "metalsDescription": "Suis tes lingots et pièces d’or et d’argent, valorisés aux prix actuels des négociants.",
+    "liabilitiesDescription": "Suis tes prêts et tes échéanciers de remboursement. Vois ton vrai patrimoine net.",
+    "headline": "Tout ce qu’il te faut pour <highlight>maîtriser ton patrimoine</highlight>",
+    "subheadline": "Des comptes bancaires aux portefeuilles crypto, suis tous tes actifs dans un tableau de bord unique.",
+    "banksTitle": "Comptes bancaires",
+    "banksDescription": "Connecte tes comptes bancaires en toute sécurité via Plaid. Suis tes comptes courants, d’épargne et cartes de crédit.",
+    "investmentsTitle": "Portefeuilles d’investissement",
+    "investmentsDescription": "Importe automatiquement actions, ETF, obligations et fonds depuis les principaux courtiers.",
+    "cryptoTitle": "Cryptomonnaies",
+    "liabilitiesTitle": "Dettes et passifs",
+    "netWorthTitle": "Suivi du patrimoine net",
+    "netWorthDescription": "Regarde ton patrimoine grandir au fil du temps avec des graphiques et analyses clairs."
+  },
+  "steps": {
+    "createDescription": "Inscris-toi avec ton e-mail ou un compte social. L’accès s’ouvre progressivement via une liste d’attente. Aucune carte bancaire requise.",
+    "netWorthDescription": "Regarde ton patrimoine complet se constituer, actualisé automatiquement chaque jour.",
+    "headline": "Démarre en <highlight>quelques minutes</highlight>",
+    "subheadline": "Trois étapes simples pour voir ta situation financière complète.",
+    "createTitle": "Crée ton compte",
+    "connectTitle": "Connecte tes comptes",
+    "connectDescription": "Relie en toute sécurité tes banques, courtiers et plateformes crypto. Accès en lecture seule uniquement.",
+    "netWorthTitle": "Vois ton patrimoine net"
+  },
+  "security": {
+    "description": "Nous ne voyons jamais tes identifiants bancaires. Les jetons d’accès et clés API sont stockés chiffrés, et chaque connexion est en lecture seule.",
+    "badge": "Sécurité dès la conception",
+    "headline": "Tes données sont <highlight>en sécurité chez nous</highlight>",
+    "encryption": "Chiffrement AES-256-GCM pour tous les jetons sensibles",
+    "readOnly": "Accès en lecture seule : nous ne pouvons jamais déplacer ton argent",
+    "credentials": "Tes identifiants bancaires ne passent jamais par nos serveurs",
+    "providers": "Fournisseurs de confiance : Plaid, SnapTrade, Bitpanda",
+    "ownership": "Tes données t’appartiennent : nous ne les vendons jamais"
+  },
+  "cta": {
+    "description": "Réunis tes comptes, avoirs et prêts et vois tout ton patrimoine net en un seul endroit.",
+    "headline": "Prêt à prendre le contrôle de <highlight>ton patrimoine ?</highlight>"
+  },
+  "nav": {
+    "features": "Fonctionnalités",
+    "howItWorks": "Comment ça marche",
+    "security": "Sécurité",
+    "signIn": "Se connecter",
+    "joinWaitlist": "Rejoindre la liste d’attente",
+    "dashboard": "Tableau de bord",
+    "goToDashboard": "Aller au tableau de bord"
+  },
+  "logoAlt": "Logo Fiscalis",
+  "mockup": {
+    "totalNetWorth": "Patrimoine net total",
+    "yearChange": "{change} cette année",
+    "banks": "{count, plural, one {# banque} other {# banques}}",
+    "brokers": "{count, plural, one {# courtier} other {# courtiers}}",
+    "wallets": "{count, plural, one {# portefeuille} other {# portefeuilles}}",
+    "equities": "Actions",
+    "crypto": "Crypto",
+    "cash": "Liquidités",
+    "realEstate": "Immobilier"
+  },
+  "languageToggle": {
+    "label": "Langue"
+  }
+}

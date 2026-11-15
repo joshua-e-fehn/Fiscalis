@@ -8,7 +8,7 @@
  * App codes ("en", "de") are what is stored (userSettings.language), what the
  * locale cookie holds and how the catalogues under messages/ are named.
  * next-intl is given the Intl tag instead, so dates are day-first in English
- * (en-GB) and German formats as de-DE.
+ * (en-GB), German formats as de-DE and French as fr-FR.
  *
  * Pure module (no Next.js imports): services/i18n/i18n.test.ts covers it.
  */
@@ -28,13 +28,15 @@ export const DEFAULT_LANGUAGE: Language = "en";
  * list once its screens are translated; until then a stored choice of it
  * renders as English, so the page language, Clerk, Plaid Link and the
  * catalogue never claim a language the content is not in (browsers would
- * offer to translate the page, screen readers would mispronounce it). English
- * and German are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
+ * offer to translate the page, screen readers would mispronounce it). English,
+ * German and French are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
  * in LANGUAGES, for checking a new catalogue locally (inlined at build time on
  * both server and client).
  */
 export const RENDERED_LANGUAGES: readonly Language[] =
-  process.env.NEXT_PUBLIC_I18N_PREVIEW === "1" ? LANGUAGES : ["en", "de", "es"];
+  process.env.NEXT_PUBLIC_I18N_PREVIEW === "1"
+    ? LANGUAGES
+    : ["en", "de", "es", "fr"];
 
 /** The language a stored or requested language is rendered in. */
 export function renderedLanguage(
@@ -58,6 +60,7 @@ export const INTL_TAGS = {
   en: "en-GB",
   de: "de-DE",
   es: "es-ES",
+  fr: "fr-FR",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -67,6 +70,7 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   en: "English",
   de: "Deutsch",
   es: "Español",
+  fr: "Français",
 };
 
 /**
@@ -74,7 +78,6 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
 export const PLANNED_LOCALES = [
-  "fr",
   "it",
   "pt-PT",
   "ru",

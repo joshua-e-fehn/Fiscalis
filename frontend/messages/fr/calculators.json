@@ -1,0 +1,295 @@
+{
+  "index": {
+    "title": "Calculateurs",
+    "subtitle": "Des outils financiers pour t’aider à mieux décider de tes investissements et de tes emprunts.",
+    "interestDescription": "Taux d’intérêt, durée de croissance, valeurs futures et actuelles avec intérêts simples ou composés.",
+    "loanDescription": "Échéances, intérêts totaux et amortissement pour les prêts à mensualités constantes, dégressives, in fine ou à intérêts seuls, avec remboursements anticipés."
+  },
+  "intervals": {
+    "label": {
+      "minute": "Minute",
+      "hour": "Heure",
+      "day": "Jour",
+      "week": "Semaine",
+      "month": "Mois",
+      "quarter": "Trimestre",
+      "year": "Année"
+    },
+    "unitPlural": {
+      "minute": "minutes",
+      "hour": "heures",
+      "day": "jours",
+      "week": "semaines",
+      "month": "mois",
+      "quarter": "trimestres",
+      "year": "années"
+    },
+    "per": {
+      "minute": "Par minute",
+      "hour": "Par heure",
+      "day": "Par jour",
+      "week": "Par semaine",
+      "month": "Par mois",
+      "quarter": "Par trimestre",
+      "year": "Par an"
+    },
+    "count": {
+      "minute": "{count, plural, one {# minute} other {# minutes}}",
+      "hour": "{count, plural, one {# heure} other {# heures}}",
+      "day": "{count, plural, one {# jour} other {# jours}}",
+      "week": "{count, plural, one {# semaine} other {# semaines}}",
+      "month": "{count, plural, one {# mois} other {# mois}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestres}}",
+      "year": "{count, plural, one {# an} other {# ans}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, one {# minute} other {# minutes}}",
+      "hour": "{count, plural, one {# heure} other {# heures}}",
+      "day": "{count, plural, one {# jour} other {# jours}}",
+      "week": "{count, plural, one {# semaine} other {# semaines}}",
+      "month": "{count, plural, one {# mois} other {# mois}}",
+      "quarter": "{count, plural, one {# trimestre} other {# trimestres}}",
+      "year": "{count, plural, one {# an} other {# ans}}"
+    }
+  },
+  "interest": {
+    "title": "Calculateurs d’intérêts",
+    "subtitle": "Des outils financiers puissants pour t’aider à mieux décider de tes investissements. Calcule les intérêts composés, les taux de croissance, les valeurs futures et plus encore.",
+    "tabs": {
+      "rate": "Taux d’intérêt",
+      "duration": "Durée",
+      "futureValue": "Valeur future",
+      "startingValue": "Valeur initiale"
+    },
+    "fields": {
+      "initialValue": "Valeur initiale",
+      "finalValue": "Valeur finale",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "interval": "Périodicité des intérêts",
+      "intervalPlaceholder": "Choisis une périodicité",
+      "startingCapital": "Capital de départ",
+      "targetCapital": "Capital visé",
+      "interestRate": "Taux d’intérêt (%)",
+      "timePeriod": "Durée ({unit})"
+    },
+    "calculate": "Calculer",
+    "results": "Résultats",
+    "empty": "Saisis des valeurs et lance le calcul pour voir les résultats",
+    "compoundInterest": "Intérêts composés",
+    "simpleInterest": "Intérêts simples",
+    "withCompound": "Avec intérêts composés",
+    "withSimple": "Avec intérêts simples",
+    "gainAfter": "Gain : {amount} après {duration}",
+    "growthAfter": "Croissance : {amount} après {duration}",
+    "rate": {
+      "title": "Calculer le taux d’intérêt",
+      "description": "Trouve le taux d’intérêt moyen entre deux dates, en intérêts composés et simples",
+      "resultsHint": "D’après tes données, voici les taux d’intérêt calculés"
+    },
+    "duration": {
+      "title": "Calculer la durée",
+      "description": "Découvre combien de temps il te faudra pour atteindre ton capital visé, selon la valeur initiale et le taux d’intérêt",
+      "resultsHint": "Temps nécessaire pour atteindre ton capital visé"
+    },
+    "futureValue": {
+      "title": "Calculer la valeur future",
+      "description": "Découvre ce que vaudra ton investissement à l’avenir selon le taux d’intérêt et la durée",
+      "resultsHint": "Valeur future projetée de ton investissement"
+    },
+    "startingValue": {
+      "title": "Calculer la valeur initiale",
+      "description": "Découvre combien tu dois investir maintenant pour atteindre ton objectif à l’avenir",
+      "resultsHint": "Investissement initial nécessaire pour atteindre ton objectif"
+    }
+  },
+  "loan": {
+    "title": "Calculateur de prêt",
+    "subtitle": "Comprends les différents types de prêts, visualise tes échéances et trouve la meilleure option pour ta situation. Nous te montrons exactement où va ton argent.",
+    "tabs": {
+      "calculate": "Calculer un prêt",
+      "compare": "Comparer les types"
+    },
+    "chooseType": "1. Choisis ton type de prêt",
+    "calculateSection": "2. Calcule ton prêt",
+    "understanding": "Comprendre : {name}",
+    "howItWorks": "Comment ça marche",
+    "bestFor": "Idéal pour",
+    "watchOut": "Points de vigilance",
+    "intervals": {
+      "MONTHLY": {
+        "label": "Mensuel",
+        "payment": "Mensualité",
+        "perPeriod": "par mois",
+        "recurring": "Capital supplémentaire (chaque mois)"
+      },
+      "QUARTERLY": {
+        "label": "Trimestriel",
+        "payment": "Échéance trimestrielle",
+        "perPeriod": "par trimestre",
+        "recurring": "Capital supplémentaire (chaque trimestre)"
+      },
+      "SEMI_ANNUAL": {
+        "label": "Semestriel",
+        "payment": "Échéance semestrielle",
+        "perPeriod": "par semestre",
+        "recurring": "Capital supplémentaire (chaque semestre)"
+      },
+      "ANNUAL": {
+        "label": "Annuel",
+        "payment": "Annuité",
+        "perPeriod": "par an",
+        "recurring": "Capital supplémentaire (chaque année)"
+      }
+    },
+    "types": {
+      "ANNUITY": {
+        "name": "Prêt à échéances constantes",
+        "shortName": "Échéances constantes",
+        "shortDescription": "Même échéance à chaque période, le type le plus courant",
+        "calculatorTitle": "Calculateur de prêt à échéances constantes",
+        "calculatorDescription": "Calcule ton échéance périodique et vois comment elle se répartit au fil du temps.",
+        "howItWorks1": "Tu paies le même montant à chaque période pendant toute la durée du prêt",
+        "howItWorks2": "Les premières échéances sont surtout des intérêts, les dernières surtout du capital",
+        "howItWorks3": "La dette totale diminue régulièrement au fil du temps",
+        "bestFor1": "Les acheteurs immobiliers qui veulent un budget prévisible",
+        "bestFor2": "Les prêts longs (15 à 30 ans)",
+        "bestFor3": "Les personnes qui préfèrent la stabilité à la flexibilité",
+        "watchOut1": "Tu paies plus d’intérêts les premières années",
+        "watchOut2": "Moins de flexibilité si tes revenus changent"
+      },
+      "CONSTANT_PRINCIPAL": {
+        "name": "Prêt à échéances dégressives",
+        "shortName": "Échéances dégressives",
+        "shortDescription": "Les échéances commencent haut et baissent avec le temps",
+        "calculatorTitle": "Calculateur de prêt à échéances dégressives",
+        "calculatorDescription": "Vois comment tes échéances diminuent au fil du remboursement du capital.",
+        "howItWorks1": "Tu rembourses un montant fixe de capital à chaque période, plus les intérêts",
+        "howItWorks2": "À mesure que la dette baisse, les intérêts baissent aussi, et les échéances diminuent",
+        "howItWorks3": "Le total des intérêts payés est inférieur à celui d’un prêt à échéances constantes",
+        "bestFor1": "Les personnes qui prévoient des revenus plus faibles plus tard (proches de la retraite)",
+        "bestFor2": "Celles et ceux qui peuvent assumer des échéances initiales plus élevées",
+        "bestFor3": "Les emprunteurs qui veulent minimiser le total des intérêts",
+        "watchOut1": "Les premières échéances peuvent être 20 à 30 % plus élevées qu’avec un prêt à échéances constantes",
+        "watchOut2": "Tu risques de ne pas être éligible si tes revenus couvrent à peine la première échéance"
+      },
+      "INTEREST_ONLY": {
+        "name": "Prêt à intérêts seuls",
+        "shortName": "Intérêts seuls",
+        "shortDescription": "Tu paies d’abord les intérêts, le capital ensuite",
+        "calculatorTitle": "Calculateur de prêt à intérêts seuls",
+        "calculatorDescription": "Ne paie que les intérêts pendant une période, puis commence à rembourser le capital.",
+        "howItWorks1": "Pendant une période définie, tu ne paies que les intérêts : la dette ne diminue pas",
+        "howItWorks2": "Après la période à intérêts seuls, tu commences aussi à rembourser le capital",
+        "howItWorks3": "Les échéances augmentent fortement quand le remboursement du capital commence",
+        "bestFor1": "Les investisseurs immobiliers qui comptent vendre avant le début du remboursement du capital",
+        "bestFor2": "Les personnes qui prévoient des revenus plus élevés à l’avenir",
+        "bestFor3": "Les besoins de financement à court terme",
+        "watchOut1": "Tu ne constitues aucun patrimoine pendant la période à intérêts seuls",
+        "watchOut2": "Choc de paiement au début des échéances normales",
+        "watchOut3": "Risque de devoir plus que la valeur du bien"
+      },
+      "BULLET": {
+        "name": "Prêt in fine",
+        "shortName": "In fine",
+        "shortDescription": "Intérêts seuls, tout le capital dû à la fin",
+        "calculatorTitle": "Calculateur de prêt in fine",
+        "calculatorDescription": "Ne paie que les intérêts tout du long, le capital entier étant dû à la fin.",
+        "howItWorks1": "Tu ne paies que les intérêts pendant toute la durée du prêt",
+        "howItWorks2": "La totalité du capital est due en une seule fois à la fin",
+        "howItWorks3": "Les échéances sont très faibles, mais il te faut un plan pour le paiement final",
+        "bestFor1": "Les prêts relais (financement à court terme en attendant un financement définitif)",
+        "bestFor2": "Les investisseurs qui prévoient de vendre le bien avant l’échéance du prêt",
+        "bestFor3": "Les prêts à la construction ou les projets de promotion",
+        "watchOut1": "Risque élevé : tu dois prévoir comment rembourser ou refinancer",
+        "watchOut2": "Si tu ne peux pas payer le solde final, tu pourrais perdre le bien",
+        "watchOut3": "Aucun patrimoine constitué pendant la durée du prêt"
+      }
+    },
+    "fields": {
+      "loanAmount": "Montant du prêt",
+      "annualInterestRate": "Taux d’intérêt annuel (%)",
+      "interestRate": "Taux d’intérêt (%)",
+      "termYears": "Durée du prêt (années)",
+      "termYearsShort": "Durée (années)",
+      "paymentSchedule": "Périodicité des échéances",
+      "interestOnlyYears": "Période à intérêts seuls (années)",
+      "interestOnlyHint": "Combien d’années avant de commencer à rembourser le capital ?"
+    },
+    "prepayments": {
+      "title": "Remboursements anticipés",
+      "enabled": "Activés",
+      "disabled": "Désactivés",
+      "recurringHint": "Ce montant sera ajouté à chaque échéance normale.",
+      "oneTime": "Remboursements anticipés ponctuels",
+      "add": "Ajouter",
+      "oneTimeHint": "Planifie des remboursements anticipés certaines années (p. ex. prime annuelle, héritage).",
+      "year": "Année",
+      "amountPlaceholder": "Montant",
+      "fixedAmount": "Montant fixe",
+      "percentOfBalance": "% du solde",
+      "remove": "Supprimer le remboursement anticipé"
+    },
+    "calculate": "Calculer mon prêt",
+    "yourResults": "Tes résultats",
+    "summary": {
+      "totalInterest": "Intérêts totaux",
+      "totalCost": "Coût total",
+      "interestToPrincipal": "Intérêts / capital",
+      "savingsTitle": "Économies réalisées",
+      "interestSaved": "Intérêts économisés",
+      "periodsSaved": "Périodes économisées",
+      "originalTerm": "Durée initiale",
+      "newTerm": "Nouvelle durée",
+      "payments": "{count, plural, one {# échéance} other {# échéances}}"
+    },
+    "charts": {
+      "principal": "Capital",
+      "interest": "Intérêts",
+      "balance": "Capital restant dû",
+      "payment": "Échéance",
+      "yearTick": "A{year}",
+      "principalValue": "Capital : {amount}",
+      "interestValue": "Intérêts : {amount}",
+      "totalValue": "Total : {amount}",
+      "balanceValue": "Solde : {amount}",
+      "breakdownByYear": "Répartition des échéances par année",
+      "breakdownHint": "Capital (vert) et intérêts (orange) au fil du temps.",
+      "balanceOverTime": "Évolution du capital restant dû",
+      "balanceHint": "Regarde ta dette diminuer au fil de tes remboursements.",
+      "breakdown": "Répartition des échéances"
+    },
+    "schedule": {
+      "view": "Voir l’échéancier complet",
+      "period": "N°",
+      "payment": "Échéance",
+      "principal": "Capital",
+      "interest": "Intérêts",
+      "extra": "Supplément",
+      "balance": "Solde",
+      "showAll": "{count, plural, one {Afficher # échéance} other {Afficher les # échéances}}"
+    },
+    "warnings": {
+      "savingsTitle": "💰 Échéances en baisse",
+      "savingsBody": "Ton échéance passe de {first} à {last} — soit {difference} de moins par période à la fin !",
+      "shockTitle": "⚠️ Attention au choc de paiement",
+      "shockBody": "Après {years, plural, one {# an} other {# ans}}, ton échéance passera de {from} à {to} — une hausse de {difference} ({percent} % de plus). Assure-toi de pouvoir l’assumer !",
+      "balloonTitle": "🚨 Attention au paiement final",
+      "balloonBody": "Au bout de {years, plural, one {# an} other {# ans}}, tu dois payer {amount} en une seule fois. C’est ce qu’on appelle un « paiement ballon ».",
+      "balloonOptions": "<strong>Tes options à l’échéance du paiement final :</strong> refinancer avec un nouveau prêt, vendre le bien ou payer avec ton épargne. Si aucune de ces options n’est possible, tu risques de perdre le bien."
+    },
+    "compare": {
+      "title": "Comparaison côte à côte",
+      "description": "Vois comment les différents types de prêts se comparent avec le même montant, le même taux et la même durée.",
+      "button": "Comparer tous les types de prêts",
+      "loanType": "Type de prêt",
+      "firstPayment": "Première échéance",
+      "totalInterest": "Intérêts totaux",
+      "totalCost": "Coût total",
+      "interestChart": "Comparaison des intérêts totaux",
+      "byType": "Répartition des échéances et solde par type de prêt",
+      "insightTitle": "💡 À retenir",
+      "insightBody": "Le <strong>prêt à échéances dégressives</strong> te fait économiser {saved} d’intérêts par rapport à un prêt à échéances constantes, mais ta première échéance est plus élevée de {extra}. Choisis selon ton budget actuel et tes perspectives de revenus."
+    }
+  }
+}

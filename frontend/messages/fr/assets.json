@@ -1,0 +1,153 @@
+{
+  "actions": {
+    "connectBroker": "Connecter un courtier",
+    "connectBank": "Connecter une banque",
+    "connectCrypto": "Connecter une crypto",
+    "addItem": "Ajouter",
+    "addProperty": "Ajouter un bien",
+    "viewHoldings": "Voir les avoirs",
+    "viewAccounts": "Voir les comptes",
+    "viewPortfolio": "Voir le portefeuille",
+    "viewProperties": "Voir les biens",
+    "viewCollection": "Voir la collection"
+  },
+  "bonds": {
+    "subtitle": "Suis tes placements à revenu fixe : obligations d’État, obligations d’entreprise et fonds obligataires.",
+    "categories": "Catégories d’obligations"
+  },
+  "cash": {
+    "title": "Liquidités et monétaire",
+    "subtitle": "Suis tes actifs liquides : comptes d’épargne, fonds monétaires, comptes à terme et avoirs en devises étrangères.",
+    "balanceHistory": "Historique des liquidités",
+    "categories": "Catégories de liquidités"
+  },
+  "equities": {
+    "subtitle": "Suis ton portefeuille d’actions, d’ETF, de fonds et tes investissements en private equity.",
+    "publicMarkets": "Marchés cotés",
+    "privateMarkets": "Marchés non cotés"
+  },
+  "realEstate": {
+    "subtitle": "Suis tes investissements immobiliers : biens résidentiels, biens commerciaux, SCPI/REIT et plus encore.",
+    "categories": "Catégories de biens"
+  },
+  "collectibles": {
+    "subtitle": "Suis tes objets de collection : art, vin, montres, voitures anciennes et plus encore.",
+    "categories": "Catégories d’objets de collection"
+  },
+  "commodities": {
+    "subtitle": "Suis les prix en temps réel et gère tes avoirs dans différents types de matières premières",
+    "categories": "Catégories de matières premières"
+  },
+  "metals": {
+    "signIn": "Connecte-toi pour voir ton portefeuille de métaux."
+  },
+  "crypto": {
+    "title": "Actifs crypto",
+    "subtitle": "Suis tes investissements en cryptomonnaies et la performance de ton portefeuille",
+    "tabs": {
+      "overview": "Aperçu",
+      "holdings": "Avoirs",
+      "transactions": "Transactions"
+    },
+    "categories": "Catégories crypto",
+    "holdings": {
+      "title": "Tous les avoirs crypto",
+      "description": "Liste complète de tes avoirs en cryptomonnaies sur toutes les plateformes et portefeuilles connectés",
+      "emptyTitle": "Aucun compte crypto connecté",
+      "emptyDescription": "Connecte tes plateformes et portefeuilles crypto pour voir l’ensemble de tes avoirs",
+      "connect": "Connecter des comptes crypto"
+    },
+    "transactions": {
+      "title": "Historique des transactions",
+      "connectDescription": "Connecte tes comptes crypto pour voir ton historique de transactions",
+      "notConnected": "Aucun compte crypto connecté pour l’instant. Connecte tes plateformes et portefeuilles pour voir ton historique de transactions.",
+      "description": "Toutes les transactions de tes comptes crypto connectés",
+      "empty": "Aucune transaction trouvée. Ton historique apparaîtra ici après la synchronisation.",
+      "justNow": "à l’instant",
+      "unknownDate": "Date inconnue",
+      "types": {
+        "buy": "Achat",
+        "sell": "Vente",
+        "deposit": "Dépôt",
+        "withdraw": "Retrait",
+        "withdrawal": "Retrait",
+        "receive": "Réception",
+        "send": "Envoi",
+        "transfer": "Transfert",
+        "reward": "Récompense",
+        "staking": "Staking",
+        "dividend": "Dividende",
+        "interest": "Intérêts",
+        "fee": "Frais"
+      }
+    },
+    "allocation": {
+      "title": "Répartition par position",
+      "empty": "Aucun avoir pour l’instant",
+      "other": "Autres (<2 %)",
+      "otherShort": "Autres"
+    },
+    "positions": {
+      "title": "Toutes les positions",
+      "count": "{shown} sur {total, plural, one {# position} other {# positions}}",
+      "search": "Rechercher un token...",
+      "loading": "Chargement des positions…",
+      "noMatch": "Aucune position ne correspond à ta recherche",
+      "empty": "Aucune position trouvée",
+      "token": "Token",
+      "quantity": "Quantité",
+      "value": "Valeur",
+      "category": "Catégorie",
+      "priceUnavailable": "Prix indisponible",
+      "staleHint": "Bitpanda n’avait pas de prix actuel ; le dernier prix connu est affiché",
+      "priceAsOf": "Prix au {date}",
+      "lastKnownPrice": "Dernier prix connu"
+    }
+  },
+  "manualAssets": {
+    "add": "Ajouter un actif",
+    "emptyHint": "Ajoute un actif pour le suivre ici. Il compte dans ton patrimoine net à sa dernière valorisation.",
+    "addTitle": "Ajouter un actif",
+    "editTitle": "Modifier {name}",
+    "description": "Enregistre ce qu’aucun compte connecté ne remonte. Il compte dans ton patrimoine net à sa dernière valorisation.",
+    "actionsLabel": "Actions pour {name}",
+    "fields": {
+      "category": "Catégorie",
+      "subcategory": "Sous-catégorie",
+      "name": "Nom",
+      "namePlaceholder": "p. ex. Appartement à Lyon, Rolex Submariner",
+      "currency": "Devise",
+      "valuations": "Valorisations",
+      "valuationsHint": "Ce que valait l’actif à chaque date. La plus récente compte.",
+      "date": "Date",
+      "value": "Valeur",
+      "addValuation": "Ajouter une valorisation",
+      "removeValuation": "Supprimer la valorisation",
+      "costBasis": "Prix d’achat",
+      "optional": "Facultatif",
+      "costBasisHint": "Avec un prix d’achat, la plus- ou moins-value est affichée. Relie le prêt qui a financé l’actif, le cas échéant.",
+      "linkedLoan": "Financé par",
+      "noLoan": "Aucun prêt"
+    },
+    "attributes": {
+      "artist": "Artiste",
+      "brand": "Marque",
+      "model": "Modèle",
+      "referenceNumber": "N° de référence",
+      "producer": "Producteur",
+      "vintage": "Millésime",
+      "year": "Année",
+      "address": "Adresse",
+      "grade": "Note"
+    },
+    "toast": {
+      "created": "{name} ajouté",
+      "updated": "{name} enregistré",
+      "deleted": "{name} supprimé"
+    },
+    "deleteDialog": {
+      "title": "Supprimer {name} ?",
+      "description": "L’actif et toutes ses valorisations sont supprimés et ne comptent plus dans ton patrimoine net. Cette action est irréversible."
+    }
+  }
+}

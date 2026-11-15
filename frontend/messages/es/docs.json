@@ -31,7 +31,7 @@
       },
       "currency": {
         "title": "Moneda de visualización e idioma",
-        "body": "Todo se guarda en euros. Puedes mostrar tus totales en EUR, USD, GBP o CHF: los totales se convierten al último tipo de cambio diario y tu historial al tipo de cada día. Los préstamos y las filas de cuentas individuales mantienen su propia moneda.\n\nFiscalis está disponible en inglés, alemán y español. Cambia la moneda de visualización y el idioma en Ajustes > General.",
+        "body": "Todo se guarda en euros. Puedes mostrar tus totales en EUR, USD, GBP o CHF: los totales se convierten al último tipo de cambio diario y tu historial al tipo de cada día. Los préstamos y las filas de cuentas individuales mantienen su propia moneda.\n\nFiscalis está disponible en inglés, alemán, español y francés. Cambia la moneda de visualización y el idioma en Ajustes > General.",
         "linkLabel": "Abrir Ajustes > General"
       },
       "sync": {

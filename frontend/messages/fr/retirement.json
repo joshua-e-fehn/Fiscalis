@@ -1,0 +1,272 @@
+{
+  "years": "{count, plural, one {# an} other {# ans}}",
+  "yearsDative": "{count, plural, one {# an} other {# ans}}",
+  "perMonth": "{amount}/mois",
+  "perMonthUnit": "/ mois",
+  "pensions": "Pensions",
+  "steps": {
+    "intro": "Début",
+    "personal": "Âge",
+    "expenses": "Dépenses",
+    "housing": "Logement",
+    "pensions": "Pensions",
+    "portfolio": "Portefeuille",
+    "assumptions": "Hypothèses",
+    "results": "Résultats"
+  },
+  "stepShell": {
+    "saving": "Enregistrement…"
+  },
+  "progress": {
+    "stepOf": "Étape {current} sur {total}"
+  },
+  "wizard": {
+    "defaultPensionLabel": "Retraite publique",
+    "editingBanner": "Tu modifies ton plan enregistré. Les changements s’appliquent à l’enregistrement.",
+    "discardChanges": "Annuler les modifications",
+    "currencyChanged": "Ta devise d’affichage est passée à {display}. Les montants de ce formulaire sont toujours en {form} et seront enregistrés en {form}.",
+    "reloadInCurrency": "Recharger en {currency}",
+    "storedCurrency": "Ton plan a été saisi en {stored}. Ses montants sont affichés en {shown} au taux de change du jour, et ton prochain enregistrement les conservera en {shown}.",
+    "birthDateRequired": "La date de naissance est obligatoire",
+    "saveFailed": "Impossible d’enregistrer ton plan. Réessaie."
+  },
+  "dashboard": {
+    "title": "Plan de retraite",
+    "subtitle": "Objectif : retraite à {age} ans. Ce plan se met à jour automatiquement quand ton portefeuille évolue.",
+    "subtitleFallback": "Ton plan de retraite enregistré.",
+    "editPlan": "Modifier le plan",
+    "startOver": {
+      "button": "Recommencer",
+      "title": "Recommencer avec un nouveau plan ?",
+      "description": "Cela supprime ton plan de retraite enregistré et toutes ses réponses. Ta date de naissance reste dans ton profil. Cette action est irréversible.",
+      "confirm": "Supprimer le plan",
+      "resetting": "Suppression…",
+      "failed": "Impossible de supprimer ton plan. Réessaie."
+    }
+  },
+  "results": {
+    "timelineTitle": "Vérifie ton âge de départ à la retraite",
+    "timelineBody": "Ton âge de départ à la retraite doit être supérieur à ton âge actuel pour construire un plan.",
+    "assumptionsTitle": "Vérifie tes hypothèses",
+    "editHint": "Modifie ton plan pour l’ajuster.",
+    "backHint": "Reviens en arrière pour l’ajuster."
+  },
+  "progressCard": {
+    "title": "Ton objectif retraite",
+    "target": "Portefeuille cible nécessaire",
+    "in": "Dans",
+    "progressToday": "Progression actuelle (prudente)",
+    "growth": "Tes <b>{current}</b> actuels deviennent <b>{projected}</b> d’ici la retraite à un taux prudent de {rate} par an — soit <b>{pct} %</b> de l’objectif ci-dessus (avant toute épargne mensuelle). Au taux attendu de {expectedRate}, ce serait {expectedPct} %.",
+    "netDebt": "Tes passifs dépassent tes actifs de {debt}. Ton plan part de {zero}, donc le remboursement de cette dette s’ajoute à l’épargne mensuelle que nous calculons.",
+    "pensionsCoverAll": "Tes pensions couvrent déjà tes dépenses prévues — aucun prélèvement sur le portefeuille n’est nécessaire."
+  },
+  "savingsCard": {
+    "title": "Combien épargner chaque mois",
+    "pensionsCoverAll": "Tes pensions couvrent tes dépenses prévues, tu n’as donc pas besoin d’épargner pour un portefeuille de retraite.",
+    "onTrack": "D’après tes actifs actuels et la croissance attendue, tu es en bonne voie pour atteindre ton objectif sans épargne supplémentaire. Continue comme ça !",
+    "expectedCase": "Scénario attendu",
+    "conservativeCase": "Scénario prudent",
+    "expectedHint": "suppose {rate} / an — un portefeuille qui double environ tous les {years, plural, one {# an} other {# ans}}",
+    "expectedHintNoGrowth": "suppose {rate} / an",
+    "conservativeHint": "suppose un taux prudent de {rate} / an",
+    "indexed": "Montant du premier mois, revalorisé avec l’inflation — jusqu’à {amount} (scénario attendu) à la retraite.",
+    "flat": "Un montant nominal fixe chaque mois jusqu’à la retraite ; l’inflation réduit la valeur des derniers versements.",
+    "netDebt": "Ces montants partent de {zero} et n’incluent pas le remboursement de ta dette actuelle.",
+    "mortgageNotProjected": "Le solde total de {balance} de ton crédit immobilier est considéré comme encore dû à la retraite et fait partie de ton objectif : ajoute son taux et sa mensualité dans le plan pour le projeter.",
+    "mortgageOwedAtRetirement": "En plus, les mensualités de {payment}/mois de ton crédit immobilier continuent d’être payées sur tes revenus ; les {balance} encore dus à la retraite font partie de ton objectif.",
+    "mortgageRepaidBefore": "En plus, les mensualités de {payment}/mois de ton crédit immobilier continuent d’être payées sur tes revenus jusqu’au remboursement du prêt."
+  },
+  "coverage": {
+    "title": "Dépenses mensuelles à la retraite",
+    "expensesGrow": "Tes <b>{today}/mois</b> de dépenses actuelles deviennent <b>{future}/mois</b> dans {years} après inflation.",
+    "pensions": "Tes pensions de <b>{today}/mois</b> en euros constants atteignent <b>{future}/mois</b>.",
+    "pensionsAfterDeductions": "Tes pensions de <b>{today}/mois</b> en euros constants (après {deductions}/mois d’impôts et d’assurance maladie) atteignent <b>{future}/mois</b>.",
+    "coveredByPensions": "Couvert par les pensions",
+    "fundedByPortfolio": "Financé par le portefeuille"
+  },
+  "chart": {
+    "title": "Croissance projetée du portefeuille",
+    "age": "{age} ans",
+    "target": "Objectif",
+    "expectedSaving": "Attendu + épargne",
+    "conservativeSaving": "Prudent + épargne",
+    "expectedNoSaving": "Attendu, sans épargne",
+    "conservativeNoSaving": "Prudent, sans épargne",
+    "footnote": "Quatre trajectoires : tes rendements attendu et prudent, chacun avec ton plan d’épargne mensuel et avec ton portefeuille actuel laissé croître seul. La ligne en pointillés est ton objectif."
+  },
+  "explainer": {
+    "trigger": "Pourquoi ces chiffres ? La règle des 4 % expliquée",
+    "rule": "La <b>règle des 4 %</b> est un repère simple : chaque année, tu peux retirer environ 4 % de ton portefeuille sans l’épuiser au cours d’une longue retraite. À l’inverse, ton portefeuille doit valoir <b>25×</b> le montant annuel qu’il doit couvrir.",
+    "customRate": "Ton plan utilise <b>{rate}</b> à la place, ton portefeuille doit donc valoir <b>{multiple}×</b> ce montant.",
+    "whereFrom": "D’où viennent les 4 % ?",
+    "marketReturn": "<b>≈ 7–8 %</b> de rendement de marché attendu par an sur le long terme",
+    "inflation": "<b>− ~2 %</b> d’inflation, pour que ton argent garde son pouvoir d’achat",
+    "buffer": "<b>− une marge</b> pour rester en sécurité lors des mauvaises années de marché",
+    "result": "= environ 4 % que tu peux dépenser chaque année",
+    "inflationHandlingRate": "Comme le taux de retrait tient déjà compte de l’inflation pendant la retraite, nous ne comptons pas l’inflation deux fois. Avant la retraite, nous augmentons tes dépenses et pensions de {rate} par an et faisons croître chaque partie de ton portefeuille à son propre rendement attendu — pour que tout reste cohérent.",
+    "inflationHandling": "Comme le taux de retrait tient déjà compte de l’inflation pendant la retraite, nous ne comptons pas l’inflation deux fois. Avant la retraite, nous augmentons tes dépenses et pensions du taux d’inflation et faisons croître chaque partie de ton portefeuille à son propre rendement attendu — pour que tout reste cohérent.",
+    "simpleTarget": "Pour ton plan, avec tes dépenses et pensions actuelles (sans inflation), l’objectif serait de <b>{target}</b>.",
+    "adjustedTargetRate": "Corrigé de {years} d’inflation à {rate}, l’objectif réaliste est de <b>{target}</b>.",
+    "adjustedTarget": "Corrigé de {years} d’inflation, l’objectif réaliste est de <b>{target}</b>.",
+    "difference": "{reason, select, fixedPensionsAndMortgage {La différence vient de l’inflation, que tes pensions fixes ne suivent pas, et du crédit immobilier encore dû à ta retraite.} fixedPensions {La différence vient de l’inflation, que tes pensions fixes ne suivent pas.} mortgage {La différence vient de l’inflation et du crédit immobilier encore dû à ta retraite.} other {La différence vient de l’inflation.}}",
+    "taxIncluded": "Les deux incluent {rate} d’impôt sur les retraits.",
+    "taxExcluded": "Les deux sont avant impôt : l’impôt sur les retraits n’est pas inclus."
+  },
+  "teaser": {
+    "titleActive": "Ton plan de retraite",
+    "titleDraft": "Termine ton plan de retraite",
+    "titleNew": "Planifie ta retraite",
+    "needsReview": "Ton plan a besoin d’une petite vérification — ouvre-le pour ajuster ton âge de départ ou tes hypothèses.",
+    "pensionsCoverAll": "Tes pensions couvrent déjà tes dépenses prévues.",
+    "netDebt": "Tes passifs dépassent actuellement tes actifs — les rembourser est la première étape.",
+    "onTrack": "Tu es en bonne voie pour ton objectif de {target}.",
+    "onTrackExpected": "En bonne voie au rendement attendu de {rate} ; épargner {amount}/mois couvre le scénario prudent.",
+    "progress": "Tu as parcouru {pct} % du chemin vers ton objectif de {target}.",
+    "draft": "Reprends là où tu t’étais arrêté et découvre ton chiffre.",
+    "new": "Transforme ton objectif retraite en plan d’épargne mensuel en quelques minutes.",
+    "viewPlan": "Voir le plan",
+    "getStarted": "Commencer"
+  },
+  "introStep": {
+    "title": "Planifie ta retraite",
+    "body": "Quelques questions rapides pour transformer ton objectif retraite en un plan d’épargne concret et mesurable — fondé sur ton vrai portefeuille.",
+    "points": {
+      "age": {
+        "title": "Choisis ton âge de départ",
+        "body": "Dis-nous quand tu aimerais arrêter de travailler et le mode de vie que tu souhaites."
+      },
+      "pensions": {
+        "title": "Ajoute tes pensions",
+        "body": "Les retraites publiques, d’entreprise ou privées couvrent une partie de tes dépenses mensuelles."
+      },
+      "number": {
+        "title": "Découvre ton chiffre",
+        "body": "Nous utilisons la règle des 4 % pour calculer le portefeuille dont tu as besoin — et combien épargner chaque mois pour y arriver."
+      }
+    },
+    "reviewPlan": "Revoir mon plan",
+    "getStarted": "Commencer"
+  },
+  "personalStep": {
+    "title": "Ton calendrier",
+    "description": "Quand es-tu né, et quand veux-tu prendre ta retraite ?",
+    "birthDate": "Date de naissance",
+    "retirementAge": "Âge de départ à la retraite",
+    "currentAge": "{age, plural, one {Tu as <b>#</b> an.} other {Tu as <b>#</b> ans.}}",
+    "yearsLeft": "Tu as <b>{years}</b> pour constituer ton portefeuille de retraite.",
+    "enterBirthDate": "Saisis ta date de naissance pour que nous puissions calculer ton âge."
+  },
+  "expensesStep": {
+    "title": "Mode de vie souhaité",
+    "description": "Le revenu mensuel minimum que tu voudrais à la retraite, en euros constants.",
+    "label": "Dépenses de vie mensuelles (aujourd’hui)",
+    "hint": "Si tu es propriétaire de ton logement, exclus le loyer — en être propriétaire réduit déjà ce montant.",
+    "future": "Après {years} d’inflation à {rate}, cela représente environ <b>{amount}</b> à ta retraite — le même mode de vie coûte simplement plus cher."
+  },
+  "housingStep": {
+    "title": "Ton logement",
+    "description": "L’immobilier est traité différemment des investissements — faisons les choses bien.",
+    "ownsHome": "Je suis propriétaire du logement où je vis",
+    "ownsHomeHint": "Une résidence principale n’est pas comptée dans le financement de la retraite.",
+    "homeNotCounted": "Nous ne comptons <b>pas</b> ton logement dans le portefeuille qui finance ta retraite — tu ne peux pas le vendre et continuer d’y vivre. Son vrai avantage se reflète déjà dans tes dépenses mensuelles plus faibles (pas de loyer).",
+    "mortgageLabel": "Crédit immobilier sur ce logement <muted>(facultatif)</muted>",
+    "noMortgage": "Pas de crédit / non suivi",
+    "trackedLoans": "Prêts suivis",
+    "bankMortgages": "Comptes de crédit immobilier bancaires",
+    "mortgageOption": "{name} — {balance}",
+    "mortgageHint": "Son solde n’est pas déduit du financement de ta retraite : tu paies les mensualités sur tes revenus jusqu’à la retraite, comme un loyer. Tout solde encore dû à ta retraite est ajouté à ton objectif.",
+    "bankBalanceOnly": "Ta banque ne communique que le solde. Ajoute le taux d’intérêt et la mensualité pour projeter ce qui restera dû à ta retraite.",
+    "interestRate": "Taux d’intérêt (% par an)",
+    "monthlyRepayment": "Mensualité ({symbol})",
+    "withoutTerms": "Sans ces deux valeurs, la totalité du solde actuel est considérée comme encore due à la retraite.",
+    "equityLabel": "Valeur nette immobilière vendable pour financer la retraite <muted>(facultatif)</muted>",
+    "equityHint": "Pour un bien locatif ou une résidence secondaire que tu comptes vendre : sa valeur moins tout prêt associé non suivi dans Fiscalis (les prêts suivis sont déjà déduits de ton patrimoine net). Laisse 0 si ce n’est pas le cas."
+  },
+  "pensionsStep": {
+    "title": "Revenus de pension",
+    "description": "Revenus mensuels que tu percevras à la retraite, avant de puiser dans ton portefeuille. Saisis-les en euros constants, p. ex. le montant brut de ton relevé de retraite. Nous déduisons impôts et assurance maladie des montants bruts et revalorisons les pensions indexées avec l’inflation, comme tes dépenses.",
+    "source": "Source",
+    "sourcePlaceholder": "p. ex. Retraite publique",
+    "amountLabel": "{symbol} / mois (aujourd’hui)",
+    "removeSource": "Supprimer la source",
+    "gross": "Brut (avant impôts et assurance maladie)",
+    "net": "Net (déjà après déductions)",
+    "indexed": "Revalorisé avec l’inflation",
+    "fixed": "Montant fixe (p. ex. de nombreuses retraites d’entreprise)",
+    "addSource": "Ajouter une source de revenu",
+    "deductionLabel": "Impôts et assurance maladie sur les pensions brutes",
+    "deductionHint": "Un taux forfaitaire pour l’assurance maladie et dépendance (≈ 11–12 % dans la KVdR allemande) plus l’impôt sur le revenu. Le taux par défaut de {rate} transforme {gross} brut en environ {net} net.",
+    "totalNet": "Total des pensions, net (euros constants)",
+    "asEntered": "{amount} tel que saisi"
+  },
+  "portfolioStep": {
+    "title": "Ton portefeuille aujourd’hui",
+    "description": "C’est le point de départ que nous faisons croître vers ton objectif. Choisis comment chaque partie doit croître, ou exclus l’argent que tu n’investiras pas, comme une épargne de précaution.",
+    "noAssets": "Aucun actif suivi pour l’instant — ton plan part de {zero}.",
+    "growthLabel": "{category} : croissance",
+    "categories": {
+      "equities": "Actions",
+      "real-estate": "Fonds immobiliers",
+      "crypto": "Crypto",
+      "bonds": "Obligations",
+      "commodities": "Matières premières et métaux",
+      "cash": "Liquidités et épargne",
+      "collectibles": "Objets de collection",
+      "property": "Immobilier vendable"
+    },
+    "treatments": {
+      "growth": "Croît au rendement du scénario",
+      "moderate": "À mi-chemin entre rendement et inflation",
+      "inflation": "Suit l’inflation",
+      "exclude": "Non compté (p. ex. épargne de précaution)"
+    },
+    "fundable": "Actifs mobilisables",
+    "expectedGrowth": "Croissance attendue {expected} / an (prudente {conservative})",
+    "netDebt": "Tes passifs dépassent tes actifs de <b>{debt}</b>. Ton plan part de {zero} — la dette ne croît pas au rendement des investissements — donc son remboursement s’ajoute à l’épargne que nous calculons.",
+    "mortgageWithPayment": "Le crédit immobilier de <b>{balance}</b> sur ton logement n’est pas déduit ici : ses mensualités de {payment} sont payées sur tes revenus jusqu’à la retraite.",
+    "mortgage": "Le crédit immobilier de <b>{balance}</b> sur ton logement n’est pas déduit ici : ses mensualités sont payées sur tes revenus jusqu’à la retraite.",
+    "mortgageNotProjected": "Sans son taux et sa mensualité, la totalité du solde est considérée comme encore due à ta retraite.",
+    "footnote": "La valeur des actifs se met à jour automatiquement à chaque synchronisation de tes comptes, ta progression reste donc à jour. Chaque partie croît à son propre taux ; la nouvelle épargne croît au rendement du scénario. Le logement où tu vis n’est pas inclus."
+  },
+  "assumptionsStep": {
+    "title": "Hypothèses",
+    "description": "Des valeurs par défaut raisonnables sont préremplies — ne les modifie que si tu sais ce que tu fais.",
+    "seePlan": "Voir mon plan",
+    "fields": {
+      "optimisticReturn": {
+        "label": "Rendement annuel attendu",
+        "hint": "Croissance du marché à long terme. La valeur par défaut de {rate} double un portefeuille tous les 10 ans."
+      },
+      "conservativeReturn": {
+        "label": "Rendement annuel prudent",
+        "hint": "Une hypothèse de croissance prudente pour l’estimation la plus sûre."
+      },
+      "inflationRate": {
+        "label": "Taux d’inflation",
+        "hint": "La vitesse de hausse des prix ; augmente ton objectif de dépenses futures."
+      },
+      "withdrawalRate": {
+        "label": "Taux de retrait sûr",
+        "hint": "La règle des 4 %. Plus bas = plus sûr, mais nécessite un portefeuille plus important."
+      }
+    },
+    "withdrawalTax": "Impôt sur les retraits",
+    "withdrawalTaxHint": "Impôt effectif sur ce que tu retires (p. ex. impôt sur les plus-values sur la part de gains). À 0 %, l’objectif est un montant avant impôt.",
+    "indexContributions": "Revaloriser mon épargne avec l’inflation",
+    "indexContributionsHint": "Désactivé : un montant fixe en euros constants, qui vaut moins chaque année. Activé : un premier montant plus faible qui augmente avec l’inflation.",
+    "reset": "Rétablir les valeurs recommandées"
+  },
+  "resultsStep": {
+    "save": "Enregistrer mon plan",
+    "fixToSave": "{reason}. Corrige-le pour enregistrer ton plan."
+  },
+  "validation": {
+    "ageRange": "{field, select, currentAge {L’âge actuel doit} retirementAge {L’âge de départ à la retraite doit} other {Les âges doivent}} être un nombre entier entre {min} et {max}",
+    "retirementNotAfterCurrent": "L’âge de départ à la retraite doit être supérieur à ton âge actuel",
+    "rateRange": "{field, select, optimisticReturn {Le rendement attendu} conservativeReturn {Le rendement prudent} inflationRate {Le taux d’inflation} primaryResidenceMortgageRate {Le taux du crédit immobilier} pensionDeductionRate {Le taux d’impôts et d’assurance maladie sur les pensions} withdrawalTaxRate {L’impôt sur les retraits} other {Le taux}} doit être compris entre 0 % et {max} %",
+    "withdrawalRateRange": "Le taux de retrait doit être supérieur à 0 % et au maximum de {max} %",
+    "conservativeAboveExpected": "Le rendement prudent ne peut pas être supérieur au rendement attendu",
+    "amountNegative": "{field, select, monthlyExpensesToday {Les dépenses mensuelles doivent être supérieures ou égales à zéro} fundableRealEstateEquity {La valeur du bien doit être supérieure ou égale à zéro} primaryResidenceMortgagePayment {La mensualité du crédit doit être supérieure ou égale à zéro} other {Les montants de pension doivent être supérieurs ou égaux à zéro}}",
+    "expensesNotPositive": "Les dépenses mensuelles doivent être supérieures à zéro"
+  }
+}

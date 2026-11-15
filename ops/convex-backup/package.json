@@ -1,0 +1,8 @@
+{
+  "name": "fiscalis-convex-backup-cli",
+  "private": true,
+  "description": "The Convex CLI, pinned to the version frontend/package.json resolves, for the weekly prod backup on the Mya VPS (ENG-220). install.sh installs it with `npm ci --ignore-scripts --omit=dev`.",
+  "dependencies": {
+    "convex": "1.49.0"
+  }
+}

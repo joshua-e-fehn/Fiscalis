@@ -1,0 +1,14 @@
+[Unit]
+Description=Back up Fiscalis Convex production to S3 weekly (Sunday 03:15 UTC)
+
+[Timer]
+# After the 01:30 UTC archive audit and the weekly World Bank sync (Sun 03:00
+# UTC). The daily provider sync runs at 06:00 UTC, so the snapshot holds
+# Saturday's sync.
+OnCalendar=Sun *-*-* 03:15:00 UTC
+RandomizedDelaySec=10min
+# A Sunday missed while the host was down is backed up once at the next boot.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

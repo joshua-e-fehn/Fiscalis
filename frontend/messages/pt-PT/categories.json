@@ -318,5 +318,44 @@
       },
       "edit": "Alterar"
     }
+  },
+  "valuation": {
+    "action": "Definir preço",
+    "reset": "Usar preço do fornecedor",
+    "badges": {
+      "live": "Em direto",
+      "manualPrice": "Preço manual",
+      "markToModel": "Modelo"
+    },
+    "badgeHints": {
+      "live": "O preço do teu fornecedor, atualizado ao longo do dia entre sincronizações.",
+      "manualPrice": "Avaliado ao preço que introduziste, não ao do fornecedor.",
+      "markToModel": "Avaliado pelo teu modelo: o preço inicial a crescer à tua taxa anual."
+    },
+    "kinds": {
+      "manualPrice": "Preço manual",
+      "markToModel": "Avaliação por modelo"
+    },
+    "kindHints": {
+      "manualPrice": "Um preço fixo por unidade que tu próprio atualizas.",
+      "markToModel": "Um preço inicial que sobe (ou desce) a uma taxa anual fixa, para posições sem preço de mercado."
+    },
+    "dialog": {
+      "title": "Definir preço",
+      "description": "Avalia {name} ao teu próprio preço. O teu preço mantém-se quando o fornecedor sincroniza; a quantidade continua a vir do fornecedor.",
+      "kind": "Método",
+      "price": "Preço por unidade",
+      "modelPrice": "Preço por unidade na data inicial",
+      "currency": "Moeda",
+      "date": "Data do preço",
+      "modelDate": "Data inicial",
+      "rate": "Taxa anual (%)",
+      "rateHint": "Usa uma taxa negativa para um valor que desce ao longo do tempo.",
+      "preview": "Hoje: {price} por unidade, {value} no total"
+    },
+    "toast": {
+      "saved": "Preço guardado para {name}",
+      "reset": "{name} volta a usar o preço do fornecedor"
+    }
   }
 }

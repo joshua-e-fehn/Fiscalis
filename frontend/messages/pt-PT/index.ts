@@ -6,10 +6,12 @@
 import type { Messages } from "@/i18n/messages";
 
 import assets from "./assets.json";
+import billing from "./billing.json";
 import calculators from "./calculators.json";
 import categories from "./categories.json";
 import common from "./common.json";
 import dashboard from "./dashboard.json";
+import docs from "./docs.json";
 import integrations from "./integrations.json";
 import landing from "./landing.json";
 import legal from "./legal.json";
@@ -19,6 +21,7 @@ import navigation from "./navigation.json";
 import onboarding from "./onboarding.json";
 import retirement from "./retirement.json";
 import settings from "./settings.json";
+import strategies from "./strategies.json";
 import worldMap from "./worldMap.json";
 
 const ptPT = {
@@ -37,6 +40,9 @@ const ptPT = {
   metals,
   assets,
   settings,
+  strategies,
+  docs,
+  billing,
 } satisfies Messages;
 
 export default ptPT;

@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "Pies",
+    "subtitle": "Alocações-alvo para a tua carteira: define um peso por fatia e vê quanto as tuas posições se desviaram.",
+    "newPie": "Nova pie",
+    "empty": {
+      "title": "Ainda não há pies",
+      "description": "Uma pie divide a tua carteira em fatias, cada uma uma categoria, uma subcategoria ou posições específicas, com um peso-alvo. O Fiscalis mostra depois quanto a tua alocação real se desvia dele.",
+      "action": "Cria a tua primeira pie"
+    },
+    "card": {
+      "totalValue": "Valor na pie",
+      "maxDrift": "Maior desvio",
+      "noHoldings": "Nenhuma das tuas posições corresponde ainda às fatias desta pie.",
+      "edit": "Editar pie",
+      "delete": "Eliminar pie",
+      "threshold": "As fatias com mais de {threshold} pontos percentuais de desvio face ao alvo precisam de rebalanceamento.",
+      "columns": {
+        "slice": "Fatia",
+        "target": "Alvo",
+        "actual": "Real",
+        "drift": "Desvio",
+        "rebalance": "Para rebalancear"
+      },
+      "drift": "{value} p.p.",
+      "status": {
+        "onTarget": "No alvo",
+        "over": "Sobreponderada",
+        "under": "Subponderada"
+      },
+      "buy": "Comprar {amount}",
+      "sell": "Vender {amount}",
+      "balanced": "—",
+      "allOf": "Todas: {category}",
+      "holdingsCount": "{count, plural, one {# posição} other {# posições}}",
+      "missingHoldings": "{count, plural, one {# posição já não está} other {# posições já não estão}} na tua carteira"
+    },
+    "delete": {
+      "title": "Eliminar esta pie?",
+      "description": "“{name}” e os respetivos pesos-alvo vão ser eliminados. As tuas posições não são afetadas.",
+      "confirm": "Eliminar pie"
+    },
+    "toast": {
+      "created": "Pie “{name}” criada",
+      "updated": "Pie “{name}” atualizada",
+      "deleted": "Pie “{name}” eliminada"
+    },
+    "editor": {
+      "addTitle": "Nova pie",
+      "editTitle": "Editar “{name}”",
+      "description": "Dá a cada fatia um peso-alvo. Os pesos têm de somar 100%.",
+      "name": "Nome",
+      "namePlaceholder": "p. ex. Core & Satellite",
+      "descriptionLabel": "Descrição",
+      "optional": "Opcional",
+      "slices": "Fatias",
+      "slice": "Fatia {number}",
+      "addSlice": "Adicionar fatia",
+      "removeSlice": "Remover fatia",
+      "splitEvenly": "Dividir por igual",
+      "kind": "Alvo",
+      "kinds": {
+        "category": "Categoria",
+        "holdings": "Posições específicas"
+      },
+      "category": "Categoria",
+      "subcategory": "Subcategoria",
+      "allSubcategories": "Todas as subcategorias",
+      "holdings": "Posições",
+      "noHoldings": "Ainda não tens posições para escolher.",
+      "holdingGone": "Já não está na tua carteira",
+      "label": "Etiqueta",
+      "weight": "Peso-alvo (%)",
+      "total": "Total: {total}%",
+      "totalOff": "Total: {total}%. Os pesos têm de somar 100%."
+    }
+  }
+}

@@ -30,6 +30,8 @@ import {
   withoutSnapshotHoldings,
 } from "../../services/portfolio/aggregate";
 import { getUserId } from "./lib/auth";
+import { notify } from "./lib/notifications";
+import { netWorthChangeNotification } from "../../services/notifications/notifications";
 
 /** Delay before a snapshot requested by a manual change is taken. */
 export const SNAPSHOT_DEBOUNCE_MS = 60_000;
@@ -159,6 +161,15 @@ export const takeSnapshot = internalMutation({
         }
       }
     }
+
+    // A day-over-day move beyond the threshold (deduped to one per day)
+    const alert = netWorthChangeNotification({
+      previous: previous ?? undefined,
+      current: { netWorth, partial: fields.partial },
+      today,
+      nowMs: now,
+    });
+    if (alert) await notify(ctx, userId, alert);
 
     return { totalAssets, totalLiabilities, netWorth };
   },

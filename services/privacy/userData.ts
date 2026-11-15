@@ -58,6 +58,8 @@ export const USER_DATA_TABLES = [
   { table: "onboardingProgress", excludedFields: [] },
   { table: "userSettings", excludedFields: [] },
   { table: "planGrants", excludedFields: [] },
+  { table: "notifications", excludedFields: [] },
+  { table: "notificationPreferences", excludedFields: [] },
 ] as const satisfies readonly UserDataTable[];
 
 export type UserDataTableName = (typeof USER_DATA_TABLES)[number]["table"];

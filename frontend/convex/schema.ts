@@ -20,6 +20,7 @@ import {
 	LOAN_TYPES,
 	PREPAYMENT_EFFECTS,
 } from "../../services/finance/loanScheduleService";
+import { NOTIFICATION_TYPES } from "../../services/notifications/notifications";
 
 // Loan enums are declared once in the loan engine; these validators derive
 // from the same const arrays
@@ -31,6 +32,7 @@ export const loanStatusValidator = oneOf(LOAN_STATUSES);
 export const loanPaymentTypeValidator = oneOf(LOAN_PAYMENT_TYPES);
 export const prepaymentEffectValidator = oneOf(PREPAYMENT_EFFECTS);
 export const dayCountValidator = oneOf(DAY_COUNT_CONVENTIONS);
+export const notificationTypeValidator = oneOf(NOTIFICATION_TYPES);
 
 /** Retirement plan: how a funding category grows (FundingTreatment in retirementService). */
 export const retirementFundingTreatmentValidator = v.union(
@@ -1250,6 +1252,49 @@ export default defineSchema({
 		grantedAt: v.number(),
 		expiresAt: v.optional(v.number()), // epoch ms; absent = no end
 	}).index("by_user", ["userId"]),
+
+	// ═══════════════════════════════════════════════════════════════
+	// NOTIFICATIONS (ENG-207)
+	// ═══════════════════════════════════════════════════════════════
+	// The notification centre (convex/notifications.ts). A row holds message
+	// keys of the `notifications` namespace plus params, never rendered
+	// text, so it shows in the viewer's language. Written by
+	// lib/notifications.ts notify (preferences and dedupe checked there);
+	// pruned after 90 days (services/notifications/notifications.ts).
+
+	notifications: defineTable({
+		userId: v.string(),
+		type: notificationTypeValidator,
+		titleKey: v.string(), // e.g. "messages.syncFailed.title"
+		bodyKey: v.string(),
+		params: v.optional(v.record(v.string(), v.union(v.string(), v.number()))),
+		link: v.optional(v.string()), // in-app route
+		// Same key for the same event (a connection's failed sync per day)
+		dedupeKey: v.optional(v.string()),
+		// false: the user switched the type off in the app and only gets the
+		// email; the row stays so the dedupe still holds
+		inApp: v.boolean(),
+		createdAt: v.number(),
+		readAt: v.optional(v.number()),
+		emailedAt: v.optional(v.number()),
+	})
+		.index("by_user", ["userId"])
+		.index("by_user_inApp_created", ["userId", "inApp", "createdAt"])
+		.index("by_user_inApp_read", ["userId", "inApp", "readAt"])
+		.index("by_user_dedupe", ["userId", "dedupeKey"])
+		.index("by_created", ["createdAt"]),
+
+	// Per user and type: in-app on/off, email on/off. No row = the default
+	// (in the app, no email; services/notifications DEFAULT_PREFERENCE).
+	notificationPreferences: defineTable({
+		userId: v.string(),
+		type: notificationTypeValidator,
+		inApp: v.boolean(),
+		email: v.boolean(),
+		updatedAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_user_type", ["userId", "type"]),
 
 	apiKeys: defineTable({
 		userId: v.string(), // Clerk user ID that owns the key

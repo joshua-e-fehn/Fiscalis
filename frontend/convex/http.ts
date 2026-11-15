@@ -18,6 +18,7 @@ import {
 } from "./lib/scheduledSync";
 import { verifySvixSignature } from "../../services/security/svixSignature";
 import { deletedClerkUserId } from "../../services/privacy/userData";
+import { billingNotification } from "../../services/notifications/notifications";
 
 // ═══════════════════════════════════════════════════════════════
 // Convex HTTP Router
@@ -391,6 +392,23 @@ http.route({
 // verifies the Stripe-Signature header against STRIPE_WEBHOOK_SECRET before
 // it reads the event, then syncs customers, subscriptions and invoices into
 // its tables (billing.ts reads them for the plan).
-registerStripeRoutes(http, components.stripe, { webhookPath: "/stripe/webhook" });
+// After its own syncing, a plan start or end and a failed payment notify
+// the user (services/notifications/notifications.ts billingNotification).
+registerStripeRoutes(http, components.stripe, {
+  webhookPath: "/stripe/webhook",
+  onEvent: async (ctx, event) => {
+    const billing = billingNotification(event);
+    if (!billing) return;
+    try {
+      await ctx.runMutation(internal.notifications.notifyUser, {
+        userId: billing.userId,
+        ...billing.content,
+      });
+    } catch {
+      // The webhook's own work is done; a lost notification is not a retry
+      console.error(`POST /stripe/webhook: ${event.type} notification not written`);
+    }
+  },
+});
 
 export default http;

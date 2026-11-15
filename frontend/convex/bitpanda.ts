@@ -13,6 +13,8 @@ import {
 import { bitpandaOverridePatch } from "./lib/classificationOverride";
 import { getOwnedDoc, requireUserId } from "./lib/auth";
 import { requireConnectionSlot } from "./lib/plan";
+import { notify } from "./lib/notifications";
+import { connectionStatusNotification } from "../../services/notifications/notifications";
 import { ensureSyncTarget } from "./lib/syncTargets";
 import { deleteOverridesByKeyPrefix } from "./valuationOverrides";
 import {
@@ -250,6 +252,9 @@ export const updateConnectionStatus = internalMutation({
     lastSyncAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) throw new Error("Connection not found");
+    const now = Date.now();
     // errorMessage is cleared when absent; lastSyncAt is only ever moved
     // forward, so a failed or in-progress sync keeps the last good time
     // (as brokers.updateConnectionStatus)
@@ -257,8 +262,16 @@ export const updateConnectionStatus = internalMutation({
       status: args.status,
       errorMessage: args.errorMessage,
       ...(args.lastSyncAt !== undefined ? { lastSyncAt: args.lastSyncAt } : {}),
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
+    const alert = connectionStatusNotification({
+      provider: "bitpanda",
+      connection: connection._id,
+      name: connection.label ?? "Bitpanda",
+      status: args.status,
+      nowMs: now,
+    });
+    if (alert) await notify(ctx, connection.userId, alert);
   },
 });
 

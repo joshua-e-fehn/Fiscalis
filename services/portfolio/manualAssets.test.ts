@@ -274,12 +274,15 @@ describe("parseTypedAmount", () => {
     expect(parseTypedAmount("1,2,3.4.5", "en")).toBeNaN();
   });
 
-  it("reads German input", () => {
+  it("reads German and Italian input", () => {
     expect(parseTypedAmount("250.000", "de")).toBe(250_000);
     expect(parseTypedAmount("1.250,50", "de")).toBe(1250.5);
     expect(parseTypedAmount("1250,5", "de")).toBe(1250.5);
     expect(parseTypedAmount("1500.50", "de")).toBe(1500.5);
     expect(parseTypedAmount("1.250.000", "de")).toBe(1_250_000);
+    expect(parseTypedAmount("250.000", "it-IT")).toBe(250_000);
+    expect(parseTypedAmount("1.250,50", "it-IT")).toBe(1250.5);
+    expect(parseTypedAmount("1250,5", "it")).toBe(1250.5);
   });
 
   it("reads Spanish input", () => {
@@ -312,6 +315,7 @@ describe("localeDecimalMark", () => {
     expect(localeDecimalMark("de-DE")).toBe(",");
     expect(localeDecimalMark("es-ES")).toBe(",");
     expect(localeDecimalMark("fr-FR")).toBe(",");
+    expect(localeDecimalMark("it-IT")).toBe(",");
     expect(localeDecimalMark("not a locale")).toBe(".");
   });
 });

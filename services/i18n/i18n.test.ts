@@ -215,8 +215,13 @@ describe("resolveLocale", () => {
 
 // The defaults assume NEXT_PUBLIC_I18N_PREVIEW is unset.
 describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered languages", () => {
-  it("renders English, German, Spanish and French", () => {
-    expect(RENDERED_LANGUAGES).toEqual(["en", "de", "es", "fr"]);
+  it("renders English, German, Spanish, French and Italian", () => {
+    expect(RENDERED_LANGUAGES).toEqual(["en", "de", "es", "fr", "it"]);
+  });
+
+  it("renders Italian for Italian visitors", () => {
+    expect(resolveLocale({ acceptLanguage: "it-IT,it;q=0.9" })).toBe("it");
+    expect(renderedLanguage("it")).toBe("it");
   });
 
   it("renders German for German visitors and users by default", () => {

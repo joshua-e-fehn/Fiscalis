@@ -177,11 +177,15 @@ export function useRefreshAccounts() {
   const [error, setError] = useState<Error | null>(null);
 
   const mutate = useCallback(
-    async (itemId?: string) => {
+    // afterReconnect: the user just renewed the item in update mode
+    async (itemId?: string, options?: { afterReconnect?: boolean }) => {
       setIsLoading(true);
       setError(null);
       try {
-        const result = await refreshAccounts({ itemId });
+        const result = await refreshAccounts({
+          itemId,
+          afterReconnect: options?.afterReconnect,
+        });
         return result;
       } catch (err) {
         const error = toActionError(err);

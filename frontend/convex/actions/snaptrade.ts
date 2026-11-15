@@ -32,12 +32,10 @@ import { enforceUserRateLimit } from "../lib/rateLimit";
 import { withSyncRun, type SyncTrigger } from "../lib/syncRuns";
 import { syncTriggerValidator } from "../lib/syncRunValidators";
 import { itemsOutcome } from "../../../services/health/syncRuns";
-
-// TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
-// After deploying to production, add webhook handler at:
-// - app/(api)/api/webhooks/snaptrade/route.ts
-// Events to handle: ACCOUNT_UPDATED, HOLDINGS_UPDATED, CONNECTION_BROKEN, CONNECTION_DELETED
-// See docs/archive/SNAPTRADE_INTEGRATION_PLAN.md Phase 10 for implementation guide
+import {
+  snaptradeWebhookEvent,
+  verifySnaptradeWebhook,
+} from "../../../services/security/snaptradeWebhook";
 
 // ═══════════════════════════════════════════════════════════════
 // USER REGISTRATION ACTIONS
@@ -1293,5 +1291,110 @@ export const syncAllForUserInternal = internalAction({
         error: error instanceof Error ? error.message : "Sync failed",
       };
     }
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// WEBHOOKS (ENG-240)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Verify and handle one SnapTrade webhook (POST /snaptrade-webhook,
+ * http.ts). Returns the HTTP status for SnapTrade: 401 when the signature
+ * or timestamp fails, 200 otherwise (also for ignored events and unknown
+ * connections, so SnapTrade does not retry them).
+ *
+ * - CONNECTION_BROKEN: the connection asks the user to reconnect.
+ * - CONNECTION_DELETED: removed at SnapTrade, so its local data is deleted
+ *   (as deleteConnection does after revoking it).
+ * - ACCOUNT_HOLDINGS_UPDATED, CONNECTION_FIXED, NEW_ACCOUNT_AVAILABLE: the
+ *   connection is synced (scheduled; no snapshot, the daily sync takes it).
+ *
+ * The payload's userId must be the connection's SnapTrade user, so a
+ * webhook cannot act on another user's connection.
+ */
+export const receiveWebhook = internalAction({
+  args: { body: v.string(), signature: v.optional(v.string()) },
+  returns: v.object({ status: v.number() }),
+  handler: async (ctx, args): Promise<{ status: number }> => {
+    const consumerKey = process.env.SNAPTRADE_SECRET;
+    if (!consumerKey) {
+      console.error("SnapTrade webhook: SNAPTRADE_SECRET is not set");
+      return { status: 500 };
+    }
+
+    const verified = await verifySnaptradeWebhook({
+      signature: args.signature,
+      body: args.body,
+      consumerKey,
+      nowMs: Date.now(),
+    });
+    if (!verified.ok) {
+      console.warn(`SnapTrade webhook rejected: ${verified.reason}`);
+      return { status: verified.reason === "malformed_body" ? 400 : 401 };
+    }
+
+    const event = snaptradeWebhookEvent(verified.payload);
+    if (event.kind === "ignore") {
+      console.log(`SnapTrade webhook ignored: ${event.reason}`);
+      return { status: 200 };
+    }
+
+    const connection: Doc<"brokerConnections"> | null = await ctx.runQuery(
+      internal.brokers.getConnectionByAuthorizationId,
+      { authorizationId: event.authorizationId },
+    );
+    if (!connection || connection.snaptradeUserId !== event.snaptradeUserId) {
+      console.log(`SnapTrade webhook ${event.kind} for unknown connection`);
+      return { status: 200 };
+    }
+    console.log(`SnapTrade webhook ${event.kind} for connection ${connection._id}`);
+
+    switch (event.kind) {
+      case "connection_broken":
+        await ctx.runMutation(internal.brokers.updateConnectionStatus, {
+          connectionId: connection._id,
+          status: "reauth_required",
+          errorMessage: "snaptradeConnectionExpired" satisfies UserErrorCode,
+        });
+        break;
+      case "connection_deleted":
+        await ctx.runMutation(internal.brokers.deleteConnectionData, {
+          connectionId: connection._id,
+        });
+        await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
+          userId: connection.userId,
+          source: "snaptrade-disconnect",
+        });
+        break;
+      case "sync_connection":
+        await ctx.scheduler.runAfter(0, internal.actions.snaptrade.syncConnectionInternal, {
+          userId: connection.userId,
+          connectionId: connection._id,
+        });
+        break;
+    }
+    return { status: 200 };
+  },
+});
+
+/** Sync one connection (from a webhook); errors land on the connection. */
+export const syncConnectionInternal = internalAction({
+  args: { userId: v.string(), connectionId: v.id("brokerConnections") },
+  returns: v.null(),
+  handler: async (ctx, { userId, connectionId }): Promise<null> => {
+    const result = await syncSnaptrade(
+      ctx,
+      userId,
+      { kind: "connection", connectionId },
+      // Not user-initiated: a failure counts like a cron one
+      "scheduled",
+    );
+    if (result && result.errors.length > 0) {
+      console.warn(
+        `[SNAPTRADE WEBHOOK] Sync of ${connectionId} had ${result.errors.length} error(s)`,
+      );
+    }
+    return null;
   },
 });

@@ -72,6 +72,13 @@ export default defineSchema({
 		// absent until the item's first sync, which reads the full history
 		transactionsCursor: v.optional(v.string()),
 		transactionsSyncedAt: v.optional(v.number()),
+		// End of the user's consent per Plaid (consent_expiration_time, ms),
+		// mirrored on each balance sync and by the PENDING_EXPIRATION webhook;
+		// absent when consent does not expire (ENG-240)
+		consentExpiresAt: v.optional(v.number()),
+		// Expected disconnect after a PENDING_DISCONNECT webhook (ms); cleared
+		// when the user renews in update mode
+		disconnectExpectedAt: v.optional(v.number()),
 		createdAt: v.number(),
 		updatedAt: v.number(),
 	})

@@ -168,6 +168,16 @@ export function BanksCard({}: BanksCardProps) {
               institutionLogo={item.institutionLogo}
               institutionPrimaryColor={item.institutionPrimaryColor}
               accounts={itemAccounts}
+              // A broken item already has its BankReauthCard (and reconnect
+              // button) above, so only a working one gets the consent notice
+              consent={
+                item.status === "active"
+                  ? {
+                      consentExpiresAt: item.consentExpiresAt,
+                      disconnectExpectedAt: item.disconnectExpectedAt,
+                    }
+                  : undefined
+              }
             />
           );
         })}

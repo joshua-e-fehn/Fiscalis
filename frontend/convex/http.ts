@@ -18,7 +18,8 @@ import {
 
 // ═══════════════════════════════════════════════════════════════
 // Convex HTTP Router
-// Health checks + the public, API-key authenticated REST API.
+// Health checks, provider webhooks and the public, API-key authenticated
+// REST API.
 // Served from https://<deployment>.convex.site
 // ═══════════════════════════════════════════════════════════════
 
@@ -254,6 +255,70 @@ http.route({
       // Never echo internal errors (they may contain data) to API clients.
       console.error("GET /api/v1/net-worth failed");
       return apiError(500, "internal_error", "Internal error.");
+    }
+  }),
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PROVIDER WEBHOOKS (ENG-240)
+// ═══════════════════════════════════════════════════════════════
+//
+// Unauthenticated by design: each provider signs its requests, and the
+// signature is checked before anything is read from the body (Plaid: ES256
+// JWT in Plaid-Verification, SnapTrade: HMAC in Signature). The response
+// carries no body, so it reveals nothing.
+
+/** Larger bodies are refused unread; real webhooks are a few KB. */
+const MAX_WEBHOOK_BYTES = 256 * 1024;
+
+async function readWebhookBody(request: Request): Promise<string | null> {
+  const declared = Number(request.headers.get("Content-Length") ?? "0");
+  if (declared > MAX_WEBHOOK_BYTES) return null;
+  const body = await request.text();
+  return body.length > MAX_WEBHOOK_BYTES ? null : body;
+}
+
+const webhookResponse = (status: number) =>
+  new Response(null, { status, headers: { "Cache-Control": "no-store" } });
+
+// Registered per item: link tokens carry it (actions/plaid.ts createLinkToken),
+// older items get it from actions/plaid.ts updateItemWebhooks
+http.route({
+  path: "/plaid-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await readWebhookBody(request);
+    if (body === null) return webhookResponse(413);
+    try {
+      const { status } = await ctx.runAction(internal.actions.plaid.receiveWebhook, {
+        body,
+        verification: request.headers.get("Plaid-Verification") ?? undefined,
+      });
+      return webhookResponse(status);
+    } catch {
+      // A 5xx makes Plaid retry
+      console.error("POST /plaid-webhook failed");
+      return webhookResponse(500);
+    }
+  }),
+});
+
+// Registered once in the SnapTrade dashboard
+http.route({
+  path: "/snaptrade-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await readWebhookBody(request);
+    if (body === null) return webhookResponse(413);
+    try {
+      const { status } = await ctx.runAction(internal.actions.snaptrade.receiveWebhook, {
+        body,
+        signature: request.headers.get("Signature") ?? undefined,
+      });
+      return webhookResponse(status);
+    } catch {
+      console.error("POST /snaptrade-webhook failed");
+      return webhookResponse(500);
     }
   }),
 });

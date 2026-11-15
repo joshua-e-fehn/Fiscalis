@@ -107,5 +107,51 @@
   "comingSoon": {
     "inventoryTitle": "{name}: your holdings",
     "notice": "Tracking for this category is coming soon."
+  },
+  "manualAssets": {
+    "add": "Add asset",
+    "emptyHint": "Add an asset to track it here. It counts in your net worth at its latest valuation.",
+    "addTitle": "Add an asset",
+    "editTitle": "Edit {name}",
+    "description": "Record something no connected account reports. It counts in your net worth at its latest valuation.",
+    "actionsLabel": "Actions for {name}",
+    "fields": {
+      "category": "Category",
+      "subcategory": "Subcategory",
+      "name": "Name",
+      "namePlaceholder": "e.g. Flat in Munich, Rolex Submariner",
+      "currency": "Currency",
+      "valuations": "Valuations",
+      "valuationsHint": "What the asset was worth on each date. The latest one counts.",
+      "date": "Date",
+      "value": "Value",
+      "addValuation": "Add valuation",
+      "removeValuation": "Remove valuation",
+      "costBasis": "Purchase price",
+      "optional": "Optional",
+      "costBasisHint": "With a purchase price, the gain or loss is shown. Link the loan that financed the asset, if any.",
+      "linkedLoan": "Financed by",
+      "noLoan": "No loan"
+    },
+    "attributes": {
+      "artist": "Artist",
+      "brand": "Brand",
+      "model": "Model",
+      "referenceNumber": "Reference no.",
+      "producer": "Producer",
+      "vintage": "Vintage",
+      "year": "Year",
+      "address": "Address",
+      "grade": "Grade"
+    },
+    "toast": {
+      "created": "{name} added",
+      "updated": "{name} saved",
+      "deleted": "{name} deleted"
+    },
+    "deleteDialog": {
+      "title": "Delete {name}?",
+      "description": "The asset and all its valuations are removed and no longer count in your net worth. This can't be undone."
+    }
   }
 }

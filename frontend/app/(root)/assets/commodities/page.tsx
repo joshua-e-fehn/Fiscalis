@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
+import { ManualAssetDialog } from "@/components/atomic/molecules/manualAssets";
 import { useCommoditiesSummary } from "@/hooks/convex/commodities";
 import {
   commoditiesCategoryCards,
@@ -17,6 +19,7 @@ export default function CommoditiesPage() {
   const t = useTranslations("assets.commodities");
   const labels = useCategoryLabels();
   const tAction = useTranslations("assets.actions");
+  const [adding, setAdding] = useState(false);
 
   // Check if there are any holdings
   const hasHoldings = summary && summary.totalValue > 0;
@@ -29,7 +32,7 @@ export default function CommoditiesPage() {
         actions={[
           {
             label: tAction("addItem"),
-            href: "/assets/commodities/metals",
+            onClick: () => setAdding(true),
             variant: "outline",
           },
           { label: tAction("connectBroker"), href: "/integrations/brokers" },
@@ -52,6 +55,12 @@ export default function CommoditiesPage() {
         cards={commoditiesCategoryCards}
         actionLabel={tAction("viewPortfolio")}
         className="w-full"
+      />
+
+      <ManualAssetDialog
+        open={adding}
+        onOpenChange={setAdding}
+        category="commodities"
       />
     </main>
   );

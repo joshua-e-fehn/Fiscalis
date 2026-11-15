@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
+import { ManualAssetDialog } from "@/components/atomic/molecules/manualAssets";
 import { useEquitiesSummary } from "@/hooks/convex/equities";
 import {
   equitiesPublicCards,
@@ -18,6 +20,7 @@ export default function EquitiesPage() {
   const t = useTranslations("assets.equities");
   const labels = useCategoryLabels();
   const tAction = useTranslations("assets.actions");
+  const [adding, setAdding] = useState(false);
 
   // Check if there are any holdings
   const hasHoldings = summary && summary.totalValue > 0;
@@ -28,6 +31,11 @@ export default function EquitiesPage() {
         title={labels.categoryName("equities")}
         subtitle={t("subtitle")}
         actions={[
+          {
+            label: tAction("addItem"),
+            onClick: () => setAdding(true),
+            variant: "outline",
+          },
           { label: tAction("connectBroker"), href: "/integrations/brokers" },
         ]}
       />
@@ -53,6 +61,12 @@ export default function EquitiesPage() {
         title={t("privateMarkets")}
         cards={equitiesPrivateCards}
         actionLabel={tAction("viewHoldings")}
+      />
+
+      <ManualAssetDialog
+        open={adding}
+        onOpenChange={setAdding}
+        category="equities"
       />
     </div>
   );

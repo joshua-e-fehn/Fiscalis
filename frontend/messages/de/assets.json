@@ -107,5 +107,51 @@
   "comingSoon": {
     "inventoryTitle": "{name}: dein Bestand",
     "notice": "Diese Kategorie kannst du bald hier erfassen."
+  },
+  "manualAssets": {
+    "add": "Vermögenswert hinzufügen",
+    "emptyHint": "Füge einen Vermögenswert hinzu, um ihn hier zu verfolgen. Er zählt mit seiner letzten Bewertung zu deinem Nettovermögen.",
+    "addTitle": "Vermögenswert hinzufügen",
+    "editTitle": "{name} bearbeiten",
+    "description": "Erfasse, was kein verbundenes Konto meldet. Es zählt mit seiner letzten Bewertung zu deinem Nettovermögen.",
+    "actionsLabel": "Aktionen für {name}",
+    "fields": {
+      "category": "Kategorie",
+      "subcategory": "Unterkategorie",
+      "name": "Name",
+      "namePlaceholder": "z. B. Wohnung in München, Rolex Submariner",
+      "currency": "Währung",
+      "valuations": "Bewertungen",
+      "valuationsHint": "Was der Vermögenswert an jedem Datum wert war. Die letzte Bewertung zählt.",
+      "date": "Datum",
+      "value": "Wert",
+      "addValuation": "Bewertung hinzufügen",
+      "removeValuation": "Bewertung entfernen",
+      "costBasis": "Kaufpreis",
+      "optional": "Optional",
+      "costBasisHint": "Mit einem Kaufpreis siehst du Gewinn oder Verlust. Verknüpfe den Kredit, der den Vermögenswert finanziert hat, falls es einen gibt.",
+      "linkedLoan": "Finanziert durch",
+      "noLoan": "Kein Kredit"
+    },
+    "attributes": {
+      "artist": "Künstler:in",
+      "brand": "Marke",
+      "model": "Modell",
+      "referenceNumber": "Referenznr.",
+      "producer": "Erzeuger",
+      "vintage": "Jahrgang",
+      "year": "Jahr",
+      "address": "Adresse",
+      "grade": "Zustand/Grading"
+    },
+    "toast": {
+      "created": "{name} hinzugefügt",
+      "updated": "{name} gespeichert",
+      "deleted": "{name} gelöscht"
+    },
+    "deleteDialog": {
+      "title": "{name} löschen?",
+      "description": "Der Vermögenswert und alle seine Bewertungen werden entfernt und zählen nicht mehr zu deinem Nettovermögen. Das lässt sich nicht rückgängig machen."
+    }
   }
 }

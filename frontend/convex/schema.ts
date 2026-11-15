@@ -1164,6 +1164,22 @@ export default defineSchema({
 		createdAt: v.number(),
 	}).index("by_user", ["userId"]),
 
+	// ═══════════════════════════════════════════════════════════════
+	// PLAN GRANTS (ENG-199)
+	// ═══════════════════════════════════════════════════════════════
+	// Pro without a Stripe subscription: the grandfathered first users
+	// (migrations:grantProToExistingUsers) and complimentary accounts.
+	// Paid plans live in the Stripe component's tables (convex/billing.ts);
+	// services/billing/plans.ts resolvePlan combines the two.
+
+	planGrants: defineTable({
+		userId: v.string(),
+		plan: v.literal("pro"),
+		reason: v.union(v.literal("grandfathered"), v.literal("complimentary")),
+		grantedAt: v.number(),
+		expiresAt: v.optional(v.number()), // epoch ms; absent = no end
+	}).index("by_user", ["userId"]),
+
 	apiKeys: defineTable({
 		userId: v.string(), // Clerk user ID that owns the key
 		name: v.string(), // User-chosen label

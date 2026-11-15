@@ -7,6 +7,7 @@
 import { convexTest } from "convex-test";
 import migrationsTest from "@convex-dev/migrations/test";
 import rateLimiterTest from "@convex-dev/rate-limiter/test";
+import stripeTest from "@convex-dev/stripe/test";
 import type { TableNames } from "../_generated/dataModel";
 import schema from "../schema";
 import { insertDemoData, type DemoIds } from "../lib/demoData";
@@ -26,6 +27,7 @@ export function newTest() {
   const t = convexTest(schema, modules);
   rateLimiterTest.register(t);
   migrationsTest.register(t);
+  stripeTest.register(t);
   return t;
 }
 

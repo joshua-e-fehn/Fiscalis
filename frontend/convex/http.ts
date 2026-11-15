@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction, type ActionCtx } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { components, internal } from "./_generated/api";
+import { registerRoutes as registerStripeRoutes } from "@convex-dev/stripe";
 import {
   hashApiKey,
   parseBearerApiKey,
@@ -379,5 +380,15 @@ http.route({
     }
   }),
 });
+
+// ═══════════════════════════════════════════════════════════════
+// STRIPE WEBHOOK (ENG-198)
+// ═══════════════════════════════════════════════════════════════
+//
+// POST /stripe/webhook, registered in the Stripe dashboard. The component
+// verifies the Stripe-Signature header against STRIPE_WEBHOOK_SECRET before
+// it reads the event, then syncs customers, subscriptions and invoices into
+// its tables (billing.ts reads them for the plan).
+registerStripeRoutes(http, components.stripe, { webhookPath: "/stripe/webhook" });
 
 export default http;

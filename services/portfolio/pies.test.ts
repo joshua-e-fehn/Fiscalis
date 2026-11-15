@@ -80,6 +80,14 @@ describe("validatePie", () => {
     expect(validatePie(at(Number.NaN, 100))).toBe("pieWeightInvalid");
     expect(validatePie(at(60, 30))).toBe("pieWeightsNotHundred");
     expect(validatePie(at(60, 40.02))).toBe("pieWeightsNotHundred");
+    // Stored weights are rounded: 0.001 would be stored as 0
+    expect(validatePie(at(0.001, 99.999))).toBe("pieWeightInvalid");
+    // 33.333 + 33.333 + 33.334 = 100, but the stored weights sum to 99.99
+    const thirds = [33.333, 33.333, 33.334].map((weight, i): PieSlice => ({
+      weight,
+      target: { kind: "category", category: ["equities", "bonds", "cash"][i] },
+    }));
+    expect(validatePie(pie({ slices: thirds }))).toBe("pieWeightsNotHundred");
   });
 
   it("rejects unknown categories, liabilities and empty targets", () => {
@@ -99,6 +107,12 @@ describe("validatePie", () => {
       { weight: 50, target: { kind: "category", category: "equities", subcategory: "etfs" } },
     ];
     expect(validatePie(pie({ slices }))).toBe("pieSliceDuplicate");
+    // Stored trimmed, so " etfs " is the same subcategory
+    const padded: PieSlice[] = [
+      { weight: 50, target: { kind: "category", category: "equities", subcategory: "etfs" } },
+      { weight: 50, target: { kind: "category", category: "equities", subcategory: " etfs " } },
+    ];
+    expect(validatePie(pie({ slices: padded }))).toBe("pieSliceDuplicate");
     const holdings: PieSlice[] = [
       { weight: 50, target: { kind: "holdings", holdingKeys: ["a", "b"] } },
       { weight: 50, target: { kind: "holdings", holdingKeys: ["b"] } },
@@ -173,6 +187,16 @@ describe("pieHoldingsFrom", () => {
       { key: "broker:acc:VWCE", name: "VWCE", category: "equities", subcategory: "etfs", value: 1000 },
       { key: "doc2", name: "Flat", category: "real-estate", subcategory: "residential", value: 300000 },
       { key: "card", name: "Card", category: "cash", subcategory: "credit-balance", value: 40 },
+    ]);
+  });
+
+  it("lists holdings under one key once, at their summed value", () => {
+    const holdings: NormalizedHolding[] = [
+      { ...base, id: "w1", key: "bitpanda:c:crypto:BTC", source: "bitpanda", category: "crypto", subcategory: "bitcoin", name: "BTC", valueBase: 300 },
+      { ...base, id: "w2", key: "bitpanda:c:crypto:BTC", source: "bitpanda", category: "crypto", subcategory: "bitcoin", name: "BTC", valueBase: 200 },
+    ];
+    expect(pieHoldingsFrom(holdings)).toEqual([
+      { key: "bitpanda:c:crypto:BTC", name: "BTC", category: "crypto", subcategory: "bitcoin", value: 500 },
     ]);
   });
 });

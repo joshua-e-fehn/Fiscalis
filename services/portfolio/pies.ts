@@ -66,14 +66,15 @@ export function roundWeight(weight: number): number {
   return Math.round(weight * 100) / 100;
 }
 
-/** Sum of the slices' weights, to two decimals. */
+/** Sum of the slices' weights as stored (each rounded to two decimals). */
 export function totalWeight(slices: readonly Pick<PieSlice, "weight">[]): number {
-  return roundWeight(slices.reduce((sum, s) => sum + s.weight, 0));
+  return roundWeight(slices.reduce((sum, s) => sum + roundWeight(s.weight), 0));
 }
 
 /**
  * The first rule the input breaks, as a user error code, or null when it
- * is a valid pie.
+ * is a valid pie. The rules hold for the input as normalizePie stores it:
+ * weights are checked after rounding and targets after trimming.
  */
 export function validatePie(input: PieInput): UserErrorCode | null {
   const name = input.name.trim();
@@ -89,7 +90,11 @@ export function validatePie(input: PieInput): UserErrorCode | null {
   const holdingKeys = new Set<string>();
   for (const slice of input.slices) {
     if ((slice.label?.trim().length ?? 0) > PIE_LABEL_MAX) return "pieLabelTooLong";
-    if (!Number.isFinite(slice.weight) || slice.weight <= 0 || slice.weight > 100) {
+    if (
+      !Number.isFinite(slice.weight) ||
+      roundWeight(slice.weight) <= 0 ||
+      roundWeight(slice.weight) > 100
+    ) {
       return "pieWeightInvalid";
     }
     const { target } = slice;
@@ -98,7 +103,7 @@ export function validatePie(input: PieInput): UserErrorCode | null {
       if (target.subcategory !== undefined && !target.subcategory.trim()) {
         return "pieSliceTargetInvalid";
       }
-      const identity = `${target.category}:${target.subcategory ?? ""}`;
+      const identity = `${target.category}:${target.subcategory?.trim() ?? ""}`;
       if (targets.has(identity)) return "pieSliceDuplicate";
       targets.add(identity);
     } else {
@@ -183,21 +188,29 @@ export interface PieHolding {
 /**
  * The asset holdings a pie can hold, at their placed category and value
  * (a credit balance is cash): liabilities and empty holdings are left out.
+ * Holdings under one key (e.g. two wallets of a symbol) are one holding,
+ * at the first one's name and category, so a key is listed once.
  */
 export function pieHoldingsFrom(holdings: readonly NormalizedHolding[]): PieHolding[] {
-  const out: PieHolding[] = [];
+  const byKey = new Map<string, PieHolding>();
   for (const h of holdings) {
     const at = placeHolding(h);
     if (at.category === "liabilities" || !(at.value > 0)) continue;
-    out.push({
-      key: h.key ?? h.id,
+    const key = h.key ?? h.id;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.value += at.value;
+      continue;
+    }
+    byKey.set(key, {
+      key,
       name: h.name,
       category: at.category,
       subcategory: at.subcategory,
       value: at.value,
     });
   }
-  return out;
+  return [...byKey.values()];
 }
 
 // ═══════════════════════════════════════════════════════════════

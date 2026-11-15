@@ -265,6 +265,12 @@ describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered language
     expect(resolveLocale({ acceptLanguage: "zh-CN,zh;q=0.9" })).toBe("zh-Hans");
   });
 
+  it("renders Hindi for Hindi visitors", () => {
+    expect(RENDERED_LANGUAGES).toContain("hi");
+    expect(resolveLocale({ acceptLanguage: "hi-IN,hi;q=0.9" })).toBe("hi");
+    expect(renderedLanguage("hi")).toBe("hi");
+  });
+
   it("renders German for German visitors and users by default", () => {
     expect(resolveLocale({ cookie: "de", acceptLanguage: "en-GB" })).toBe("de");
     expect(resolveLocale({ acceptLanguage: "de-CH,de;q=0.9" })).toBe("de");

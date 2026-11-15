@@ -13,6 +13,8 @@
  */
 
 import { describeError } from "../security/providerError";
+// Hex SHA-256 of a string; the same hash API keys are stored as
+import { hashApiKey as sha256Hex } from "../apiKeys/apiKeyService";
 
 export const SYNC_PROVIDERS = [
   "plaid",
@@ -246,12 +248,6 @@ export function summarizeSyncRuns(
     truncated: options.truncated ?? false,
     providers,
   };
-}
-
-/** Hex SHA-256 of a string (Web Crypto: Convex runtime, Node, vitest). */
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** The shortest monitor secret accepted: shorter is a configuration error. */

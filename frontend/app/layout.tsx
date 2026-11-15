@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Noto_Sans_Devanagari } from "next/font/google";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { NextIntlClientProvider } from "next-intl";
@@ -26,6 +26,15 @@ const inter = Inter({
     '"Noto Sans SC"',
     "sans-serif",
   ],
+});
+// Inter has no Devanagari glyphs either. next/font self-hosts this with a
+// Devanagari-only unicode-range, so it is listed first without a fallback
+// face (Latin and CJK text fall through to Inter's stack) and browsers only
+// fetch it for Hindi text; not preloaded because most pages never render any.
+const devanagari = Noto_Sans_Devanagari({
+  subsets: ["devanagari"],
+  preload: false,
+  adjustFontFallback: false,
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -62,7 +71,12 @@ export default async function AppLayout({
     >
       {/* next-themes sets the theme class on <html> before hydration */}
       <html lang={language} dir={localeDirection(language)} suppressHydrationWarning>
-        <body className={inter.className}>
+        <body
+          className={inter.className}
+          style={{
+            fontFamily: `${devanagari.style.fontFamily}, ${inter.style.fontFamily}`,
+          }}
+        >
           {/* Inherits locale, messages, time zone and formats from i18n/request.ts */}
           <NextIntlClientProvider>
             <ThemeProvider nonce={nonce}>

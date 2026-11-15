@@ -40,18 +40,6 @@ import { syncErrorCode, type SyncOutcome } from "../../../services/health/syncRu
 import { userError } from "../lib/userError";
 
 // ═══════════════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════════════
-
-function getEncryptionKey(): string {
-  const key = process.env.CONVEX_ENCRYPTION_KEY;
-  if (!key) {
-    throw new Error("CONVEX_ENCRYPTION_KEY environment variable not set");
-  }
-  return key;
-}
-
-// ═══════════════════════════════════════════════════════════════
 // CONNECT / DISCONNECT
 // ═══════════════════════════════════════════════════════════════
 
@@ -90,7 +78,7 @@ export const connect = action({
       throw error;
     }
 
-    const encryptedKey = encrypt(apiKey, getEncryptionKey());
+    const encryptedKey = encrypt(apiKey);
 
     const connectionId = await ctx.runMutation(
       internal.bitpanda.createConnection,
@@ -290,7 +278,7 @@ export const syncConnectionInternal = internalAction({
         });
 
         try {
-          const apiKey = decrypt(connection.apiKey, getEncryptionKey());
+          const apiKey = decrypt(connection.apiKey);
 
           const [assetWallets, fiatWallets, ticker] = await Promise.all([
             fetchAssetWallets(apiKey),
@@ -401,7 +389,7 @@ export const syncTransactionsInternal = internalAction({
       },
       async () => {
         try {
-          const apiKey = decrypt(connection.apiKey, getEncryptionKey());
+          const apiKey = decrypt(connection.apiKey);
 
           const syncState = await ctx.runQuery(
             internal.bitpanda.getTransactionSyncStateInternal,

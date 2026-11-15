@@ -6,7 +6,6 @@ import { internal } from "../_generated/api";
 import { encrypt, decrypt } from "../lib/encryption";
 import {
   getSnaptradeClient,
-  getEncryptionKey,
   normalizeAccountType,
   parseSnapTradeError,
   requiresReauthentication,
@@ -84,7 +83,6 @@ export const registerUser = action({
     }
 
     const snaptrade = getSnaptradeClient();
-    const encryptionKey = getEncryptionKey();
 
     try {
       // Register user with SnapTrade
@@ -100,7 +98,7 @@ export const registerUser = action({
       }
 
       // Encrypt the userSecret before storing
-      const encryptedSecret = encrypt(userSecret, encryptionKey);
+      const encryptedSecret = encrypt(userSecret);
 
       // Store in database
       await ctx.runMutation(internal.brokers.upsertSnaptradeUser, {
@@ -158,7 +156,7 @@ export const deleteUser = action({
     const snaptrade = getSnaptradeClient();
     // Decrypting the stored secret fails fast (before any deletion) when the
     // encryption key or secret is invalid; the plaintext itself is not needed.
-    decrypt(snaptradeUser.snaptradeUserSecret, getEncryptionKey());
+    decrypt(snaptradeUser.snaptradeUserSecret);
 
     try {
       // Delete user from SnapTrade
@@ -241,11 +239,7 @@ export const createConnectUrl = action({
     }
 
     const snaptrade = getSnaptradeClient();
-    const encryptionKey = getEncryptionKey();
-    const userSecret = decrypt(
-      snaptradeUser.snaptradeUserSecret,
-      encryptionKey,
-    );
+    const userSecret = decrypt(snaptradeUser.snaptradeUserSecret);
 
     try {
       // Generate login redirect URL for SnapTrade Connect
@@ -345,11 +339,7 @@ export const handleCallback = action({
     }
 
     const snaptrade = getSnaptradeClient();
-    const encryptionKey = getEncryptionKey();
-    const userSecret = decrypt(
-      snaptradeUser.snaptradeUserSecret,
-      encryptionKey,
-    );
+    const userSecret = decrypt(snaptradeUser.snaptradeUserSecret);
 
     try {
       // Get the brokerage authorization details
@@ -430,11 +420,7 @@ export const listConnections = action({
     }
 
     const snaptrade = getSnaptradeClient();
-    const encryptionKey = getEncryptionKey();
-    const userSecret = decrypt(
-      snaptradeUser.snaptradeUserSecret,
-      encryptionKey,
-    );
+    const userSecret = decrypt(snaptradeUser.snaptradeUserSecret);
 
     try {
       const response = await snaptrade.connections.listBrokerageAuthorizations({
@@ -490,11 +476,7 @@ export const deleteConnection = action({
 
     if (snaptradeUser) {
       const snaptrade = getSnaptradeClient();
-      const encryptionKey = getEncryptionKey();
-      const userSecret = decrypt(
-        snaptradeUser.snaptradeUserSecret,
-        encryptionKey,
-      );
+      const userSecret = decrypt(snaptradeUser.snaptradeUserSecret);
 
       try {
         // Delete from SnapTrade
@@ -670,7 +652,7 @@ async function syncRegisteredSnaptradeUser(
   const snaptrade = getSnaptradeClient();
   const credentials = {
     userId: snaptradeUser.snaptradeUserId,
-    userSecret: decrypt(snaptradeUser.snaptradeUserSecret, getEncryptionKey()),
+    userSecret: decrypt(snaptradeUser.snaptradeUserSecret),
   };
 
   const result: SnaptradeSyncResult = {
@@ -1059,11 +1041,7 @@ export const updateAllBrokerLogos = action({
     }
 
     const snaptrade = getSnaptradeClient();
-    const encryptionKey = getEncryptionKey();
-    const userSecret = decrypt(
-      snaptradeUser.snaptradeUserSecret,
-      encryptionKey,
-    );
+    const userSecret = decrypt(snaptradeUser.snaptradeUserSecret);
 
     // Get all connections
     const connections: Array<{

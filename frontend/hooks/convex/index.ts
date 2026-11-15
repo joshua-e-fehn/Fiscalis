@@ -161,3 +161,13 @@ export {
   useCreateCheckoutSession,
   useCreatePortalSession,
 } from "./billing";
+
+// Re-export notification centre hooks (ENG-207)
+export {
+  useNotificationBell,
+  useNotificationList,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useNotificationPreferences,
+  useSetNotificationPreference,
+} from "./notifications";

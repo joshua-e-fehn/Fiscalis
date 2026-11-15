@@ -12,11 +12,12 @@
  *   (compounded daily), for a holding with no market such as a private
  *   placement held at a broker, or a bond accruing towards par.
  *
- * Either one makes the holding discrete with the "manual" provider, so the
- * refresh crons leave it alone (services/performance/config.ts
- * priceFeedFor), and every net-worth figure values it from the override
- * (frontend/convex/lib/netWorth.ts). The value follows the synced
- * quantity, so a sale or purchase still moves it.
+ * Either one makes the holding discrete with the "manual" provider
+ * (valuationOverrideConfig), and every net-worth figure values it from the
+ * override (frontend/convex/lib/netWorth.ts). The live-price refresh still
+ * re-prices the stored holding row (frontend/convex/assetPrices.ts), so
+ * clearing the override shows a current provider price. The value follows
+ * the synced quantity, so a sale or purchase still moves it.
  *
  * Overrides live in their own table (valuationOverrides), keyed by the
  * holding's sync-stable key (services/portfolio/flows.ts brokerPositionKey,

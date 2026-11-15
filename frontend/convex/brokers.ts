@@ -10,6 +10,8 @@ import {
 } from "../../services/classification";
 import { loadFxRates } from "./fxRates";
 import { ensureSyncTarget } from "./lib/syncTargets";
+import { deleteOverridesByKeyPrefix } from "./valuationOverrides";
+import { brokerPositionKey } from "../../services/portfolio/flows";
 import {
   brokerAccountBaseFields,
   brokerAccountWithBaseFields,
@@ -435,6 +437,13 @@ export const deleteConnectionData = internalMutation({
       for (const transaction of transactions) {
         await ctx.db.delete(transaction._id);
       }
+
+      // The account's per-asset valuation overrides (ENG-239)
+      await deleteOverridesByKeyPrefix(
+        ctx,
+        connection.userId,
+        brokerPositionKey(account._id, ""),
+      );
 
       await ctx.db.delete(account._id);
     }

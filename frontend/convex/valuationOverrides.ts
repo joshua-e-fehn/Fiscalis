@@ -62,6 +62,26 @@ async function requireOwnedHolding(ctx: MutationCtx, ref: HoldingRef) {
   };
 }
 
+/**
+ * Delete the user's overrides whose holding key starts with `prefix`: a
+ * deleted connection's holdings never come back under the same key
+ * (services/portfolio/flows.ts keys include the account or connection id),
+ * so their overrides would only linger. Range on by_user_key, no scan.
+ */
+export async function deleteOverridesByKeyPrefix(
+  ctx: MutationCtx,
+  userId: string,
+  prefix: string,
+): Promise<void> {
+  const rows = await ctx.db
+    .query("valuationOverrides")
+    .withIndex("by_user_key", (q) =>
+      q.eq("userId", userId).gte("holdingKey", prefix).lt("holdingKey", `${prefix}\uffff`),
+    )
+    .collect();
+  for (const row of rows) await ctx.db.delete(row._id);
+}
+
 async function findOverride(ctx: MutationCtx, userId: string, holdingKey: string) {
   return await ctx.db
     .query("valuationOverrides")

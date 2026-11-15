@@ -4,7 +4,7 @@
  * cleared; invalid input and cash are rejected.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { NOW, OWNER, newTest, seedUser, type TestConvex } from "./setup.helpers";
 
 beforeEach(() => {
@@ -88,5 +88,48 @@ describe("valuation overrides", () => {
         asOf: "2026-11-01",
       }),
     ).rejects.toThrow(/valuationNotSupported/);
+  });
+
+  it("removes a deleted connection's overrides, and only those", async () => {
+    const t = newTest();
+    await seedUser(t, OWNER);
+    await seedUser(t, "user_other");
+    const overrides = (userId: string) =>
+      t.run((ctx) =>
+        ctx.db
+          .query("valuationOverrides")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect(),
+      );
+    expect(await overrides(OWNER)).toHaveLength(1);
+    const brokerConnection = await t.run(async (ctx) =>
+      (await ctx.db.query("brokerConnections").collect()).find(
+        (c) => c.userId === OWNER,
+      )!,
+    );
+    await t.mutation(internal.brokers.deleteConnectionData, {
+      connectionId: brokerConnection._id,
+    });
+    expect(await overrides(OWNER)).toHaveLength(0);
+    expect(await overrides("user_other")).toHaveLength(1);
+
+    // A Bitpanda override goes with its connection
+    const btc = await t.run(async (ctx) =>
+      (await ctx.db.query("bitpandaHoldings").collect()).find(
+        (h) => h.userId === OWNER && h.assetType !== "fiat",
+      )!,
+    );
+    await t.withIdentity({ subject: OWNER }).mutation(api.valuationOverrides.set, {
+      holding: { source: "bitpanda", id: btc._id },
+      kind: "manualPrice",
+      pricePerUnit: 1,
+      currency: "EUR",
+      asOf: "2026-11-01",
+    });
+    expect(await overrides(OWNER)).toHaveLength(1);
+    await t.mutation(internal.bitpanda.deleteConnectionData, {
+      connectionId: btc.connectionId,
+    });
+    expect(await overrides(OWNER)).toHaveLength(0);
   });
 });

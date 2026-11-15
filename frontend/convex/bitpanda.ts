@@ -12,6 +12,7 @@ import {
 } from "../../services/bitpanda/holdingPrice";
 import { bitpandaOverridePatch } from "./lib/classificationOverride";
 import { getOwnedDoc, requireUserId } from "./lib/auth";
+import { requireConnectionSlot } from "./lib/plan";
 import { ensureSyncTarget } from "./lib/syncTargets";
 import { deleteOverridesByKeyPrefix } from "./valuationOverrides";
 import {
@@ -217,6 +218,9 @@ export const createConnection = internalMutation({
     label: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Atomic with the insert, so parallel connects cannot pass the limit
+    // together (ENG-199)
+    await requireConnectionSlot(ctx, args.userId);
     const now = Date.now();
     await ensureSyncTarget(ctx, args.userId);
     return await ctx.db.insert("bitpandaConnections", {

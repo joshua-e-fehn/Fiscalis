@@ -371,6 +371,27 @@ export const handleCallback = action({
     const snaptrade = getSnaptradeClient();
     const userSecret = decrypt(snaptradeUser.snaptradeUserSecret);
 
+    // A new connection: the plan must have room (ENG-199). Several Connect
+    // URLs opened while below the limit could otherwise each add one. Over
+    // the limit, the authorization just made at SnapTrade is removed again
+    try {
+      await ctx.runQuery(internal.billing.assertConnectionSlot, { userId });
+    } catch (error) {
+      try {
+        await snaptrade.connections.removeBrokerageAuthorization({
+          userId: snaptradeUser.snaptradeUserId,
+          userSecret,
+          authorizationId: args.authorizationId,
+        });
+      } catch (removeError) {
+        console.error(
+          "SnapTrade remove over-limit authorization error:",
+          describeError(removeError),
+        );
+      }
+      throw error;
+    }
+
     try {
       // Get the brokerage authorization details
       const authResponse =

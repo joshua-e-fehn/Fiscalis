@@ -92,6 +92,35 @@ describe("connection limit", () => {
       await errorCode(asOwner.action(api.actions.bitpanda.connect, { apiKey: "demo-key" })),
     ).toBe("planConnectionLimit");
   });
+
+  it("is enforced again where each connection is inserted", async () => {
+    const t = await seededFree();
+    expect(
+      await errorCode(
+        t.mutation(internal.brokers.createConnection, {
+          userId: OWNER,
+          snaptradeUserId: "snap",
+          authorizationId: "auth-new",
+          brokerName: "Broker",
+          brokerSlug: "broker",
+        }),
+      ),
+    ).toBe("planConnectionLimit");
+    expect(
+      await errorCode(
+        t.mutation(internal.bitpanda.createConnection, { userId: OWNER, apiKey: "enc" }),
+      ),
+    ).toBe("planConnectionLimit");
+    expect(
+      await errorCode(
+        t.mutation(internal.banking.saveItem, {
+          userId: OWNER,
+          accessToken: "enc",
+          itemId: "item-new",
+        }),
+      ),
+    ).toBe("planConnectionLimit");
+  });
 });
 
 describe("API keys", () => {

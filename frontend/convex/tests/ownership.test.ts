@@ -85,6 +85,22 @@ const ARG_OVERRIDES: Record<string, (ids: SeedIds) => Args> = {
     transactionDate: "2026-11-01",
   }),
   "vault:addVaultItemFromCatalog": (ids) => ({ catalogItemId: ids.metalCatalog[0], quantity: 1 }),
+  "manualAssets:create": (ids) => ({
+    category: "collectibles",
+    subcategory: "watches",
+    name: "Demo watch",
+    currency: "EUR",
+    valuations: [{ date: "2026-11-01", value: 5000 }],
+    linkedLoanId: ids.loans[0],
+  }),
+  "manualAssets:update": (ids) => ({
+    assetId: ids.manualAssets[0],
+    category: "real-estate",
+    subcategory: "residential",
+    name: "Renamed",
+    currency: "EUR",
+    valuations: [{ date: "2026-11-01", value: 350000 }],
+  }),
   "retirement:saveRetirementPlan": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
   "retirement:getFundingBase": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
 };

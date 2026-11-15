@@ -64,6 +64,7 @@ export const DEMO_TABLES = [
   "loanPayments",
   "loanScenarios",
   "retirementPlans",
+  "manualAssets",
   "vaultItems",
   "vaultTransactions",
   "worldBankFavorites",
@@ -364,6 +365,24 @@ export async function insertDemoData(
     name: "200 € extra",
     extraPerPeriod: 200,
     prepaymentEffect: "reduce_term",
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // ── Manual assets ──────────────────────────────────────────────
+  await insert("manualAssets", {
+    userId,
+    category: "real-estate",
+    subcategory: "residential",
+    name: "Eigentumswohnung",
+    currency: "EUR",
+    valuations: [
+      { date: isoDay(loanStart), value: 310000 },
+      { date: isoDay(now - 60 * DAY_MS), value: 345000 },
+    ],
+    costBasis: 310000,
+    linkedLoanId: loanId,
+    attributes: { address: "Musterstraße 1, Berlin" },
     createdAt: now,
     updatedAt: now,
   });

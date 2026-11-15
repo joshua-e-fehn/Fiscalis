@@ -49,11 +49,11 @@
       "dark": "Dunkel",
       "system": "System"
     },
-    "saveFailed": "Dein Profil konnte nicht gespeichert werden. Bitte versuche es erneut."
+    "saveFailed": "Dein Profil konnte nicht gespeichert werden. Bitte versuch es erneut."
   },
   "banking": {
     "title": "Verbinde deine Bankkonten",
-    "subtitle": "Sieh Girokonten, Sparkonten und Kreditkarten in einer Ansicht",
+    "subtitle": "Sieh dir deine Girokonten, Sparkonten und Kreditkarten in einer Ansicht an",
     "benefitBalances": "Automatische Aktualisierung der Kontostände",
     "benefitTransactions": "Transaktionsverlauf & Kategorisierung",
     "benefitCurrencies": "Unterstützung mehrerer Währungen",
@@ -83,7 +83,7 @@
     "title": "Bitpanda verbinden",
     "subtitle": "Verfolge Bitcoin, Ethereum und über 100 weitere Werte – dazu Metalle, Aktien und Liquidität",
     "benefitAssets": "Krypto, Edelmetalle, Rohstoffe & Aktien an einem Ort",
-    "benefitApiKey": "Verbindung mit einem API-Schlüssel mit Lesezugriff",
+    "benefitApiKey": "Verbindung per API-Schlüssel mit Lesezugriff",
     "benefitValuation": "Automatische Bewertung in deiner Basiswährung",
     "connected": "Verbunden",
     "addAnother": "Weiteres Konto hinzufügen",

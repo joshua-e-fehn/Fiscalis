@@ -24,7 +24,7 @@
       },
       "private": {
         "name": "Private Equity",
-        "description": "Beteiligungen an nicht börsennotierten Unternehmen, Start-ups und Business Angels",
+        "description": "Beteiligungen an nicht börsennotierten Unternehmen und Start-ups sowie Angel-Investments",
         "examples": "Start-ups, Venture Capital, Angel-Investments, PE-Fonds"
       }
     }
@@ -69,7 +69,7 @@
     "subcategories": {
       "government": {
         "name": "Staatsanleihen",
-        "description": "Geldmarktpapiere, Notes und Anleihen von Staaten, einschließlich inflationsgeschützter Wertpapiere",
+        "description": "Schatzwechsel, Schatzanweisungen und Anleihen von Staaten, einschließlich inflationsgeschützter Wertpapiere",
         "examples": "US Treasuries, Bundesanleihen, UK Gilts, TIPS/I-Bonds"
       },
       "corporate": {
@@ -88,7 +88,7 @@
         "examples": "Series I Bonds, Series EE Bonds, Premium Bonds, Sparzertifikate"
       },
       "funds": {
-        "name": "Rentenfonds & ETFs",
+        "name": "Anleihefonds & ETFs",
         "description": "Breit gestreute festverzinsliche Anlagen über Fonds und ETFs",
         "examples": "Aggregate Bond, Kurzläufer, Langläufer, International"
       }
@@ -119,13 +119,13 @@
       },
       "land": {
         "name": "Grundstücke",
-        "description": "Bauland, Agrarland und unerschlossene Grundstücke",
-        "examples": "Rohbauland, Ackerland, Wald, Bauerwartungsland"
+        "description": "Unbebautes Land, Agrarflächen und unerschlossene Grundstücke",
+        "examples": "Unbebautes Land, Ackerland, Wald, Bauerwartungsland"
       }
     }
   },
   "cash": {
-    "name": "Liquidität & Geldmarkt",
+    "name": "Liquidität & Ersparnisse",
     "subcategories": {
       "checking-accounts": {
         "name": "Girokonten",
@@ -271,7 +271,7 @@
       },
       "margin-loans": {
         "name": "Wertpapierkredite",
-        "description": "Im Depot geliehene Mittel",
+        "description": "Über das Depot aufgenommene Kredite",
         "examples": "Broker-Margin, Wertpapierleihe"
       }
     }

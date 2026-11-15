@@ -94,4 +94,44 @@ describe("investmentLots", () => {
     ]);
     expect(invested).toEqual([]);
   });
+
+  it("leaves out the flow of a source on the day it gained holdings already owned", () => {
+    const row = (date: string, ts: number, broker: number, bitpanda: number, flows?: [number, number]) => ({
+      date,
+      timestamp: ts,
+      categoryBreakdown: [
+        {
+          category: "equities",
+          value: broker + bitpanda,
+          ...(flows ? { netFlow: flows[0] + flows[1] } : {}),
+          sources: [
+            { source: "brokerPosition", value: broker, ...(flows ? { netFlow: flows[0] } : {}) },
+            { source: "bitpanda", value: bitpanda, ...(flows ? { netFlow: flows[1] } : {}) },
+          ],
+        },
+      ],
+    });
+    const { invested, gains } = investmentLots(
+      [
+        row("2026-01-01", 1, 10_000, 0),
+        // Bitpanda connected with 50k already owned, and 1000 bought at the broker
+        row("2026-01-02", 2, 11_000, 50_000, [1000, 50_000]),
+      ],
+      [{ date: "2026-01-02", source: "bitpanda" }],
+    );
+    expect(invested).toEqual([{ date: "2026-01-02", amount: 1000 }]);
+    expect(gains).toEqual([]);
+  });
+
+  it("keeps the flow when the rows have no per-source values to attribute it to", () => {
+    const { invested } = investmentLots(
+      [
+        snap("2026-01-01", 1, { cash: { value: 1 } }),
+        snap("2026-01-05", 2, { cash: { value: 1 }, crypto: { value: 500 } }),
+      ],
+      [{ date: "2026-01-03", source: "bitpanda" }],
+    );
+    // No per-source rows: nothing to attribute the appearance to
+    expect(invested).toEqual([{ date: "2026-01-05", amount: 500 }]);
+  });
 });

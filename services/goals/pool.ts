@@ -3,17 +3,19 @@
  * purchases charged to it (ENG-256).
  *
  * Every metric (new money invested, gains, each attested counter) keeps one
- * pool shared by all goals. Replayed in date order:
+ * pool shared by all goals. Lots stay signed and dated: a goal sees the net
+ * of every lot dated on or after its start, so a withdrawal or a loss
+ * lowers every goal open at that time, and a goal started after a loss
+ * does not count the recovery from it as new. Replayed in date order:
  *
- * - a positive lot first repays the pool's debt, and the rest is kept with
- *   its date;
- * - a negative lot (a withdrawal, a loss) takes from the newest kept lots
- *   first; what they cannot cover becomes debt;
- * - a purchase draws its charge from the oldest lots dated on or after its
- *   goal's start (the ones younger goals cannot use anyway); what they
- *   cannot cover (a goal bought before it was earned) becomes debt.
+ * - a positive lot first repays the pool's debt, and the rest is kept;
+ * - a negative lot (a withdrawal, a loss) is kept as it is;
+ * - a purchase draws what its goal's window holds (at most its charge)
+ *   from the oldest positive lots dated on or after the goal's start (the
+ *   ones younger goals cannot use anyway); the part of its charge the
+ *   window cannot cover (a goal bought before it was earned) becomes debt.
  *
- * Debt is only repaid by later lots, so a goal sees new money again once
+ * Debt is only repaid by later lots, so no goal sees new money again until
  * the pool is out of debt. Lots of a day come before that day's purchases.
  *
  * Framework-free: imported by Convex functions and vitest.
@@ -37,7 +39,7 @@ export interface PoolCharge {
 }
 
 export interface PoolState {
-  /** Lots still in the pool, oldest first, each > 0 */
+  /** Lots still in the pool, oldest first, signed */
   lots: Lot[];
   /** Owed by the pool, repaid by later lots, ≥ 0 */
   debt: number;
@@ -69,39 +71,34 @@ export function replayPool(lots: readonly Lot[], charges: readonly PoolCharge[])
 
   for (const e of events) {
     if (e.type === "lot") {
-      if (e.amount > 0) {
-        const repay = Math.min(debt, e.amount);
+      let amount = e.amount;
+      if (amount > 0) {
+        const repay = Math.min(debt, amount);
         debt -= repay;
-        const rest = e.amount - repay;
-        if (rest > EPS) kept.push({ date: e.date, amount: rest });
-      } else if (e.amount < 0) {
-        let take = -e.amount;
-        while (take > EPS && kept.length > 0) {
-          const newest = kept[kept.length - 1];
-          const used = Math.min(newest.amount, take);
-          newest.amount -= used;
-          take -= used;
-          if (newest.amount <= EPS) kept.pop();
-        }
-        if (take > EPS) debt += take;
+        amount -= repay;
       }
+      if (Math.abs(amount) > EPS) kept.push({ date: e.date, amount });
       continue;
     }
-    let need = e.amount;
+    const window = kept
+      .filter((l) => l.date >= e.startDate)
+      .reduce((sum, l) => sum + l.amount, 0);
+    const drawable = Math.max(0, Math.min(e.amount, window));
+    let need = drawable;
     for (const lot of kept) {
       if (need <= EPS) break;
-      if (lot.date < e.startDate) continue;
+      if (lot.date < e.startDate || lot.amount <= 0) continue;
       const used = Math.min(lot.amount, need);
       lot.amount -= used;
       need -= used;
     }
     for (let i = kept.length - 1; i >= 0; i--) {
-      if (kept[i].amount <= EPS) kept.splice(i, 1);
+      if (Math.abs(kept[i].amount) <= EPS) kept.splice(i, 1);
     }
-    const shortfall = need > EPS ? need : 0;
+    const shortfall = e.amount - drawable > EPS ? e.amount - drawable : 0;
     debt += shortfall;
     results.set(e.id, {
-      drawn: roundMoney(e.amount - shortfall),
+      drawn: roundMoney(drawable),
       shortfall: roundMoney(shortfall),
     });
   }
@@ -113,7 +110,10 @@ export function replayPool(lots: readonly Lot[], charges: readonly PoolCharge[])
   };
 }
 
-/** What a goal that started on `startDate` can use from a replayed pool. */
+/**
+ * What a goal that started on `startDate` can use from a replayed pool: the
+ * net of its window, negative when withdrawals or losses exceed it.
+ */
 export function availableSince(state: Pick<PoolState, "lots">, startDate: string): number {
   return roundMoney(
     state.lots.filter((l) => l.date >= startDate).reduce((sum, l) => sum + l.amount, 0),

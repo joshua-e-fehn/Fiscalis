@@ -40,7 +40,7 @@ describe("replayPool", () => {
     expect(availableSince(state, "2026-03-02")).toBe(0);
   });
 
-  it("takes withdrawals from the newest lots first", () => {
+  it("lowers every goal open at a withdrawal", () => {
     const state = replayPool(
       [
         { date: "2026-01-01", amount: 1000 },
@@ -49,21 +49,34 @@ describe("replayPool", () => {
       ],
       [],
     );
-    expect(state.lots).toEqual([{ date: "2026-01-01", amount: 900 }]);
+    expect(availableSince(state, "2026-01-01")).toBe(900);
+    expect(availableSince(state, "2026-02-01")).toBe(-100);
+    expect(availableSince(state, "2026-03-02")).toBe(0);
   });
 
-  it("turns a withdrawal beyond the pool into debt that later lots repay first", () => {
+  it("does not count the recovery from a loss as new for a goal started after it", () => {
     const state = replayPool(
       [
-        { date: "2026-01-01", amount: 100 },
-        { date: "2026-01-02", amount: -250 },
-        { date: "2026-01-03", amount: 100 },
-        { date: "2026-01-04", amount: 80 },
+        { date: "2026-01-05", amount: 1000 },
+        { date: "2026-07-01", amount: -500 },
+        { date: "2026-07-02", amount: 500 },
       ],
       [],
     );
-    expect(state.lots).toEqual([{ date: "2026-01-04", amount: 30 }]);
-    expect(state.debt).toBe(0);
+    expect(availableSince(state, "2026-01-01")).toBe(1000);
+    expect(availableSince(state, "2026-07-01")).toBe(0);
+  });
+
+  it("only draws what a goal's window holds when withdrawals ate into it", () => {
+    const state = replayPool(
+      [
+        { date: "2026-02-01", amount: 10_000 },
+        { date: "2026-03-01", amount: -10_000 },
+      ],
+      [charge("car", "2026-04-01", "2026-01-01", 10_000)],
+    );
+    expect(state.charges.get("car")).toEqual({ drawn: 0, shortfall: 10_000 });
+    expect(state.debt).toBe(10_000);
   });
 
   it("draws a purchase from the oldest eligible lots", () => {
@@ -128,6 +141,6 @@ describe("replayPool", () => {
       [],
     );
     expect(availableSince(state, "2026-01-01")).toBe(150);
-    expect(availableSince(state, "2026-02-01")).toBe(0);
+    expect(availableSince(state, "2026-02-01")).toBe(-150);
   });
 });

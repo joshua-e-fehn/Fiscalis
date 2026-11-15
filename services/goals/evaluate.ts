@@ -335,36 +335,75 @@ export function evaluateRule(node: RuleNode, ctx: RuleContext, path = ""): RuleR
 
   if (node.kind === "all") {
     const charges = mergeCharges(children.map((c) => c.charges));
+    const satisfied = children.every((c) => c.satisfied) && fits(charges, ctx);
+    const mean = children.reduce((s, c) => s + c.progress, 0) / children.length;
     return {
-      satisfied: children.every((c) => c.satisfied) && fits(charges, ctx),
-      progress: children.reduce((s, c) => s + c.progress, 0) / children.length,
+      satisfied,
+      progress: satisfied ? 1 : unmetProgress(mean, charges, ctx),
       charges,
       leaves,
     };
   }
 
+  // The first combination (in child order) of `need` satisfied children
+  // whose charges fit together; an `any` is a combination of one
   const need = node.kind === "any" ? 1 : node.count;
-  // Satisfied children first (in order) while their charges fit together,
-  // then the closest ones, so an early purchase charges the nearest branch
-  const picked: RuleResult[] = [];
-  for (const c of children) {
-    if (picked.length >= need) break;
-    if (c.satisfied && fits(mergeCharges([...picked, c].map((p) => p.charges)), ctx)) {
-      picked.push(c);
-    }
+  const satisfiedIdx = children.flatMap((c, i) => (c.satisfied ? [i] : []));
+  const met = firstCombination(satisfiedIdx, need, (idx) =>
+    fits(mergeCharges(idx.map((i) => children[i].charges)), ctx),
+  );
+  if (met) {
+    return {
+      satisfied: true,
+      progress: 1,
+      charges: mergeCharges(met.map((i) => children[i].charges)),
+      leaves,
+    };
   }
-  const satisfied = picked.length >= need;
-  const rest = children
-    .filter((c) => !picked.includes(c))
-    .sort((a, b) => b.progress - a.progress);
-  const chosen = [...picked, ...rest.slice(0, need - picked.length)];
-  const top = [...children].sort((a, b) => b.progress - a.progress).slice(0, need);
-  return {
-    satisfied,
-    progress: satisfied ? 1 : top.reduce((s, c) => s + c.progress, 0) / need,
-    charges: mergeCharges(chosen.map((c) => c.charges)),
-    leaves,
+  // Unmet: an early purchase charges the `need` children closest to done
+  const closest = children
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => b.c.progress - a.c.progress || a.i - b.i)
+    .slice(0, need)
+    .sort((a, b) => a.i - b.i)
+    .map((x) => x.c);
+  const charges = mergeCharges(closest.map((c) => c.charges));
+  const mean = closest.reduce((s, c) => s + c.progress, 0) / need;
+  return { satisfied: false, progress: unmetProgress(mean, charges, ctx), charges, leaves };
+}
+
+/**
+ * Progress of an unmet group: its children's mean, but no more than the
+ * share of its combined charges the pools can cover (two checks on one pool
+ * may each be met alone and not together), and never shown as done.
+ */
+function unmetProgress(mean: number, charges: readonly MetricCharge[], ctx: RuleContext): number {
+  let covered = 1;
+  for (const c of charges) {
+    if (c.amount > 0) covered = Math.min(covered, clamp01(ctx.available(c.metric) / c.amount));
+  }
+  return Math.min(mean, covered, 0.99);
+}
+
+/** The first `k`-subset of `items` (lexicographic) that `ok` accepts, or null. */
+function firstCombination(
+  items: readonly number[],
+  k: number,
+  ok: (subset: number[]) => boolean,
+): number[] | null {
+  if (k > items.length) return null;
+  const pick: number[] = [];
+  const walk = (from: number): number[] | null => {
+    if (pick.length === k) return ok(pick) ? [...pick] : null;
+    for (let i = from; i <= items.length - (k - pick.length); i++) {
+      pick.push(items[i]);
+      const found = walk(i + 1);
+      pick.pop();
+      if (found) return found;
+    }
+    return null;
   };
+  return walk(0);
 }
 
 // ═══════════════════════════════════════════════════════════════

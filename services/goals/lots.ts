@@ -16,6 +16,15 @@
  * Each lot is dated by the later day. A lot whose flow had to be estimated
  * (rows without stored flows) is flagged, so the UI can say so.
  *
+ * The snapshot writer books a holding that appears as money in at its whole
+ * value (aggregate.ts sourceFlowFromHoldings), which keeps performance
+ * honest but would make connecting an account already owned look like new
+ * investing. So the caller passes baselines: the days a source gained
+ * holdings that were already owned (a broker or Bitpanda connection added,
+ * a manual asset recorded, a vault opening balance). On the snapshot day
+ * that covers a baseline, that source's flow is left out of the invested
+ * lot; it stays out of gains as well, since gains are change less flow.
+ *
  * Framework-free: imported by Convex functions and vitest.
  */
 
@@ -52,6 +61,14 @@ export interface SnapshotForLots {
   categoryBreakdown?: readonly SnapshotCategoryEntry[];
 }
 
+/** A day a source gained holdings that were already owned. */
+export interface LotBaseline {
+  /** UTC day, YYYY-MM-DD */
+  date: string;
+  /** The snapshot source, aggregate.ts HoldingSource (e.g. "bitpanda") */
+  source: string;
+}
+
 export interface InvestmentLots {
   invested: Lot[];
   gains: Lot[];
@@ -74,7 +91,10 @@ export function dailySnapshots<T extends SnapshotForLots>(snapshots: readonly T[
  * whose row (or the previous one) has no category breakdown yields no lot:
  * nothing about it can be split into money and performance.
  */
-export function investmentLots(snapshots: readonly SnapshotForLots[]): InvestmentLots {
+export function investmentLots(
+  snapshots: readonly SnapshotForLots[],
+  baselines: readonly LotBaseline[] = [],
+): InvestmentLots {
   const days = dailySnapshots(snapshots);
   const invested: Lot[] = [];
   const gains: Lot[] = [];
@@ -83,7 +103,13 @@ export function investmentLots(snapshots: readonly SnapshotForLots[]): Investmen
     const prev = days[i - 1].categoryBreakdown;
     const cur = days[i].categoryBreakdown;
     if (!prev || !cur) continue;
+    const from = days[i - 1].date;
+    const to = days[i].date;
+    const sources = new Set(
+      baselines.filter((b) => b.date > from && b.date <= to).map((b) => b.source),
+    );
     let flow = 0;
+    let owned = 0;
     let change = 0;
     let estimated = false;
     for (const category of GOAL_INVESTMENT_CATEGORIES) {
@@ -94,13 +120,30 @@ export function investmentLots(snapshots: readonly SnapshotForLots[]): Investmen
       flow += f.amount;
       estimated ||= f.estimated;
       change += (after?.value ?? 0) - (before?.value ?? 0);
+      for (const source of sources) owned += sourceFlow(before, after, source);
     }
     const date = days[i].date;
     flow = roundMoney(flow);
     const gain = roundMoney(change - flow);
-    if (flow !== 0) invested.push({ date, amount: flow });
+    const added = roundMoney(flow - owned);
+    if (added !== 0) invested.push({ date, amount: added });
     if (gain !== 0) gains.push({ date, amount: gain });
     if (estimated) estimatedDates.push(date);
   }
   return { invested, gains, estimatedDates };
+}
+
+/**
+ * A source's flow within a category between two rows: the one the writer
+ * stored, else its change in value (a source that appears brings its value).
+ */
+function sourceFlow(
+  before: SnapshotCategoryEntry | undefined,
+  after: SnapshotCategoryEntry | undefined,
+  source: string,
+): number {
+  const cur = after?.sources?.find((s) => s.source === source);
+  if (cur?.netFlow !== undefined) return cur.netFlow;
+  const prev = before?.sources?.find((s) => s.source === source);
+  return (cur?.value ?? 0) - (prev?.value ?? 0);
 }

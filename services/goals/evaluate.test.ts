@@ -259,6 +259,39 @@ describe("groups", () => {
     expect(only(r).satisfied).toBe(false);
   });
 
+  it("never shows an unmet group as done", () => {
+    const rule: RuleNode = { kind: "all", children: [tenTimes, tenTimes] };
+    const r = evaluateGoals(
+      input({ investedLots: [{ date: "2026-02-01", amount: 10_000 }], goals: [goal({ rule })] }),
+    );
+    expect(only(r).satisfied).toBe(false);
+    expect(only(r).progress).toBeCloseTo(0.5);
+  });
+
+  it("finds a combination of atLeast children that fits when the first one does not", () => {
+    const once = (kind: "invested" | "gains"): RuleNode => ({
+      kind,
+      target: { kind: "priceMultiple", multiple: 1 },
+    });
+    const rule: RuleNode = {
+      kind: "atLeast",
+      count: 2,
+      children: [{ kind: "all", children: [once("invested"), once("gains")] }, once("invested"), once("gains")],
+    };
+    const r = evaluateGoals(
+      input({
+        investedLots: [{ date: "2026-02-01", amount: 1000 }],
+        gainsLots: [{ date: "2026-02-01", amount: 1000 }],
+        goals: [goal({ rule })],
+      }),
+    );
+    expect(only(r).satisfied).toBe(true);
+    expect(only(r).charges).toEqual([
+      { metric: "invested", amount: 1000 },
+      { metric: "gains", amount: 1000 },
+    ]);
+  });
+
   it("charges the first satisfied branch of an any", () => {
     const rule: RuleNode = {
       kind: "any",

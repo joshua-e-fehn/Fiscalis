@@ -97,50 +97,56 @@ export const refreshSnaptradeQuotes = internalAction({
         if (!(await tryUserRateLimit(ctx, "quoteRefresh", target.userId))) {
           continue;
         }
-        const user: Doc<"snaptradeUsers"> | null = await ctx.runQuery(
-          internal.brokers.getSnaptradeUserInternal,
-          { userId: target.userId },
-        );
-        if (!user) continue;
-        const credentials = {
-          userId: user.snaptradeUserId,
-          userSecret: decrypt(user.snaptradeUserSecret),
-        };
-        users++;
-
-        accounts: for (const account of target.accounts) {
-          const quotes = [];
-          for (const ids of batches(account.symbolIds, QUOTE_BATCH_SIZE)) {
-            try {
-              const response = await withSnaptradeRetry(() =>
-                snaptrade.trading.getUserAccountQuotes({
-                  ...credentials,
-                  accountId: account.snaptradeAccountId,
-                  symbols: ids.join(","),
-                  useTicker: false,
-                }),
-              );
-              for (const [symbolId, price] of quotePricesById(response.data)) {
-                quotes.push({
-                  symbolId,
-                  ticker: price.symbol,
-                  price: price.price,
-                  currency: price.currency,
-                });
-              }
-            } catch (error) {
-              // Quotes are best effort: the nightly sync still prices the
-              // account, and its status is the sync's to set
-              console.warn("[LIVE PRICES] SnapTrade quotes:", describeError(error));
-              if (requiresReauthentication(error)) break accounts;
-            }
-          }
-          if (quotes.length === 0) continue;
-          const result: { repriced: number } = await ctx.runMutation(
-            internal.assetPrices.applySnaptradeQuotes,
-            { userId: target.userId, accountId: account.accountId, quotes },
+        // One user's failure (a secret that no longer decrypts, a write
+        // error) must not stop the refresh for the users after them
+        try {
+          const user: Doc<"snaptradeUsers"> | null = await ctx.runQuery(
+            internal.brokers.getSnaptradeUserInternal,
+            { userId: target.userId },
           );
-          repriced += result.repriced;
+          if (!user) continue;
+          const credentials = {
+            userId: user.snaptradeUserId,
+            userSecret: decrypt(user.snaptradeUserSecret),
+          };
+          users++;
+
+          accounts: for (const account of target.accounts) {
+            const quotes = [];
+            for (const ids of batches(account.symbolIds, QUOTE_BATCH_SIZE)) {
+              try {
+                const response = await withSnaptradeRetry(() =>
+                  snaptrade.trading.getUserAccountQuotes({
+                    ...credentials,
+                    accountId: account.snaptradeAccountId,
+                    symbols: ids.join(","),
+                    useTicker: false,
+                  }),
+                );
+                for (const [symbolId, price] of quotePricesById(response.data)) {
+                  quotes.push({
+                    symbolId,
+                    ticker: price.symbol,
+                    price: price.price,
+                    currency: price.currency,
+                  });
+                }
+              } catch (error) {
+                // Quotes are best effort: the nightly sync still prices the
+                // account, and its status is the sync's to set
+                console.warn("[LIVE PRICES] SnapTrade quotes:", describeError(error));
+                if (requiresReauthentication(error)) break accounts;
+              }
+            }
+            if (quotes.length === 0) continue;
+            const result: { repriced: number } = await ctx.runMutation(
+              internal.assetPrices.applySnaptradeQuotes,
+              { userId: target.userId, accountId: account.accountId, quotes },
+            );
+            repriced += result.repriced;
+          }
+        } catch (error) {
+          console.warn("[LIVE PRICES] SnapTrade user refresh:", describeError(error));
         }
       }
 

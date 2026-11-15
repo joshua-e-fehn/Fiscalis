@@ -318,5 +318,44 @@
       },
       "edit": "Change"
     }
+  },
+  "valuation": {
+    "action": "Set price",
+    "reset": "Use provider price",
+    "badges": {
+      "live": "Live",
+      "manualPrice": "Manual price",
+      "markToModel": "Model"
+    },
+    "badgeHints": {
+      "live": "Your provider's price, refreshed during the day between syncs.",
+      "manualPrice": "Valued at the price you entered, not the provider's.",
+      "markToModel": "Valued by your model: the start price grown at your annual rate."
+    },
+    "kinds": {
+      "manualPrice": "Manual price",
+      "markToModel": "Mark to model"
+    },
+    "kindHints": {
+      "manualPrice": "A fixed price per unit that you update yourself.",
+      "markToModel": "A start price that grows (or falls) at a fixed annual rate, for holdings without a market price."
+    },
+    "dialog": {
+      "title": "Set price",
+      "description": "Value {name} at your own price. Your price is kept when the provider syncs; the quantity still comes from the provider.",
+      "kind": "Method",
+      "price": "Price per unit",
+      "modelPrice": "Price per unit on the start date",
+      "currency": "Currency",
+      "date": "Price date",
+      "modelDate": "Start date",
+      "rate": "Annual rate (%)",
+      "rateHint": "Use a negative rate for a value that falls over time.",
+      "preview": "Today: {price} per unit, {value} in total"
+    },
+    "toast": {
+      "saved": "Price saved for {name}",
+      "reset": "{name} uses the provider price again"
+    }
   }
 }

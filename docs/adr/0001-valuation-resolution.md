@@ -32,9 +32,23 @@ asset override  →  subcategory override  →  category default
   stablecoins and NFTs are `semi-continuous` (computed with the discrete
   algorithm). A new subcategory inherits its category default and needs no
   entry.
-- `continuous` takes effect only when a price feed exists for the provider
-  (`PRICE_FEEDS`). Today that is vault metals alone. Everything else is
-  valued from snapshots until a feed is added through that seam.
+- `continuous` takes effect only when a price feed with a **history**
+  exists for the provider (`PRICE_FEEDS`). Today that is vault metals alone.
+  Everything else is valued from snapshots until a history is added through
+  that seam.
+- A feed without history is a **live** feed (ENG-239): Bitpanda's public
+  ticker every 10 minutes and SnapTrade quotes hourly in trading hours
+  re-price the holdings the feed covers between full syncs
+  (`priceFeedFor`, `services/pricing/livePrices.ts`,
+  `frontend/convex/assetPrices.ts`). Totals and the live end of a chart
+  are current; the history is still the snapshots'.
+- **Tier 3** (per-asset override) is stored in its own table,
+  `valuationOverrides`, keyed by the holding's sync-stable key, because
+  syncs replace the holding rows. An override is a manual price or a
+  mark-to-model (`services/pricing/valuationOverride.ts`). It resolves to
+  `discrete` with the `manual` provider, takes the holding off its live
+  feed, and is applied by every net-worth figure (`lib/netWorth.ts`).
+  Coverage and gaps per asset class: [`docs/PRICING_GAPS.md`](../PRICING_GAPS.md).
 - The registry keys subcategories by category, because ids repeat
   (`equities.funds`, `bonds.funds`). It uses the aggregator's
   `HoldingCategory`, so `services/` does not import from `frontend/`.
@@ -67,14 +81,15 @@ Code: `services/performance/config.ts` (`resolveValuationConfig`,
 
 - Adding a subcategory or a price feed is a one-line registry change, not a
   page change.
-- Snapshot-valued holdings cannot show intraday movement. That is accepted
-  until a feed exists.
+- Snapshot-valued holdings cannot show intraday history. That is accepted
+  until a history feed exists; their current value is live where a live
+  feed covers them.
 - The YTD card for net worth is labelled a change, not a return (D2).
 
 ## Not decided / deferred
 
-- Where tier-3 per-asset overrides are stored (likely a field on the holding
-  document). The resolver accepts one; nothing writes it yet.
-- Continuous feeds for equities and crypto (Linear M2 "Depth").
+- Continuous (history) feeds for equities and crypto: live feeds exist
+  since ENG-239; recording their closes is the next step
+  (`docs/PRICING_GAPS.md`). New vendors are the owner's decision.
 - Whether `semi-continuous` gets its own algorithm or stays a tuned discrete
   variant.

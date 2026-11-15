@@ -66,6 +66,9 @@ import {
   ManualCategoryBadge,
 } from "@/components/atomic/molecules/classification";
 import { ManualAssetRowMenu } from "@/components/atomic/molecules/manualAssets";
+import { ValuationBadge } from "@/components/atomic/molecules/valuation";
+import { valuationHoldingRef } from "@/hooks/convex/valuationOverrides";
+import type { PositionValuation } from "@/convex/portfolio";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { HoldingSource } from "@/../services/portfolio/aggregate";
 
@@ -125,10 +128,25 @@ interface UnifiedPositionData {
   };
   /** Set when the category can be changed (bank, broker, Bitpanda) */
   classification?: { target: ClassificationTarget; isManual: boolean };
+  /** How a broker or Bitpanda price is known, and the user's override */
+  valuation?: PositionValuation;
 }
 
 type SortField = "name" | "value" | "quantity" | "profitLoss";
 type SortDirection = "asc" | "desc";
+
+/** The row menu's price items, for a holding that can take an override. */
+function valuationMenuItem(position: UnifiedPositionData) {
+  const holding = valuationHoldingRef(position.source, position._id);
+  if (!holding || !position.valuation?.canOverride) return undefined;
+  return {
+    holding,
+    quantity: position.quantity,
+    providerPrice: position.currentPrice,
+    providerCurrency: position.currency,
+    override: position.valuation.override,
+  };
+}
 
 const providerIcons: Record<FinancialProvider, React.ElementType> = {
   plaid: Landmark,
@@ -599,6 +617,12 @@ export function UnifiedPositionsTable({
                       )}
                     >
                       {formatCurrency(position.valueInBaseCurrency, currency)}
+                      {position.valuation && (
+                        <ValuationBadge
+                          kind={position.valuation.kind}
+                          className="ml-1"
+                        />
+                      )}
                       {position.currency !== currency.toUpperCase() && (
                         <div className="text-xs text-muted-foreground">
                           {formatCurrency(
@@ -667,6 +691,7 @@ export function UnifiedPositionsTable({
                           category={position.category}
                           subcategory={position.subcategory}
                           isManual={position.classification.isManual}
+                          valuation={valuationMenuItem(position)}
                         />
                       )}
                     </TableCell>

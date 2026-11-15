@@ -318,5 +318,44 @@
       },
       "edit": "Ändern"
     }
+  },
+  "valuation": {
+    "action": "Preis festlegen",
+    "reset": "Preis des Anbieters verwenden",
+    "badges": {
+      "live": "Live",
+      "manualPrice": "Manueller Preis",
+      "markToModel": "Modell"
+    },
+    "badgeHints": {
+      "live": "Der Preis deines Anbieters, tagsüber zwischen den Synchronisierungen aktualisiert.",
+      "manualPrice": "Mit dem Preis bewertet, den du eingegeben hast, nicht mit dem des Anbieters.",
+      "markToModel": "Nach deinem Modell bewertet: der Startpreis, fortgeschrieben mit deinem Jahreszins."
+    },
+    "kinds": {
+      "manualPrice": "Manueller Preis",
+      "markToModel": "Modellbewertung"
+    },
+    "kindHints": {
+      "manualPrice": "Ein fester Preis pro Einheit, den du selbst aktualisierst.",
+      "markToModel": "Ein Startpreis, der mit einem festen Jahreszins steigt (oder fällt), für Positionen ohne Marktpreis."
+    },
+    "dialog": {
+      "title": "Preis festlegen",
+      "description": "Bewerte {name} mit deinem eigenen Preis. Dein Preis bleibt bei der Synchronisierung erhalten; die Stückzahl kommt weiter vom Anbieter.",
+      "kind": "Methode",
+      "price": "Preis pro Einheit",
+      "modelPrice": "Preis pro Einheit am Startdatum",
+      "currency": "Währung",
+      "date": "Preisdatum",
+      "modelDate": "Startdatum",
+      "rate": "Jahreszins (%)",
+      "rateHint": "Nutze einen negativen Zins für einen Wert, der mit der Zeit sinkt.",
+      "preview": "Heute: {price} pro Einheit, {value} insgesamt"
+    },
+    "toast": {
+      "saved": "Preis für {name} gespeichert",
+      "reset": "{name} verwendet wieder den Preis des Anbieters"
+    }
   }
 }

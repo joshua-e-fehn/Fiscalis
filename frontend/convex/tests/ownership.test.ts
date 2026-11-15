@@ -101,6 +101,14 @@ const ARG_OVERRIDES: Record<string, (ids: SeedIds) => Args> = {
     currency: "EUR",
     valuations: [{ date: "2026-11-01", value: 350000 }],
   }),
+  "valuationOverrides:set": (ids) => ({
+    holding: { source: "brokerPosition", id: ids.brokerPositions[0] },
+    kind: "markToModel",
+    pricePerUnit: 100,
+    currency: "EUR",
+    asOf: "2026-11-01",
+    annualRatePercent: 5,
+  }),
   "retirement:saveRetirementPlan": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
   "retirement:getFundingBase": (ids) => ({ primaryResidenceLoanId: ids.loans[0] }),
 };

@@ -13,6 +13,7 @@ import {
 import { bitpandaOverridePatch } from "./lib/classificationOverride";
 import { getOwnedDoc, requireUserId } from "./lib/auth";
 import { ensureSyncTarget } from "./lib/syncTargets";
+import { deleteOverridesByKeyPrefix } from "./valuationOverrides";
 import {
   isInSyncWindow,
   syncWindowIndexLowerBound,
@@ -276,6 +277,17 @@ export const deleteConnectionData = internalMutation({
       )
       .collect();
     for (const t of transactions) await ctx.db.delete(t._id);
+
+    // The connection's per-asset valuation overrides (ENG-239), keyed
+    // bitpanda:<connectionId>:… (services/portfolio/flows.ts bitpandaHoldingKey)
+    const connection = await ctx.db.get(args.connectionId);
+    if (connection) {
+      await deleteOverridesByKeyPrefix(
+        ctx,
+        connection.userId,
+        `bitpanda:${args.connectionId}:`,
+      );
+    }
 
     await ctx.db.delete(args.connectionId);
   },

@@ -37,6 +37,12 @@ import {
   type SnapshotCategoryEntry,
 } from "../../../services/portfolio/aggregate";
 import {
+  canOverrideValuation,
+  overriddenValue,
+  type OverriddenValue,
+  type ValuationOverride,
+} from "../../../services/pricing/valuationOverride";
+import {
   bitpandaHoldingKey,
   bitpandaTradeFlow,
   bitpandaTradeKeys,
@@ -89,6 +95,12 @@ import {
  * - Manual assets are worth their latest valuation, converted from their
  *   currency at today's rates (services/portfolio/manualAssets.ts); they
  *   are valued discretely, from their own valuations, with no price feed.
+ * - A broker position or Bitpanda holding with a per-asset valuation
+ *   override (valuationOverrides, ENG-239) is worth its synced quantity at
+ *   the override's price, converted at today's rate
+ *   (services/pricing/valuationOverride.ts); its cost basis is unchanged.
+ *   The override is matched by the holding's sync-stable key and ignored
+ *   on cash and liabilities.
  */
 
 type BankAccountDoc = Doc<"plaidAccounts">;
@@ -103,12 +115,26 @@ type BitpandaHoldingDoc = Doc<"bitpandaHoldings"> & {
   costBasisInBaseCurrency?: number;
 };
 
+/** A holding's value under its per-asset override, with the override as entered. */
+export type HoldingOverride = OverriddenValue & {
+  kind: ValuationOverride["kind"];
+  input: ValuationOverride;
+};
+
 /** A holding together with the stored document it was read from. */
 export type LoadedHolding =
   | (NormalizedHolding & { source: "bank"; doc: BankAccountDoc })
-  | (NormalizedHolding & { source: "brokerPosition"; doc: BrokerPositionDoc })
+  | (NormalizedHolding & {
+      source: "brokerPosition";
+      doc: BrokerPositionDoc;
+      override?: HoldingOverride;
+    })
   | (NormalizedHolding & { source: "brokerAccount"; doc: BrokerAccountDoc })
-  | (NormalizedHolding & { source: "bitpanda"; doc: BitpandaHoldingDoc })
+  | (NormalizedHolding & {
+      source: "bitpanda";
+      doc: BitpandaHoldingDoc;
+      override?: HoldingOverride;
+    })
   | (NormalizedHolding & { source: "vault"; doc: Doc<"vaultItems"> })
   | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> })
   | (NormalizedHolding & { source: "manualAsset"; doc: Doc<"manualAssets"> });
@@ -141,6 +167,39 @@ export async function loadHoldings(
     (toBaseOn: ToBaseOn): ToBaseOn =>
     (amount, currency, date) =>
       toBaseOn(amount, currency, date) ?? toBaseAmount(amount, currency);
+
+  // Per-asset valuation overrides, by holding key (ENG-239)
+  const overrides = new Map(
+    (
+      await ctx.db
+        .query("valuationOverrides")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect()
+    ).map((o) => [o.holdingKey, o]),
+  );
+  /** The override's value of a holding, when it has one that applies. */
+  const overrideFor = (
+    key: string,
+    category: string,
+    quantity: number,
+  ): HoldingOverride | undefined => {
+    const override = overrides.get(key);
+    if (!override || !canOverrideValuation(category)) return undefined;
+    const input: ValuationOverride = {
+      kind: override.kind,
+      pricePerUnit: override.pricePerUnit,
+      currency: override.currency,
+      asOf: override.asOf,
+      ...(override.annualRatePercent !== undefined
+        ? { annualRatePercent: override.annualRatePercent }
+        : {}),
+    };
+    return {
+      kind: override.kind,
+      input,
+      ...overriddenValue(quantity, input, now, toBaseAmount),
+    };
+  };
 
   // 1. Bank accounts (Plaid)
   const bankAccounts = await ctx.db
@@ -177,22 +236,30 @@ export async function loadHoldings(
     const category = toHoldingCategory(doc.investmentCategory);
     const value = positionValue(doc);
     const costBase = positionCostBasis(doc);
+    const key = brokerPositionKey(doc.accountId, doc.symbol);
+    const override = overrideFor(key, category, doc.quantity);
     holdings.push({
       id: doc._id,
-      key: brokerPositionKey(doc.accountId, doc.symbol),
+      key,
       provider: "snaptrade",
       source: "brokerPosition",
       category,
       subcategory: doc.investmentSubcategory ?? "unknown",
       name: doc.symbol ?? doc.name ?? "Unknown",
-      valueBase: category === "liabilities" ? positionOwed(value) : value,
+      valueBase: override
+        ? (override.valueBase ?? 0)
+        : category === "liabilities"
+          ? positionOwed(value)
+          : value,
       costBase,
       ...(costBase !== null &&
       doc.totalCostBasis !== undefined &&
       doc.currency !== BASE_CURRENCY
         ? { costNative: { amount: doc.totalCostBasis, currency: doc.currency } }
         : {}),
-      pricedAt: doc.lastSyncAt ?? doc.createdAt,
+      // An override is the user's own record, like a manual asset
+      pricedAt: override ? null : (doc.lastSyncAt ?? doc.createdAt),
+      ...(override ? { override } : {}),
       doc,
     });
   }
@@ -247,15 +314,24 @@ export async function loadHoldings(
       category === "liabilities" ? undefined : bitpandaCostBasis(raw, averageCost);
     const doc: BitpandaHoldingDoc =
       cost === undefined ? raw : { ...raw, costBasisInBaseCurrency: cost.base };
+    const key = bitpandaHoldingKey(doc.connectionId, doc.assetType, doc.symbol);
+    const override =
+      doc.assetType === "fiat"
+        ? undefined
+        : overrideFor(key, category, doc.quantity);
     holdings.push({
       id: doc._id,
-      key: bitpandaHoldingKey(doc.connectionId, doc.assetType, doc.symbol),
+      key,
       provider: "bitpanda",
       source: "bitpanda",
       category,
       subcategory: doc.investmentSubcategory ?? "unknown",
       name: doc.symbol ?? doc.name ?? "Unknown",
-      valueBase: category === "liabilities" ? positionOwed(value) : value,
+      valueBase: override
+        ? (override.valueBase ?? 0)
+        : category === "liabilities"
+          ? positionOwed(value)
+          : value,
       costBase: cost?.base ?? null,
       // A foreign-currency cost stays put when the rate moves, so the
       // snapshot flow is read from it (holdingNetFlow)
@@ -264,9 +340,10 @@ export async function loadHoldings(
       // sync, holdingPrice.ts) pulls asOf back; null when never priced.
       // Rows synced before priceStatus fall back to their sync time.
       pricedAt:
-        doc.priceStatus === "missing"
+        override || doc.priceStatus === "missing"
           ? null
           : (doc.priceAsOf ?? doc.lastSyncAt ?? doc.createdAt),
+      ...(override ? { override } : {}),
       doc,
     });
   }

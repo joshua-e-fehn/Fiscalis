@@ -46,6 +46,7 @@ export const USER_DATA_TABLES = [
   { table: "vaultItems", excludedFields: [] },
   { table: "vaultTransactions", excludedFields: [] },
   { table: "manualAssets", excludedFields: [] },
+  { table: "valuationOverrides", excludedFields: [] },
   { table: "portfolioSnapshots", excludedFields: [] },
   { table: "syncRuns", excludedFields: [] },
   { table: "retirementPlans", excludedFields: [] },

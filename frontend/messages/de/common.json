@@ -127,7 +127,14 @@
     "snaptradeAccountsUnplaced": "Dein Broker hat nicht angegeben, welche Konten zu dieser Verbindung gehören, daher wurde keines synchronisiert.",
     "snaptradeSyncFailed": "Einige deiner Broker-Konten konnten nicht synchronisiert werden. Bitte versuch es später erneut.",
     "accountDeleteConfirmationMismatch": "Gib den Bestätigungstext genau ein, um dein Konto zu löschen.",
-    "accountDeleteRevokeFailed": "Eine Bank- oder Broker-Verbindung konnte beim Anbieter nicht widerrufen werden, deshalb wurde nichts gelöscht. Bitte versuch es in ein paar Minuten erneut."
+    "accountDeleteRevokeFailed": "Eine Bank- oder Broker-Verbindung konnte beim Anbieter nicht widerrufen werden, deshalb wurde nichts gelöscht. Bitte versuch es in ein paar Minuten erneut.",
+    "holdingNotFound": "Diese Position gibt es nicht mehr. Lade die Seite neu und versuche es noch einmal.",
+    "valuationNotSupported": "Diese Position kann nicht manuell bewertet werden: Bargeld und Verbindlichkeiten werden nach ihrem Saldo bewertet.",
+    "valuationPriceInvalid": "Gib einen Preis von 0 oder mehr ein.",
+    "valuationCurrencyInvalid": "Wähle eine Währung mit Wechselkurs.",
+    "valuationInvalidDate": "Gib ein gültiges Datum ein.",
+    "valuationDateInFuture": "Das Datum darf nicht in der Zukunft liegen.",
+    "valuationRateInvalid": "Gib einen Jahreszins zwischen -100 % und 100 % ein."
   },
   "a11y": {
     "toggleSidebar": "Seitenleiste ein-/ausblenden",

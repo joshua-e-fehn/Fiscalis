@@ -351,6 +351,31 @@ export default defineSchema({
 		.index("by_subcategory", ["userId", "category", "subcategory"]),
 
 	// ═══════════════════════════════════════════════════════════════
+	// VALUATION OVERRIDES (per-asset, ENG-239)
+	// ═══════════════════════════════════════════════════════════════
+
+	// The user's own price for one provider holding: a manual price or a
+	// mark-to-model (services/pricing/valuationOverride.ts). Keyed by the
+	// holding's sync-stable key, since syncs replace the holding rows;
+	// applied by every net-worth figure (lib/netWorth.ts). Written by
+	// convex/valuationOverrides.ts.
+	valuationOverrides: defineTable({
+		userId: v.string(), // Clerk user ID
+		holdingKey: v.string(), // services/portfolio/flows.ts brokerPositionKey / bitpandaHoldingKey
+		source: v.union(v.literal("brokerPosition"), v.literal("bitpanda")),
+		symbol: v.string(), // For display after the holding is gone
+		kind: v.union(v.literal("manualPrice"), v.literal("markToModel")),
+		pricePerUnit: v.number(), // In `currency`, on `asOf`
+		currency: v.string(),
+		asOf: v.string(), // YYYY-MM-DD
+		annualRatePercent: v.optional(v.number()), // markToModel only
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_user_key", ["userId", "holdingKey"]),
+
+	// ═══════════════════════════════════════════════════════════════
 	// LOANS (Debt Management)
 	// ═══════════════════════════════════════════════════════════════
 

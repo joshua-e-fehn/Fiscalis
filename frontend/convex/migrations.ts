@@ -1,8 +1,20 @@
 import { Migrations } from "@convex-dev/migrations";
 import { v } from "convex/values";
-import { components } from "./_generated/api";
+import { components, internal } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
-import { internalMutation } from "./_generated/server";
+import {
+  internalAction,
+  internalMutation,
+  internalQuery,
+  type ActionCtx,
+} from "./_generated/server";
+import {
+  REMAP_BATCH_SIZE,
+  REMAP_COUNT_PAGE_SIZE,
+  describeCounts,
+  remapArgsRefusal,
+} from "../../services/auth/clerkUserIdRemap";
+import { USER_DATA_TABLE_NAMES } from "../../services/privacy/userData";
 import {
   isLegacyInterestOnlyThenPayment,
   loanBalanceAdjustment,
@@ -870,5 +882,188 @@ export const backfillSyncTargets = internalMutation({
     }
 
     return { dryRun, users: userIds.size, alreadyRegistered, inserted };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CLERK USER ID REMAP
+// ═══════════════════════════════════════════════════════════════
+//
+// Walks services/privacy/userData.ts USER_DATA_TABLES, the list of every
+// table with a userId (convex/account.ts fails `tsc` when a table is
+// missing from it). Every listed table has a by_user index on userId;
+// narrowing the union to one member lets withIndex type-check for all
+// (as in account.ts).
+type AnyUserTable = "loans";
+
+/** One page of the count of `userId`'s documents in USER_DATA_TABLES[tableIndex]. */
+export const countUserIdDocs = internalQuery({
+  args: {
+    tableIndex: v.number(),
+    userId: v.string(),
+    cursor: v.union(v.string(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    const table = USER_DATA_TABLE_NAMES[args.tableIndex];
+    if (!table) throw new Error(`No user data table at index ${args.tableIndex}`);
+    const page = await ctx.db
+      .query(table as AnyUserTable)
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .paginate({ cursor: args.cursor, numItems: REMAP_COUNT_PAGE_SIZE });
+    return {
+      count: page.page.length,
+      isDone: page.isDone,
+      continueCursor: page.continueCursor,
+    };
+  },
+});
+
+/** `userId`'s document count in every user data table, keyed by table. */
+async function countUserDocs(
+  ctx: ActionCtx,
+  userId: string,
+): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const [tableIndex, table] of USER_DATA_TABLE_NAMES.entries()) {
+    let count = 0;
+    let cursor: string | null = null;
+    for (;;) {
+      const page: { count: number; isDone: boolean; continueCursor: string } =
+        await ctx.runQuery(internal.migrations.countUserIdDocs, {
+          tableIndex,
+          userId,
+          cursor,
+        });
+      count += page.count;
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
+    counts[table] = count;
+  }
+  return counts;
+}
+
+const sum = (counts: Record<string, number>) =>
+  Object.values(counts).reduce((a, b) => a + b, 0);
+
+/**
+ * Migration: move one user's documents from Clerk user ID `from` to `to`,
+ * for a change of Clerk instance (development -> production gives the same
+ * person a new ID, and every user-owned document stores
+ * `userId = identity.subject`). Rewrites `userId` in every table of
+ * USER_DATA_TABLES (services/privacy/userData.ts). SnapTrade's own user ID
+ * (snaptradeUserId) keeps the old value on purpose, see
+ * KEPT_CLERK_ID_FIELDS (services/auth/clerkUserIdRemap.ts). Rate-limiter
+ * buckets keyed by the old ID are left to expire.
+ *
+ * Dry run is the default: it counts `from`'s documents per table and
+ * reports documents that already belong to `to`, changing nothing. A real
+ * run refuses when `to` already owns documents (a sign-in on the new
+ * instance creates userSettings/onboardingProgress rows), unless
+ * `force: true`, which merges into them and can leave two rows in
+ * one-per-user tables (userSettings, onboardingProgress, snaptradeUsers,
+ * syncTargets). It then starts remapUserIdBatch, which patches
+ * REMAP_BATCH_SIZE documents per mutation and schedules itself until every
+ * table is done, logging each table's count. Re-running the dry run
+ * afterwards should report 0 documents left. Idempotent.
+ *
+ * NOT RUN. Dry run first:
+ *   npx convex run migrations:remapUserId '{"from": "user_OLD", "to": "user_NEW"}'
+ *   npx convex run migrations:remapUserId '{"from": "user_OLD", "to": "user_NEW", "dryRun": false}'
+ */
+export const remapUserId = internalAction({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    dryRun: v.optional(v.boolean()),
+    force: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const dryRun = args.dryRun ?? true;
+    const refusal = remapArgsRefusal(args.from, args.to);
+    if (refusal) throw new Error(`remapUserId refused: ${refusal}`);
+
+    const counts = await countUserDocs(ctx, args.from);
+    const collisions = Object.fromEntries(
+      Object.entries(await countUserDocs(ctx, args.to)).filter(([, n]) => n > 0),
+    );
+    const collision =
+      sum(collisions) > 0
+        ? `documents already belong to ${args.to}: ${describeCounts(collisions)}`
+        : null;
+    const report = {
+      dryRun,
+      from: args.from,
+      to: args.to,
+      total: sum(counts),
+      counts,
+      collisions,
+    };
+    console.log(
+      `remapUserId${dryRun ? " (dry run)" : ""}: ${report.total} documents of ` +
+        `${args.from}: ${describeCounts(counts)}` +
+        (collision ? `; ${collision}` : ""),
+    );
+
+    if (collision && !args.force && !dryRun) {
+      throw new Error(
+        `remapUserId refused: ${collision}. Remove them or pass "force": true to merge.`,
+      );
+    }
+    if (dryRun) return { ...report, scheduled: false };
+
+    await ctx.runMutation(internal.migrations.remapUserIdBatch, {
+      from: args.from,
+      to: args.to,
+      tableIndex: 0,
+      patched: {},
+    });
+    return { ...report, scheduled: true };
+  },
+});
+
+/**
+ * One batch of remapUserId: patches up to REMAP_BATCH_SIZE of `from`'s
+ * documents in USER_DATA_TABLES[tableIndex] to `to`, then schedules the
+ * next batch (the same table until a batch comes back short, then the next
+ * table). Patched documents leave the by_user range of `from`, so each
+ * batch reads the range from the start. `patched` carries the per-table
+ * counts for the final log line.
+ */
+export const remapUserIdBatch = internalMutation({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    tableIndex: v.number(),
+    patched: v.record(v.string(), v.number()),
+  },
+  handler: async (ctx, args) => {
+    const table = USER_DATA_TABLE_NAMES[args.tableIndex];
+    if (!table) {
+      console.log(
+        `remapUserId done: ${sum(args.patched)} documents ${args.from} -> ${args.to}: ` +
+          describeCounts(args.patched),
+      );
+      return;
+    }
+    const docs = await ctx.db
+      .query(table as AnyUserTable)
+      .withIndex("by_user", (q) => q.eq("userId", args.from))
+      .take(REMAP_BATCH_SIZE);
+    for (const doc of docs) {
+      await ctx.db.patch(doc._id, { userId: args.to });
+    }
+    const patched = {
+      ...args.patched,
+      [table]: (args.patched[table] ?? 0) + docs.length,
+    };
+    const tableDone = docs.length < REMAP_BATCH_SIZE;
+    if (tableDone) console.log(`remapUserId: ${table}: ${patched[table]}`);
+    await ctx.scheduler.runAfter(0, internal.migrations.remapUserIdBatch, {
+      from: args.from,
+      to: args.to,
+      tableIndex: tableDone ? args.tableIndex + 1 : args.tableIndex,
+      patched,
+    });
   },
 });

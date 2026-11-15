@@ -16,6 +16,7 @@ import { NotificationItem } from "@/components/atomic/molecules/notificationItem
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
+  useNotificationBell,
   useNotificationList,
 } from "@/hooks/convex";
 import { NOTIFICATION_PAGE_SIZE } from "@/../services/notifications/notifications";
@@ -25,7 +26,10 @@ export function NotificationCenter() {
   const { results, status, loadMore } = useNotificationList();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
-  const anyUnread = results.some((n) => n.readAt === undefined);
+  // The server-side count, not just the loaded pages: an unread row can sit
+  // past the last page loaded
+  const bell = useNotificationBell();
+  const anyUnread = (bell?.unread ?? 0) > 0 || results.some((n) => n.readAt === undefined);
 
   return (
     <div className="flex flex-col gap-4">

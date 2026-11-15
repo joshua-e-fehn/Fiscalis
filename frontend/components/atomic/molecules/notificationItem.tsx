@@ -77,12 +77,13 @@ export function NotificationItem({
   return (
     <div className="flex items-start gap-3 py-2">
       <span
-        aria-label={unread ? t("center.unreadLabel") : undefined}
+        aria-hidden
         className={cn(
           "mt-2 size-2 shrink-0 rounded-full",
           unread ? "bg-primary" : "bg-transparent",
         )}
       />
+      {unread && <span className="sr-only">{t("center.unreadLabel")}</span>}
       {notification.link ? (
         <Link
           href={notification.link}

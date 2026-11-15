@@ -144,8 +144,21 @@ async function getCategoryPositions(
 ) {
   const loaded = await loadAggregate(ctx);
   if (!loaded) return null;
-  const holdings = inCategory(loaded.holdings, category);
-  const summary = loaded.aggregate.byCategory[category];
+  return await categoryPositionsView(ctx, loaded.holdings, loaded.aggregate, category);
+}
+
+/**
+ * The category view over some holdings and their aggregate: one user's
+ * (getCategoryPositions) or a team's sharing members' (teamViews.ts).
+ */
+export async function categoryPositionsView(
+  ctx: QueryCtx,
+  allHoldings: LoadedHolding[],
+  aggregate: NetWorthAggregate,
+  category: InvestmentCategory,
+) {
+  const holdings = inCategory(allHoldings, category);
+  const summary = aggregate.byCategory[category];
   return {
     positions: toCategoryPositions(holdings),
     manualHoldings: await toManualHoldings(ctx, holdings),
@@ -167,72 +180,90 @@ export const getCashHoldings = query({
   handler: async (ctx) => {
     const loaded = await loadAggregate(ctx);
     if (!loaded) return null;
-    const { userId } = loaded;
-    const cash = inCategory(loaded.holdings, "cash");
-    const summary = loaded.aggregate.byCategory.cash;
-
-    // Institution names for the bank accounts
-    const plaidItems = await ctx.db
-      .query("plaidItems")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
-    const itemToInstitution = new Map(
-      plaidItems.map((item) => [item.itemId, item.institutionName]),
-    );
-
-    const bankAccounts = cash.flatMap((h) =>
-      h.source === "bank" && h.category === "cash"
-        ? [
-            {
-              ...h.doc,
-              institutionName:
-                itemToInstitution.get(h.doc.itemId) ?? undefined,
-            },
-          ]
-        : [],
-    );
-
-    // Uninvested broker account cash, each row with its EUR amount (a
-    // margin debit is a liability, see getLiabilities)
-    const brokerAccountCash = cash.flatMap((h) =>
-      h.source === "brokerAccount"
-        ? [{ ...h.doc, cashInBaseCurrency: h.valueBase }]
-        : [],
-    );
-
-    // Totals per source that reconcile with the rows: a credit balance (a
-    // card or an overpaid loan, money owed to the user) is its own total
-    let bankTotal = 0;
-    let brokerCashTotal = 0;
-    let bitpandaTotal = 0;
-    let creditBalanceTotal = 0;
-    for (const h of cash) {
-      const { subcategory, value } = placeHolding(h);
-      if (subcategory === CREDIT_BALANCE_SUBCATEGORY) creditBalanceTotal += value;
-      else if (h.source === "bank") bankTotal += value;
-      else if (h.source === "brokerAccount" || h.source === "brokerPosition")
-        brokerCashTotal += value;
-      else if (h.source === "bitpanda") bitpandaTotal += value;
-    }
-
-    return {
-      bankAccounts,
-      brokerCash: toCategoryPositions(cash),
-      brokerAccountCash,
-      // Manual assets recorded as cash (treasury bills), in EUR
-      manualHoldings: await toManualHoldings(ctx, cash),
-      summary: {
-        totalValue: summary.value,
-        bankTotal,
-        brokerCashTotal,
-        bitpandaTotal,
-        creditBalanceTotal,
-        accountCount: summary.count,
-        bySubcategory: subcategoryTotals(summary),
-      },
-    };
+    return await cashHoldingsView(ctx, [loaded.userId], loaded.holdings, loaded.aggregate);
   },
 });
+
+/**
+ * The cash view over the holdings of `userIds` (one user, or a team's
+ * sharing members in teamViews.ts) and their aggregate.
+ */
+export async function cashHoldingsView(
+  ctx: QueryCtx,
+  userIds: readonly string[],
+  holdings: LoadedHolding[],
+  aggregate: NetWorthAggregate,
+) {
+  const cash = inCategory(holdings, "cash");
+  const summary = aggregate.byCategory.cash;
+
+  // Institution names for the bank accounts
+  const plaidItems = (
+    await Promise.all(
+      userIds.map((userId) =>
+        ctx.db
+          .query("plaidItems")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .collect(),
+      ),
+    )
+  ).flat();
+  const itemToInstitution = new Map(
+    plaidItems.map((item) => [item.itemId, item.institutionName]),
+  );
+
+  const bankAccounts = cash.flatMap((h) =>
+    h.source === "bank" && h.category === "cash"
+      ? [
+          {
+            ...h.doc,
+            institutionName:
+              itemToInstitution.get(h.doc.itemId) ?? undefined,
+          },
+        ]
+      : [],
+  );
+
+  // Uninvested broker account cash, each row with its EUR amount (a
+  // margin debit is a liability, see getLiabilities)
+  const brokerAccountCash = cash.flatMap((h) =>
+    h.source === "brokerAccount"
+      ? [{ ...h.doc, cashInBaseCurrency: h.valueBase }]
+      : [],
+  );
+
+  // Totals per source that reconcile with the rows: a credit balance (a
+  // card or an overpaid loan, money owed to the user) is its own total
+  let bankTotal = 0;
+  let brokerCashTotal = 0;
+  let bitpandaTotal = 0;
+  let creditBalanceTotal = 0;
+  for (const h of cash) {
+    const { subcategory, value } = placeHolding(h);
+    if (subcategory === CREDIT_BALANCE_SUBCATEGORY) creditBalanceTotal += value;
+    else if (h.source === "bank") bankTotal += value;
+    else if (h.source === "brokerAccount" || h.source === "brokerPosition")
+      brokerCashTotal += value;
+    else if (h.source === "bitpanda") bitpandaTotal += value;
+  }
+
+  return {
+    bankAccounts,
+    brokerCash: toCategoryPositions(cash),
+    brokerAccountCash,
+    // Manual assets recorded as cash (treasury bills), in EUR
+    manualHoldings: await toManualHoldings(ctx, cash),
+    summary: {
+      totalValue: summary.value,
+      bankTotal,
+      brokerCashTotal,
+      bitpandaTotal,
+      creditBalanceTotal,
+      accountCount: summary.count,
+      bySubcategory: subcategoryTotals(summary),
+    },
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════
 // LIABILITIES
@@ -259,33 +290,40 @@ export const getLiabilities = query({
   handler: async (ctx) => {
     const loaded = await loadAggregate(ctx);
     if (!loaded) return null;
-    const { aggregate } = loaded;
-    const summary = aggregate.byCategory.liabilities;
-
-    const rows: LiabilityRow[] = inCategory(
-      loaded.holdings,
-      "liabilities",
-    ).map((h) => ({
-      id: h.id,
-      source: h.source,
-      name: h.name,
-      subcategory: h.subcategory,
-      owedInBaseCurrency: h.valueBase,
-    }));
-
-    return {
-      rows,
-      summary: {
-        totalLiabilities: summary.value,
-        // Non-loan liabilities; loans are counted in loansCount
-        accountCount: aggregate.liabilityAccountsCount,
-        loansCount: aggregate.loansCount,
-        monthlyPayment: aggregate.monthlyLoanPayment,
-        bySubcategory: subcategoryTotals(summary),
-      },
-    };
+    return liabilitiesView(loaded.holdings, loaded.aggregate);
   },
 });
+
+/** The liabilities view over some holdings and their aggregate (see cashHoldingsView). */
+export function liabilitiesView(
+  holdings: LoadedHolding[],
+  aggregate: NetWorthAggregate,
+) {
+  const summary = aggregate.byCategory.liabilities;
+
+  const rows: LiabilityRow[] = inCategory(
+    holdings,
+    "liabilities",
+  ).map((h) => ({
+    id: h.id,
+    source: h.source,
+    name: h.name,
+    subcategory: h.subcategory,
+    owedInBaseCurrency: h.valueBase,
+  }));
+
+  return {
+    rows,
+    summary: {
+      totalLiabilities: summary.value,
+      // Non-loan liabilities; loans are counted in loansCount
+      accountCount: aggregate.liabilityAccountsCount,
+      loansCount: aggregate.loansCount,
+      monthlyPayment: aggregate.monthlyLoanPayment,
+      bySubcategory: subcategoryTotals(summary),
+    },
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════
 // EQUITIES

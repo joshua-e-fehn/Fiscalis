@@ -46,7 +46,7 @@ export default function CryptoHoldingsPage() {
               <Button variant="outline" asChild>
                 <Link href="/integrations/brokers">
                   {t("connect")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4 rtl:-scale-x-100" />
                 </Link>
               </Button>
             </div>

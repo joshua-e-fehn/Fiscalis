@@ -152,7 +152,7 @@ export function LoanNotesTab({ loan }: LoanNotesTabProps) {
               disabled={!hasUnsavedChanges || isSaving}
               variant="outline"
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="h-4 w-4 me-2" />
               {t("saveNow")}
             </Button>
           </div>

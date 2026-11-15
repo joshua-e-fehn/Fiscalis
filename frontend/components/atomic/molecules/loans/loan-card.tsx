@@ -174,19 +174,19 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
             </div>
 
             <div className="flex items-center gap-8">
-              <div className="text-right hidden md:block">
+              <div className="text-end hidden md:block">
                 <p className="text-sm text-muted-foreground">{t("balance")}</p>
                 <p className="font-semibold">
                   {formatCurrency(loan.currentBalance, loan.currency)}
                 </p>
               </div>
-              <div className="text-right hidden lg:block">
+              <div className="text-end hidden lg:block">
                 <p className="text-sm text-muted-foreground">{t("payment")}</p>
                 <p className="font-semibold">
                   {formatCurrency(nextAmount, loan.currency)}
                 </p>
               </div>
-              <div className="text-right hidden sm:block">
+              <div className="text-end hidden sm:block">
                 <p className="text-sm text-muted-foreground">{t("nextDue")}</p>
                 <p className="font-semibold">
                   {formatDate(nextDate)}
@@ -206,7 +206,7 @@ export function LoanCard({ loan, viewMode, onClick }: LoanCardProps) {
                   />
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground rtl:-scale-x-100" />
             </div>
           </div>
         </CardContent>

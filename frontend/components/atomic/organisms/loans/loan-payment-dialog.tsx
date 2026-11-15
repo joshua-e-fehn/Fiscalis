@@ -129,7 +129,7 @@ function LoanPaymentForm({
 
   const currency = toInvestmentCurrency(loan.currency);
   const symbol = currency ? currencySymbols[currency].trim() : loan.currency;
-  const inputPadding = symbol.length > 1 ? "pl-12" : "pl-7";
+  const inputPadding = symbol.length > 1 ? "ps-12" : "ps-7";
 
   // Interest is one period on the balance owed on the payment date, less
   // what partial payments already booked for that due date; an edit is split
@@ -257,7 +257,7 @@ function LoanPaymentForm({
           <Label htmlFor="payment-amount">{t("totalAmount")}</Label>
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {symbol}
               </span>
               <Input
@@ -280,7 +280,7 @@ function LoanPaymentForm({
           <div>
             <Label htmlFor="principal-portion">{t("principalPortion")}</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {symbol}
               </span>
               <Input
@@ -299,7 +299,7 @@ function LoanPaymentForm({
           <div>
             <Label htmlFor="interest-portion">{t("interestPortion")}</Label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {symbol}
               </span>
               <Input
@@ -344,7 +344,7 @@ function LoanPaymentForm({
             type="submit"
             disabled={!(parseFloat(amount) > 0) || isSubmitting}
           >
-            {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isSubmitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
             {isEdit ? t("editSubmit") : t("recordPayment")}
           </Button>
         </DialogFooter>

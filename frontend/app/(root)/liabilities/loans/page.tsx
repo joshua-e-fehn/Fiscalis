@@ -250,7 +250,7 @@ export default function LoansPage() {
                       <span className="font-semibold">
                         {formatCurrency(payment.amount, payment.currency)}
                       </span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground rtl:-scale-x-100" />
                     </div>
                   </div>
                 );
@@ -403,11 +403,11 @@ function EmptyState({ onAddLoan }: { onAddLoan: () => void }) {
           {t("emptyDescription")}
         </p>
         <Button onClick={onAddLoan}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 me-2" />
           {t("addFirst")}
         </Button>
 
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-4 text-left max-w-2xl mx-auto">
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-3 gap-4 text-start max-w-2xl mx-auto">
           {LOAN_EXAMPLES.map(({ key, icon: Icon, color }) => (
             <div
               key={key}

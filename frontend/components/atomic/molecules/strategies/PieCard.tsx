@@ -139,10 +139,10 @@ export function PieCard({ pie, currency, onEdit, onDelete }: PieCardProps) {
           <TableHeader>
             <TableRow>
               <TableHead>{t("columns.slice")}</TableHead>
-              <TableHead className="text-right">{t("columns.target")}</TableHead>
-              <TableHead className="text-right">{t("columns.actual")}</TableHead>
-              <TableHead className="text-right">{t("columns.drift")}</TableHead>
-              <TableHead className="text-right">{t("columns.rebalance")}</TableHead>
+              <TableHead className="text-end">{t("columns.target")}</TableHead>
+              <TableHead className="text-end">{t("columns.actual")}</TableHead>
+              <TableHead className="text-end">{t("columns.drift")}</TableHead>
+              <TableHead className="text-end">{t("columns.rebalance")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -160,14 +160,14 @@ export function PieCard({ pie, currency, onEdit, onDelete }: PieCardProps) {
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="text-end tabular-nums">
                   {percent(slice.targetWeight)}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="text-end tabular-nums">
                   {slice.actualWeight === null ? t("balanced") : percent(slice.actualWeight)}
                   <div className="text-xs text-muted-foreground">{money(slice.actualValue)}</div>
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="text-end tabular-nums">
                   {slice.drift === null || slice.status === null ? (
                     t("balanced")
                   ) : (
@@ -179,7 +179,7 @@ export function PieCard({ pie, currency, onEdit, onDelete }: PieCardProps) {
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="text-end tabular-nums">
                   {isEmpty || Math.round(slice.rebalance) === 0
                     ? t("balanced")
                     : slice.rebalance > 0
@@ -204,12 +204,12 @@ function AllocationBar({ target, actual }: { target: number; actual: number }) {
   return (
     <div className="relative mt-2 h-1.5 w-full rounded-full bg-muted" aria-hidden>
       <div
-        className="absolute inset-y-0 left-0 rounded-full bg-primary"
+        className="absolute inset-y-0 start-0 rounded-full bg-primary"
         style={{ width: `${clamp(actual)}%` }}
       />
       <div
         className="absolute -top-0.5 h-2.5 w-0.5 bg-foreground"
-        style={{ left: `${clamp(target)}%` }}
+        style={{ insetInlineStart: `${clamp(target)}%` }}
       />
     </div>
   );

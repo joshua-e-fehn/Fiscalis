@@ -80,12 +80,12 @@ function SortButton({
     <Button
       variant="ghost"
       size="sm"
-      className="-ml-3 h-8"
+      className="-ms-3 h-8"
       onClick={() => onSort(field)}
     >
       {children}
       <ArrowUpDown
-        className={cn("ml-2 h-3 w-3", activeField === field && "text-primary")}
+        className={cn("ms-2 h-3 w-3", activeField === field && "text-primary")}
       />
     </Button>
   );
@@ -170,10 +170,10 @@ export function CryptoPositionsTable({
         {showFilters && (
           <div className="flex flex-col sm:flex-row gap-2 pt-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t("search")}
-                className="pl-8"
+                className="ps-8"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />

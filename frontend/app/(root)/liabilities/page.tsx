@@ -140,7 +140,7 @@ const LiabilityCategoryCard = ({
             </div>
           </div>
           {hasHoldings && (
-            <div className="text-right">
+            <div className="text-end">
               <AlertTriangle className="h-5 w-5 text-amber-500" />
             </div>
           )}
@@ -176,7 +176,7 @@ const LiabilityCategoryCard = ({
           >
             <Link href={category.href}>
               {hasHoldings ? t("viewDetails") : t("track")}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ms-2 h-4 w-4 rtl:-scale-x-100" />
             </Link>
           </Button>
         ) : (
@@ -221,7 +221,7 @@ export default function LiabilitiesPage() {
           <p className="text-muted-foreground mt-2">{t("subtitle")}</p>
         </div>
         <Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           {tLoans("addLoan")}
         </Button>
       </div>
@@ -299,13 +299,13 @@ export default function LiabilitiesPage() {
           <Button variant="outline" asChild>
             <Link href="/tools/calculators/loan">
               {tCalculator("title")}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ms-2 h-4 w-4 rtl:-scale-x-100" />
             </Link>
           </Button>
           <Button variant="outline" asChild>
             <Link href="/integrations/banking">
               {tAction("connectBank")}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <ArrowRight className="ms-2 h-4 w-4 rtl:-scale-x-100" />
             </Link>
           </Button>
         </CardContent>

@@ -200,7 +200,7 @@ function CurrencyInput({
 }: CurrencyInputProps) {
   return (
     <div className="relative mt-1.5">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2">
+      <span className="absolute start-3 top-1/2 -translate-y-1/2">
         {getCurrencyIcon(currency)}
       </span>
       <Input
@@ -209,7 +209,7 @@ function CurrencyInput({
         step="0.01"
         min="0"
         placeholder={placeholder}
-        className="pl-9"
+        className="ps-9"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -687,7 +687,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       type="button"
                       onClick={() => setLoanType(type.value)}
                       className={cn(
-                        "p-3 rounded-lg border text-left transition-all",
+                        "p-3 rounded-lg border text-start transition-all",
                         loanType === type.value
                           ? "border-primary bg-primary/5 ring-1 ring-primary"
                           : "border-border hover:border-muted-foreground/50",
@@ -711,13 +711,13 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                 <div>
                   <Label htmlFor="lender">{t("lender")}</Label>
                   <div className="relative mt-1.5">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Building2 className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="lender"
                       placeholder={t("lenderPlaceholder")}
                       value={lender}
                       onChange={(e) => setLender(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
                 </div>
@@ -725,13 +725,13 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                 <div>
                   <Label htmlFor="contractNumber">{t("contractNumber")}</Label>
                   <div className="relative mt-1.5">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <FileText className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="contractNumber"
                       placeholder="12345-67890"
                       value={contractNumber}
                       onChange={(e) => setContractNumber(e.target.value)}
-                      className="pl-9"
+                      className="ps-9"
                     />
                   </div>
                 </div>
@@ -772,7 +772,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                 <div>
                   <Label htmlFor="annualInterestRate">{t("annualRate")}</Label>
                   <div className="relative mt-1.5">
-                    <Percent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Percent className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="annualInterestRate"
                       type="number"
@@ -780,7 +780,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       min="0"
                       max="100"
                       placeholder="3.75"
-                      className="pl-9"
+                      className="ps-9"
                       value={annualInterestRate}
                       onChange={(e) => setAnnualInterestRate(e.target.value)}
                     />
@@ -844,7 +844,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                     {t("term", { unit: periodUnit })}
                   </Label>
                   <div className="relative mt-1.5">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Calendar className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="termPeriods"
                       type="number"
@@ -854,7 +854,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           ? t("termPlaceholderMonthly")
                           : "30"
                       }
-                      className="pl-9"
+                      className="ps-9"
                       value={termPeriods}
                       onChange={(e) => setTermPeriods(e.target.value)}
                     />
@@ -1047,7 +1047,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                 );
                               }}
                               disabled={!payment.paid}
-                              className="text-right"
+                              className="text-end"
                             />
                           </div>
                         </div>
@@ -1108,11 +1108,11 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           min="0"
                           max="100"
                           placeholder={t("noLimit")}
-                          className="pr-7"
+                          className="pe-7"
                           value={maxPrepayment}
                           onChange={(e) => setMaxPrepayment(e.target.value)}
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <span className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                           %
                         </span>
                       </div>
@@ -1131,11 +1131,11 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           min="0"
                           max="100"
                           placeholder={t("none")}
-                          className="pr-7"
+                          className="pe-7"
                           value={prepaymentPenalty}
                           onChange={(e) => setPrepaymentPenalty(e.target.value)}
                         />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <span className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                           %
                         </span>
                       </div>
@@ -1157,7 +1157,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           size="sm"
                           onClick={() => addExtraPayment("one_time")}
                         >
-                          <Plus className="h-3 w-3 mr-1" />
+                          <Plus className="h-3 w-3 me-1" />
                           {t("oneTime")}
                         </Button>
                         <Button
@@ -1166,7 +1166,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           size="sm"
                           onClick={() => addExtraPayment("recurring")}
                         >
-                          <Plus className="h-3 w-3 mr-1" />
+                          <Plus className="h-3 w-3 me-1" />
                           {t("recurring")}
                         </Button>
                       </div>
@@ -1230,7 +1230,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                                 </Button>
                               </div>
                               {ep.type === "recurring" && (
-                                <div className="flex flex-wrap items-center gap-2 mt-2 ml-20">
+                                <div className="flex flex-wrap items-center gap-2 mt-2 ms-20">
                                   <Label
                                     htmlFor={`extra-${ep.id}-until`}
                                     className="text-xs text-muted-foreground"
@@ -1435,7 +1435,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               }
             }}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" />
+            <ChevronLeft className="h-4 w-4 me-1 rtl:-scale-x-100" />
             {currentStep === 1 ? tActions("cancel") : tActions("back")}
           </Button>
 
@@ -1446,12 +1446,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
               disabled={!canProceed()}
             >
               {t("next")}
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4 ms-1 rtl:-scale-x-100" />
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
               )}
               {t("submit")}
             </Button>

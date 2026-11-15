@@ -156,7 +156,7 @@ export function EditLoanDialog({
             <div>
               <Label htmlFor="edit-balance">{t("currentBalance")}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                   {loan.currency}
                 </span>
                 <Input
@@ -164,7 +164,7 @@ export function EditLoanDialog({
                   type="number"
                   step="0.01"
                   min="0"
-                  className="pl-12"
+                  className="ps-12"
                   value={currentBalance}
                   onChange={(e) => setCurrentBalance(e.target.value)}
                 />
@@ -180,11 +180,11 @@ export function EditLoanDialog({
                   step="0.01"
                   min="0"
                   max="100"
-                  className="pr-7"
+                  className="pe-7"
                   value={annualInterestRate}
                   onChange={(e) => setAnnualInterestRate(e.target.value)}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                   %
                 </span>
               </div>
@@ -193,7 +193,7 @@ export function EditLoanDialog({
             <div>
               <Label htmlFor="edit-payment">{t("scheduledPayment")}</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                   {loan.currency}
                 </span>
                 <Input
@@ -201,7 +201,7 @@ export function EditLoanDialog({
                   type="number"
                   step="0.01"
                   min="0"
-                  className="pl-12"
+                  className="ps-12"
                   value={scheduledPayment}
                   onChange={(e) => {
                     setPaymentEdited(true);
@@ -291,7 +291,7 @@ export function EditLoanDialog({
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
               )}
               {tActions("saveChanges")}
             </Button>

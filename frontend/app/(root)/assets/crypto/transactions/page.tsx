@@ -137,7 +137,7 @@ export default function CryptoAssetsTransactionsPage() {
               <Button variant="outline" asChild>
                 <Link href="/integrations/brokers">
                   {tAction("connectCrypto")}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ms-2 h-4 w-4 rtl:-scale-x-100" />
                 </Link>
               </Button>
             </div>
@@ -181,7 +181,7 @@ export default function CryptoAssetsTransactionsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <div className="font-medium">
                       {tx.quantity?.toFixed(6)} {tx.symbol}
                     </div>

@@ -103,7 +103,7 @@ export function SubcategoryCategoryCard({
             <Button asChild className="w-full">
               <Link href={category.href}>
                 {actionLabel ?? t("viewPortfolio")}
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ms-2 h-4 w-4 rtl:-scale-x-100" />
               </Link>
             </Button>
           ) : (

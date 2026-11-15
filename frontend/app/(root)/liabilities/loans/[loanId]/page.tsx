@@ -149,7 +149,7 @@ export default function LoanDetailPage() {
             {t("notFoundDescription")}
           </p>
           <Button onClick={() => router.push("/liabilities/loans")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ArrowLeft className="h-4 w-4 me-2 rtl:-scale-x-100" />
             {t("back")}
           </Button>
         </Card>
@@ -167,7 +167,7 @@ export default function LoanDetailPage() {
           onClick={() => router.push("/liabilities/loans")}
           className="mb-4"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-4 w-4 me-2 rtl:-scale-x-100" />
           {t("back")}
         </Button>
 
@@ -201,7 +201,7 @@ export default function LoanDetailPage() {
 
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowEditDialog(true)}>
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className="h-4 w-4 me-2" />
               {tActions("edit")}
             </Button>
             <AlertDialog>
@@ -210,7 +210,7 @@ export default function LoanDetailPage() {
                   variant="outline"
                   className="text-red-600 hover:text-red-700"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-4 w-4 me-2" />
                   {tActions("delete")}
                 </Button>
               </AlertDialogTrigger>
@@ -344,7 +344,7 @@ export default function LoanDetailPage() {
               </p>
             )}
             {kpis.paymentBelowInterest && kpis.finalBalloon > 0 && (
-              <p className="pl-6">
+              <p className="ps-6">
                 {t("finalPaymentDue", {
                   amount: formatCurrencyPrecise(kpis.finalBalloon, loan.currency),
                 })}

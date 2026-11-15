@@ -270,7 +270,7 @@ function PieEditorForm({ onOpenChange, pie }: PieEditorDialogProps) {
         <div className="flex items-center justify-between">
           <Label>{t("slices")}</Label>
           <Button type="button" variant="ghost" size="sm" onClick={splitEvenly}>
-            <Scale className="mr-2 h-4 w-4" />
+            <Scale className="me-2 h-4 w-4" />
             {t("splitEvenly")}
           </Button>
         </div>
@@ -430,7 +430,7 @@ function PieEditorForm({ onOpenChange, pie }: PieEditorDialogProps) {
 
         <div className="flex items-center justify-between">
           <Button type="button" variant="outline" size="sm" onClick={addRow}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             {t("addSlice")}
           </Button>
           <span
@@ -454,7 +454,7 @@ function PieEditorForm({ onOpenChange, pie }: PieEditorDialogProps) {
           {tActions("cancel")}
         </Button>
         <Button onClick={handleSave} disabled={isPending}>
-          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
           {tActions("save")}
         </Button>
       </DialogFooter>

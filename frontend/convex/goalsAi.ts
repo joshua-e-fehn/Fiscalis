@@ -109,7 +109,7 @@ export const draftRule = action({
     const messages = ruleAuthoringMessages({
       text: trimmed,
       currency: currency.slice(0, 3),
-      language: language.slice(0, 16),
+      language: language.slice(0, 40),
       trackers,
     });
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {

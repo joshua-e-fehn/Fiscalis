@@ -357,6 +357,7 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
 
           <RuleAssistant
             currency={currency}
+            trackers={trackers}
             onApply={(rule) => {
               setBare(!isGroup(rule));
               if (isFlat(rule)) {
@@ -613,7 +614,15 @@ function RowFields({ row, patch, counts, measures, currency }: RowFieldsProps) {
  * the server), applied to the builder once the user has read its summary.
  * Trackers the rule needs are created on apply.
  */
-function RuleAssistant({ currency, onApply }: { currency: string; onApply: (rule: RuleNode) => void }) {
+function RuleAssistant({
+  currency,
+  trackers,
+  onApply,
+}: {
+  currency: string;
+  trackers: readonly TrackerView[];
+  onApply: (rule: RuleNode) => void;
+}) {
   const t = useTranslations("strategies.goals.editor.ai");
   const tErrors = useTranslations("common.errors");
   const locale = useLocale();
@@ -660,7 +669,15 @@ function RuleAssistant({ currency, onApply }: { currency: string; onApply: (rule
     try {
       const ids = new Map<string, string>();
       for (const tracker of draft.newTrackers) {
-        ids.set(tracker.ref, await createTracker({ name: tracker.name, kind: tracker.kind, unit: tracker.unit }));
+        // Reuse one with the same name and kind (a retry after a failed apply)
+        const existing = trackers.find(
+          (x) => x.kind === tracker.kind && x.name.toLowerCase() === tracker.name.toLowerCase(),
+        );
+        ids.set(
+          tracker.ref,
+          existing?._id ??
+            (await createTracker({ name: tracker.name, kind: tracker.kind, unit: tracker.unit })),
+        );
       }
       onApply(withCreatedTrackers(draft.rule, ids));
       setNote(t("applied"));

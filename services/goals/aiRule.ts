@@ -42,6 +42,8 @@ export interface RuleDraft {
 
 export const NEW_TRACKER_PREFIX = "new:";
 export const DRAFT_TEXT_MAX = 1000;
+/** Most trackers one draft may add */
+export const MAX_NEW_TRACKERS = 10;
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -161,13 +163,19 @@ export function parseDraft(
     }
   }
   const used = new Set(ruleLeaves(parsed.rule).flatMap((l) => ("trackerId" in l ? [l.trackerId] : [])));
+  if ([...used].filter((id) => id.startsWith(NEW_TRACKER_PREFIX)).length > MAX_NEW_TRACKERS) {
+    return { ok: false, reason: `Use at most ${MAX_NEW_TRACKERS} new trackers.` };
+  }
 
   return {
     ok: true,
     draft: {
       rule: parsed.rule,
       summary: shortText(obj.summary, 400) ?? "",
-      newTrackers: declared.filter((t) => used.has(t.ref)),
+      // One tracker per ref the rule uses, at most MAX_NEW_TRACKERS
+      newTrackers: declared
+        .filter((t, i) => used.has(t.ref) && declared.findIndex((d) => d.ref === t.ref) === i)
+        .slice(0, MAX_NEW_TRACKERS),
       unsupported: (Array.isArray(obj.unsupported) ? obj.unsupported : [])
         .map((u) => shortText(u, 200))
         .filter((u): u is string => u !== undefined)

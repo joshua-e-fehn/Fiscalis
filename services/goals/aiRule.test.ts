@@ -54,6 +54,7 @@ describe("parseDraft", () => {
         newTrackers: [
           { ref: "new:1", name: "Jogging", kind: "count", unit: "runs" },
           { ref: "new:2", name: "Unused", kind: "count" },
+          { ref: "new:1", name: "Jogging again", kind: "count" },
         ],
       }),
       trackers,

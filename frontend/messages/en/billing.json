@@ -1,0 +1,81 @@
+{
+  "plans": {
+    "free": "Free",
+    "pro": "Pro"
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Your plan, subscription and invoices.",
+    "current": {
+      "title": "Current plan",
+      "description": "What you're on and how it renews.",
+      "sourceSubscription": "Paid subscription",
+      "sourceGrant": "Included at no cost",
+      "sourceDefault": "Free forever",
+      "renews": "Renews on {date}",
+      "endsOn": "Ends on {date}",
+      "pastDue": "The last payment failed. Update your payment method to keep Pro.",
+      "ended": "Your Pro subscription has ended.",
+      "intervalMonth": "Billed monthly",
+      "intervalYear": "Billed yearly",
+      "manage": "Manage subscription",
+      "manageHint": "Change or cancel your plan, update your payment method and download invoices in the Stripe customer portal."
+    },
+    "upgrade": {
+      "title": "Upgrade to Pro",
+      "description": "Unlimited connections, API access and Pies.",
+      "perMonth": "{price} per month",
+      "perYear": "{price} per year",
+      "month": "Monthly",
+      "year": "Yearly",
+      "submit": "Upgrade to Pro",
+      "unavailable": "Upgrading isn't available yet. Please check back soon.",
+      "grantNote": "Pro is already included for you. You can still subscribe to support Fiscalis.",
+      "features": {
+        "connections": "Unlimited bank, broker and crypto connections",
+        "apiKeys": "API keys for the net worth API",
+        "pies": "Pies (investment strategies)"
+      }
+    },
+    "checkout": {
+      "success": "Thanks for upgrading! Your plan updates as soon as Stripe confirms the payment.",
+      "canceled": "Checkout was canceled. Nothing was charged."
+    },
+    "invoices": {
+      "title": "Invoices",
+      "description": "Your most recent invoices. The customer portal has the full history and PDFs.",
+      "empty": "No invoices yet.",
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status",
+      "statuses": {
+        "draft": "Draft",
+        "open": "Open",
+        "paid": "Paid",
+        "void": "Void",
+        "uncollectible": "Uncollectible",
+        "failed": "Failed",
+        "other": "Other"
+      }
+    }
+  },
+  "limits": {
+    "title": "Limits",
+    "subtitle": "What your plan includes and how much of it you use.",
+    "card": {
+      "title": "Usage",
+      "description": "You're on the {plan} plan."
+    },
+    "rows": {
+      "connections": "Provider connections",
+      "apiKeys": "API keys",
+      "pies": "Pies"
+    },
+    "unlimited": "Unlimited",
+    "notIncluded": "Not included",
+    "usedOf": "{used} of {limit}",
+    "used": "{used} in use",
+    "upgradeHint": "Need more? Pro has no limits.",
+    "upgrade": "See Pro"
+  }
+}

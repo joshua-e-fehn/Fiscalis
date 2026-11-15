@@ -16,10 +16,10 @@ describe("parseFeatureFlags", () => {
   });
 
   it("turns on the listed flags and ignores unknown names", () => {
-    const flags = parseFeatureFlags(" notifications , billing,unknown");
+    const flags = parseFeatureFlags(" notifications , teamSettings,unknown");
     expect(flags.notifications).toBe(true);
-    expect(flags.billing).toBe(true);
-    expect(flags.upgrade).toBe(false);
+    expect(flags.teamSettings).toBe(true);
+    expect(flags.plannedCategories).toBe(false);
     expect("unknown" in flags).toBe(false);
   });
 
@@ -31,8 +31,8 @@ describe("parseFeatureFlags", () => {
 
 describe("filterByFeature", () => {
   it("keeps unflagged items and flagged ones that are on", () => {
-    const items = [{ id: 1 }, { id: 2, feature: "notifications" as const }, { id: 3, feature: "billing" as const }];
-    expect(filterByFeature(items, parseFeatureFlags("billing")).map((i) => i.id)).toEqual([1, 3]);
+    const items = [{ id: 1 }, { id: 2, feature: "notifications" as const }, { id: 3, feature: "teamSettings" as const }];
+    expect(filterByFeature(items, parseFeatureFlags("teamSettings")).map((i) => i.id)).toEqual([1, 3]);
   });
 });
 

@@ -42,6 +42,8 @@ import strategiesEn from "@/messages/en/strategies.json";
 import strategiesDe from "@/messages/de/strategies.json";
 import docsEn from "@/messages/en/docs.json";
 import docsDe from "@/messages/de/docs.json";
+import billingEn from "@/messages/en/billing.json";
+import billingDe from "@/messages/de/billing.json";
 
 import type { Language } from "./locales";
 
@@ -63,6 +65,7 @@ const en = {
   settings: settingsEn,
   strategies: strategiesEn,
   docs: docsEn,
+  billing: billingEn,
 };
 
 export type Messages = typeof en;
@@ -85,6 +88,7 @@ const de = {
   settings: settingsDe,
   strategies: strategiesDe,
   docs: docsDe,
+  billing: billingDe,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = { en, de };

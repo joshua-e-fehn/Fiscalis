@@ -152,3 +152,12 @@ export {
   useRevokeApiKey,
   netWorthEndpointUrl,
 } from "./apiKeys";
+
+// Re-export billing hooks (plans, Stripe Checkout and portal)
+export {
+  useMyPlan,
+  useBillingOverview,
+  usePlanUsage,
+  useCreateCheckoutSession,
+  useCreatePortalSession,
+} from "./billing";

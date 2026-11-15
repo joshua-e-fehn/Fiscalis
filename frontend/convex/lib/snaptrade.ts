@@ -40,17 +40,6 @@ export function getSnaptradeClient(): Snaptrade {
 }
 
 /**
- * Get the encryption key for storing sensitive data
- */
-export function getEncryptionKey(): string {
-  const key = process.env.CONVEX_ENCRYPTION_KEY;
-  if (!key) {
-    throw new Error("CONVEX_ENCRYPTION_KEY environment variable is not set");
-  }
-  return key;
-}
-
-/**
  * Normalize account type from SnapTrade to our schema
  */
 export function normalizeAccountType(

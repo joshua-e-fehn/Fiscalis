@@ -53,14 +53,6 @@ function getPlaidClient() {
   return new PlaidApi(configuration);
 }
 
-function getEncryptionKey(): string {
-  const key = process.env.CONVEX_ENCRYPTION_KEY;
-  if (!key) {
-    throw new Error("CONVEX_ENCRYPTION_KEY environment variable is not set");
-  }
-  return key;
-}
-
 // Parse country codes from environment
 function getCountryCodes(): CountryCode[] {
   const codes = process.env.PLAID_COUNTRY_CODES?.split(",") || ["US"];
@@ -132,7 +124,7 @@ export const createUpdateLinkToken = action({
       userError("connectionNotFound");
     }
 
-    const accessToken = decrypt(item.accessToken, getEncryptionKey());
+    const accessToken = decrypt(item.accessToken);
     const plaidClient = getPlaidClient();
 
     const response = await plaidClient.linkTokenCreate({
@@ -200,7 +192,7 @@ export const exchangeToken = action({
     }
 
     // Encrypt the access token before storing
-    const encryptedToken = encrypt(accessToken, getEncryptionKey());
+    const encryptedToken = encrypt(accessToken);
 
     // Save to database
     await ctx.runMutation(internal.banking.saveItem, {
@@ -405,7 +397,7 @@ export const syncAccountsInternal = internalAction({
       ctx,
       { provider: "plaid", userId: item.userId, trigger: args.trigger },
       async () => {
-        const accessToken = decrypt(item.accessToken, getEncryptionKey());
+        const accessToken = decrypt(item.accessToken);
         const plaidClient = getPlaidClient();
 
         try {
@@ -666,7 +658,7 @@ export const syncItemTransactions = internalAction({
         trigger: args.trigger,
       },
       async () => {
-        const accessToken = decrypt(item.accessToken, getEncryptionKey());
+        const accessToken = decrypt(item.accessToken);
         const plaidClient = getPlaidClient();
         const startCursor = item.transactionsCursor;
         const syncStartedAt = Date.now();
@@ -847,7 +839,7 @@ export const disconnectItem = action({
 
     try {
       await getPlaidClient().itemRemove({
-        access_token: decrypt(item.accessToken, getEncryptionKey()),
+        access_token: decrypt(item.accessToken),
       });
     } catch (error: unknown) {
       const code = (

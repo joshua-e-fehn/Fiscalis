@@ -28,10 +28,14 @@ export default function JoinTeamPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Read once, then drop it from the address bar and history
+    // Read once, then drop it from the address bar and history. In dev,
+    // Strict Mode runs this effect twice: the second run finds the fragment
+    // already gone and must keep the token the first run read.
     const read = inviteTokenFromHash(window.location.hash);
-    window.history.replaceState(null, "", window.location.pathname);
-    setToken(read);
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    setToken((prev) => read ?? prev ?? null);
   }, []);
 
   const loading = token === undefined || (token !== null && preview === undefined);

@@ -145,7 +145,13 @@ function InviteLinkDialog({ link, onClose }: { link: string | null; onClose: () 
               size="icon"
               aria-label={copied ? t("copied") : t("copy")}
               onClick={async () => {
-                await navigator.clipboard.writeText(link);
+                try {
+                  await navigator.clipboard.writeText(link);
+                } catch {
+                  // Clipboard blocked (permissions, insecure context): the
+                  // read-only field stays selectable for a manual copy
+                  return;
+                }
                 setCopied(true);
                 setTimeout(() => setCopied(false), 1500);
               }}
@@ -164,6 +170,7 @@ function InviteLinkDialog({ link, onClose }: { link: string | null; onClose: () 
 
 function TeamCard({ teamId }: { teamId: Id<"teams"> }) {
   const t = useTranslations("teams");
+  const tActions = useTranslations("common.actions");
   const format = useFormatter();
   const team = useTeam(teamId);
   const [error, setError] = useState<string | null>(null);
@@ -227,6 +234,9 @@ function TeamCard({ teamId }: { teamId: Id<"teams"> }) {
               onChange={(e) => setRename(e.target.value)}
             />
             <Button type="submit">{t("actions.save")}</Button>
+            <Button type="button" variant="outline" onClick={() => setRename(null)}>
+              {tActions("cancel")}
+            </Button>
           </form>
         )}
         <CardDescription>{t("page.subtitle")}</CardDescription>

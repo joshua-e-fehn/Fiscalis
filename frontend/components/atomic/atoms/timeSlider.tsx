@@ -134,6 +134,7 @@ export function TimeSlider({
             title={t("jumpToStart")}
             aria-label={t("jumpToStart")}
           >
+            {/* eslint-disable-next-line fiscalis/no-physical-direction -- inside the dir="ltr" timeline */}
             <ChevronsLeft className="h-4 w-4" />
           </Button>
 
@@ -190,6 +191,7 @@ export function TimeSlider({
             title={t("jumpToEnd")}
             aria-label={t("jumpToEnd")}
           >
+            {/* eslint-disable-next-line fiscalis/no-physical-direction -- inside the dir="ltr" timeline */}
             <ChevronsRight className="h-4 w-4" />
           </Button>
         </div>

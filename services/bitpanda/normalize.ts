@@ -156,8 +156,12 @@ function readFiatSymbol(attrs: any): string {
   return cashPlusMatch?.[1] ?? symbol;
 }
 
-/** Price per unit in EUR from the public ticker, if present. */
-function priceFromTicker(
+/**
+ * Price per unit in EUR from the public ticker, if present. Shared by the
+ * sync (normalizeHoldings) and the ticker refresh (convex/assetPrices.ts),
+ * so both price a holding the same way.
+ */
+export function priceFromTicker(
   ticker: Record<string, Record<string, string>>,
   symbol: string,
 ): number | undefined {

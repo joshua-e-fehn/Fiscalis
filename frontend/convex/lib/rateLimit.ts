@@ -32,6 +32,20 @@ export async function enforceUserRateLimit(
 }
 
 /**
+ * Spends one token from `name` for `userId` when one is left; false when
+ * the bucket is empty. For scheduled work (the quote refresh), which skips
+ * a user rather than failing.
+ */
+export async function tryUserRateLimit(
+  ctx: ActionCtx,
+  name: UserRateLimitName,
+  userId: string,
+): Promise<boolean> {
+  const status = await rateLimiter.limit(ctx, name, { key: userId });
+  return status.ok;
+}
+
+/**
  * Drops every rate-limit bucket keyed by `userId` (account deletion,
  * convex/account.ts purgeUserData), so no state for the user is left in
  * the rate-limiter component.

@@ -68,6 +68,8 @@ export {
   SUBCATEGORY_VALUATION_OVERRIDES,
   resolveValuationConfig,
   PRICE_FEEDS,
+  type PriceFeed,
+  priceFeedFor,
   getValueTypeForConfig,
   continuousSourcesFor,
 } from "./config";

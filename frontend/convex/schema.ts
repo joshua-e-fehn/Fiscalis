@@ -1008,6 +1008,20 @@ export default defineSchema({
 		fetchedAt: v.number(),
 	}).index("by_metal", ["metalType"]),
 
+	// Latest provider price per asset (ENG-239), no user data: Bitpanda's
+	// public ticker (EUR, by ticker symbol) and SnapTrade quotes (by
+	// universal symbol id, in the listing's currency). Written by the
+	// refresh crons (convex/assetPrices.ts), which re-price the holdings the
+	// PRICE_FEEDS seam assigns to them (services/performance/config.ts).
+	assetPrices: defineTable({
+		provider: v.union(v.literal("bitpanda"), v.literal("snaptrade")),
+		symbol: v.string(),
+		ticker: v.optional(v.string()), // SnapTrade: the ticker of the id
+		price: v.number(),
+		currency: v.string(),
+		fetchedAt: v.number(),
+	}).index("by_provider_symbol", ["provider", "symbol"]),
+
 	// ═══════════════════════════════════════════════════════════════
 	// METAL PRICE HISTORY
 	// ═══════════════════════════════════════════════════════════════

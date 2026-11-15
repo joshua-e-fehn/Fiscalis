@@ -8,8 +8,10 @@
  *
  * A subcategory without an override inherits its category's default, so a
  * new subcategory needs no entry here. A continuous method only takes effect
- * when the app has a price feed for it (PRICE_FEEDS); until then the
- * holding is valued from snapshots like any discrete one.
+ * when the app has a price history for it (PRICE_FEEDS); until then the
+ * holding is valued from snapshots like any discrete one. A live feed
+ * without history keeps the current price fresh (priceFeedFor), and a
+ * per-asset override (tier 3) can value one holding manually instead.
  */
 
 import type {
@@ -97,30 +99,121 @@ export function resolveValuationConfig(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Price feeds the app can value history from, with the holding source each
- * one values. Only vault metals have one today: Bitpanda and broker metals
- * in the same subcategory are valued from snapshots.
+ * A price feed: the holdings of one source, category and subcategories
+ * whose provider price the app reads on its own schedule.
+ *
+ * - `history: true`: a stored price history the continuous strategy values
+ *   the holdings from (vault metals: metalPriceCloses).
+ * - `history: false`: a live feed only. The refresh crons keep the current
+ *   price fresh between full syncs (convex/assetPrices.ts), so the totals
+ *   and the live end of a chart are current, but the history is still the
+ *   snapshots'. Turning one into a history feed is the next step
+ *   (docs/PRICING_GAPS.md).
  */
-export const PRICE_FEEDS: Partial<
-  Record<
-    PriceProvider,
-    { source: HoldingSource; category: HoldingCategory; subcategory: string }
-  >
-> = {
-  metals: { source: "vault", category: "commodities", subcategory: "metals" },
-};
+export interface PriceFeed {
+  source: HoldingSource;
+  category: HoldingCategory;
+  subcategories: readonly string[];
+  history: boolean;
+}
+
+/**
+ * Every price feed by provider (ENG-239). Only existing provider prices:
+ * the gold.de spot for the vault, Bitpanda's public ticker for Bitpanda
+ * holdings, SnapTrade quotes for broker positions. A holding outside these
+ * (an option, a bond, broker crypto, a Bitpanda energy commodity) is
+ * priced by its next sync only.
+ */
+export const PRICE_FEEDS: Partial<Record<PriceProvider, readonly PriceFeed[]>> =
+  {
+    metals: [
+      {
+        source: "vault",
+        category: "commodities",
+        subcategories: ["metals"],
+        history: true,
+      },
+      {
+        source: "bitpanda",
+        category: "commodities",
+        subcategories: ["metals"],
+        history: false,
+      },
+    ],
+    "market-data": [
+      {
+        source: "brokerPosition",
+        category: "equities",
+        subcategories: ["stocks", "etfs", "funds"],
+        history: false,
+      },
+      {
+        source: "brokerPosition",
+        category: "real-estate",
+        subcategories: ["reits"],
+        history: false,
+      },
+      {
+        source: "bitpanda",
+        category: "equities",
+        subcategories: ["stocks", "etfs"],
+        history: false,
+      },
+    ],
+    "crypto-exchange": [
+      {
+        source: "bitpanda",
+        category: "crypto",
+        subcategories: ["bitcoin", "ethereum", "altcoins", "stablecoins"],
+        history: false,
+      },
+    ],
+  };
+
+/** Every feed, with the provider it belongs to. */
+function allFeeds(): { provider: PriceProvider; feed: PriceFeed }[] {
+  return (
+    Object.entries(PRICE_FEEDS) as [PriceProvider, readonly PriceFeed[]][]
+  ).flatMap(([provider, feeds]) => feeds.map((feed) => ({ provider, feed })));
+}
 
 /**
  * The value type a config is calculated with: continuous only when the method
- * is continuous and a feed exists for its provider; semi-continuous is the
- * discrete algorithm.
+ * is continuous and a history feed exists for its provider; semi-continuous
+ * is the discrete algorithm, and a live-only feed does not make a history.
  */
 export function getValueTypeForConfig(config: ValuationConfig): ValueType {
   return config.method === "continuous" &&
     config.priceProvider !== undefined &&
-    PRICE_FEEDS[config.priceProvider] !== undefined
+    (PRICE_FEEDS[config.priceProvider] ?? []).some((f) => f.history)
     ? "continuous"
     : "discrete";
+}
+
+/**
+ * The feed that prices one holding, after the full resolution chain
+ * (category default, subcategory override, per-asset override): the feed
+ * of the resolved provider that covers the holding's source, category and
+ * subcategory. Undefined when none does, or when the per-asset override
+ * values it manually (a manual price or a model), so the refresh crons
+ * leave it alone.
+ */
+export function priceFeedFor(
+  source: HoldingSource,
+  category: HoldingCategory,
+  subcategory: string | undefined,
+  assetOverride?: Partial<ValuationConfig>,
+): PriceFeed | undefined {
+  const config = resolveValuationConfig(category, subcategory, assetOverride);
+  if (config.priceProvider === undefined || subcategory === undefined) {
+    return undefined;
+  }
+  return (PRICE_FEEDS[config.priceProvider] ?? []).find(
+    (f) =>
+      f.source === source &&
+      f.category === category &&
+      f.subcategories.includes(subcategory),
+  );
 }
 
 /**
@@ -128,22 +221,35 @@ export function getValueTypeForConfig(config: ValuationConfig): ValueType {
  * portfolio for "all", or one source alone), each with the category its
  * value is stored under in snapshots. The discrete part of a hybrid
  * calculation leaves them out of the snapshot values, so they are not
- * counted twice.
+ * counted twice. Only history feeds qualify.
  */
 export function continuousSourcesFor(
   scope: HoldingCategory | "all" | { source: string },
 ): ContinuousSource[] {
-  return Object.entries(PRICE_FEEDS).flatMap(([provider, feed]) => {
-    if (!feed) return [];
+  const sources: ContinuousSource[] = [];
+  for (const { provider, feed } of allFeeds()) {
+    if (!feed.history) continue;
     const inScope =
       typeof scope === "object"
         ? feed.source === scope.source
         : scope === "all" || feed.category === scope;
-    if (!inScope) return [];
-    const config = resolveValuationConfig(feed.category, feed.subcategory);
-    return config.priceProvider === provider &&
-      getValueTypeForConfig(config) === "continuous"
-      ? [{ source: feed.source, category: feed.category }]
-      : [];
-  });
+    if (!inScope) continue;
+    const continuous = feed.subcategories.some((sub) => {
+      const config = resolveValuationConfig(feed.category, sub);
+      return (
+        config.priceProvider === provider &&
+        getValueTypeForConfig(config) === "continuous"
+      );
+    });
+    const entry = { source: feed.source, category: feed.category };
+    if (
+      continuous &&
+      !sources.some(
+        (s) => s.source === entry.source && s.category === entry.category,
+      )
+    ) {
+      sources.push(entry);
+    }
+  }
+  return sources;
 }

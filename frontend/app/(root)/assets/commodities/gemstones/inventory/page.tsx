@@ -1,16 +1,5 @@
-"use client";
-
-/**
- * Gemstones - Inventory
- */
+import { ComingSoonPage } from "@/components/atomic/molecules/investments/ComingSoonPage";
 
 export default function GemstonesInventoryPage() {
-  return (
-    <div className="container mx-auto py-6">
-      <h1 className="text-3xl font-bold mb-6">My Gemstones</h1>
-      <p className="text-muted-foreground">
-        Your certified diamonds and precious gems.
-      </p>
-    </div>
-  );
+  return <ComingSoonPage category="commodities" subcategory="gemstones" view="inventory" />;
 }

@@ -212,7 +212,23 @@
       "step": "步骤",
       "stepPlaceholder": "例如：比较三家报价",
       "removeStep": "移除步骤",
-      "addStep": "添加步骤"
+      "addStep": "添加步骤",
+      "ai": {
+        "title": "用你自己的话描述",
+        "placeholder": "例如：等我投资了旅行价格的十倍，并且连续 3 个月每周锻炼 3 次，就可以订这趟旅行。",
+        "hint": "AI 会据此写出一条规则，你在保存前检查。只会发送这段文字、货币和你的记录项名称，绝不发送你的财务数据。",
+        "write": "生成规则",
+        "writing": "正在生成…",
+        "suggestion": "建议的规则",
+        "newTrackers": "将添加这些记录项：{names}",
+        "unsupported": "规则未涵盖：{items}",
+        "use": "使用此规则",
+        "discard": "放弃",
+        "applied": "规则已应用。请在下方检查，然后保存目标。",
+        "unavailable": "助手暂时不可用。请在下方手动设置规则。",
+        "invalidText": "请用 3 到 1000 个字符描述规则。",
+        "failed": "助手无法据此写出规则。请换种说法，或在下方手动设置规则。"
+      }
     },
     "pools": {
       "invested": "新投入资金",

@@ -9,12 +9,18 @@
  * checks; a deeper rule (written elsewhere, e.g. by the AI assistant) is
  * kept as it is unless the user starts over. The input is checked with the
  * server's rules (services/goals/input.ts) before it is sent.
+ *
+ * The assistant (convex/goalsAi.ts) writes a rule from the user's own
+ * words; the user reads its summary and applies it to the builder, which
+ * creates any trackers it needs. Hidden when the deployment has no model.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +41,15 @@ import {
   SelectValue,
 } from "@/components/ui/shadcn/select";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useCreateGoal, useUpdateGoal, useUtcToday, type TrackerView } from "@/hooks/convex/goals";
+import {
+  useCreateGoal,
+  useCreateTracker,
+  useUpdateGoal,
+  useUtcToday,
+  type TrackerView,
+} from "@/hooks/convex/goals";
+import { toActionError } from "@/lib/actionError";
+import { withCreatedTrackers, type RuleDraft } from "@/../services/goals/aiRule";
 import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { useErrorMessage, type ErrorCode } from "@/i18n/errors";
 import { parseTypedAmount, typedAmountText } from "@/../services/i18n/typedAmount";
@@ -223,7 +237,8 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
   const [description, setDescription] = useState(goal?.description ?? "");
   const [currency, setCurrency] = useState(goal?.currency ?? code);
   const [price, setPrice] = useState(goal ? typedAmountText(goal.price, locale) : "");
-  const [keepRule, setKeepRule] = useState(!flat);
+  // A rule the builder cannot show (nested groups), kept as it is
+  const [fixedRule, setFixedRule] = useState<RuleNode | null>(flat ? null : (initialRule ?? null));
   const [combinator, setCombinator] = useState<Combinator>(
     initialRule && isGroup(initialRule) ? initialRule.kind : "all",
   );
@@ -244,13 +259,13 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
   /** Why the last save was refused, shown under the form until the next try */
   const [problem, setProblem] = useState<{ message: string; rule: boolean } | null>(null);
   /** The rule is a single check rather than a group (kept so a save does not reshape it) */
-  const bare = initialRule ? !isGroup(initialRule) : true;
+  const [bare, setBare] = useState(initialRule ? !isGroup(initialRule) : true);
 
   const patch = (key: number, change: Partial<Row>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...change } : r)));
 
   const buildRule = (): RuleNode => {
-    if (keepRule && initialRule) return initialRule;
+    if (fixedRule) return fixedRule;
     const leaves = rows.map((r) => toLeaf(r, locale));
     if (leaves.length === 1 && combinator === "all" && bare) return leaves[0];
     return combinator === "atLeast"
@@ -340,10 +355,26 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
           <div className="text-sm font-medium">{t("rule")}</div>
           <p className="text-xs text-muted-foreground">{t("ruleHint")}</p>
 
-          {keepRule ? (
+          <RuleAssistant
+            currency={currency}
+            onApply={(rule) => {
+              setBare(!isGroup(rule));
+              if (isFlat(rule)) {
+                setFixedRule(null);
+                setCombinator(isGroup(rule) ? rule.kind : "all");
+                if (rule.kind === "atLeast") setAtLeast(String(rule.count));
+                const leaves = isGroup(rule) ? (rule.children as RuleLeaf[]) : [rule];
+                setRows(leaves.map((l) => toRow(l, locale)));
+              } else {
+                setFixedRule(rule);
+              }
+            }}
+          />
+
+          {fixedRule ? (
             <div className="space-y-2 text-sm">
               <p>{t("nestedRule")}</p>
-              <Button variant="outline" size="sm" onClick={() => setKeepRule(false)}>
+              <Button variant="outline" size="sm" onClick={() => setFixedRule(null)}>
                 {t("startOver")}
               </Button>
             </div>
@@ -575,4 +606,115 @@ function RowFields({ row, patch, counts, measures, currency }: RowFieldsProps) {
         </div>
       );
   }
+}
+
+/**
+ * The assistant: the user's own words in, a rule draft out (validated on
+ * the server), applied to the builder once the user has read its summary.
+ * Trackers the rule needs are created on apply.
+ */
+function RuleAssistant({ currency, onApply }: { currency: string; onApply: (rule: RuleNode) => void }) {
+  const t = useTranslations("strategies.goals.editor.ai");
+  const tErrors = useTranslations("common.errors");
+  const locale = useLocale();
+  const draftRule = useAction(api.goalsAi.draftRule);
+  const isAvailable = useAction(api.goalsAi.available);
+  const createTracker = useCreateTracker();
+  const [available, setAvailable] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState<RuleDraft | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    isAvailable({})
+      .then((ok) => live && setAvailable(ok))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [isAvailable]);
+
+  if (!available) return null;
+
+  const write = async () => {
+    setBusy(true);
+    setDraft(null);
+    setNote(null);
+    try {
+      const language = new Intl.DisplayNames(["en"], { type: "language" }).of(locale) ?? "English";
+      const result = await draftRule({ text, currency, language });
+      if (result.ok) setDraft(result.draft);
+      else setNote(t(result.reason));
+    } catch (e) {
+      setNote(toActionError(e, (minutes) => tErrors("rateLimited", { minutes })).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const apply = async () => {
+    if (!draft) return;
+    setBusy(true);
+    try {
+      const ids = new Map<string, string>();
+      for (const tracker of draft.newTrackers) {
+        ids.set(tracker.ref, await createTracker({ name: tracker.name, kind: tracker.kind, unit: tracker.unit }));
+      }
+      onApply(withCreatedTrackers(draft.rule, ids));
+      setNote(t("applied"));
+      setDraft(null);
+    } catch (e) {
+      setNote(toActionError(e).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-md bg-muted/40 p-3">
+      <Label htmlFor="goal-ai" className="flex items-center gap-1.5">
+        <Sparkles className="h-4 w-4" />
+        {t("title")}
+      </Label>
+      <Textarea
+        id="goal-ai"
+        rows={3}
+        value={text}
+        placeholder={t("placeholder")}
+        onChange={(e) => setText(e.target.value)}
+      />
+      <p className="text-xs text-muted-foreground">{t("hint")}</p>
+      <Button size="sm" variant="secondary" onClick={() => void write()} disabled={busy || text.trim().length < 3}>
+        {busy && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
+        {t(busy ? "writing" : "write")}
+      </Button>
+      {draft && (
+        <div className="space-y-2 rounded-md border bg-background p-3 text-sm">
+          <div className="font-medium">{t("suggestion")}</div>
+          <p>{draft.summary}</p>
+          {draft.newTrackers.length > 0 && (
+            <p className="text-muted-foreground">
+              {t("newTrackers", { names: draft.newTrackers.map((x) => x.name).join(", ") })}
+            </p>
+          )}
+          {draft.unsupported.length > 0 && (
+            <p className="text-amber-700 dark:text-amber-400">
+              {t("unsupported", { items: draft.unsupported.join("; ") })}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => void apply()} disabled={busy}>
+              {t("use")}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setDraft(null)} disabled={busy}>
+              {t("discard")}
+            </Button>
+          </div>
+        </div>
+      )}
+      {note && <p className="text-sm text-muted-foreground">{note}</p>}
+    </div>
+  );
 }

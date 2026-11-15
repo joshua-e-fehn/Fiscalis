@@ -212,7 +212,23 @@
       "step": "Passaggio",
       "stepPlaceholder": "es. Confronta tre offerte",
       "removeStep": "Rimuovi passaggio",
-      "addStep": "Aggiungi passaggio"
+      "addStep": "Aggiungi passaggio",
+      "ai": {
+        "title": "Descrivilo con parole tue",
+        "placeholder": "ad es. Posso prenotare il viaggio quando avrò investito dieci volte il suo prezzo e fatto allenamento 3 volte a settimana per 3 mesi.",
+        "hint": "Un’IA ne ricava una regola che controlli prima di salvare. Vengono inviati solo questo testo, la valuta e i nomi dei tuoi tracker, mai i tuoi dati finanziari.",
+        "write": "Scrivi la regola",
+        "writing": "Scrittura…",
+        "suggestion": "Regola suggerita",
+        "newTrackers": "Verranno aggiunti questi tracker: {names}",
+        "unsupported": "Non coperto dalla regola: {items}",
+        "use": "Usa questa regola",
+        "discard": "Scarta",
+        "applied": "Regola applicata. Controllala qui sotto, poi salva l’obiettivo.",
+        "unavailable": "L’assistente non è disponibile ora. Crea la regola qui sotto.",
+        "invalidText": "Descrivi la regola in 3-1000 caratteri.",
+        "failed": "L’assistente non è riuscito a ricavarne una regola. Prova a riformularla o crea la regola qui sotto."
+      }
     },
     "pools": {
       "invested": "Denaro nuovo investito",

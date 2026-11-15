@@ -36,6 +36,8 @@ export interface UserRateLimit {
  *   scheduled runs cannot call SnapTrade more often for one user.
  * - billingSession: Stripe Checkout and Customer Portal sessions
  *   (convex/billing.ts). A burst of 10, then one every 3 minutes.
+ * - goalRuleDraft: a goal rule written by the LLM assistant
+ *   (convex/goalsAi.ts). A burst of 5, then one every 3 minutes.
  */
 export const USER_RATE_LIMITS = {
   manualSync: { kind: "token bucket", rate: 6, period: HOUR_MS, capacity: 3 },
@@ -62,6 +64,12 @@ export const USER_RATE_LIMITS = {
     rate: 20,
     period: HOUR_MS,
     capacity: 10,
+  },
+  goalRuleDraft: {
+    kind: "token bucket",
+    rate: 20,
+    period: HOUR_MS,
+    capacity: 5,
   },
 } as const satisfies Record<string, UserRateLimit>;
 

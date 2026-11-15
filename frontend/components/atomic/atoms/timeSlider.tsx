@@ -119,8 +119,9 @@ export function TimeSlider({
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
-      {/* Main control row */}
-      <div className="flex items-center gap-3">
+      {/* Main control row. A timeline reads left-to-right in every language,
+          like the charts it drives, so it does not mirror in RTL. */}
+      <div dir="ltr" className="flex items-center gap-3">
         {/* Playback controls */}
         <div className="flex items-center gap-1">
           {/* Jump to start */}
@@ -162,7 +163,7 @@ export function TimeSlider({
             {isPlaying ? (
               <Pause className="h-4 w-4" />
             ) : (
-              <Play className="h-4 w-4 ml-0.5" />
+              <Play className="h-4 w-4 ms-0.5" />
             )}
           </Button>
 
@@ -208,6 +209,7 @@ export function TimeSlider({
         {/* Slider */}
         <div className="flex-1 relative pb-5">
           <Slider
+            dir="ltr"
             value={[value]}
             min={min}
             max={max}
@@ -220,7 +222,7 @@ export function TimeSlider({
 
           {/* Year markers */}
           <div className="absolute bottom-0 w-full flex justify-between px-0 text-xs text-muted-foreground select-none pointer-events-none">
-            <span className="w-8 text-left">{min}</span>
+            <span className="w-8 text-start">{min}</span>
             {visibleMarkers.map((year) => {
               const position = ((year - min) / (max - min)) * 100;
               return (
@@ -233,7 +235,7 @@ export function TimeSlider({
                 </span>
               );
             })}
-            <span className="w-8 text-right">{max}</span>
+            <span className="w-8 text-end">{max}</span>
           </div>
         </div>
       </div>
@@ -302,7 +304,7 @@ export function CompactTimeSlider({
         {isPlaying ? (
           <Pause className="h-3 w-3" />
         ) : (
-          <Play className="h-3 w-3 ml-0.5" />
+          <Play className="h-3 w-3 ms-0.5" />
         )}
       </Button>
 
@@ -368,7 +370,7 @@ export function SpeedControl({
 
   return (
     <div className={cn("flex items-center gap-1", className)}>
-      <span className="text-xs text-muted-foreground mr-1">{t("speed")}</span>
+      <span className="text-xs text-muted-foreground me-1">{t("speed")}</span>
       {SPEED_OPTIONS.map((option) => (
         <Button
           key={option.label}

@@ -913,12 +913,12 @@ export default function WorldMapPage() {
                     disabled={(!worldData && !indicatorsData) || isExporting}
                   >
                     {isExporting ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 me-2 animate-spin" />
                     ) : (
-                      <Download className="h-4 w-4 mr-2" />
+                      <Download className="h-4 w-4 me-2" />
                     )}
                     {isExporting ? t("export.exporting") : t("export.button")}
-                    <ChevronDown className="h-4 w-4 ml-2" />
+                    <ChevronDown className="h-4 w-4 ms-2" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -926,14 +926,14 @@ export default function WorldMapPage() {
                     onClick={exportCurrentYear}
                     disabled={!worldData || isLoading}
                   >
-                    <Calendar className="h-4 w-4 mr-2" />
+                    <Calendar className="h-4 w-4 me-2" />
                     {t("export.currentYear", { year })}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={exportAllYears}
                     disabled={isExporting}
                   >
-                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    <FileSpreadsheet className="h-4 w-4 me-2" />
                     {t("export.allYears", {
                       min: YEAR_RANGE.min,
                       max: YEAR_RANGE.max,
@@ -944,7 +944,7 @@ export default function WorldMapPage() {
                       onClick={exportComparison}
                       disabled={!delta.data}
                     >
-                      <GitCompareArrows className="h-4 w-4 mr-2" />
+                      <GitCompareArrows className="h-4 w-4 me-2" />
                       {t("export.comparison", {
                         start: compareStart,
                         end: compareEnd,
@@ -1068,7 +1068,7 @@ export default function WorldMapPage() {
                     onClick={prefetchAll}
                     className="text-xs"
                   >
-                    <Download className="h-3 w-3 mr-1" />
+                    <Download className="h-3 w-3 me-1" />
                     {t("prefetch.loadAll")}
                   </Button>
                 )}
@@ -1095,8 +1095,8 @@ export default function WorldMapPage() {
                   })}
                 </span>
                 {isLoading && (
-                  <Badge variant="outline" className="ml-auto animate-pulse">
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  <Badge variant="outline" className="ms-auto animate-pulse">
+                    <Loader2 className="h-3 w-3 me-1 animate-spin" />
                     {t("dynamic.fetching")}
                   </Badge>
                 )}
@@ -1115,9 +1115,9 @@ export default function WorldMapPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => refetch()}
-                  className="ml-4"
+                  className="ms-4"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className="h-4 w-4 me-2" />
                   {t("errors.retry")}
                 </Button>
               </AlertDescription>
@@ -1130,7 +1130,7 @@ export default function WorldMapPage() {
             <Card className="lg:col-span-3">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <Globe2 className="h-5 w-5" />
                     <CardTitle className="text-lg">
                       {mapTitle || t("map.fallbackTitle")}
@@ -1218,7 +1218,7 @@ export default function WorldMapPage() {
                       <NavigationControl position="top-right" />
 
                       {/* Legend */}
-                      <div className="absolute bottom-4 right-4 bg-background/95 backdrop-blur p-3 rounded-lg shadow-lg border">
+                      <div className="absolute bottom-4 end-4 bg-background/95 backdrop-blur p-3 rounded-lg shadow-lg border">
                         <div className="text-xs font-medium mb-2">
                           {isComparing
                             ? t("compare.legendTitle", {
@@ -1231,7 +1231,7 @@ export default function WorldMapPage() {
                           {legendColors.map((color, i) => (
                             <div
                               key={i}
-                              className="w-6 h-4 first:rounded-l last:rounded-r"
+                              className="w-6 h-4 first:rounded-s last:rounded-e"
                               style={{ backgroundColor: color }}
                             />
                           ))}
@@ -1302,7 +1302,7 @@ export default function WorldMapPage() {
             {/* Top Countries Sidebar */}
             <Card className="lg:col-span-1">
               <CardHeader className="pb-2">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   {isComparing && rankOrder === "decrease" ? (
                     <TrendingDown className="h-5 w-5" />
                   ) : (
@@ -1376,7 +1376,7 @@ export default function WorldMapPage() {
                         aria-label={t("top.showHistory", {
                           country: entry.name,
                         })}
-                        className="flex w-full items-center gap-3 p-2 rounded-lg text-left hover:bg-muted/50 transition-colors"
+                        className="flex w-full items-center gap-3 p-2 rounded-lg text-start hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">
                           {index + 1}
@@ -1404,7 +1404,7 @@ export default function WorldMapPage() {
           {/* Dataset Information */}
           <Card>
             <CardHeader className="pb-2">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
                 <CardTitle className="text-lg">{t("dataset.title")}</CardTitle>
               </div>

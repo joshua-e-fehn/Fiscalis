@@ -29,9 +29,9 @@ export function RetirementWizardProgress({
 			{/* Desktop — circles anchored edge-to-edge, line connects their centers */}
 			<div className="relative hidden pb-6 md:block">
 				{/* Track (first circle center → last circle center; circles are 28px) */}
-				<div className="absolute top-[14px] right-[14px] left-[14px] h-0.5 -translate-y-1/2 bg-border" />
+				<div className="absolute top-[14px] end-[14px] start-[14px] h-0.5 -translate-y-1/2 bg-border" />
 				<div
-					className="absolute top-[14px] left-[14px] h-0.5 -translate-y-1/2 bg-primary transition-all duration-300"
+					className="absolute top-[14px] start-[14px] h-0.5 -translate-y-1/2 bg-primary transition-all duration-300"
 					style={{ width: `calc((100% - 28px) * ${pct} / 100)` }}
 				/>
 
@@ -69,9 +69,9 @@ export function RetirementWizardProgress({
 									className={cn(
 										"absolute top-9 whitespace-nowrap text-[11px]",
 										isFirst
-											? "left-0"
+											? "start-0"
 											: isLast
-												? "right-0"
+												? "end-0"
 												: "left-1/2 -translate-x-1/2",
 										active
 											? "font-medium text-foreground"

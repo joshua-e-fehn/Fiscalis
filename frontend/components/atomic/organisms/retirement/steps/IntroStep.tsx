@@ -38,7 +38,7 @@ export function IntroStep({ onNext, hasExistingPlan }: IntroStepProps) {
 						</p>
 					</div>
 
-					<div className="grid gap-4 text-left sm:grid-cols-3">
+					<div className="grid gap-4 text-start sm:grid-cols-3">
 						{POINTS.map((p) => (
 							<div key={p.key} className="space-y-2">
 								<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-foreground">
@@ -56,7 +56,7 @@ export function IntroStep({ onNext, hasExistingPlan }: IntroStepProps) {
 
 					<Button size="lg" onClick={onNext} className="w-full sm:w-auto">
 						{hasExistingPlan ? t("reviewPlan") : t("getStarted")}
-						<ArrowRight className="ml-1 h-4 w-4" />
+						<ArrowRight className="ms-1 h-4 w-4 rtl:-scale-x-100" />
 					</Button>
 				</CardContent>
 			</Card>

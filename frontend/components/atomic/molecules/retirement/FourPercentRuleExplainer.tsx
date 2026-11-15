@@ -76,7 +76,7 @@ export function FourPercentRuleExplainer({
 	return (
 		<Card className={className}>
 			<Collapsible defaultOpen>
-				<CollapsibleTrigger className="flex w-full items-center gap-2 px-6 py-4 text-left text-sm font-medium hover:bg-muted/40">
+				<CollapsibleTrigger className="flex w-full items-center gap-2 px-6 py-4 text-start text-sm font-medium hover:bg-muted/40">
 					<Info className="h-4 w-4 text-primary" />
 					{t("explainer.trigger")}
 				</CollapsibleTrigger>
@@ -96,7 +96,7 @@ export function FourPercentRuleExplainer({
 							)}
 						</p>
 						<p>{t("explainer.whereFrom")}</p>
-						<ul className="ml-1 space-y-1.5">
+						<ul className="ms-1 space-y-1.5">
 							{(["marketReturn", "inflation", "buffer"] as const).map((key) => (
 								<li key={key} className="flex gap-2">
 									{t.rich(`explainer.${key}`, { b: highlight })}

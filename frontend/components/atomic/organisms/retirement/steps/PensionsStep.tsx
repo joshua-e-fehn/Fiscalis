@@ -123,7 +123,7 @@ export function PensionsStep({
 								<Trash2 className="h-4 w-4" />
 							</Button>
 						</div>
-						<div className="flex flex-wrap gap-x-5 gap-y-1 pl-1 text-xs text-muted-foreground">
+						<div className="flex flex-wrap gap-x-5 gap-y-1 ps-1 text-xs text-muted-foreground">
 							<label className="flex items-center gap-2">
 								<Switch
 									checked={source.gross !== false}
@@ -156,7 +156,7 @@ export function PensionsStep({
 			)}
 
 			<Button variant="outline" size="sm" onClick={addSource}>
-				<Plus className="mr-1 h-4 w-4" />
+				<Plus className="me-1 h-4 w-4" />
 				{t("pensionsStep.addSource")}
 			</Button>
 
@@ -171,7 +171,7 @@ export function PensionsStep({
 						min={0}
 						max={60}
 						step={1}
-						className="pr-8"
+						className="pe-8"
 						aria-invalid={!!deductionIssue}
 						value={deductionDraft ?? +(deductionRate * 100).toFixed(2)}
 						onChange={(e) => {
@@ -184,7 +184,7 @@ export function PensionsStep({
 							});
 						}}
 					/>
-					<span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+					<span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground">
 						%
 					</span>
 				</div>

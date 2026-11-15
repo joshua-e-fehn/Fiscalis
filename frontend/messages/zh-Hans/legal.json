@@ -1,0 +1,178 @@
+{
+  "common": {
+    "home": "首页",
+    "lastUpdated": "最后更新：{date}",
+    "placeholderNotice": "本页部分内容仍在完善中。突出显示的占位符标记了将在上线前补充的细节。",
+    "placeholder": "占位符：{text}",
+    "country": "德国"
+  },
+  "footer": {
+    "label": "法律信息",
+    "privacy": "隐私",
+    "terms": "条款",
+    "impressum": "法律声明",
+    "contact": "联系",
+    "copyright": "© {year} Fiscalis"
+  },
+  "impressum": {
+    "metaTitle": "法律声明 · Fiscalis",
+    "metaDescription": "依据 § 5 DDG 的 Fiscalis 法律声明",
+    "title": "Impressum（法律声明）",
+    "sections": {
+      "provider": {
+        "title": "依据 § 5 DDG 的信息",
+        "body": "Fiscalis 的提供者：\n\n{name}\n{street}\n{postalCode} {city}\n{country}"
+      },
+      "contact": {
+        "title": "联系方式",
+        "body": "电话：{phone}\n电子邮件：{email}"
+      },
+      "vat": {
+        "title": "增值税号",
+        "body": "依据《德国增值税法》（UStG）§ 27a 的增值税识别号：{vatId}"
+      },
+      "responsible": {
+        "title": "依据 § 18 (2) MStV 的内容负责人",
+        "body": "{name}，地址同上。[占位符：确认运营者即编辑内容的负责人]"
+      },
+      "disputes": {
+        "title": "消费者争议解决",
+        "body": "我们既不愿意也没有义务参加消费者仲裁委员会的争议解决程序（§ 36 VSBG）。"
+      },
+      "liability": {
+        "title": "内容责任",
+        "body": "作为服务提供者，我们依据一般法律对本网站上的自有内容负责。Fiscalis 显示的资产、价格和计算仅供参考，不构成投资、税务或法律建议。价格和估值部分来自第三方，可能存在延迟、不完整或错误。"
+      },
+      "links": {
+        "title": "链接责任",
+        "body": "我们的页面包含指向第三方外部网站的链接，我们无法控制这些网站的内容。链接页面的内容始终由其各自的提供者或运营者负责。如果我们获悉存在违法行为，将立即删除相关链接。"
+      }
+    }
+  },
+  "privacy": {
+    "metaTitle": "隐私政策 · Fiscalis",
+    "metaDescription": "Fiscalis 如何处理你的个人数据",
+    "title": "隐私政策",
+    "sections": {
+      "controller": {
+        "title": "1. 谁负责",
+        "body": "依据欧盟《通用数据保护条例》（GDPR），数据控制者为：\n\n{name}\n{street}\n{postalCode} {city}\n{country}\n电子邮件：{email}\n\nFiscalis 由个人运营。由于未达到设立数据保护官的法定门槛（GDPR 第 37 条、§ 38 BDSG），因此未指定数据保护官。如有任何隐私问题，请写信至 {email}。"
+      },
+      "overview": {
+        "title": "2. Fiscalis 如何使用你的数据",
+        "body": "Fiscalis 是一款个人净资产追踪工具。为了显示你的净资产，它会处理：\n\n- 账户数据：你的姓名、电子邮件地址、头像和登录数据；\n- 你连接或输入的财务数据：银行账户、余额和交易，券商账户、头寸和交易，加密货币持仓和交易，贷款、贵金属、退休计划和投资组合历史；\n- 设置：语言、显示货币、主题、时区和引导进度；\n- 技术数据：IP 地址、浏览器、请求时间和错误日志，用于提供和保护服务。\n\n我们仅将这些数据用于向你提供 Fiscalis。我们不会出售数据，不会将其用于广告，也不会建立营销画像。Fiscalis 没有广告，也没有任何分析或追踪工具。"
+      },
+      "hosting": {
+        "title": "3. 托管（Vercel）",
+        "body": "网站和应用由 Vercel Inc.（440 N Barranca Ave #4133, Covina, CA 91723, USA）提供服务。当你打开页面时，Vercel 会处理你的 IP 地址、请求的 URL、时间以及浏览器的用户代理，以交付页面、防御攻击并保留短期日志。法律依据：GDPR 第 6(1)(f) 条（我们对网站安全、正常运行的合法利益），在你拥有账户后还包括 GDPR 第 6(1)(b) 条。无服务器函数的区域：[占位符：确认 Vercel 函数区域]。隐私政策：https://vercel.com/legal/privacy-policy"
+      },
+      "auth": {
+        "title": "4. 登录和账户（Clerk）",
+        "body": "账户、登录和会话由 Clerk, Inc.（660 King Street, Unit 345, San Francisco, CA 94107, USA）处理。Clerk 会存储你的电子邮件地址、姓名、头像、密码哈希或你所选社交登录的信息，以及 IP 地址、设备和时间等登录元数据。Clerk 会设置保持你登录状态所需的 Cookie（见第 10 节）。目前注册需通过候补名单邀请；如果你加入候补名单，Clerk 会存储你的电子邮件地址，直到你收到邀请或要求我们将其删除。法律依据：GDPR 第 6(1)(b) 条。隐私政策：https://clerk.com/legal/privacy"
+      },
+      "database": {
+        "title": "5. 数据库和后台任务（Convex）",
+        "body": "你在 Fiscalis 中拥有的一切（已连接的账户、持仓、交易、贷款、贵金属、设置和投资组合快照）都存储在由 Convex, Inc.（444 De Haro St, Suite 218, San Francisco, CA 94107, USA）运营的数据库中。Convex 还运行定时任务，用于刷新你已连接的账户（每天一次，Bitpanda 每六小时一次）并记录每日投资组合快照。你的连接所用的访问令牌和 API 密钥均加密存储（AES-256-GCM）。部署区域：[占位符：确认 Convex 部署区域]。法律依据：GDPR 第 6(1)(b) 条。隐私政策：https://www.convex.dev/legal/privacy"
+      },
+      "plaid": {
+        "title": "6. 银行连接（Plaid）",
+        "body": "如果你连接银行，连接将通过 Plaid 进行。你在 Plaid 自己的窗口中输入银行凭据；Fiscalis 永远看不到也不会存储它们。Plaid 向我们传递只读数据：账户名称和类型、余额和交易。我们会存储一个加密的访问令牌，以便刷新这些数据。Plaid 作为独立的数据控制者，依据其自身的终端用户隐私政策处理你的数据：https://plaid.com/legal/#end-user-privacy-policy。面向欧盟用户的 Plaid 签约实体：[占位符：确认 Plaid 合同中列明的实体]。法律依据：GDPR 第 6(1)(b) 条，应你的请求。你可以随时在“集成 > 银行”中断开银行连接，这会从 Fiscalis 中删除其账户和交易。"
+      },
+      "snaptrade": {
+        "title": "7. 券商连接（SnapTrade）",
+        "body": "如果你连接券商，连接将通过 SnapTrade（Passiv Inc.，加拿大）进行。你在 SnapTrade 的门户中授权连接；Fiscalis 永远看不到你的券商密码。SnapTrade 向我们传递只读数据：账户、头寸、现金余额和交易历史。我们会存储一个 SnapTrade 用户 ID 和一个加密的用户密钥，以便刷新这些数据。SnapTrade 依据其隐私政策处理数据：https://snaptrade.com/privacy-policy。法律依据：GDPR 第 6(1)(b) 条，应你的请求。在“集成 > 券商”中断开券商连接，会从 Fiscalis 中删除其账户、头寸和交易。"
+      },
+      "bitpanda": {
+        "title": "8. 加密货币连接（Bitpanda）",
+        "body": "如果你连接 Bitpanda，你需要在 Bitpanda 账户中创建一个只读 API 密钥并粘贴到 Fiscalis 中。我们会加密存储该密钥（AES-256-GCM），并用它从 Bitpanda GmbH（Stella-Klein-Löw-Weg 17, 1020 Vienna, Austria）读取你的钱包、持仓和交易。该密钥无法进行交易或提现。Bitpanda 的隐私政策：https://www.bitpanda.com/en/legal/privacy-policy。法律依据：GDPR 第 6(1)(b) 条，应你的请求。删除连接会同时删除该密钥和已导入的数据。"
+      },
+      "marketData": {
+        "title": "9. 市场数据和地图",
+        "body": "Fiscalis 在其服务器上获取公开市场数据，不会发送任何个人数据：\n\n- 来自 gold.de 的贵金属价格；\n- 来自欧洲中央银行的货币汇率；\n- 来自世界银行开放数据 API 的经济指标。\n\n世界地图则不同：你的浏览器会直接从 CARTO（CartoDB Inc.，美国）加载地图瓦片，CARTO 会接收你的 IP 地址和浏览器信息以交付瓦片；世界地图页面还可能从你的浏览器查询世界银行 API（api.worldbank.org）。法律依据：GDPR 第 6(1)(f) 条（我们对显示你所请求的地图和数据的利益）。CARTO 的隐私政策：https://carto.com/privacy"
+      },
+      "cookies": {
+        "title": "10. Cookie 和本地存储",
+        "body": "Fiscalis 仅使用服务严格必需的 Cookie，因此无需同意横幅（§ 25(2) no. 2 TDDDG）：\n\n- Clerk 会话 Cookie（例如 __session 和 __client_uat）用于保持你的登录状态；\n- fiscalis-locale 记住你选择的语言（1 年）；\n- fiscalis-tz 存储你的时区，以便正确显示日期（1 年）；\n- sidebar_state 记住侧边栏是否打开（7 天）。\n\n你选择的主题也可能保存在浏览器的本地存储中。我们不使用任何广告、分析或追踪 Cookie。"
+      },
+      "transfers": {
+        "title": "11. 向欧盟以外地区的传输",
+        "body": "Vercel、Clerk、Convex、Plaid 和 CARTO 位于美国，SnapTrade 位于加拿大，因此你的数据可能会在这些地方处理。向美国的传输在服务商已获认证时依据《欧盟-美国数据隐私框架》，否则依据欧盟标准合同条款（GDPR 第 46(2)(c) 条）。加拿大针对商业机构拥有欧盟充分性认定。[占位符：确认各服务商数据处理协议中的传输机制]"
+      },
+      "retention": {
+        "title": "12. 我们保留数据的时长",
+        "body": "- 账户和财务数据：只要你拥有账户就会保留。当你断开某个服务商时，其数据会立即从 Fiscalis 中删除。\n- 当你删除账户时，我们会在 30 天内删除你的数据。应用内的账户删除和数据导出功能仍在开发中；在此之前，请发送电子邮件给我们，我们将手动删除或导出你的数据。\n- 投资组合快照：只要你拥有账户就会保留，以便你查看历史。\n- Vercel 和 Convex 的服务器和错误日志：按照这些服务商的设置，通常最长 30 天。\n- 候补名单条目：直到你收到邀请或要求我们将你删除。\n- 依法必须保留的数据（例如引入付费方案后的发票）：在法定期限内保留。"
+      },
+      "rights": {
+        "title": "13. 你的权利",
+        "body": "你有权：\n\n- 查阅我们持有的关于你的数据（GDPR 第 15 条）；\n- 更正错误的数据（第 16 条）；\n- 删除你的数据（第 17 条）；\n- 限制处理（第 18 条）；\n- 以可移植的格式获取你的数据（第 20 条）；\n- 反对基于我们合法利益的处理（第 21 条）；\n- 撤回你给予的任何同意，对将来生效（第 7(3) 条）。\n\n如需行使上述任何权利，请发送电子邮件至 {email}。我们会在一个月内答复。"
+      },
+      "complaint": {
+        "title": "14. 投诉权",
+        "body": "你可以向数据保护监管机构投诉，特别是你居住或工作所在的欧盟国家的监管机构。负责我们的监管机构是 Bayerisches Landesamt für Datenschutzaufsicht（BayLDA），Promenade 18, 91522 Ansbach, Germany，https://www.lda.bayern.de"
+      },
+      "security": {
+        "title": "15. 安全",
+        "body": "连接均使用 TLS 加密。服务商访问令牌和 API 密钥均静态加密。与银行、券商和 Bitpanda 的连接都是只读的：Fiscalis 无法转移资金或下单交易。每个获取你数据的请求都会与你的登录账户进行核验。"
+      },
+      "changes": {
+        "title": "16. 本政策的变更",
+        "body": "当 Fiscalis 或法律发生变化时，我们会更新本政策。顶部的日期显示当前版本。如果某项变更影响我们使用你已提供的数据的方式，我们会在应用内或通过电子邮件通知你。"
+      }
+    }
+  },
+  "terms": {
+    "metaTitle": "服务条款 · Fiscalis",
+    "metaDescription": "使用 Fiscalis 的条款",
+    "title": "服务条款",
+    "sections": {
+      "scope": {
+        "title": "1. 适用范围",
+        "body": "本条款适用于你对 fiscalis.joshua-fehn.de 上 Fiscalis 的使用，该服务由 {name}（{street}, {postalCode} {city}, {country}，以下称“我们”）提供。创建账户即表示你同意本条款。我们的隐私政策说明了我们如何处理你的数据。"
+      },
+      "service": {
+        "title": "2. Fiscalis 是什么",
+        "body": "Fiscalis 汇集你的银行账户、券商账户、加密货币持仓、贵金属、贷款和其他资产，以显示你的净资产。它还提供计算器、退休规划工具和经济数据。Fiscalis 是一款信息工具。它不是银行、券商或投资顾问，也无法转移资金或下单交易。"
+      },
+      "noAdvice": {
+        "title": "3. 不构成财务建议",
+        "body": "Fiscalis 中的任何内容都不构成投资、税务、法律或财务建议。预测、计算器和退休计划都是基于可能不会实现的假设所做的估算。请自行做出决定，并在依据 Fiscalis 显示的任何数字采取行动之前咨询合格的顾问。"
+      },
+      "data": {
+        "title": "4. 数据的准确性",
+        "body": "余额、头寸、价格和汇率来自第三方（Plaid、SnapTrade、Bitpanda、gold.de、欧洲中央银行和世界银行）或你输入的内容。它们可能存在延迟、不完整或错误，而且已连接的账户是按计划刷新的，而非实时刷新。我们不保证任何数值正确。请向你的银行或券商核实重要数字。"
+      },
+      "account": {
+        "title": "5. 你的账户",
+        "body": "你必须年满 18 周岁才能使用 Fiscalis。目前注册需通过候补名单邀请。请对你的登录信息保密，如果你认为有他人使用了你的账户，请通过 {email} 告知我们。你只能连接属于你本人或你有权访问的账户。"
+      },
+      "connections": {
+        "title": "6. 已连接的服务商",
+        "body": "当你连接银行、券商或 Bitpanda 时，你也在使用该服务商的服务并接受其条款。你可以随时断开服务商，这会从 Fiscalis 中删除其数据。我们不对这些服务商的中断或错误负责。"
+      },
+      "acceptableUse": {
+        "title": "7. 合理使用",
+        "body": "请勿滥用 Fiscalis。尤其不得：\n\n- 试图访问其他用户的数据或绕过安全措施；\n- 使服务过载、抓取服务内容，或超出正常个人用途使用 API 密钥；\n- 将 Fiscalis 用于任何违法目的。\n\n我们可能会暂停违反这些规则的账户。"
+      },
+      "availability": {
+        "title": "8. 可用性和变更",
+        "body": "Fiscalis 免费提供，并且仍在开发中。我们会尽力保持其运行，但不承诺任何可用性水平。我们可能会更改、添加或移除功能。如果引入付费方案，需要你另行同意。"
+      },
+      "liability": {
+        "title": "9. 责任",
+        "body": "对于故意和重大过失、对生命、身体或健康的伤害，以及依据《德国产品责任法》，我们承担无限责任。对于轻微过失，我们仅在违反基本合同义务（即其履行使合同得以实现且你可以信赖的义务）时承担责任，且仅限于典型的、可预见的损害。除此之外，责任均被排除。由于本服务免费，《德国民法典》（BGB）第 521 条和第 599 条在进一步限制我们责任的范围内类推适用。"
+      },
+      "termination": {
+        "title": "10. 终止合同",
+        "body": "你可以随时停止使用 Fiscalis，并写信至 {email} 要求我们删除你的账户。我们可以提前 30 天通知终止合同，或在有正当理由时立即终止。当你的账户终止时，你的数据将按照隐私政策中的说明删除。"
+      },
+      "changes": {
+        "title": "11. 本条款的变更",
+        "body": "我们可能会出于正当理由更改本条款，例如新增功能或法律变化。我们会在变更生效前至少 30 天通知你。如果你在此之后继续使用 Fiscalis 且未提出异议，则新条款适用；我们会在通知你时指出这一点。"
+      },
+      "law": {
+        "title": "12. 适用法律",
+        "body": "适用德国法律，但排除《联合国国际货物销售合同公约》。如果你是居住在其他欧盟国家的消费者，该国的强制性消费者保护规定仍然适用。我们不参加消费者仲裁程序。"
+      }
+    }
+  }
+}

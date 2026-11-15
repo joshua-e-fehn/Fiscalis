@@ -1,0 +1,78 @@
+{
+  "pies": {
+    "title": "投资组合包",
+    "subtitle": "为你的投资组合设定目标配置：为每个分块设置权重，看看你的持仓偏离了多少。",
+    "newPie": "新建投资组合包",
+    "empty": {
+      "title": "还没有投资组合包",
+      "description": "投资组合包会把你的投资组合分成若干分块，每个分块可以是一个类别、一个子类别或特定持仓，并带有目标权重。Fiscalis 会显示你的实际配置偏离目标的程度。",
+      "action": "创建你的第一个投资组合包"
+    },
+    "card": {
+      "totalValue": "包内价值",
+      "maxDrift": "最大偏离",
+      "noHoldings": "你的持仓目前还没有与此投资组合包的分块相匹配的。",
+      "edit": "编辑投资组合包",
+      "delete": "删除投资组合包",
+      "threshold": "偏离目标超过 {threshold} 个百分点的分块需要再平衡。",
+      "columns": {
+        "slice": "分块",
+        "target": "目标",
+        "actual": "实际",
+        "drift": "偏离",
+        "rebalance": "再平衡"
+      },
+      "drift": "{value} 个百分点",
+      "status": {
+        "onTarget": "符合目标",
+        "over": "超配",
+        "under": "低配"
+      },
+      "buy": "买入 {amount}",
+      "sell": "卖出 {amount}",
+      "balanced": "—",
+      "allOf": "全部{category}",
+      "holdingsCount": "{count, plural, other {# 个持仓}}",
+      "missingHoldings": "{count, plural, other {# 个持仓}}已不在你的投资组合中"
+    },
+    "delete": {
+      "title": "删除这个投资组合包？",
+      "description": "“{name}”及其目标权重将被删除。你的持仓不受影响。",
+      "confirm": "删除投资组合包"
+    },
+    "toast": {
+      "created": "已创建投资组合包“{name}”",
+      "updated": "已更新投资组合包“{name}”",
+      "deleted": "已删除投资组合包“{name}”"
+    },
+    "editor": {
+      "addTitle": "新建投资组合包",
+      "editTitle": "编辑“{name}”",
+      "description": "为每个分块设定目标权重。所有权重之和必须为 100%。",
+      "name": "名称",
+      "namePlaceholder": "例如：核心与卫星",
+      "descriptionLabel": "描述",
+      "optional": "可选",
+      "slices": "分块",
+      "slice": "分块 {number}",
+      "addSlice": "添加分块",
+      "removeSlice": "移除分块",
+      "splitEvenly": "平均分配",
+      "kind": "目标",
+      "kinds": {
+        "category": "类别",
+        "holdings": "特定持仓"
+      },
+      "category": "类别",
+      "subcategory": "子类别",
+      "allSubcategories": "全部子类别",
+      "holdings": "持仓",
+      "noHoldings": "你还没有可供选择的持仓。",
+      "holdingGone": "已不在你的投资组合中",
+      "label": "标签",
+      "weight": "目标权重（%）",
+      "total": "合计：{total}%",
+      "totalOff": "合计：{total}%。所有权重之和必须为 100%。"
+    }
+  }
+}

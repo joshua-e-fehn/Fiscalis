@@ -1,0 +1,80 @@
+{
+  "plans": {
+    "free": "免费版",
+    "pro": "Pro"
+  },
+  "billing": {
+    "title": "账单",
+    "subtitle": "你的套餐、订阅和发票。",
+    "current": {
+      "title": "当前套餐",
+      "description": "你正在使用的套餐及其续订方式。",
+      "sourceSubscription": "付费订阅",
+      "sourceGrant": "免费赠送",
+      "sourceDefault": "永久免费",
+      "renews": "将于 {date} 续订",
+      "endsOn": "将于 {date} 结束",
+      "pastDue": "上次付款失败。请更新你的付款方式以继续使用 Pro。",
+      "ended": "你的 Pro 订阅已结束。",
+      "intervalMonth": "按月计费",
+      "intervalYear": "按年计费",
+      "manage": "管理订阅",
+      "manageHint": "在 Stripe 客户门户中更改或取消套餐、更新付款方式并下载发票。"
+    },
+    "upgrade": {
+      "title": "升级到 Pro",
+      "description": "无限连接、API 访问和投资组合包。",
+      "perMonth": "每月 {price}",
+      "perYear": "每年 {price}",
+      "month": "按月",
+      "year": "按年",
+      "submit": "升级到 Pro",
+      "unavailable": "暂时还无法升级，请稍后再来看看。",
+      "grantNote": "你已免费获得 Pro。你仍然可以订阅以支持 Fiscalis。",
+      "features": {
+        "connections": "无限数量的银行、券商和加密货币连接",
+        "apiKeys": "用于净资产 API 的 API 密钥",
+        "pies": "投资组合包（投资策略）"
+      }
+    },
+    "checkout": {
+      "success": "感谢升级！Stripe 确认付款后，你的套餐会立即更新。",
+      "canceled": "结账已取消，未产生任何费用。"
+    },
+    "invoices": {
+      "title": "发票",
+      "description": "你最近的发票。客户门户中有完整记录和 PDF。",
+      "empty": "还没有发票。",
+      "date": "日期",
+      "amount": "金额",
+      "status": "状态",
+      "statuses": {
+        "draft": "草稿",
+        "open": "待付款",
+        "paid": "已付款",
+        "void": "已作废",
+        "uncollectible": "无法收款",
+        "failed": "失败",
+        "other": "其他"
+      }
+    }
+  },
+  "limits": {
+    "title": "限额",
+    "subtitle": "你的套餐包含哪些内容，以及你已使用了多少。",
+    "card": {
+      "title": "用量",
+      "description": "你当前使用的是 {plan} 套餐。"
+    },
+    "rows": {
+      "connections": "服务商连接",
+      "apiKeys": "API 密钥",
+      "pies": "投资组合包"
+    },
+    "notIncluded": "不包含",
+    "usedOf": "{used} / {limit}",
+    "usedUnlimited": "已使用 {used} · 无限制",
+    "upgradeHint": "需要更多？Pro 没有限制。",
+    "upgrade": "了解 Pro"
+  }
+}

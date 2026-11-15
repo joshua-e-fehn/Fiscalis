@@ -1,8 +1,8 @@
 /**
  * The message catalogues, one JSON file per namespace under
  * messages/<language>/. Every namespace is imported statically for every
- * language: German is checked against English with `satisfies`, so a missing
- * German key fails `bunx tsc` and `bun run build`. Extra keys and mismatched
+ * language: each translation is checked against English with `satisfies`, so a
+ * missing key fails `bunx tsc` and `bun run build`. Extra keys and mismatched
  * ICU arguments are caught by services/i18n/i18n.test.ts.
  *
  * Adding a namespace: add messages/en/<ns>.json and messages/de/<ns>.json and
@@ -101,6 +101,7 @@ import billingIt from "@/messages/it/billing.json";
 
 import ptPT from "@/messages/pt-PT";
 import { ru } from "@/messages/ru";
+import { zhHans } from "@/messages/zh-Hans";
 import type { Language } from "./locales";
 
 const en = {
@@ -210,7 +211,16 @@ const it = {
   billing: billingIt,
 } satisfies Messages;
 
-const MESSAGES: Record<Language, Messages> = { en, de, es, fr, it, "pt-PT": ptPT, ru };
+const MESSAGES: Record<Language, Messages> = {
+  en,
+  de,
+  es,
+  fr,
+  it,
+  "pt-PT": ptPT,
+  ru,
+  "zh-Hans": zhHans,
+};
 
 export function messagesFor(language: Language): Messages {
   return MESSAGES[language];

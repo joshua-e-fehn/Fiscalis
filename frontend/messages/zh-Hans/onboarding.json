@@ -1,0 +1,109 @@
+{
+  "steps": {
+    "welcome": "欢迎",
+    "profile": "个人资料",
+    "banking": "银行",
+    "brokers": "券商",
+    "crypto": "加密货币",
+    "completion": "完成"
+  },
+  "progress": {
+    "stepOf": "第 {current} 步，共 {total} 步"
+  },
+  "shared": {
+    "skip": "暂时跳过",
+    "noConnections": "还没有连接",
+    "accounts": "{count, plural, other {# 个账户}}"
+  },
+  "welcome": {
+    "logoAlt": "Fiscalis 标志",
+    "title": "欢迎使用 <brand>Fiscalis</brand>",
+    "subtitle": "你完整的财富全貌，尽在一处。",
+    "trackTitle": "追踪一切",
+    "trackDescription": "股票、加密货币、房地产、现金、贵金属——尽在一个视图中",
+    "debtsTitle": "了解你的债务",
+    "debtsDescription": "贷款、房贷、信用卡，一目了然",
+    "netWorthTitle": "真实净资产",
+    "netWorthDescription": "资产减去负债，实时更新",
+    "mockupNetWorth": "总净资产",
+    "mockupChange": "今年 {change}",
+    "getStarted": "开始吧"
+  },
+  "profile": {
+    "title": "个性化你的体验",
+    "subtitle": "设置你的偏好，充分发挥 Fiscalis 的作用",
+    "displayName": "显示名称",
+    "displayNamePlaceholder": "你的名字",
+    "birthDate": "出生日期",
+    "birthDateHint": "用于个性化规划工具，例如你的退休预测。",
+    "currency": "首选货币",
+    "currencies": {
+      "EUR": "欧元 (€)",
+      "USD": "美元 ($)",
+      "GBP": "英镑 (£)",
+      "CHF": "瑞士法郎 (CHF)"
+    },
+    "theme": "主题",
+    "themes": {
+      "light": "浅色",
+      "dark": "深色",
+      "system": "跟随系统"
+    },
+    "saveFailed": "无法保存你的个人资料，请重试。"
+  },
+  "banking": {
+    "title": "连接你的银行账户",
+    "subtitle": "在一个视图中查看你的活期、储蓄和信用卡账户",
+    "benefitBalances": "余额自动更新",
+    "benefitTransactions": "交易记录与分类",
+    "benefitCurrencies": "多币种支持",
+    "connected": "已连接的账户",
+    "connecting": "正在连接…",
+    "addAnother": "添加其他银行",
+    "connect": "连接银行账户",
+    "security": "银行级加密 • 只读访问",
+    "continueWithout": "不连接银行，继续"
+  },
+  "brokers": {
+    "title": "连接你的投资账户",
+    "subtitle": "自动导入你的股票、ETF 和债券",
+    "benefitRealtime": "投资组合实时更新",
+    "benefitBrokerages": "支持 15 家以上券商",
+    "benefitDividends": "股息与表现追踪",
+    "connected": "已连接的券商",
+    "supported": "支持的券商",
+    "opening": "正在打开连接…",
+    "addAnother": "添加其他券商",
+    "connect": "连接券商账户",
+    "newWindow": "应该已经打开了一个新窗口。请在那里完成连接。",
+    "security": "通过 SnapTrade 安全连接 • 只读访问",
+    "continueWithout": "不连接券商，继续"
+  },
+  "crypto": {
+    "title": "连接 Bitpanda",
+    "subtitle": "追踪比特币、以太坊和 100 多种其他资产——还有贵金属、股票和现金",
+    "benefitAssets": "加密货币、贵金属、大宗商品和股票尽在一处",
+    "benefitApiKey": "使用只读 API 密钥连接",
+    "benefitValuation": "自动按你的基准货币估值",
+    "connected": "已连接",
+    "addAnother": "添加其他账户",
+    "connect": "连接 Bitpanda",
+    "security": "只读 API 密钥 • 静态加密",
+    "continueWithout": "不连接 Bitpanda，继续"
+  },
+  "completion": {
+    "title": "一切就绪！🎉",
+    "subtitle": "你的财富仪表盘已准备好，快去看看吧",
+    "summaryConnected": "你已连接的内容",
+    "summaryEmpty": "设置摘要",
+    "bankAccounts": "银行账户",
+    "brokerageAccounts": "券商账户",
+    "cryptoWallets": "加密钱包",
+    "notConnected": "未连接",
+    "connectLater": "你可以随时在“设置”中连接账户",
+    "syncing": "你的账户正在同步。前往仪表盘查看你完整的财富全貌。",
+    "goToDashboard": "前往仪表盘",
+    "goBack": "返回",
+    "addAccounts": "添加账户"
+  }
+}

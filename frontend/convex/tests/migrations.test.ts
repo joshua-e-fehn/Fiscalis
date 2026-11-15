@@ -19,12 +19,18 @@ const ONE_SHOT = Object.entries(migrationsModule)
   })
   .map(([name, fn]) => {
     const args = JSON.parse((fn as RegisteredMutation).exportArgs!()) as {
-      value: Record<string, unknown>;
+      value: Record<string, { optional: boolean }>;
     };
-    return { name, takesDryRun: "dryRun" in args.value, componentMigration: "oneBatchOnly" in args.value };
+    return {
+      name,
+      takesDryRun: "dryRun" in args.value,
+      componentMigration: "oneBatchOnly" in args.value,
+      needsArgs: Object.values(args.value).some((arg) => !arg.optional),
+    };
   })
-  // Component migrations and the runner have their own tests below
-  .filter((m) => !m.componentMigration && m.name !== "run");
+  // Component migrations and the runner have their own tests below, and so
+  // do the steps of migrations that need arguments (remapUserId.test.ts)
+  .filter((m) => !m.componentMigration && !m.needsArgs && m.name !== "run");
 
 const ref = (name: string) => makeFunctionReference<"mutation">(`migrations:${name}`);
 

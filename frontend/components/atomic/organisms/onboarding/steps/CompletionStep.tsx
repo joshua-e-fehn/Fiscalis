@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useInlineSign } from "@/hooks/useInlineSign";
 import {
   PartyPopper,
   CheckCircle2,
@@ -160,7 +161,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
             isLoading={isNavigating}
             size="lg"
             className="w-full"
-            icon={<ArrowRight className="w-5 h-5" />}
+            icon={<ArrowRight className="w-5 h-5 rtl:-scale-x-100" />}
           >
             {t("goToDashboard")}
           </OnboardingButton>
@@ -169,7 +170,7 @@ export function CompletionStep({ onAddMore, onBack }: CompletionStepProps) {
             <OnboardingButton
               onClick={onBack}
               variant="ghost"
-              icon={<ArrowLeft className="w-4 h-4" />}
+              icon={<ArrowLeft className="w-4 h-4 rtl:-scale-x-100" />}
             >
               {t("goBack")}
             </OnboardingButton>
@@ -206,6 +207,7 @@ function ConnectionSummaryItem({
   delay,
 }: ConnectionSummaryItemProps) {
   const t = useTranslations("onboarding.completion");
+  const sign = useInlineSign();
   const colorStyles = {
     emerald: {
       bg: "bg-emerald-500/10",
@@ -229,7 +231,7 @@ function ConnectionSummaryItem({
   return (
     <motion.div
       className="flex items-center justify-between"
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: -20 * sign }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay }}
     >

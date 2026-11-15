@@ -59,10 +59,10 @@ export function AnimatedBackground({
       )}
 
       {/* Radial glow - gold accent */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[#D4AF37]/5 rounded-full blur-[120px] translate-x-1/3 -translate-y-1/3" />
+      <div className="absolute top-0 end-0 w-[600px] h-[600px] bg-[#D4AF37]/5 rounded-full blur-[120px] translate-x-1/3 rtl:-translate-x-1/3 -translate-y-1/3" />
 
       {/* Radial glow - blue accent */}
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#3B82F6]/5 rounded-full blur-[100px] -translate-x-1/3 translate-y-1/3" />
+      <div className="absolute bottom-0 start-0 w-[500px] h-[500px] bg-[#3B82F6]/5 rounded-full blur-[100px] -translate-x-1/3 rtl:translate-x-1/3 translate-y-1/3" />
 
       {/* Floating particles (keyed so a new count regenerates them) */}
       {isClient && (

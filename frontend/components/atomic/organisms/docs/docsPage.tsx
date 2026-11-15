@@ -183,7 +183,7 @@ function DocsPager({
           href={DOC_ROUTES[previous]}
           className="hover:bg-muted/50 flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" />
           <span>
             <span className="text-muted-foreground block text-xs">
               {labels.previous}
@@ -197,7 +197,7 @@ function DocsPager({
       {next && (
         <Link
           href={DOC_ROUTES[next]}
-          className="hover:bg-muted/50 flex items-center justify-end gap-3 rounded-lg border px-4 py-3 text-right text-sm"
+          className="hover:bg-muted/50 flex items-center justify-end gap-3 rounded-lg border px-4 py-3 text-end text-sm"
         >
           <span>
             <span className="text-muted-foreground block text-xs">
@@ -205,7 +205,7 @@ function DocsPager({
             </span>
             {titles[next]}
           </span>
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-4 w-4 rtl:-scale-x-100" />
         </Link>
       )}
     </nav>
@@ -230,11 +230,11 @@ function DocsBlocks({
             </li>
           ));
           return numbered ? (
-            <ol key={i} className="list-decimal space-y-1.5 pl-6">
+            <ol key={i} className="list-decimal space-y-1.5 ps-6">
               {items}
             </ol>
           ) : (
-            <ul key={i} className="list-disc space-y-1 pl-6">
+            <ul key={i} className="list-disc space-y-1 ps-6">
               {items}
             </ul>
           );

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useInlineSign } from "@/hooks/useInlineSign";
 import { LucideIcon } from "lucide-react";
 
 interface FeatureItemProps {
@@ -19,6 +20,7 @@ export function FeatureItem({
   iconColor = "default",
   delay = 0,
 }: FeatureItemProps) {
+  const sign = useInlineSign();
   const iconColorStyles = {
     gold: "text-[#D4AF37] bg-[#D4AF37]/10",
     blue: "text-[#3B82F6] bg-[#3B82F6]/10",
@@ -29,7 +31,7 @@ export function FeatureItem({
   return (
     <motion.div
       className="flex items-start gap-4"
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: -20 * sign }}
       animate={{ opacity: 1, x: 0 }}
       transition={{
         type: "spring",
@@ -62,10 +64,11 @@ interface BenefitItemProps {
 }
 
 export function BenefitItem({ text, delay = 0 }: BenefitItemProps) {
+  const sign = useInlineSign();
   return (
     <motion.div
       className="flex items-center gap-3"
-      initial={{ opacity: 0, x: -10 }}
+      initial={{ opacity: 0, x: -10 * sign }}
       animate={{ opacity: 1, x: 0 }}
       transition={{
         type: "spring",

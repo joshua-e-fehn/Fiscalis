@@ -39,11 +39,11 @@ export function OnboardingProgress({
       {/* Progress bar */}
       <div className="relative flex items-center justify-between">
         {/* Background line */}
-        <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-white/10 -translate-y-1/2" />
+        <div className="absolute start-0 end-0 top-1/2 h-0.5 bg-white/10 -translate-y-1/2" />
 
         {/* Active line */}
         <motion.div
-          className="absolute left-0 top-1/2 h-0.5 bg-gradient-to-r from-[#D4AF37] to-[#3B82F6] -translate-y-1/2"
+          className="absolute start-0 top-1/2 h-0.5 bg-gradient-to-r from-[#D4AF37] to-[#3B82F6] -translate-y-1/2"
           initial={{ width: "0%" }}
           animate={{
             width: `${((currentStep - 1) / (TOTAL_STEPS - 1)) * 100}%`,

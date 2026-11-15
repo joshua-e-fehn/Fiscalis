@@ -311,7 +311,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
             disabled={!!birthDateError}
             size="lg"
             className="w-full"
-            icon={<ArrowRight className="w-5 h-5" />}
+            icon={<ArrowRight className="w-5 h-5 rtl:-scale-x-100" />}
           >
             {tActions("continue")}
           </OnboardingButton>
@@ -323,7 +323,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
           <OnboardingButton
             onClick={onBack}
             variant="ghost"
-            icon={<ArrowLeft className="w-4 h-4" />}
+            icon={<ArrowLeft className="w-4 h-4 rtl:-scale-x-100" />}
           >
             {tActions("back")}
           </OnboardingButton>
@@ -361,7 +361,7 @@ function ThemeButton({ selected, onClick, label, preview }: ThemeButtonProps) {
       <span className="text-sm text-white/70">{label}</span>
       {selected && (
         <motion.div
-          className="absolute top-2 right-2 w-5 h-5 rounded-full bg-[#3B82F6] flex items-center justify-center"
+          className="absolute top-2 end-2 w-5 h-5 rounded-full bg-[#3B82F6] flex items-center justify-center"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}

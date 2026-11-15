@@ -186,7 +186,7 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
             onClick={onNext}
             size="lg"
             className="w-full"
-            icon={<ArrowRight className="w-5 h-5" />}
+            icon={<ArrowRight className="w-5 h-5 rtl:-scale-x-100" />}
           >
             {hasConnections ? tActions("continue") : t("continueWithout")}
           </OnboardingButton>
@@ -194,7 +194,7 @@ export function BankingStep({ onNext, onSkip, onBack }: BankingStepProps) {
             <OnboardingButton
               onClick={onBack}
               variant="ghost"
-              icon={<ArrowLeft className="w-4 h-4" />}
+              icon={<ArrowLeft className="w-4 h-4 rtl:-scale-x-100" />}
             >
               {tActions("back")}
             </OnboardingButton>

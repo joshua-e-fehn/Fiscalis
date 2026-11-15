@@ -268,6 +268,30 @@ export const assertConnectionSlot = internalQuery({
 });
 
 /**
+ * GDPR export (account.exportMyData): the user's rows in the Stripe
+ * component's tables, which USER_DATA_TABLES cannot list because they live
+ * in the component. All reads go through the component's by_user_id
+ * indexes.
+ */
+export const exportBillingData = internalQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, { userId }) => {
+    const [customer, subscriptions, invoices, payments] = await Promise.all([
+      ctx.runQuery(components.stripe.public.getCustomerByUserId, { userId }),
+      ctx.runQuery(components.stripe.public.listSubscriptionsByUserId, { userId }),
+      ctx.runQuery(components.stripe.public.listInvoicesByUserId, { userId }),
+      ctx.runQuery(components.stripe.public.listPaymentsByUserId, { userId }),
+    ]);
+    return {
+      "stripe.customers": customer ? [customer] : [],
+      "stripe.subscriptions": subscriptions,
+      "stripe.invoices": invoices,
+      "stripe.payments": payments,
+    } as Record<string, Record<string, unknown>[]>;
+  },
+});
+
+/**
  * Account deletion (account.ts): deletes the user's Stripe customer, which
  * cancels their subscriptions at once (no further charges). The
  * customer.deleted and customer.subscription.deleted webhooks then update

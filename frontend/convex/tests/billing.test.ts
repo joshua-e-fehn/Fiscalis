@@ -126,6 +126,23 @@ describe("billing queries", () => {
   });
 });
 
+describe("data export", () => {
+  it("includes the user's Stripe rows, and no one else's", async () => {
+    const t = await seededFree();
+    await subscribe(t, "active");
+
+    const mine = await t.withIdentity({ subject: OWNER }).action(api.account.exportMyData, {});
+    expect(mine.tables["stripe.subscriptions"]).toMatchObject([
+      { stripeSubscriptionId: "sub_test", userId: OWNER },
+    ]);
+
+    const theirs = await t
+      .withIdentity({ subject: "user_other" })
+      .action(api.account.exportMyData, {});
+    expect(theirs.tables["stripe.subscriptions"]).toEqual([]);
+  });
+});
+
 describe("grantProToExistingUsers", () => {
   it("grandfathers existing users onto Pro, only when not a dry run, once", async () => {
     const t = await seededFree();

@@ -98,6 +98,11 @@ export const exportMyData = action({
       }
       tables[table] = docs;
     }
+    // Plan and payment history kept by the Stripe component (ENG-198)
+    Object.assign(
+      tables,
+      await ctx.runQuery(internal.billing.exportBillingData, { userId }),
+    );
     return buildUserDataExport(userId, tables, new Date());
   },
 });

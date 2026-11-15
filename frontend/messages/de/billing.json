@@ -1,0 +1,80 @@
+{
+  "plans": {
+    "free": "Free",
+    "pro": "Pro"
+  },
+  "billing": {
+    "title": "Abrechnung",
+    "subtitle": "Dein Plan, dein Abo und deine Rechnungen.",
+    "current": {
+      "title": "Aktueller Plan",
+      "description": "Welchen Plan du hast und wie er sich verlängert.",
+      "sourceSubscription": "Bezahltes Abo",
+      "sourceGrant": "Kostenlos für dich freigeschaltet",
+      "sourceDefault": "Dauerhaft kostenlos",
+      "renews": "Verlängert sich am {date}",
+      "endsOn": "Endet am {date}",
+      "pastDue": "Die letzte Zahlung ist fehlgeschlagen. Aktualisiere deine Zahlungsmethode, um Pro zu behalten.",
+      "ended": "Dein Pro-Abo ist beendet.",
+      "intervalMonth": "Monatliche Abrechnung",
+      "intervalYear": "Jährliche Abrechnung",
+      "manage": "Abo verwalten",
+      "manageHint": "Im Stripe-Kundenportal änderst oder kündigst du deinen Plan, aktualisierst deine Zahlungsmethode und lädst Rechnungen herunter."
+    },
+    "upgrade": {
+      "title": "Auf Pro upgraden",
+      "description": "Unbegrenzte Verbindungen, API-Zugriff und Pies.",
+      "perMonth": "{price} pro Monat",
+      "perYear": "{price} pro Jahr",
+      "month": "Monatlich",
+      "year": "Jährlich",
+      "submit": "Auf Pro upgraden",
+      "unavailable": "Das Upgrade ist noch nicht verfügbar. Schau bald wieder vorbei.",
+      "grantNote": "Pro ist für dich bereits enthalten. Du kannst trotzdem ein Abo abschließen, um Fiscalis zu unterstützen.",
+      "features": {
+        "connections": "Unbegrenzte Bank-, Broker- und Krypto-Verbindungen",
+        "apiKeys": "API-Schlüssel für die Nettovermögen-API",
+        "pies": "Pies (Anlagestrategien)"
+      }
+    },
+    "checkout": {
+      "success": "Danke für dein Upgrade! Dein Plan wird aktualisiert, sobald Stripe die Zahlung bestätigt.",
+      "canceled": "Der Checkout wurde abgebrochen. Es wurde nichts berechnet."
+    },
+    "invoices": {
+      "title": "Rechnungen",
+      "description": "Deine neuesten Rechnungen. Im Kundenportal findest du den vollständigen Verlauf und die PDFs.",
+      "empty": "Noch keine Rechnungen.",
+      "date": "Datum",
+      "amount": "Betrag",
+      "status": "Status",
+      "statuses": {
+        "draft": "Entwurf",
+        "open": "Offen",
+        "paid": "Bezahlt",
+        "void": "Storniert",
+        "uncollectible": "Uneinbringlich",
+        "failed": "Fehlgeschlagen",
+        "other": "Sonstige"
+      }
+    }
+  },
+  "limits": {
+    "title": "Limits",
+    "subtitle": "Was dein Plan enthält und wie viel du davon nutzt.",
+    "card": {
+      "title": "Nutzung",
+      "description": "Du nutzt den {plan}-Plan."
+    },
+    "rows": {
+      "connections": "Anbieter-Verbindungen",
+      "apiKeys": "API-Schlüssel",
+      "pies": "Pies"
+    },
+    "notIncluded": "Nicht enthalten",
+    "usedOf": "{used} von {limit}",
+    "usedUnlimited": "{used} in Nutzung · Unbegrenzt",
+    "upgradeHint": "Brauchst du mehr? Pro hat keine Limits.",
+    "upgrade": "Pro ansehen"
+  }
+}

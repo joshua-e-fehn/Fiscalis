@@ -9,12 +9,6 @@
 export const FEATURE_FLAGS = [
   /** Settings > Team */
   "teamSettings",
-  /** Settings > Billing and the user menu's Billing entry */
-  "billing",
-  /** Settings > Limits */
-  "usageLimits",
-  /** User menu > Upgrade to Pro */
-  "upgrade",
   /** User menu > Notifications */
   "notifications",
   /** Drill-down cards for categories that are not built yet ("Coming soon") */

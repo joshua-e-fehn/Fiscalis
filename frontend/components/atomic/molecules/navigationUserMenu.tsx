@@ -8,6 +8,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { useClerk } from "@clerk/nextjs";
 import { useTranslations } from "next-intl";
 
@@ -32,6 +33,7 @@ import {
   useSidebar,
 } from "@/components/ui/shadcn/sidebar";
 import { isFeatureEnabled } from "@/lib/config/features";
+import { useMyPlan } from "@/hooks/convex";
 
 export function NavigationUserMenu({
   user,
@@ -45,6 +47,7 @@ export function NavigationUserMenu({
   const t = useTranslations("navigation.userMenu");
   const { isMobile } = useSidebar();
   const { openUserProfile, signOut } = useClerk();
+  const myPlan = useMyPlan();
 
   const handleOpenUserProfile = () => {
     openUserProfile();
@@ -95,14 +98,16 @@ export function NavigationUserMenu({
                 </div>
               </div>
             </DropdownMenuLabel>
-            {/* Planned entries stay hidden until they are built (lib/config/features.ts) */}
-            {isFeatureEnabled("upgrade") && (
+            {/* Only once the plan is known to be Free */}
+            {myPlan?.plan === "free" && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem>
-                    <Sparkles />
-                    {t("upgrade")}
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/billing">
+                      <Sparkles />
+                      {t("upgrade")}
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
               </>
@@ -113,12 +118,13 @@ export function NavigationUserMenu({
                 <BadgeCheck />
                 {t("account")}
               </DropdownMenuItem>
-              {isFeatureEnabled("billing") && (
-                <DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings/billing">
                   <CreditCard />
                   {t("billing")}
-                </DropdownMenuItem>
-              )}
+                </Link>
+              </DropdownMenuItem>
+              {/* Planned entries stay hidden until they are built (lib/config/features.ts) */}
               {isFeatureEnabled("notifications") && (
                 <DropdownMenuItem>
                   <Bell />

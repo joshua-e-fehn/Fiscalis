@@ -228,13 +228,11 @@ const data: Record<
 				},
 				{
 					titleKey: "billing",
-					url: "#",
-					feature: "billing",
+					url: "/settings/billing",
 				},
 				{
 					titleKey: "limits",
-					url: "#",
-					feature: "usageLimits",
+					url: "/settings/limits",
 				},
 			],
 		},

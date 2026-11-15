@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented for banking and brokers (shared IntegrationConnectionCard); the Vezgo crypto page it describes no longer exists.
+
 # Integration Pages Unification Plan
 
 Unify the design of Banking, Brokers, and Crypto integration pages while preserving page-specific features.

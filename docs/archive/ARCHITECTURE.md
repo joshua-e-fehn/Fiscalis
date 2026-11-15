@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Historical. Written before the Supabase retirement (#67) and the Vezgo removal; many sections are stale. The current picture is README.md and AGENTS.md.
+
 # Fiscalis Architecture Guide
 
 This document provides a comprehensive overview of the Fiscalis application architecture, explaining the relationships between different components, data flows, and design patterns used throughout the codebase.

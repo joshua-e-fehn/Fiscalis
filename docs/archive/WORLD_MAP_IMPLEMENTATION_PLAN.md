@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (all phases; per-country views added in #99).
+
 # World Map + World Bank API Implementation Plan
 
 ## Overview

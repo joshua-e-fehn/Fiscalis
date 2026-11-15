@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Abandoned. Vezgo was removed in favour of Bitpanda; no Vezgo code remains (ENG-228).
+
 # Vezgo Integration Implementation Plan
 
 ## Overview

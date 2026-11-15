@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (all phases done; classification.ts plus categoryUI.tsx are the single source of truth).
+
 # Investment Category Unification Plan
 
 > **Goal:** Establish a single source of truth for investment categories and subcategories (`classification.ts`) with a compile-time-enforced UI config layer (`categoryUI.tsx`) that ensures every subcategory is accounted for in the frontend.

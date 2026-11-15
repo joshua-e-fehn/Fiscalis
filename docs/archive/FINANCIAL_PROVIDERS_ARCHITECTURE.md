@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Historical. Providers today are Plaid, SnapTrade and Bitpanda; Vezgo was dropped for Bitpanda and FinAPI was never built.
+
 # Financial Providers Architecture Guide
 
 ## Overview

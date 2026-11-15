@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented (loans pages, What-If, payments; one schedule engine in services/finance/loanScheduleService.ts since ENG-171/172).
+
 # Loans Management Page - Feature Specification
 
 ## Overview

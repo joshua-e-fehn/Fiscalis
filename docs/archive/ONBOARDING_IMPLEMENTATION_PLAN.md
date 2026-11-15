@@ -1,3 +1,5 @@
+> **Status (archived 2026-11-15):** Implemented; the app is gated behind onboarding since #61. The unticked polish and test items were not pursued.
+
 # Fiscalis Onboarding Implementation Plan
 
 ## Overview

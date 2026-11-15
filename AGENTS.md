@@ -30,7 +30,9 @@
 - A framework-free calculation package (loan amortisation, interest, retirement
   projection, time-range vocabulary, and three portfolio-performance strategies
   — discrete/continuous/hybrid) is consumed by both the app and the server
-  functions, and is the only part of the repo with tests.
+  functions, and holds the repo's only TypeScript tests (`ops/health-monitor`
+  has its own Python test). How a holding is valued, and the owner decisions
+  D1–D4 behind the numbers, are in `docs/adr/0001-valuation-resolution.md`.
 
 ## Non-obvious structure
 
@@ -57,24 +59,34 @@
   mode is production-only on purpose: enabling it in dev sends HMR into a
   reload loop.
 - `dev` runs Turbopack but `build` is pinned to `--webpack` deliberately.
-- `categories.ts` casts Bitpanda holdings to the broker-position doc type so
-  category queries can merge both into one `positions` array. The overlap only
-  covers the fields consumers read (cost basis / P&L are absent by design).
-- `README.md` is stale: it documents Vezgo crypto aggregation, which was
-  removed in favour of Bitpanda. The dependency and its CSP entries still
-  linger.
+- `categories.ts` merges SnapTrade positions and Bitpanda holdings into one
+  `positions` array typed `CategoryPosition`, a union discriminated by
+  `provider`. Bitpanda rows have no native cost basis or P&L by design.
+- Every category query and the server-side net worth read holdings through
+  one loader (`convex/lib/netWorth.ts` `loadHoldings`) and one aggregator
+  (`services/portfolio/aggregate.ts`). Do not add a second sum.
+- User-facing text is next-intl only: keys in `frontend/messages/en|de/<ns>.json`
+  (registered in `frontend/i18n/messages.ts`; `services/i18n/i18n.test.ts`
+  enforces parity). Errors a user sees are `userError(code, params)` from
+  `convex/lib/userError.ts`, codes in `services/i18n/userErrorCodes.ts`.
+- `eslint-rules/no-raw-error-log.mjs` forbids logging a caught error raw
+  (provider errors carry credentials); pass it through `describeError()` or
+  `redactSecrets()` from `services/security/providerError.ts` first.
+- `docs/` holds current reference docs and ADRs; finished plans are in
+  `docs/archive/` with a status line and are not instructions. The backlog is
+  in Linear (`ToDo.md` points there), not in the repo.
 
 ## Operational commands
 
 ```bash
-cd frontend && bun install && bunx convex dev   # codegen + live backend, keep running
+cd frontend && bun install --frozen-lockfile && bunx convex dev   # codegen + dev backend, keep running
 bun run dev                                     # app on :3000
 bun run build                                   # convex codegen, then webpack build
 bun run lint
 bun run check                                   # lint + tsc (app, convex) + services tests = CI
 # (no manual backend deploy: Vercel production builds run `convex deploy`)
 
-cd services && bun install && bun run test      # vitest — the repo's only tests
+cd services && bun install --frozen-lockfile && bun run test   # vitest
 ```
 
 ## Deployments

@@ -27,10 +27,10 @@ Custom directives in `proxy.ts` are **merged** with Clerk's built-in ones (`img.
 
 | Directive                | Domains                                                                                                                                | Reason                                                    |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `connect-src`            | `*.convex.cloud`, `wss://*.convex.cloud`, `api.worldbank.org`, `basemaps.cartocdn.com`, `*.basemaps.cartocdn.com`, `connect.vezgo.com` | Convex real-time, World Bank API, CARTO map tiles, Vezgo  |
+| `connect-src`            | `*.convex.cloud`, `wss://*.convex.cloud`, `api.worldbank.org`, `basemaps.cartocdn.com`, `*.basemaps.cartocdn.com` | Convex real-time, World Bank API, CARTO map tiles |
 | `connect-src` (dev only) | `ws://localhost:*`, `ws://127.0.0.1:*`                                                                                                 | Dev tools (console-ninja etc.) WebSocket connections      |
 | `script-src`             | `cdn.plaid.com`                                                                                                                        | Plaid Link loads scripts at runtime                       |
-| `frame-src`              | `*.plaid.com`, `connect.vezgo.com`, `app.snaptrade.com`                                                                                | Plaid Link iframe, Vezgo Connect widget, SnapTrade portal |
+| `frame-src`              | `*.plaid.com`, `app.snaptrade.com` | Plaid Link iframe, SnapTrade portal |
 | `img-src`                | `data:`, `blob:`, `basemaps.cartocdn.com`, `*.basemaps.cartocdn.com`                                                                   | Inline SVGs, MapLibre blob images, CARTO sprites          |
 | `font-src`               | `'self'`, `basemaps.cartocdn.com`, `*.basemaps.cartocdn.com`                                                                           | Next.js self-hosted Inter font + CARTO map label glyphs   |
 | `worker-src`             | `blob:`                                                                                                                                | MapLibre Web Workers for tile parsing                     |
@@ -80,7 +80,7 @@ Custom directives in `proxy.ts` are **merged** with Clerk's built-in ones (`img.
 
 1. **Dev mode** — run `bun run dev`, open the browser console, check for `Refused to load/connect/execute` CSP violation errors.
 2. **Production mode** — run `bun run build && bun run start`, inspect the `Content-Security-Policy` response header in DevTools → Network, and verify it contains `nonce-...` (not `'unsafe-inline'`).
-3. **Key flows to test** — Plaid Link, SnapTrade connect, Vezgo connect, World Map (CARTO tiles + MapLibre workers), any page loading Convex data (WebSocket).
+3. **Key flows to test** — Plaid Link, SnapTrade connect, Bitpanda connect, World Map (CARTO tiles + MapLibre workers), any page loading Convex data (WebSocket).
 
 ### CSRF Protection (Already Handled)
 
@@ -93,5 +93,4 @@ Custom directives in `proxy.ts` are **merged** with Clerk's built-in ones (`img.
 
 ### Open Items
 
-- **Vezgo webhook signature verification** — commented out in `convex/http.ts` (lines 42-44). Enable when Vezgo provides signing keys.
 - **Rate limiting** on public API routes (`/api/world-data`, `/api/worldbank/sync`) — consider Vercel WAF or middleware-based rate limiter.

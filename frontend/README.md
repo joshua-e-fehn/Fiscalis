@@ -1,402 +1,83 @@
-# Fiscalis Frontend
+# Fiscalis frontend
 
-<div align="center">
+The Next.js 16 app (App Router, React 19) and its Convex backend in
+`convex/`. Product overview, CI and deployments: [../README.md](../README.md).
+Agent rules and structure gotchas: [../AGENTS.md](../AGENTS.md).
 
-**The Next.js 16 frontend application for Fiscalis — a comprehensive personal wealth management platform.**
-
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://react.dev/)
-[![Convex](https://img.shields.io/badge/Convex-Backend-orange?style=flat-square)](https://convex.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-
-</div>
-
----
-
-## Overview
-
-This is the main frontend application for Fiscalis, built with Next.js 16 and the App Router. It includes:
-
-- **React 19** with Server Components and the latest features
-- **Convex** real-time backend for user data and market data: metal prices, FX (embedded in `/convex` directory)
-- **Hono** API routes for the public World Bank data
-- **Clerk** authentication with protected routes
-- **TanStack Query** for REST API state management
-
----
-
-## Features
-
-| Feature                | Description                                                               |
-| ---------------------- | ------------------------------------------------------------------------- |
-| 🏦 **Banking**         | Connect bank accounts via Plaid, view balances and transactions           |
-| 📈 **Brokers**         | Track 38+ brokerage accounts via SnapTrade (IBKR, Schwab, Fidelity, etc.) |
-| ₿ **Crypto**           | Aggregate exchanges, wallets, DeFi, and NFTs via Vezgo                    |
-| 🥇 **Precious Metals** | Track physical gold, silver, platinum inventory with live prices          |
-| 💰 **Loans**           | Loan calculator with amortization schedules and what-if scenarios         |
-| 🌍 **World Map**       | Interactive economic indicators from World Bank API                       |
-| 📊 **Dashboard**       | Unified portfolio view with allocation charts and performance metrics     |
-| 🔄 **Onboarding**      | Step-by-step guided setup for new users                                   |
-
----
-
-## Tech Stack
-
-### Core Framework
-
-| Technology     | Version | Purpose                              |
-| -------------- | ------- | ------------------------------------ |
-| **Next.js**    | ^16.1.4 | React framework with App Router      |
-| **React**      | ^19.2.3 | UI library with Server Components    |
-| **TypeScript** | ^5.9.3  | Type-safe JavaScript                 |
-| **Bun**        | latest  | JavaScript runtime & package manager |
-
-### Backend (Convex)
-
-| Technology             | Version | Purpose                                    |
-| ---------------------- | ------- | ------------------------------------------ |
-| **Convex**             | ^1.31.6 | Real-time backend, database, and functions |
-| **convex/react**       | -       | React hooks for queries/mutations          |
-| **convex/react-clerk** | -       | Clerk authentication integration           |
-
-### API Layer
-
-| Technology           | Version | Purpose                           |
-| -------------------- | ------- | --------------------------------- |
-| **Hono**             | ^4.11.5 | Edge-compatible API framework     |
-| **@hono/clerk-auth** | ^2.0.1  | Clerk middleware for Hono         |
-
-### UI & Styling
-
-| Technology        | Version  | Purpose                       |
-| ----------------- | -------- | ----------------------------- |
-| **Tailwind CSS**  | ^3.4.19  | Utility-first CSS             |
-| **shadcn/ui**     | -        | Accessible component library  |
-| **Radix UI**      | various  | Headless UI primitives        |
-| **Framer Motion** | ^11.18.2 | Animations                    |
-| **Recharts**      | ^2.15.4  | Charts and data visualization |
-| **MapLibre GL**   | ^5.16.0  | Interactive maps              |
-
-### Financial Integrations
-
-| Technology    | Version  | Purpose                                       |
-| ------------- | -------- | --------------------------------------------- |
-| **Plaid**     | ^31.1.0  | Banking data aggregation                      |
-| **SnapTrade** | ^9.0.160 | Brokerage account aggregation                 |
-| **Vezgo**     | ^2.0.3   | Crypto aggregation (exchanges, wallets, DeFi) |
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) v1.0+ (recommended) or Node.js 20+
-- [Convex](https://convex.dev/) account
-- [Clerk](https://clerk.com/) account
-
-### Environment Variables
-
-Create a `.env.local` file in the frontend directory:
+## Run it
 
 ```bash
-# ===========================================
-# Convex
-# ===========================================
-CONVEX_DEPLOYMENT="your-deployment-name"
-NEXT_PUBLIC_CONVEX_URL="https://your-deployment.convex.cloud"
-
-# ===========================================
-# Clerk Authentication
-# ===========================================
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_..."
-CLERK_SECRET_KEY="sk_..."
-NEXT_PUBLIC_CLERK_SIGN_IN_URL="/sign-in"
-NEXT_PUBLIC_CLERK_SIGN_UP_URL="/sign-up"
-
-# ===========================================
-# Plaid (Banking Integration)
-# ===========================================
-PLAID_CLIENT_ID="..."
-PLAID_SECRET="..."  # Use sandbox/development/production secret
-PLAID_ENV="sandbox"  # sandbox | development | production
-PLAID_PRODUCTS="transactions" # auth/identity are always dropped (ENG-225)
-PLAID_COUNTRY_CODES="US,DE,GB,FR,ES,IT"
-
-# ===========================================
-# SnapTrade (Brokerage Integration)
-# ===========================================
-SNAPTRADE_CLIENT_ID="..."
-SNAPTRADE_CONSUMER_KEY="..."
-
-# ===========================================
-# Vezgo (Crypto Integration)
-# ===========================================
-VEZGO_CLIENT_ID="..."
-VEZGO_CLIENT_SECRET="..."
-
-# ===========================================
-# Encryption Key (for token storage)
-# ===========================================
-ENCRYPTION_KEY="..."  # 32-byte hex key for AES-256-GCM
+bun install --frozen-lockfile
+bunx convex dev    # codegen + push to the dev deployment, keep running
+bun run dev        # http://localhost:3000
+bun run check      # what CI runs: lint, both tsc projects, services tests
 ```
 
-### Installation
+## Environment
 
-```bash
-# Install dependencies
-bun install
+**Next.js** (`frontend/.env.local`, Vercel project settings):
 
-# Start Convex development server (in one terminal)
-bunx convex dev
+| Variable | Purpose |
+| --- | --- |
+| `CONVEX_DEPLOYMENT`, `NEXT_PUBLIC_CONVEX_URL` | Convex deployment (written by `convex dev`) |
+| `NEXT_PUBLIC_CONVEX_SITE_URL` | Optional: Convex HTTP origin for the API-key settings; derived from the `.convex.cloud` URL when unset |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Clerk auth |
+| `NEXT_PUBLIC_FEATURES` | Comma-separated flags for unbuilt menu entries (`services/features/featureFlags.ts`); all off by default |
+| `NEXT_PUBLIC_I18N_PREVIEW` | `1` offers every language before it is released |
+| `CONVEX_DEPLOY_KEY` | Vercel only: production key for prod builds, dev key for previews |
 
-# Start Next.js development server (in another terminal)
-bun run dev
-```
+**Convex** (set with `bunx convex env set`, per deployment):
 
-Open [http://localhost:3000](http://localhost:3000) to view the app.
+| Variable | Purpose |
+| --- | --- |
+| `CLERK_JWT_ISSUER_DOMAIN` | Clerk issuer for `auth.config.ts` |
+| `CONVEX_ENCRYPTION_KEY` | AES-256-GCM key for provider tokens and Bitpanda keys |
+| `PLAID_CLIENT_ID`, `PLAID_SANDBOX_SECRET`, `PLAID_PRODUCTION_SECRET`, `PLAID_ENV` | Plaid |
+| `PLAID_PRODUCTS`, `PLAID_COUNTRY_CODES` | Plaid Link products and countries |
+| `SNAPTRADE_CLIENT_ID`, `SNAPTRADE_SECRET` | SnapTrade |
+| `SCHEDULED_SYNC_ENABLED` | `true` only on production: enables the provider-syncing crons |
+| `METAL_PRICES_URL` | Optional override of the gold.de price feed |
+| `METAL_ARCHIVE_BUCKET`, `METAL_ARCHIVE_REGION`, `METAL_ARCHIVE_ENDPOINT`, `METAL_ARCHIVE_ACCESS_KEY_ID`, `METAL_ARCHIVE_SECRET_ACCESS_KEY`, `METAL_ARCHIVE_PREFIX`, `METAL_ARCHIVE_REQUIRED` | S3 archive of minutely metal prices (`convex/actions/metalPriceArchive.ts`) |
 
----
+Bitpanda needs no app credentials: each user enters a read-only API key.
 
-## Project Structure
-
-```
-frontend/
-├── app/                          # Next.js App Router
-│   ├── globals.css               # Global styles
-│   ├── layout.tsx                # Root layout
-│   ├── (api)/                    # API route group
-│   │   └── api/
-│   │       ├── [[...route]]/     # Hono catch-all routes
-│   │       │   ├── route.ts      # Hono app entry
-│   │       │   ├── metals.ts     # Precious metals endpoints
-│   │       │   ├── worlddata.ts  # World Bank endpoints
-│   │       │   └── worldbank-sync.ts
-│   │       └── vezgo/            # Vezgo webhooks
-│   ├── (auth)/                   # Authentication pages
-│   │   ├── sign-in/
-│   │   └── sign-up/
-│   ├── (onboarding)/             # Onboarding flow
-│   │   └── onboarding/
-│   ├── (root)/                   # Protected app pages
-│   │   ├── dashboard/            # Main dashboard
-│   │   ├── assets/               # Asset management
-│   │   │   ├── bonds/
-│   │   │   ├── cash/
-│   │   │   ├── collectibles/
-│   │   │   ├── commodities/      # Precious metals inventory
-│   │   │   ├── crypto/
-│   │   │   ├── equities/
-│   │   │   └── real-estate/
-│   │   ├── integrations/         # Provider connections
-│   │   │   ├── banking/          # Plaid connections
-│   │   │   ├── brokers/          # SnapTrade connections
-│   │   │   └── crypto/           # Vezgo connections
-│   │   ├── liabilities/
-│   │   │   └── loans/            # Loan management
-│   │   └── tools/
-│   │       ├── calculators/
-│   │       └── world-map/
-│   └── (website)/                # Public marketing pages
-│
-├── convex/                       # Convex Backend
-│   ├── _generated/               # Auto-generated types
-│   ├── actions/                  # External API calls
-│   │   ├── plaid.ts              # Plaid integration
-│   │   ├── snaptrade.ts          # SnapTrade integration
-│   │   ├── vezgo.ts              # Vezgo integration
-│   │   └── syncAll.ts            # Sync all providers
-│   ├── lib/                      # Utilities
-│   │   ├── encryption.ts         # AES-256-GCM encryption
-│   │   └── vezgo.ts              # Vezgo helpers
-│   ├── schema.ts                 # Database schema
-│   ├── banking.ts                # Banking queries/mutations
-│   ├── brokers.ts                # Broker queries/mutations
-│   ├── crypto.ts                 # Crypto queries/mutations
-│   ├── categories.ts             # Category-based queries
-│   ├── classification.ts         # Classification overrides
-│   ├── loans.ts                  # Loan management
-│   ├── vault.ts                  # Precious metals inventory
-│   ├── portfolio.ts              # Portfolio aggregation
-│   ├── portfolioSnapshots.ts     # Historical tracking
-│   ├── worldbank.ts              # World Bank indicators
-│   ├── onboarding.ts             # Onboarding progress
-│   └── crons.ts                  # Scheduled jobs
-│
-├── components/
-│   ├── ConvexClientProvider.tsx  # Convex + Clerk provider
-│   ├── atomic/                   # Atomic Design Pattern
-│   │   ├── atoms/                # Basic building blocks
-│   │   ├── molecules/            # Component combinations
-│   │   └── organisms/            # Complex UI sections
-│   └── ui/                       # UI library components
-│       └── shadcn/               # shadcn/ui components
-│
-├── hooks/
-│   ├── convex/                   # Convex real-time hooks
-│   │   ├── banking.ts            # Plaid data hooks
-│   │   ├── brokers.ts            # SnapTrade data hooks
-│   │   ├── crypto.ts             # Vezgo data hooks
-│   │   ├── cash.ts               # Cash summary
-│   │   ├── equities.ts           # Equities summary
-│   │   ├── bonds.ts              # Bonds summary
-│   │   ├── loans.ts              # Loan hooks
-│   │   ├── metals.ts             # Metals vault hooks
-│   │   ├── portfolio.ts          # Portfolio aggregation
-│   │   └── onboarding.ts         # Onboarding hooks
-│   ├── metals.ts                 # Metal prices (React Query)
-│   ├── worldbank.ts              # World Bank data hooks
-│   ├── useVezgoConnect.ts        # Vezgo connect URL
-│   └── useTimePlayback.ts        # Historical playback
-│
-├── lib/
-│   ├── api/                      # World Bank fetch functions
-│   ├── types/                    # TypeScript definitions
-│   │   ├── metals.ts
-│   │   └── classification.ts     # Investment categories
-│   └── utils.ts                  # General utilities
-│
-├── providers/
-│   ├── queryProvider.tsx         # TanStack Query provider
-│   └── syncProvider.tsx          # Data sync provider
-│
-└── public/
-    └── data/                     # Static data files
-```
-
----
-
-## Available Scripts
-
-| Command               | Description                          |
-| --------------------- | ------------------------------------ |
-| `bun run dev`         | Start development server (Turbopack) |
-| `bun run build`       | Create production build              |
-| `bun run start`       | Start production server              |
-| `bun run lint`        | Run ESLint                           |
-
-### Convex Commands
-
-| Command                 | Description                                   |
-| ----------------------- | --------------------------------------------- |
-| `bunx convex dev`       | Start Convex dev server (watches for changes) |
-| `bunx convex deploy`    | Deploy to production                          |
-| `bunx convex run <fn>`  | Run a one-off function                        |
-| `bunx convex dashboard` | Open Convex dashboard                         |
-
----
-
-## API Routes
-
-### Hono API (World Bank)
-
-| Method | Endpoint                                    | Description                  |
-| ------ | ------------------------------------------- | ---------------------------- |
-| GET    | `/api/world-data/indicators/:code/:country` | World Bank indicator         |
-| POST   | `/api/worldbank/sync`                       | Trigger indicator sync       |
-
-### Convex Queries (Real-time)
-
-| Module       | Key Functions                                         |
-| ------------ | ----------------------------------------------------- |
-| `banking`    | `getItems`, `getAccounts`, `getTransactions`          |
-| `brokers`    | `getConnections`, `getAccounts`, `getPositions`       |
-| `bitpanda`   | `getConnections`, `getHoldings`, `getTransactions`    |
-| `categories` | `getCashHoldings`, `getEquities`, `getLiabilities`    |
-| `portfolio`  | `getOverview`, `getUnifiedPositions`                  |
-| `loans`      | `getLoans`, `getLoanWithPayments`, `getLoanScenarios` |
-| `vault`      | `getUserVaultItems`, `getUserTransactions`            |
-| `metalPrices`| `latest`, `closes` (public market data)               |
-
----
-
-## Data Flow
-
-### Real-time Data (Convex)
+## Layout
 
 ```
-Component → useQuery(api.banking.getAccounts)
-    │
-    └──→ Convex Backend → WebSocket subscription
-                              │
-                              └──→ Auto-updates on data change
+app/
+  (website)/       public landing, privacy, terms, impressum
+  (auth)/          Clerk sign-in, sign-up, waitlist
+  (onboarding)/    onboarding flow (the app is gated behind it)
+  (root)/          signed-in app: dashboard, assets/*, liabilities, integrations,
+                   retirement, tools (calculators, world map), settings
+  (api)/api/       Hono catch-all: public World Bank routes only
+convex/
+  schema.ts, crons.ts, http.ts   tables, scheduled jobs, HTTP routes
+  actions/         provider calls: plaid, snaptrade, bitpanda, syncAll, price archive
+  lib/             auth, encryption, netWorth (the one holdings loader), userError
+  *.ts             queries and mutations per domain
+components/atomic/ atoms, molecules, organisms; ui/ holds shadcn/ui
+hooks/convex/      one hook module per domain, returning display-currency values
+hooks/performance/ useCategoryPerformance and friends
+i18n/, messages/   next-intl setup; messages/{en,de}/<namespace>.json
+proxy.ts           Clerk middleware and the Content-Security-Policy
+eslint-rules/      repo-specific lint rules
 ```
 
-### Metal Prices (Convex)
+## Conventions
 
-```
-cron (every minute) → metalPrices.ingestGoldDe → gold.de
-    │
-    └──→ metalPriceTicks (7 days) + metalPriceCloses (hour/day, forever)
-
-Component → useMetalPrices("gold", "Month", "eur")
-    │
-    └──→ useQuery(api.metalPrices.closes) + useQuery(api.metalPrices.latest)
-```
-
----
-
-## Investment Categories
-
-Fiscalis uses a unified classification system for all assets:
-
-| Category         | Subcategories                                                            |
-| ---------------- | ------------------------------------------------------------------------ |
-| **cash**         | checking, savings, money-market, cds, treasury-bills, forex, broker-cash |
-| **equities**     | stocks, etfs, funds, options, private                                    |
-| **bonds**        | government, corporate, municipal, savings, funds                         |
-| **crypto**       | bitcoin, ethereum, altcoins, stablecoins, defi, nfts                     |
-| **commodities**  | metals, energy, industrial, agricultural                                 |
-| **real-estate**  | residential, commercial, reits, crowdfunding, land                       |
-| **collectibles** | art, watches, wine, cars, memorabilia                                    |
-| **liabilities**  | mortgages, loans, credit-cards, margin-loans                             |
-
----
-
-## Deployment
-
-### Vercel (Recommended)
-
-```bash
-# Install Vercel CLI
-bun add -g vercel
-
-# Deploy
-vercel
-```
-
-Configure environment variables in the Vercel dashboard.
-
-### Requirements
-
-- Edge Runtime support (for Hono API routes)
-- Environment variables configured
-- Convex deployment linked
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run linting (`bun run lint`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
----
-
-## Architecture Reference
-
-For detailed architecture documentation, see:
-
-- [Architecture Guide](../docs/ARCHITECTURE.md) — Comprehensive system overview
-- [Convex README](./convex/README.md) — Convex function patterns
-- [Loan Spec](../docs/LOANS_PAGE_SPEC.md) — Loan calculator specification
-
----
-
-## License
-
-This project is private and proprietary.
+- **Logic lives in `services/`** with tests and is imported as
+  `@/../services/...`. Pages and Convex functions call it rather than
+  re-implementing it.
+- **Money:** format with `formatCurrency`; aggregate in EUR and convert at
+  the presentation boundary via the `hooks/convex/*` hooks.
+- **Text:** every user-facing string goes through next-intl
+  (`useTranslations` on the client, `getTranslations` on the server). Add
+  keys to both `messages/en/<ns>.json` and `messages/de/<ns>.json` (German
+  uses "du"); `services/i18n/i18n.test.ts` checks parity. Category names come
+  from `useCategoryLabels()`.
+- **Errors shown to users** are thrown from Convex as
+  `userError(code, params)` (`convex/lib/userError.ts`) and rendered with
+  `useErrorMessage()`; codes are in `services/i18n/userErrorCodes.ts`.
+- **CSP:** a new third-party origin means editing `proxy.ts`, never
+  `next.config.mjs`.

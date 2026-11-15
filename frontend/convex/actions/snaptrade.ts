@@ -35,7 +35,7 @@ import { enforceUserRateLimit } from "../lib/rateLimit";
 // After deploying to production, add webhook handler at:
 // - app/(api)/api/webhooks/snaptrade/route.ts
 // Events to handle: ACCOUNT_UPDATED, HOLDINGS_UPDATED, CONNECTION_BROKEN, CONNECTION_DELETED
-// See docs/SNAPTRADE_INTEGRATION_PLAN.md Phase 10 for implementation guide
+// See docs/archive/SNAPTRADE_INTEGRATION_PLAN.md Phase 10 for implementation guide
 
 // ═══════════════════════════════════════════════════════════════
 // USER REGISTRATION ACTIONS

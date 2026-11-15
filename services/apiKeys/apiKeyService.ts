@@ -52,7 +52,8 @@ const KEY_PATTERN = new RegExp(
   `^${API_KEY_PREFIX}[A-Za-z0-9_-]{${API_KEY_BODY_LENGTH}}$`,
 );
 
-function toBase64Url(bytes: Uint8Array): string {
+/** base64url without padding (also used for team invite tokens). */
+export function toBase64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");

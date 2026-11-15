@@ -10,6 +10,7 @@ import { internal } from "./_generated/api";
 import type { TableNames } from "./_generated/dataModel";
 import { requireUserId, type OwnedTable } from "./lib/auth";
 import { resetUserRateLimits } from "./lib/rateLimit";
+import { releaseOwnedTeams } from "./lib/teams";
 import { userError } from "./lib/userError";
 import {
   EXPORT_PAGE_SIZE,
@@ -115,8 +116,12 @@ export const exportMyData = action({
 //    revoked through its API; the purge drops the stored key.
 //    Stripe: the customer is deleted, which cancels any subscription at
 //    once so the user is not charged again (billing.deleteStripeCustomer).
-// 2. Purge every user-owned document, PURGE_BATCH_SIZE at a time, one
-//    scheduled mutation per batch (purgeUserData).
+// 2. Hand every team the user owns to its longest-standing admin or
+//    member, or delete it when the user is alone in it (lib/teams.ts
+//    releaseOwnedTeams, ENG-197), so other members keep their team.
+//    Then purge every user-owned document (their memberships and invites
+//    included), PURGE_BATCH_SIZE at a time, one scheduled mutation per
+//    batch (purgeUserData).
 // 3. Delete the Clerk user. Clerk then sends user.deleted to
 //    POST /clerk-webhook (http.ts), which runs the purge once more and
 //    catches anything a client wrote meanwhile.
@@ -184,6 +189,8 @@ export const purgeUserData = internalMutation({
       }
       return;
     }
+
+    if (args.tableIndex === 0) await releaseOwnedTeams(ctx, args.userId);
 
     const table = USER_DATA_TABLE_NAMES[args.tableIndex];
     const docs = await ctx.db

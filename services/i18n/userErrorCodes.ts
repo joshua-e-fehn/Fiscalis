@@ -23,6 +23,7 @@ export const USER_ERROR_CODES = [
   "planConnectionLimit",
   "planApiKeysRequirePro",
   "planPiesRequirePro",
+  "planTeamsRequirePro",
   "billingUnavailable",
   "billingAlreadySubscribed",
   "billingNoCustomer",
@@ -111,6 +112,19 @@ export const USER_ERROR_CODES = [
   "goalChecklistItemNotFound",
   "goalStartDateInvalid",
   "goalBackdateClosed",
+
+  // Teams (convex/teams.ts, services/teams/teams.ts)
+  "teamNotFound",
+  "teamNameRequired",
+  "teamNameTooLong",
+  "teamPermissionDenied",
+  "teamMemberNotFound",
+  "teamInviteInvalid",
+  "teamAlreadyMember",
+  "teamOwnedLimit",
+  "teamMemberLimit",
+  "teamInviteLimit",
+  "teamOwnerCannotLeave",
 
   // Profile and onboarding (frontend/lib/utils/date.ts BirthDateError)
   "birthDate.format",

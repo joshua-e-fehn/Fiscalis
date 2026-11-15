@@ -60,6 +60,11 @@ export const USER_DATA_TABLES = [
   { table: "planGrants", excludedFields: [] },
   { table: "notifications", excludedFields: [] },
   { table: "notificationPreferences", excludedFields: [] },
+  // Teams: account.ts hands owned teams over (or deletes them) before the
+  // purge reaches these, so other members keep their team
+  { table: "teamInvites", excludedFields: ["tokenHash"] },
+  { table: "teamMembers", excludedFields: [] },
+  { table: "teams", excludedFields: [] },
 ] as const satisfies readonly UserDataTable[];
 
 export type UserDataTableName = (typeof USER_DATA_TABLES)[number]["table"];

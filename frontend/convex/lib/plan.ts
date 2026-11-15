@@ -65,6 +65,7 @@ export async function requireConnectionSlot(ctx: DbCtx, userId: string): Promise
 const FEATURE_ERRORS = {
   apiKeys: "planApiKeysRequirePro",
   pies: "planPiesRequirePro",
+  teams: "planTeamsRequirePro",
 } as const satisfies Record<PlanFeature, string>;
 
 /** Whether the user's plan includes `feature`. */

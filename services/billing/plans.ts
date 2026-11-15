@@ -19,7 +19,7 @@ export const BILLING_INTERVALS = ["month", "year"] as const;
 export type BillingInterval = (typeof BILLING_INTERVALS)[number];
 
 /** Gated features, beyond the connection count. */
-export type PlanFeature = "apiKeys" | "pies";
+export type PlanFeature = "apiKeys" | "pies" | "teams";
 
 export interface PlanLimits {
   /** Provider connections (bank, broker and crypto links); null = unlimited. */
@@ -28,11 +28,13 @@ export interface PlanLimits {
   apiKeys: boolean;
   /** Portfolio > Investment Strategies > Pies. */
   pies: boolean;
+  /** Creating teams and inviting members (Settings > Team, ENG-197). */
+  teams: boolean;
 }
 
 export const PLAN_LIMITS: Readonly<Record<Plan, PlanLimits>> = {
-  free: { maxConnections: 2, apiKeys: false, pies: false },
-  pro: { maxConnections: null, apiKeys: true, pies: true },
+  free: { maxConnections: 2, apiKeys: false, pies: false, teams: false },
+  pro: { maxConnections: null, apiKeys: true, pies: true, teams: true },
 };
 
 /** Display prices of Pro (placeholders, see the file comment). */

@@ -1088,7 +1088,10 @@ export default defineSchema({
 		endedAt: v.optional(v.number()),
 		status: syncRunStatusValidator,
 		errorCode: v.optional(v.string()),
-	}).index("by_startedAt", ["startedAt"]),
+	})
+		.index("by_startedAt", ["startedAt"])
+		// Account export and deletion (convex/account.ts) page by user
+		.index("by_user", ["userId"]),
 
 	// ═══════════════════════════════════════════════════════════════
 	// API KEYS

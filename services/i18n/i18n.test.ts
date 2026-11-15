@@ -215,14 +215,15 @@ describe("resolveLocale", () => {
 
 // The defaults assume NEXT_PUBLIC_I18N_PREVIEW is unset.
 describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered languages", () => {
-  it("renders English, German and Spanish", () => {
-    expect(RENDERED_LANGUAGES).toEqual(["en", "de", "es"]);
+  it("renders English, German, Spanish and French", () => {
+    expect(RENDERED_LANGUAGES).toEqual(["en", "de", "es", "fr"]);
   });
 
   it("renders German for German visitors and users by default", () => {
     expect(resolveLocale({ cookie: "de", acceptLanguage: "en-GB" })).toBe("de");
     expect(resolveLocale({ acceptLanguage: "de-CH,de;q=0.9" })).toBe("de");
-    expect(resolveLocale({ acceptLanguage: "fr-FR" })).toBe("en");
+    expect(resolveLocale({ acceptLanguage: "fr-FR" })).toBe("fr");
+    expect(resolveLocale({ acceptLanguage: "nl-NL" })).toBe("en");
   });
 
   it("maps a stored language to the one it renders in", () => {
@@ -233,14 +234,15 @@ describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered language
 });
 
 describe("locale helpers", () => {
-  it("formats English day-first and German as de-DE", () => {
-    expect(INTL_TAGS).toEqual({ en: "en-GB", de: "de-DE", es: "es-ES" });
+  it("formats English day-first, German as de-DE, Spanish as es-ES and French as fr-FR", () => {
+    expect(INTL_TAGS).toEqual({ en: "en-GB", de: "de-DE", es: "es-ES", fr: "fr-FR" });
   });
 
   it("maps Intl tags back to app languages", () => {
     expect(languageForLocale("de-DE")).toBe("de");
     expect(languageForLocale("de-CH")).toBe("de");
     expect(languageForLocale("en-GB")).toBe("en");
+    expect(languageForLocale("fr-CA")).toBe("fr");
     expect(languageForLocale("nl-NL")).toBe("en");
   });
 

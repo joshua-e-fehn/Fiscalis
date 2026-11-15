@@ -132,14 +132,13 @@ const data: Record<
 		},
 		{
 			titleKey: "investmentStrategies",
-			url: "#",
+			url: "/strategies/pies",
 			icon: ChartNoAxesCombined,
 			items: [
 				{
 					titleKey: "pies",
-					url: "#",
+					url: "/strategies/pies",
 					icon: PieChart,
-					feature: "pies",
 				},
 			],
 		},

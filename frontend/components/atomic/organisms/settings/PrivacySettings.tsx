@@ -36,23 +36,12 @@ import {
 } from "@/components/ui/shadcn/alert-dialog";
 import { useDeleteMyAccount, useExportMyData } from "@/hooks/convex/account";
 import { useErrorMessage } from "@/i18n/errors";
+import { downloadJSON } from "@/lib/utils/export";
 import {
   ACCOUNT_DELETE_PHRASE,
   exportFileName,
   isAccountDeleteConfirmation,
 } from "@/../services/privacy/userData";
-
-function saveJson(data: unknown, fileName: string) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 function ErrorText({ children }: { children: string }) {
   return (
@@ -73,7 +62,7 @@ function ExportCard() {
     setIsExporting(true);
     try {
       const data = await exportMyData({});
-      saveJson(data, exportFileName(new Date()));
+      downloadJSON(data, exportFileName(new Date()));
     } catch {
       setError(t("failed"));
     } finally {

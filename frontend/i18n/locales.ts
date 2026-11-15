@@ -104,14 +104,15 @@ export function intlLocaleFor(language: Language): IntlLocale {
 /**
  * The language among `candidates` a BCP 47 tag belongs to: the one it names
  * exactly ("pt-PT"), else the first that shares its primary subtag ("de-CH"
- * → "de", "pt-BR" → "pt-PT"), case-insensitively. Region-qualified app codes
- * such as "pt-PT" make the exact match necessary.
+ * → "de", "pt-BR" → "pt-PT", "zh-CN" → "zh-Hans"), case-insensitively, with
+ * "_" read as "-" ("zh_SG"). Region-qualified app codes such as "pt-PT" make
+ * the exact match necessary.
  */
 export function matchLanguage<Code extends string = Language>(
   tag: string,
   candidates: readonly Code[] = LANGUAGES as readonly string[] as readonly Code[],
 ): Code | undefined {
-  const lower = tag.toLowerCase();
+  const lower = tag.trim().toLowerCase().replaceAll("_", "-");
   const primary = lower.split("-")[0];
   return (
     candidates.find((code) => code.toLowerCase() === lower) ??

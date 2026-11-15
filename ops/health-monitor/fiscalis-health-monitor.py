@@ -854,6 +854,18 @@ def compose_digest(digest: Any, now: float, slack: bool = True) -> str:
     return "\n".join(out)
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects: urllib would resend the secret header to the new location."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        return None
+
+
+def no_redirect_urlopen(request: urllib.request.Request, timeout: float) -> Any:
+    """``urlopen`` for requests that carry a secret: a 3xx is an HTTPError, not followed."""
+    return urllib.request.build_opener(_NoRedirect).open(request, timeout=timeout)
+
+
 def run_digest(settings: Mapping[str, str], opener: Opener, now: float,
                sleep: Callable[[float], None] = time.sleep) -> str:  # fmt: skip
     """The digest message; a digest that cannot be fetched is itself reported."""
@@ -861,6 +873,8 @@ def run_digest(settings: Mapping[str, str], opener: Opener, now: float,
     at = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     if not secret:
         return f":warning: Fiscalis daily sync digest ({at}): no FISCALIS_MONITOR_SECRET in monitor-env"
+    if not DIGEST_URL.startswith("https://"):
+        return f":warning: Fiscalis daily sync digest ({at}): the digest URL is not https, secret not sent"
     try:
         digest = fetch_json(DIGEST_URL, opener, sleep, headers={DIGEST_SECRET_HEADER: secret}, what="digest")
     except NotifyError as error:
@@ -966,7 +980,9 @@ def main(
     if args.test_alert:
         return test_alert(send, clock(), environ)
     if args.digest:
-        return digest_main(state_dir, settings, opener, clock, sleep, args.dry_run)
+        # The digest request carries the secret: never follow a redirect with it
+        digest_opener = no_redirect_urlopen if opener is urllib.request.urlopen else opener
+        return digest_main(state_dir, settings, digest_opener, clock, sleep, args.dry_run)
 
     audit = None
     if args.audit:  # the slow network part, outside the lock

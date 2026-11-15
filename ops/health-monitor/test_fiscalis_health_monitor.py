@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import unittest.mock
 import urllib.error
+import urllib.request
 
 _spec = importlib.util.spec_from_file_location(
     "monitor", pathlib.Path(__file__).with_name("fiscalis-health-monitor.py")
@@ -654,6 +655,12 @@ class DigestMain(MainHarness):
         self.digest_status = 401
         self.assertEqual(self.main("--digest"), 0)
         self.assertIn("unavailable: digest HTTP 401", self.slack_texts[0])
+
+    def test_redirect_is_not_followed_with_the_secret(self):
+        handler = monitor._NoRedirect()
+        request = urllib.request.Request("https://example.convex.site/health/sync-digest",
+                                         headers={"X-Fiscalis-Monitor-Secret": "s" * 48})
+        self.assertIsNone(handler.redirect_request(request, None, 302, "Found", {}, "http://evil.example/"))
 
     def test_failed_slack_post_is_retried_next_run(self):
         self.slack_ok = False

@@ -74,5 +74,189 @@
       "total": "Total : {total} %",
       "totalOff": "Total : {total} %. Les poids doivent totaliser 100 %."
     }
+  },
+  "goals": {
+    "title": "Objectifs",
+    "subtitle": "Ce que tu veux t’offrir, débloqué par des règles que tu fixes. Seuls l’argent frais et l’activité après le début d’un objectif comptent.",
+    "newGoal": "Nouvel objectif",
+    "debt": "{pool} doit {amount} à cause d’un objectif acheté avant d’être mérité. Les nouveaux progrès remboursent d’abord cette dette, avant qu’un objectif puisse les utiliser.",
+    "estimated": "{count, plural, one {Sur # jour} other {Sur # jours}}, l’argent placé en investissements a dû être estimé, donc certains chiffres sont approximatifs.",
+    "empty": {
+      "title": "Aucun objectif pour l’instant",
+      "description": "Donne un prix et une règle à un objectif, par exemple : investis dix fois le prix avant de réserver le voyage.",
+      "action": "Créer un objectif"
+    },
+    "toast": {
+      "deleted": "{name} supprimé",
+      "archived": "{name} archivé",
+      "restored": "{name} restauré"
+    },
+    "delete": {
+      "title": "Supprimer cet objectif ?",
+      "description": "{name} et sa progression seront supprimés. Cette action est irréversible.",
+      "confirm": "Supprimer l’objectif"
+    },
+    "card": {
+      "status": {
+        "active": "En cours",
+        "eligible": "Prêt à acheter",
+        "bought": "Acheté",
+        "boughtEarly": "Acheté avant d’être mérité",
+        "archived": "Archivé"
+      },
+      "buy": "Marquer comme acheté",
+      "edit": "Modifier l’objectif",
+      "archive": "Archiver l’objectif",
+      "restore": "Restaurer l’objectif",
+      "delete": "Supprimer l’objectif",
+      "price": "Prix",
+      "started": "Débuté",
+      "progress": "{percent} du chemin parcouru",
+      "boughtOn": "Acheté le {date} pour {price}.",
+      "boughtEarlyHint": "La règle n’était pas encore remplie, donc le manque est devenu une dette.",
+      "ruleChanges": "{count, plural, one {La règle a été modifiée une fois} other {La règle a été modifiée # fois}}, la dernière fois le {date}."
+    },
+    "rule": {
+      "all": "Toutes ces conditions",
+      "any": "L’une de ces conditions",
+      "atLeast": "Au moins {count} de ces conditions",
+      "unknownTracker": "Suivi supprimé",
+      "invested": {
+        "multiple": "Investis {multiple}× le prix en argent frais",
+        "amount": "Investis {amount} en argent frais"
+      },
+      "gains": {
+        "multiple": "Des gains de {multiple}× le prix sur tes investissements",
+        "amount": "Des gains de {amount} sur tes investissements"
+      },
+      "netWorth": "Un patrimoine net d’au moins {amount}",
+      "cooldown": "Attends {days, plural, one {# jour} other {# jours}}",
+      "counter": "{tracker} : {count} fois",
+      "streak": {
+        "week": "{tracker} : {perPeriod} fois par semaine pendant {periods, plural, one {# semaine} other {# semaines}} d’affilée",
+        "month": "{tracker} : {perPeriod} fois par mois pendant {periods, plural, one {# mois} other {# mois}} d’affilée"
+      },
+      "checklist": "Liste de contrôle",
+      "measurement": {
+        "best": {
+          "atLeast": "{tracker} : meilleur relevé d’au moins {value} {unit}",
+          "atMost": "{tracker} : meilleur relevé d’au plus {value} {unit}"
+        },
+        "latest": {
+          "atLeast": "{tracker} : dernier relevé d’au moins {value} {unit}",
+          "atMost": "{tracker} : dernier relevé d’au plus {value} {unit}"
+        }
+      },
+      "standing": "{current} sur {target}",
+      "consumed": "consommé à l’achat"
+    },
+    "editor": {
+      "newTitle": "Nouvel objectif",
+      "editTitle": "Modifier l’objectif",
+      "description": "Indique ce que tu veux acheter et la règle qui le débloque. Seuls l’argent frais et l’activité à partir d’aujourd’hui comptent.",
+      "name": "Nom",
+      "namePlaceholder": "p. ex. Voyage à Lisbonne",
+      "notes": "Notes",
+      "price": "Prix",
+      "currency": "Devise",
+      "startDate": "Commencé le",
+      "startDateHint": "Pendant que tu crées tes premiers objectifs, tu peux en dater un au jour où tu as vraiment commencé à y travailler. Seuls l’argent et l’activité à partir de ce jour comptent.",
+      "rule": "Règle",
+      "ruleHint": "Fiscalis suit lui-même l’argent, les gains, le patrimoine net et les délais d’attente. Les comptages, séries, listes et mesures, c’est toi qui les saisis.",
+      "nestedRule": "Cette règle contient des groupes dans des groupes, que l’éditeur ne peut pas afficher. L’enregistrement la conserve telle quelle.",
+      "startOver": "Remplacer par une nouvelle règle",
+      "combinator": "Comment les conditions se combinent",
+      "atLeastN": "Au moins n de ces conditions",
+      "atLeastCount": "Nombre de conditions à remplir",
+      "checkKind": "Type de condition",
+      "kinds": {
+        "invested": "Argent frais investi",
+        "gains": "Gains sur investissements",
+        "netWorth": "Patrimoine net",
+        "cooldown": "Délai d’attente",
+        "counter": "Comptage (p. ex. séances de sport)",
+        "streak": "Série",
+        "checklist": "Liste de contrôle",
+        "measurement": "Mesure"
+      },
+      "removeCheck": "Retirer la condition",
+      "addCheck": "Ajouter une condition",
+      "invalid": "Vérifie les valeurs en surbrillance : chaque cible doit être supérieure à zéro.",
+      "save": "Enregistrer l’objectif",
+      "create": "Créer l’objectif",
+      "saved": "{name} enregistré",
+      "created": "{name} créé",
+      "noTrackers": "Ajoute d’abord un suivi de ce type sous les objectifs.",
+      "tracker": "Suivi",
+      "target": "Cible",
+      "multiple": "Fois le prix",
+      "amount": "Montant en {currency}",
+      "days": "Jours",
+      "count": "Fois",
+      "perPeriod": "Fois par période",
+      "period": "Période",
+      "periods": "Périodes d’affilée",
+      "comparison": "Comparaison",
+      "value": "Valeur",
+      "basis": "Mesure",
+      "options": {
+        "priceMultiple": "Un multiple du prix",
+        "amount": "Un montant fixe",
+        "week": "Semaine",
+        "month": "Mois",
+        "atLeast": "Au moins",
+        "atMost": "Au plus",
+        "best": "Meilleure mesure",
+        "latest": "Dernière mesure"
+      },
+      "step": "Étape",
+      "stepPlaceholder": "p. ex. Comparer trois offres",
+      "removeStep": "Retirer l’étape",
+      "addStep": "Ajouter une étape"
+    },
+    "pools": {
+      "invested": "Argent frais investi",
+      "gains": "Gains sur investissements",
+      "tracker": "Un suivi supprimé"
+    },
+    "purchase": {
+      "title": "Marquer {name} comme acheté",
+      "description": "Saisis ce que tu as réellement payé. La règle est revérifiée à ce prix.",
+      "pricePaid": "Prix payé en {currency}",
+      "earned": "Ta règle est remplie à {price}. L’achat utilise :",
+      "early": "Ta règle n’est pas encore remplie à {price}. Tu peux quand même le marquer comme acheté : ce qui manque devient une dette que les nouveaux progrès remboursent en premier. L’achat utilise :",
+      "confirm": "Marquer comme acheté",
+      "confirmEarly": "Acheter avant de l’avoir mérité",
+      "toastEarned": "{name} acheté. Profites-en !",
+      "toastEarly": "{name} marqué comme acheté avant d’être mérité"
+    },
+    "trackers": {
+      "title": "Suivis",
+      "description": "Ce que tu saisis toi-même pour tes objectifs, comme des séances de sport ou ton temps sur 10 km. Fiscalis se fie à ces saisies.",
+      "empty": "Aucun suivi pour l’instant.",
+      "name": "Nom du suivi",
+      "namePlaceholder": "p. ex. Séances de sport",
+      "kind": "Type",
+      "kinds": {
+        "count": "Comptage",
+        "measurement": "Mesure"
+      },
+      "unit": "Unité",
+      "unitPlaceholder": "Unité",
+      "add": "Ajouter un suivi",
+      "created": "{name} ajouté",
+      "logged": "Saisi pour {name}",
+      "deleted": "{name} supprimé",
+      "countSummary": "{total} {unit} saisis",
+      "measurementSummary": "Dernière : {value} {unit}",
+      "noEntries": "Aucune saisie pour l’instant",
+      "date": "Date",
+      "value": "Valeur",
+      "log": "Saisir",
+      "showEntries": "Afficher les saisies",
+      "hideEntries": "Masquer les saisies",
+      "delete": "Supprimer le suivi",
+      "deleteEntry": "Supprimer la saisie"
+    }
   }
 }

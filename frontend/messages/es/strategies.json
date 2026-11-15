@@ -74,5 +74,189 @@
       "total": "Total: {total} %",
       "totalOff": "Total: {total} %. Los pesos deben sumar 100 %."
     }
+  },
+  "goals": {
+    "title": "Metas",
+    "subtitle": "Cosas que quieres comprar, desbloqueadas por reglas que tú fijas. Solo cuentan el dinero nuevo y la actividad desde que empieza una meta.",
+    "newGoal": "Nueva meta",
+    "debt": "{pool} debe {amount} por una meta comprada antes de conseguirla. El nuevo progreso salda esto primero, antes de que ninguna meta pueda usarlo.",
+    "estimated": "{count, plural, one {Durante # día} other {Durante # días}} hubo que estimar el dinero que pasó a inversiones, así que algunas cifras son aproximadas.",
+    "empty": {
+      "title": "Aún no hay metas",
+      "description": "Ponle a una meta un precio y una regla, por ejemplo: invierte diez veces el precio antes de reservar el viaje.",
+      "action": "Crear una meta"
+    },
+    "toast": {
+      "deleted": "{name} eliminada",
+      "archived": "{name} archivada",
+      "restored": "{name} restaurada"
+    },
+    "delete": {
+      "title": "¿Eliminar esta meta?",
+      "description": "Se eliminarán {name} y su progreso. No se puede deshacer.",
+      "confirm": "Eliminar meta"
+    },
+    "card": {
+      "status": {
+        "active": "En curso",
+        "eligible": "Lista para comprar",
+        "bought": "Comprada",
+        "boughtEarly": "Comprada antes de conseguirla",
+        "archived": "Archivada"
+      },
+      "buy": "Marcar como comprada",
+      "edit": "Editar meta",
+      "archive": "Archivar meta",
+      "restore": "Restaurar meta",
+      "delete": "Eliminar meta",
+      "price": "Precio",
+      "started": "Inicio",
+      "progress": "{percent} del camino",
+      "boughtOn": "Comprada el {date} por {price}.",
+      "boughtEarlyHint": "La regla aún no se cumplía, así que lo que faltaba se convirtió en deuda.",
+      "ruleChanges": "{count, plural, one {La regla se cambió una vez} other {La regla se cambió # veces}}, la última el {date}."
+    },
+    "rule": {
+      "all": "Todas estas",
+      "any": "Cualquiera de estas",
+      "atLeast": "Al menos {count} de estas",
+      "unknownTracker": "Seguimiento eliminado",
+      "invested": {
+        "multiple": "Invierte {multiple}× el precio en dinero nuevo",
+        "amount": "Invierte {amount} en dinero nuevo"
+      },
+      "gains": {
+        "multiple": "Ganancias de {multiple}× el precio en tus inversiones",
+        "amount": "Ganancias de {amount} en tus inversiones"
+      },
+      "netWorth": "Patrimonio neto de al menos {amount}",
+      "cooldown": "Espera {days, plural, one {# día} other {# días}}",
+      "counter": "{tracker}: {count} veces",
+      "streak": {
+        "week": "{tracker}: {perPeriod} veces por semana durante {periods, plural, one {# semana} other {# semanas}} seguidas",
+        "month": "{tracker}: {perPeriod} veces al mes durante {periods, plural, one {# mes} other {# meses}} seguidos"
+      },
+      "checklist": "Lista de tareas",
+      "measurement": {
+        "best": {
+          "atLeast": "{tracker}: mejor registro de al menos {value} {unit}",
+          "atMost": "{tracker}: mejor registro de como máximo {value} {unit}"
+        },
+        "latest": {
+          "atLeast": "{tracker}: último registro de al menos {value} {unit}",
+          "atMost": "{tracker}: último registro de como máximo {value} {unit}"
+        }
+      },
+      "standing": "{current} de {target}",
+      "consumed": "se consume al comprar"
+    },
+    "editor": {
+      "newTitle": "Nueva meta",
+      "editTitle": "Editar meta",
+      "description": "Fija qué quieres comprar y la regla que lo desbloquea. Solo cuentan el dinero nuevo y la actividad a partir de hoy.",
+      "name": "Nombre",
+      "namePlaceholder": "p. ej. Viaje a Lisboa",
+      "notes": "Notas",
+      "price": "Precio",
+      "currency": "Moneda",
+      "startDate": "Empezó el",
+      "startDateHint": "Mientras configuras tus primeros objetivos, puedes fechar uno en el día en que de verdad empezaste a trabajar en él. Solo cuentan el dinero y la actividad desde ese día.",
+      "rule": "Regla",
+      "ruleHint": "Fiscalis sigue por sí mismo el dinero, las ganancias, el patrimonio neto y los periodos de espera. Los recuentos, rachas, listas y mediciones los registras tú.",
+      "nestedRule": "Esta regla tiene grupos dentro de grupos, que el editor no puede mostrar. Al guardar, se mantiene tal cual.",
+      "startOver": "Sustituir por una regla nueva",
+      "combinator": "Cómo se combinan las condiciones",
+      "atLeastN": "Al menos n de estas",
+      "atLeastCount": "Cuántas condiciones deben cumplirse",
+      "checkKind": "Tipo de condición",
+      "kinds": {
+        "invested": "Dinero nuevo invertido",
+        "gains": "Ganancias de inversión",
+        "netWorth": "Patrimonio neto",
+        "cooldown": "Periodo de espera",
+        "counter": "Recuento (p. ej. entrenamientos)",
+        "streak": "Racha",
+        "checklist": "Lista de tareas",
+        "measurement": "Medición"
+      },
+      "removeCheck": "Quitar condición",
+      "addCheck": "Añadir condición",
+      "invalid": "Revisa los valores marcados: cada objetivo debe ser mayor que cero.",
+      "save": "Guardar meta",
+      "create": "Crear meta",
+      "saved": "{name} guardada",
+      "created": "{name} creada",
+      "noTrackers": "Primero añade un seguimiento de este tipo debajo de las metas.",
+      "tracker": "Seguimiento",
+      "target": "Objetivo",
+      "multiple": "Veces el precio",
+      "amount": "Importe en {currency}",
+      "days": "Días",
+      "count": "Veces",
+      "perPeriod": "Veces por periodo",
+      "period": "Periodo",
+      "periods": "Periodos seguidos",
+      "comparison": "Comparación",
+      "value": "Valor",
+      "basis": "Registro",
+      "options": {
+        "priceMultiple": "Un múltiplo del precio",
+        "amount": "Un importe fijo",
+        "week": "Semana",
+        "month": "Mes",
+        "atLeast": "Al menos",
+        "atMost": "Como máximo",
+        "best": "Mejor registro",
+        "latest": "Último registro"
+      },
+      "step": "Paso",
+      "stepPlaceholder": "p. ej. Comparar tres ofertas",
+      "removeStep": "Quitar paso",
+      "addStep": "Añadir paso"
+    },
+    "pools": {
+      "invested": "Dinero nuevo invertido",
+      "gains": "Ganancias de inversión",
+      "tracker": "Un seguimiento eliminado"
+    },
+    "purchase": {
+      "title": "Marcar {name} como comprada",
+      "description": "Introduce lo que pagaste realmente. La regla se vuelve a comprobar con ese precio.",
+      "pricePaid": "Precio pagado en {currency}",
+      "earned": "Tu regla se cumple con {price}. Comprarla consume:",
+      "early": "Tu regla aún no se cumple con {price}. Puedes marcarla como comprada igualmente: lo que falta se convierte en deuda que el nuevo progreso salda primero. Comprarla consume:",
+      "confirm": "Marcar como comprada",
+      "confirmEarly": "Comprar antes de conseguirla",
+      "toastEarned": "{name} comprada. ¡Que la disfrutes!",
+      "toastEarly": "{name} marcada como comprada antes de conseguirla"
+    },
+    "trackers": {
+      "title": "Seguimientos",
+      "description": "Cosas que registras tú para tus metas, como entrenamientos o tu tiempo en 10 km. Fiscalis confía en estos registros.",
+      "empty": "Aún no hay seguimientos.",
+      "name": "Nombre del seguimiento",
+      "namePlaceholder": "p. ej. Entrenamientos",
+      "kind": "Tipo",
+      "kinds": {
+        "count": "Recuento",
+        "measurement": "Medición"
+      },
+      "unit": "Unidad",
+      "unitPlaceholder": "Unidad",
+      "add": "Añadir seguimiento",
+      "created": "{name} añadido",
+      "logged": "Registrado para {name}",
+      "deleted": "{name} eliminado",
+      "countSummary": "{total} {unit} registrados",
+      "measurementSummary": "Último: {value} {unit}",
+      "noEntries": "Aún no hay registros",
+      "date": "Fecha",
+      "value": "Valor",
+      "log": "Registrar",
+      "showEntries": "Mostrar registros",
+      "hideEntries": "Ocultar registros",
+      "delete": "Eliminar seguimiento",
+      "deleteEntry": "Eliminar registro"
+    }
   }
 }

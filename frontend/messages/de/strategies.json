@@ -74,5 +74,189 @@
       "total": "Summe: {total} %",
       "totalOff": "Summe: {total} %. Die Gewichtungen müssen zusammen 100 % ergeben."
     }
+  },
+  "goals": {
+    "title": "Ziele",
+    "subtitle": "Dinge, die du dir kaufen willst, freigeschaltet durch Regeln, die du selbst festlegst. Es zählen nur neues Geld und Aktivitäten ab dem Start eines Ziels.",
+    "newGoal": "Neues Ziel",
+    "debt": "{pool} schuldet {amount} aus einem Ziel, das gekauft wurde, bevor es verdient war. Neuer Fortschritt zahlt das zuerst zurück, bevor ein Ziel ihn nutzen kann.",
+    "estimated": "{count, plural, one {An # Tag} other {An # Tagen}} musste das in Anlagen geflossene Geld geschätzt werden, daher sind manche Werte nur ungefähr.",
+    "empty": {
+      "title": "Noch keine Ziele",
+      "description": "Gib einem Ziel einen Preis und eine Regel, zum Beispiel: Investiere das Zehnfache des Preises, bevor du die Reise buchst.",
+      "action": "Ziel erstellen"
+    },
+    "toast": {
+      "deleted": "{name} gelöscht",
+      "archived": "{name} archiviert",
+      "restored": "{name} wiederhergestellt"
+    },
+    "delete": {
+      "title": "Dieses Ziel löschen?",
+      "description": "{name} und der Fortschritt werden gelöscht. Das lässt sich nicht rückgängig machen.",
+      "confirm": "Ziel löschen"
+    },
+    "card": {
+      "status": {
+        "active": "Läuft",
+        "eligible": "Bereit zum Kauf",
+        "bought": "Gekauft",
+        "boughtEarly": "Vor dem Verdienen gekauft",
+        "archived": "Archiviert"
+      },
+      "buy": "Als gekauft markieren",
+      "edit": "Ziel bearbeiten",
+      "archive": "Ziel archivieren",
+      "restore": "Ziel wiederherstellen",
+      "delete": "Ziel löschen",
+      "price": "Preis",
+      "started": "Gestartet",
+      "progress": "{percent} geschafft",
+      "boughtOn": "Am {date} für {price} gekauft.",
+      "boughtEarlyHint": "Die Regel war noch nicht erfüllt, deshalb wurde der Fehlbetrag zur Schuld.",
+      "ruleChanges": "{count, plural, one {Die Regel wurde einmal geändert} other {Die Regel wurde #-mal geändert}}, zuletzt am {date}."
+    },
+    "rule": {
+      "all": "Alle davon",
+      "any": "Eine davon",
+      "atLeast": "Mindestens {count} davon",
+      "unknownTracker": "Gelöschter Tracker",
+      "invested": {
+        "multiple": "Investiere das {multiple}-Fache des Preises als neues Geld",
+        "amount": "Investiere {amount} als neues Geld"
+      },
+      "gains": {
+        "multiple": "Gewinne in Höhe des {multiple}-Fachen des Preises auf deine Anlagen",
+        "amount": "Gewinne von {amount} auf deine Anlagen"
+      },
+      "netWorth": "Nettovermögen von mindestens {amount}",
+      "cooldown": "Warte {days, plural, one {# Tag} other {# Tage}}",
+      "counter": "{tracker}: {count}-mal",
+      "streak": {
+        "week": "{tracker}: {perPeriod}-mal pro Woche, {periods, plural, one {# Woche} other {# Wochen}} in Folge",
+        "month": "{tracker}: {perPeriod}-mal pro Monat, {periods, plural, one {# Monat} other {# Monate}} in Folge"
+      },
+      "checklist": "Checkliste",
+      "measurement": {
+        "best": {
+          "atLeast": "{tracker}: Bestwert mindestens {value} {unit}",
+          "atMost": "{tracker}: Bestwert höchstens {value} {unit}"
+        },
+        "latest": {
+          "atLeast": "{tracker}: letzter Wert mindestens {value} {unit}",
+          "atMost": "{tracker}: letzter Wert höchstens {value} {unit}"
+        }
+      },
+      "standing": "{current} von {target}",
+      "consumed": "wird beim Kauf verbraucht"
+    },
+    "editor": {
+      "newTitle": "Neues Ziel",
+      "editTitle": "Ziel bearbeiten",
+      "description": "Leg fest, was du kaufen willst und welche Regel es freischaltet. Es zählen nur neues Geld und Aktivitäten ab heute.",
+      "name": "Name",
+      "namePlaceholder": "z. B. Reise nach Lissabon",
+      "notes": "Notizen",
+      "price": "Preis",
+      "currency": "Währung",
+      "startDate": "Gestartet am",
+      "startDateHint": "Solange du deine ersten Ziele anlegst, kannst du eines auf den Tag zurückdatieren, an dem du wirklich darauf hingearbeitet hast. Nur Geld und Aktivität ab diesem Tag zählen.",
+      "rule": "Regel",
+      "ruleHint": "Geld, Gewinne, Nettovermögen und Wartezeiten verfolgt Fiscalis selbst. Zählungen, Serien, Checklisten und Messwerte trägst du ein.",
+      "nestedRule": "Diese Regel enthält Gruppen in Gruppen, die der Editor nicht anzeigen kann. Beim Speichern bleibt sie unverändert.",
+      "startOver": "Durch eine neue Regel ersetzen",
+      "combinator": "Wie die Bedingungen kombiniert werden",
+      "atLeastN": "Mindestens n davon",
+      "atLeastCount": "Wie viele Bedingungen erfüllt sein müssen",
+      "checkKind": "Art der Bedingung",
+      "kinds": {
+        "invested": "Neu investiertes Geld",
+        "gains": "Anlagegewinne",
+        "netWorth": "Nettovermögen",
+        "cooldown": "Wartezeit",
+        "counter": "Zählung (z. B. Trainings)",
+        "streak": "Serie",
+        "checklist": "Checkliste",
+        "measurement": "Messwert"
+      },
+      "removeCheck": "Bedingung entfernen",
+      "addCheck": "Bedingung hinzufügen",
+      "invalid": "Prüf die markierten Werte: Jedes Ziel muss über null liegen.",
+      "save": "Ziel speichern",
+      "create": "Ziel erstellen",
+      "saved": "{name} gespeichert",
+      "created": "{name} erstellt",
+      "noTrackers": "Füg zuerst unter den Zielen einen Tracker dieser Art hinzu.",
+      "tracker": "Tracker",
+      "target": "Zielwert",
+      "multiple": "Vielfaches des Preises",
+      "amount": "Betrag in {currency}",
+      "days": "Tage",
+      "count": "Anzahl",
+      "perPeriod": "Anzahl pro Zeitraum",
+      "period": "Zeitraum",
+      "periods": "Zeiträume in Folge",
+      "comparison": "Vergleich",
+      "value": "Wert",
+      "basis": "Messwert",
+      "options": {
+        "priceMultiple": "Ein Vielfaches des Preises",
+        "amount": "Ein fester Betrag",
+        "week": "Woche",
+        "month": "Monat",
+        "atLeast": "Mindestens",
+        "atMost": "Höchstens",
+        "best": "Bestwert",
+        "latest": "Letzter Wert"
+      },
+      "step": "Schritt",
+      "stepPlaceholder": "z. B. Drei Angebote vergleichen",
+      "removeStep": "Schritt entfernen",
+      "addStep": "Schritt hinzufügen"
+    },
+    "pools": {
+      "invested": "Neu investiertes Geld",
+      "gains": "Anlagegewinne",
+      "tracker": "Ein gelöschter Tracker"
+    },
+    "purchase": {
+      "title": "{name} als gekauft markieren",
+      "description": "Gib ein, was du tatsächlich bezahlt hast. Die Regel wird mit diesem Preis erneut geprüft.",
+      "pricePaid": "Bezahlter Preis in {currency}",
+      "earned": "Deine Regel ist bei {price} erfüllt. Der Kauf verbraucht:",
+      "early": "Deine Regel ist bei {price} noch nicht erfüllt. Du kannst es trotzdem als gekauft markieren: Was fehlt, wird zur Schuld, die neuer Fortschritt zuerst zurückzahlt. Der Kauf verbraucht:",
+      "confirm": "Als gekauft markieren",
+      "confirmEarly": "Vor dem Verdienen kaufen",
+      "toastEarned": "{name} gekauft. Viel Freude damit!",
+      "toastEarly": "{name} als gekauft markiert, bevor es verdient war"
+    },
+    "trackers": {
+      "title": "Tracker",
+      "description": "Dinge, die du für deine Ziele selbst einträgst, etwa Trainings oder deine Zeit über 10 km. Fiscalis vertraut diesen Einträgen.",
+      "empty": "Noch keine Tracker.",
+      "name": "Name des Trackers",
+      "namePlaceholder": "z. B. Trainings",
+      "kind": "Art",
+      "kinds": {
+        "count": "Zählung",
+        "measurement": "Messwert"
+      },
+      "unit": "Einheit",
+      "unitPlaceholder": "Einheit",
+      "add": "Tracker hinzufügen",
+      "created": "{name} hinzugefügt",
+      "logged": "Für {name} eingetragen",
+      "deleted": "{name} gelöscht",
+      "countSummary": "{total} {unit} eingetragen",
+      "measurementSummary": "Zuletzt: {value} {unit}",
+      "noEntries": "Noch keine Einträge",
+      "date": "Datum",
+      "value": "Wert",
+      "log": "Eintragen",
+      "showEntries": "Einträge anzeigen",
+      "hideEntries": "Einträge ausblenden",
+      "delete": "Tracker löschen",
+      "deleteEntry": "Eintrag löschen"
+    }
   }
 }

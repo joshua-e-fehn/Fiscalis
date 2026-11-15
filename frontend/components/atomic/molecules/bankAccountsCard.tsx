@@ -25,6 +25,12 @@ import {
   IntegrationConnectionCard,
   IntegrationAccountItem,
 } from "@/components/atomic/molecules/integrations";
+import {
+  CategoryOverrideMenu,
+  ManualCategoryBadge,
+} from "@/components/atomic/molecules/classification";
+import { hasUserOverride } from "@/../services/classification";
+import { useCategoryLabels } from "@/lib/config/categoryUI";
 
 // Type for Convex account data, with the stored EUR value the totals read
 interface ConvexAccount extends BankAccountTotalsLike {
@@ -40,6 +46,10 @@ interface ConvexAccount extends BankAccountTotalsLike {
   availableBalance?: number;
   currency: string;
   lastSynced?: number;
+  investmentCategory?: string;
+  investmentSubcategory?: string;
+  userCategoryOverride?: string;
+  userSubcategoryOverride?: string;
 }
 
 interface BankAccountsCardProps {
@@ -106,6 +116,7 @@ export function BankAccountsCard({
 }: BankAccountsCardProps) {
   const t = useTranslations("integrations.banking");
   const tNotices = useTranslations("integrations.connectionNotices");
+  const labels = useCategoryLabels();
   const deleteItem = useDeletePlaidItem();
   const refreshAccounts = useRefreshAccounts();
 
@@ -187,17 +198,41 @@ export function BankAccountsCard({
             const balanceB = b.currentBalance || b.availableBalance || 0;
             return balanceB - balanceA; // Descending order
           })
-          .map((account) => (
-            <IntegrationAccountItem
-              key={account._id}
-              name={account.name}
-              type={accountTypeLabel(account.subtype || account.type)}
-              accountNumber={account.mask ? `****${account.mask}` : undefined}
-              balance={account.currentBalance || account.availableBalance || 0}
-              currency={account.currency}
-              icon={getAccountIcon(account.type, account.subtype)}
-            />
-          ))}
+          .map((account) => {
+            const isManual = hasUserOverride(account);
+            return (
+              <IntegrationAccountItem
+                key={account._id}
+                name={account.name}
+                type={accountTypeLabel(account.subtype || account.type)}
+                accountNumber={account.mask ? `****${account.mask}` : undefined}
+                balance={
+                  account.currentBalance || account.availableBalance || 0
+                }
+                currency={account.currency}
+                icon={getAccountIcon(account.type, account.subtype)}
+                detail={
+                  account.investmentCategory && (
+                    <>
+                      <span>
+                        {labels.categoryNameOf(account.investmentCategory)}
+                      </span>
+                      {isManual && <ManualCategoryBadge />}
+                    </>
+                  )
+                }
+                actions={
+                  <CategoryOverrideMenu
+                    item={{ target: "plaid", id: account._id }}
+                    name={account.name}
+                    category={account.investmentCategory}
+                    subcategory={account.investmentSubcategory}
+                    isManual={isManual}
+                  />
+                }
+              />
+            );
+          })}
       </div>
     </IntegrationConnectionCard>
   );

@@ -119,7 +119,8 @@
       "category": "Kategorie",
       "quantity": "Menge",
       "value": "Wert",
-      "profitLoss": "G/V"
+      "profitLoss": "G/V",
+      "actions": "Aktionen"
     },
     "shown": "{count, plural, one {# Position angezeigt} other {# Positionen angezeigt}}",
     "total": "Gesamt: {amount}"

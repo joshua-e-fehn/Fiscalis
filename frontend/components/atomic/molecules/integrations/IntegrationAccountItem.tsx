@@ -26,6 +26,10 @@ interface IntegrationAccountItemProps {
   currency: string;
   /** Optional icon to show before the name */
   icon?: React.ReactNode;
+  /** Optional line under the type (e.g. the category the account counts as) */
+  detail?: React.ReactNode;
+  /** Optional row actions, shown after the balance */
+  actions?: React.ReactNode;
   /** Additional class names */
   className?: string;
   /** Click handler for the item */
@@ -40,6 +44,8 @@ export function IntegrationAccountItem({
   cash,
   currency,
   icon,
+  detail,
+  actions,
   className,
   onClick,
 }: IntegrationAccountItemProps) {
@@ -71,6 +77,11 @@ export function IntegrationAccountItem({
             {type && accountNumber && <span>•</span>}
             {accountNumber && <span>{accountNumber}</span>}
           </div>
+          {detail && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+              {detail}
+            </div>
+          )}
         </div>
       </div>
       <div className="text-right flex-shrink-0 ml-4">
@@ -81,6 +92,7 @@ export function IntegrationAccountItem({
           </p>
         )}
       </div>
+      {actions && <div className="ml-2 flex-shrink-0">{actions}</div>}
     </div>
   );
 }

@@ -59,6 +59,11 @@ import {
   useCategoryLabels,
 } from "@/lib/config/categoryUI";
 import type { FinancialProvider } from "@/lib/types/portfolio";
+import type { ClassificationTarget } from "@/lib/types/classification";
+import {
+  CategoryOverrideMenu,
+  ManualCategoryBadge,
+} from "@/components/atomic/molecules/classification";
 
 interface UnifiedPositionsTableProps {
   className?: string;
@@ -106,6 +111,8 @@ interface UnifiedPositionData {
     tokenId?: string;
     imageUrl?: string;
   };
+  /** Set when the category can be changed (bank, broker, Bitpanda) */
+  classification?: { target: ClassificationTarget; isManual: boolean };
 }
 
 type SortField = "name" | "value" | "quantity" | "profitLoss";
@@ -457,6 +464,9 @@ export function UnifiedPositionsTable({
                     </Button>
                   </TableHead>
                 )}
+                <TableHead className="w-[40px]">
+                  <span className="sr-only">{t("columns.actions")}</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -508,6 +518,9 @@ export function UnifiedPositionsTable({
                           )}
                         >
                           {position.name}
+                          {compact && position.classification?.isManual && (
+                            <ManualCategoryBadge className="ml-1" />
+                          )}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {position.symbol}
@@ -539,6 +552,9 @@ export function UnifiedPositionsTable({
                               )}
                             </span>
                           )}
+                        {position.classification?.isManual && (
+                          <ManualCategoryBadge className="ml-1" />
+                        )}
                       </TableCell>
                     )}
 
@@ -600,6 +616,22 @@ export function UnifiedPositionsTable({
                         )}
                       </TableCell>
                     )}
+
+                    {/* Change category */}
+                    <TableCell className="p-1">
+                      {position.classification && (
+                        <CategoryOverrideMenu
+                          item={{
+                            target: position.classification.target,
+                            id: position._id,
+                          }}
+                          name={position.name}
+                          category={position.category}
+                          subcategory={position.subcategory}
+                          isManual={position.classification.isManual}
+                        />
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}

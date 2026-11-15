@@ -283,5 +283,40 @@
     "comingSoon": "Demnächst",
     "comingSoonButton": "Demnächst verfügbar",
     "viewPortfolio": "Portfolio ansehen"
+  },
+  "override": {
+    "action": "Kategorie ändern",
+    "reset": "Auf automatisch zurücksetzen",
+    "manual": "Manuell",
+    "manualHint": "Diese Kategorie hast du gewählt. Sie bleibt erhalten, wenn der Anbieter synchronisiert.",
+    "actionsLabel": "Aktionen für {name}",
+    "dialog": {
+      "title": "Kategorie ändern",
+      "description": "Wähle, wo {name} in deinen Summen zählt. Deine Wahl bleibt erhalten, wenn der Anbieter synchronisiert.",
+      "category": "Kategorie",
+      "subcategory": "Unterkategorie",
+      "bankHint": "Ein Bankkonto kann als Liquidität oder als Verbindlichkeit zählen.",
+      "saveFailed": "Die Kategorie konnte nicht gespeichert werden. Bitte versuche es erneut.",
+      "resetFailed": "Die Kategorie konnte nicht zurückgesetzt werden. Bitte versuche es erneut."
+    },
+    "list": {
+      "title": "Kategorien",
+      "subtitle": "Konten und Bestände, deren Kategorie du selbst gewählt hast.",
+      "cardTitle": "Manuelle Kategorien",
+      "count": "{count, plural, one {# Eintrag} other {# Einträge}}",
+      "empty": "Du hast noch keine Kategorie geändert. Nutze „Kategorie ändern“ bei einer Position oder einem Bankkonto.",
+      "columns": {
+        "name": "Name",
+        "source": "Quelle",
+        "category": "Kategorie",
+        "automatic": "Automatisch"
+      },
+      "sources": {
+        "plaid": "Bankkonto",
+        "broker": "Broker",
+        "bitpanda": "Bitpanda"
+      },
+      "edit": "Ändern"
+    }
   }
 }

@@ -50,6 +50,12 @@
     "exchangeRate": "Exchange rate",
     "account": "Account"
   },
+  "fxNotice": {
+    "staleLabel": "Rates as of {date}",
+    "approximateLabel": "Approximate rate",
+    "staleDetail": "Amounts in {currency} use the exchange rate of {date}, the latest available.",
+    "approximateDetail": "No current exchange rate for {currency} is available, so amounts use an approximate rate."
+  },
   "errors": {
     "generic": "Something went wrong. Please try again.",
     "saveFailed": "We couldn't save your changes. Please try again.",

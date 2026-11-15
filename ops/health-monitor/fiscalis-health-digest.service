@@ -1,0 +1,54 @@
+# Fiscalis daily sync digest: GET /health/sync-digest on production Convex
+# with the shared secret (FISCALIS_MONITOR_SECRET in monitor-env), posted to
+# Mya's Slack home channel once per UTC day. Slack only, so no Docker socket.
+# Started daily at 07:30 UTC by fiscalis-health-digest.timer, or by hand:
+# `systemctl start fiscalis-health-digest.service`. See the README.
+[Unit]
+Description=Fiscalis daily sync digest (Slack through Mya)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Root, as the monitor: it shares the monitor's state directory and lock.
+User=root
+StateDirectory=fiscalis-health-monitor
+StateDirectoryMode=0700
+Environment=FISCALIS_HEALTH_STATE_DIR=/var/lib/fiscalis-health-monitor
+ExecStart=/usr/bin/python3 -I /usr/local/lib/fiscalis-health-monitor/fiscalis-health-monitor.py --digest
+# Slack token and channel, the WhatsApp number (Mya's env file) and the
+# healthchecks.io ping URL: install.sh writes this root-only file; systemd
+# hands the run a read-only copy, nothing enters the environment.
+LoadCredential=monitor-env:/etc/fiscalis-health-monitor/monitor.env
+RuntimeDirectory=fiscalis-health-digest
+RuntimeDirectoryMode=0700
+Environment=HOME=/run/fiscalis-health-digest
+TimeoutStartSec=3min
+
+# --- hardening: it talks to Convex and slack.com
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+InaccessiblePaths=-/docker -/var/lib/docker/volumes -/root -/etc/fiscalis-health-monitor
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+# AF_UNIX: name resolution through systemd-resolved
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+# No private, CGNAT, link-local or multicast range; only the DNS stub on loopback.
+IPAddressDeny=link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7 localhost
+IPAddressAllow=127.0.0.53

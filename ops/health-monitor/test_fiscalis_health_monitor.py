@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import unittest.mock
 import urllib.error
+import urllib.request
 
 _spec = importlib.util.spec_from_file_location(
     "monitor", pathlib.Path(__file__).with_name("fiscalis-health-monitor.py")
@@ -437,7 +438,9 @@ class FakeResponse:
 PING = "https://hc-ping.com/1234abcd-0000-4000-8000-000000000000"
 
 
-class Main(unittest.TestCase):
+class MainHarness(unittest.TestCase):
+    """main() against fake Convex, Slack, healthchecks.io and WhatsApp (no tests of its own)."""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.dir = pathlib.Path(self.tmp.name)
@@ -482,6 +485,8 @@ class Main(unittest.TestCase):
         self.requests.clear()
         return out
 
+
+class Main(MainHarness):
     def test_emergency_flow_pings_and_retries(self):
         self.assertEqual(self.main(), 0)
         self.assertEqual(self.pings(), ["ok"])
@@ -574,6 +579,106 @@ class Main(unittest.TestCase):
         self.main()
         self.assertEqual(len(self.whatsapp), 1)
         self.assertIn("archive-audit (critical)", self.whatsapp[0]["message"])
+
+
+# --- daily sync digest -----------------------------------------------------------------------
+
+
+DIGEST = {
+    "windowStart": 0, "windowEnd": 86_400_000, "runs": 7, "problems": 3, "truncated": False,
+    "providers": [
+        {"provider": "plaid", "runs": 5, "succeeded": 2, "partial": 1, "failed": 2, "stuck": 0,
+         "usersAffected": 2, "scheduledFailed": 1, "lastSuccessAt": 1,
+         "topErrorCodes": [{"code": "ITEM_LOGIN_REQUIRED", "count": 2}, {"code": "<!channel>", "count": 1}]},
+        {"provider": "bitpanda", "runs": 2, "succeeded": 2, "partial": 0, "failed": 0, "stuck": 0,
+         "usersAffected": 0, "scheduledFailed": 0, "lastSuccessAt": 1, "topErrorCodes": []},
+        {"provider": "<script>", "runs": 1},
+    ],
+    "health": {"ok": False, "critical": False, "checks": [
+        check("fx-rates", severity="warning", age=9 * 3600, threshold=8 * 3600),
+        check("metal-price-ticks", ok=True),
+    ]},
+}  # fmt: skip
+
+
+class Digest(unittest.TestCase):
+    def test_compose_lists_problems_codes_and_stale_feeds(self):
+        text = monitor.compose_digest(DIGEST, 1_000_000.0)
+        self.assertIn(":warning: Fiscalis daily sync digest", text)
+        self.assertIn("Sync runs: 7, with problems: 3", text)
+        self.assertIn("- plaid: 5 runs, 2 ok, 1 partial, 2 failed (1 scheduled); 2 user(s) affected", text)
+        self.assertIn("ITEM_LOGIN_REQUIRED x2", text)
+        self.assertNotIn("<!channel>", text)  # escaped
+        self.assertIn("- bitpanda: 2 runs, all ok", text)
+        self.assertNotIn("script", text)  # malformed provider dropped
+        self.assertIn("- fx-rates (warning): age 9h00m, max 8h00m", text)
+
+    def test_compose_quiet_day(self):
+        quiet = {"runs": 0, "problems": 0, "providers": [], "health": {"ok": True, "checks": []}}
+        text = monitor.compose_digest(quiet, 1_000_000.0)
+        self.assertTrue(text.startswith(":white_check_mark:"))
+        self.assertIn("no provider syncs ran", text)
+        self.assertIn("Feeds: all fresh", text)
+        self.assertIn("not readable", monitor.compose_digest([], 1_000_000.0))
+
+
+class DigestMain(MainHarness):
+    def setUp(self):
+        super().setUp()
+        with open(self.dir / "monitor.env", "a") as handle:
+            handle.write("FISCALIS_MONITOR_SECRET=" + "s" * 48 + "\n")
+        self.digest_status, self.digest_headers, self.slack_texts = 200, [], []
+
+    def opener(self, request, timeout):
+        if request.full_url.endswith("/health/sync-digest"):
+            self.requests.append(request.full_url)
+            self.digest_headers.append(request.get_header("X-fiscalis-monitor-secret"))
+            if self.digest_status != 200:
+                raise urllib.error.HTTPError(request.full_url, self.digest_status, "x", {}, io.BytesIO(b"{}"))
+            return FakeResponse(200, json.dumps(DIGEST).encode())
+        if request.full_url.startswith("https://slack.com/"):
+            self.slack_texts.append(json.loads(request.data)["text"])
+        return super().opener(request, timeout)
+
+    def test_posts_once_per_day_with_the_secret_and_no_ping(self):
+        self.assertEqual(self.main("--digest"), 0)
+        self.assertEqual(self.digest_headers, ["s" * 48])
+        self.assertEqual(len(self.slack_texts), 1)
+        self.assertIn("plaid", self.slack_texts[0])
+        self.assertNotIn("s" * 48, self.slack_texts[0])
+        self.assertEqual(self.main("--digest"), 0)  # same UTC day: skipped
+        self.assertEqual(len(self.slack_texts), 1)
+        self.assertEqual(self.pings(), [])
+        self.assertEqual(self.whatsapp, [])
+
+    def test_unauthorized_digest_is_reported_not_silent(self):
+        self.digest_status = 401
+        self.assertEqual(self.main("--digest"), 0)
+        self.assertIn("unavailable: digest HTTP 401", self.slack_texts[0])
+
+    def test_redirect_is_not_followed_with_the_secret(self):
+        handler = monitor._NoRedirect()
+        request = urllib.request.Request("https://example.convex.site/health/sync-digest",
+                                         headers={"X-Fiscalis-Monitor-Secret": "s" * 48})
+        self.assertIsNone(handler.redirect_request(request, None, 302, "Found", {}, "http://evil.example/"))
+
+    def test_failed_slack_post_is_retried_next_run(self):
+        self.slack_ok = False
+        self.assertEqual(self.main("--digest"), 1)
+        self.slack_ok = True
+        self.assertEqual(self.main("--digest"), 0)
+        self.assertEqual(len(self.slack_texts), 2)
+
+    def test_dry_run_sends_nothing(self):
+        self.assertEqual(self.main("--digest", "--dry-run"), 0)
+        self.assertEqual(self.slack_texts, [])
+        self.assertFalse((self.dir / "state").exists())
+
+    def test_missing_secret(self):
+        (self.dir / "monitor.env").write_text("SLACK_BOT_TOKEN=x\nSLACK_HOME_CHANNEL=C\n")
+        self.main("--digest")
+        self.assertEqual(self.digest_headers, [])
+        self.assertIn("no FISCALIS_MONITOR_SECRET", self.slack_texts[0])
 
 
 class TestUnit(unittest.TestCase):

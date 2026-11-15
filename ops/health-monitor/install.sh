@@ -2,6 +2,7 @@
 # Install or update the Fiscalis health monitor and archive audit on the Mya VPS.
 #
 #   bash install.sh --audit-env /root/fiscalis-audit.env   # install / update, start the timers
+#   bash install.sh --digest-env /root/fiscalis-digest.env # also set or rotate the digest secret
 #   bash install.sh --dry-run                              # say what would change, change nothing
 #   bash install.sh --test-alert                           # also send a TEST alert through the real unit
 #   bash install.sh --print-test-unit                      # print the generated test unit (no root needed)
@@ -15,7 +16,9 @@
 #       WHATSAPP_ALLOWED_USERS copied from Mya's env file (her existing bot and
 #       bridge: no new app or token), plus FISCALIS_HC_PING_URL (the
 #       healthchecks.io check): from $FISCALIS_HC_PING_URL, else kept from the
-#       previous monitor.env.
+#       previous monitor.env; and FISCALIS_MONITOR_SECRET (the shared secret of
+#       GET /health/sync-digest, also set on Convex) from the 0600 root file named
+#       by --digest-env, else kept from the previous monitor.env.
 #   /etc/fiscalis-health-monitor/audit.env    FISCALIS_ARCHIVE_AUDIT_ACCESS_KEY_ID,
 #       FISCALIS_ARCHIVE_AUDIT_SECRET_ACCESS_KEY and FISCALIS_ARCHIVE_BUCKET, copied
 #       from the 0600 file named by --audit-env (or $FISCALIS_AUDIT_KEY_FILE), else
@@ -33,12 +36,14 @@ SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=0
 TEST_ALERT=0
 AUDIT_KEY_FILE="${FISCALIS_AUDIT_KEY_FILE:-}"
+DIGEST_KEY_FILE=""
 while (($#)); do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
     --test-alert) TEST_ALERT=1 ;;
     --print-test-unit) PRINT_TEST_UNIT=1 ;;
     --audit-env) AUDIT_KEY_FILE="${2:?--audit-env needs a file}"; shift ;;
+    --digest-env) DIGEST_KEY_FILE="${2:?--digest-env needs a file}"; shift ;;
     *) printf 'unknown argument: %s\n' "$1" >&2; exit 2 ;;
   esac
   shift
@@ -81,13 +86,28 @@ elif [[ -r "$ETC_DIR/monitor.env" ]]; then
 fi
 [[ -n "$ping_line" ]] || say "WARNING: no FISCALIS_HC_PING_URL: nothing will notice if the monitor stops"
 
+# --- the digest secret ---------------------------------------------------------
+root_only() { # root_only <file>: a regular 0600 root file, or exit
+  [[ -f "$1" && ! -L "$1" ]] || { say "$1 is not a regular file"; exit 1; }
+  [[ "$(stat -c %a "$1")" == 600 && "$(stat -c %u "$1")" == 0 ]] ||
+    { say "$1 must be mode 0600 and owned by root"; exit 1; }
+}
+secret_line=""
+if [[ -n "$DIGEST_KEY_FILE" ]]; then
+  root_only "$DIGEST_KEY_FILE"
+  secret_line="$(lines FISCALIS_MONITOR_SECRET "$DIGEST_KEY_FILE" | tail -n 1)"
+  [[ "$secret_line" =~ =[[:space:]]*[A-Za-z0-9_-]{32,}[[:space:]]*$ ]] ||
+    { say "$DIGEST_KEY_FILE lacks FISCALIS_MONITOR_SECRET (32+ characters of [A-Za-z0-9_-])"; exit 1; }
+elif [[ -r "$ETC_DIR/monitor.env" ]]; then
+  secret_line="$(lines FISCALIS_MONITOR_SECRET "$ETC_DIR/monitor.env" | tail -n 1)"
+fi
+[[ -n "$secret_line" ]] || say "WARNING: no FISCALIS_MONITOR_SECRET: the daily digest will only report that (pass --digest-env)"
+
 # --- the audit key -------------------------------------------------------------
 AUDIT_KEYS="FISCALIS_ARCHIVE_AUDIT_ACCESS_KEY_ID|FISCALIS_ARCHIVE_AUDIT_SECRET_ACCESS_KEY|FISCALIS_ARCHIVE_BUCKET"
 audit_source=""
 if [[ -n "$AUDIT_KEY_FILE" ]]; then
-  [[ -f "$AUDIT_KEY_FILE" && ! -L "$AUDIT_KEY_FILE" ]] || { say "$AUDIT_KEY_FILE is not a regular file"; exit 1; }
-  [[ "$(stat -c %a "$AUDIT_KEY_FILE")" == 600 && "$(stat -c %u "$AUDIT_KEY_FILE")" == 0 ]] ||
-    { say "$AUDIT_KEY_FILE must be mode 0600 and owned by root"; exit 1; }
+  root_only "$AUDIT_KEY_FILE"
   audit_source="$AUDIT_KEY_FILE"
 elif [[ -r "$ETC_DIR/audit.env" ]]; then
   audit_source="$ETC_DIR/audit.env"
@@ -112,7 +132,8 @@ write_secret() { # write_secret <target> <description>; content on stdin
 run install -d -m 0755 -o root -g root "$LIB_DIR"
 run install -m 0755 -o root -g root "$SRC/fiscalis-health-monitor.py" "$LIB_DIR/"
 for unit in fiscalis-health-monitor.service fiscalis-health-monitor.timer \
-  fiscalis-health-audit.service fiscalis-health-audit.timer; do
+  fiscalis-health-audit.service fiscalis-health-audit.timer \
+  fiscalis-health-digest.service fiscalis-health-digest.timer; do
   run install -m 0644 -o root -g root "$SRC/$unit" "$UNIT_DIR/"
 done
 if ((DRY_RUN)); then
@@ -125,7 +146,8 @@ run install -d -m 0750 -o root -g root "$ETC_DIR"
 {
   lines 'SLACK_BOT_TOKEN|SLACK_HOME_CHANNEL|WHATSAPP_ALLOWED_USERS' "$MYA_ENV"
   [[ -z "$ping_line" ]] || printf '%s\n' "$ping_line"
-} | write_secret "$ETC_DIR/monitor.env" "Slack, the WhatsApp number, the ping URL"
+  [[ -z "$secret_line" ]] || printf '%s\n' "$secret_line"
+} | write_secret "$ETC_DIR/monitor.env" "Slack, the WhatsApp number, the ping URL, the digest secret"
 if [[ "$audit_source" != "$ETC_DIR/audit.env" ]]; then
   lines "$AUDIT_KEYS" "$audit_source" | write_secret "$ETC_DIR/audit.env" "the read-only archive audit key"
 fi
@@ -140,7 +162,7 @@ if [[ -L "$STATE_DIR" && -d "/var/lib/private/fiscalis-health-monitor" ]]; then
 fi
 
 run systemctl daemon-reload
-run systemctl enable --now fiscalis-health-monitor.timer fiscalis-health-audit.timer
+run systemctl enable --now fiscalis-health-monitor.timer fiscalis-health-audit.timer fiscalis-health-digest.timer
 run rm -f "$ETC_DIR/slack.env" # the first version's credential, replaced by monitor.env
 say "poll now (prints the decision, sends nothing):"
 run /usr/bin/python3 -I "$LIB_DIR/fiscalis-health-monitor.py" --dry-run

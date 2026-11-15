@@ -34,6 +34,9 @@ import { describeError } from "../../../services/security/providerError";
 import { classifyProviderFailure } from "../../../services/security/providerFailure";
 import { bitpandaFailureStatus } from "../../../services/security/connectionStatus";
 import { enforceUserRateLimit } from "../lib/rateLimit";
+import { withSyncRun } from "../lib/syncRuns";
+import { syncTriggerValidator } from "../lib/syncRunValidators";
+import { syncErrorCode, type SyncOutcome } from "../../../services/health/syncRuns";
 import { userError } from "../lib/userError";
 
 // ═══════════════════════════════════════════════════════════════
@@ -97,11 +100,12 @@ export const connect = action({
     // Initial sync (holdings + transactions), then snapshot
     const holdingsSync: { ok: boolean } = await ctx.runAction(
       internal.actions.bitpanda.syncConnectionInternal,
-      { userId, connectionId },
+      { userId, connectionId, trigger: "manual" },
     );
     await ctx.runAction(internal.actions.bitpanda.syncTransactionsInternal, {
       userId,
       connectionId,
+      trigger: "manual",
     });
 
     // A failed holdings sync is shown on the connection; no snapshot of it
@@ -174,11 +178,12 @@ export const syncConnection = action({
 
     const holdingsSync: { ok: boolean } = await ctx.runAction(
       internal.actions.bitpanda.syncConnectionInternal,
-      { userId, connectionId: args.connectionId },
+      { userId, connectionId: args.connectionId, trigger: "manual" },
     );
     await ctx.runAction(internal.actions.bitpanda.syncTransactionsInternal, {
       userId,
       connectionId: args.connectionId,
+      trigger: "manual",
     });
 
     // Snapshot only holdings that synced; a failure stays on the connection
@@ -215,12 +220,12 @@ export const syncAllConnections = action({
       try {
         const holdingsSync: { ok: boolean } = await ctx.runAction(
           internal.actions.bitpanda.syncConnectionInternal,
-          { userId, connectionId: connection._id },
+          { userId, connectionId: connection._id, trigger: "manual" },
         );
         if (holdingsSync.ok) synced++;
         await ctx.runAction(
           internal.actions.bitpanda.syncTransactionsInternal,
-          { userId, connectionId: connection._id },
+          { userId, connectionId: connection._id, trigger: "manual" },
         );
       } catch (error) {
         console.error(
@@ -263,6 +268,7 @@ export const syncConnectionInternal = internalAction({
   args: {
     userId: v.string(),
     connectionId: v.id("bitpandaConnections"),
+    trigger: syncTriggerValidator,
   },
   returns: v.object({ ok: v.boolean() }),
   handler: async (ctx, args): Promise<{ ok: boolean }> => {
@@ -272,79 +278,89 @@ export const syncConnectionInternal = internalAction({
     );
     if (!connection) return { ok: false };
 
-    await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
-      connectionId: args.connectionId,
-      status: "syncing",
-    });
-
-    try {
-      const apiKey = decrypt(connection.apiKey, getEncryptionKey());
-
-      const [assetWallets, fiatWallets, ticker] = await Promise.all([
-        fetchAssetWallets(apiKey),
-        fetchFiatWallets(apiKey),
-        fetchTicker(),
-      ]);
-
-      const normalized = normalizeHoldings(assetWallets, fiatWallets, ticker);
-      const now = Date.now();
-
-      const holdings = normalized.map((h) => {
-        const classification = classifyBitpandaPosition({
-          assetType: h.assetType,
-          symbol: h.symbol,
-          name: h.name ?? null,
+    // A failure is returned as ok: false, not thrown: kept for the ledger
+    let outcome: SyncOutcome | undefined;
+    return withSyncRun(
+      ctx,
+      { provider: "bitpanda", userId: args.userId, trigger: args.trigger },
+      async (): Promise<{ ok: boolean }> => {
+        await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
+          connectionId: args.connectionId,
+          status: "syncing",
         });
-        const fields = getClassificationFields(classification);
 
-        return {
-          assetType: h.assetType,
-          symbol: h.symbol,
-          name: h.name,
-          quantity: h.quantity,
-          currentPrice: h.currentPrice,
-          marketValue: h.marketValue,
-          currency: h.currency,
-          investmentCategory: fields.investmentCategory,
-          investmentSubcategory: fields.investmentSubcategory,
-          classificationSource: fields.classificationSource,
-          classificationRule: fields.classificationRule,
-          // Holdings are already valued in EUR by the normalizer. Fiat
-          // holdings retain the actual native→EUR rate used for traceability.
-          // syncHoldings swaps in the last known price where the ticker had
-          // none (holdingPrice.ts).
-          valueInBaseCurrency: h.marketValue,
-          exchangeRateUsed:
-            h.assetType === "fiat" ? h.currentPrice : 1,
-          exchangeRateTimestamp: now,
-          baseCurrency: "EUR",
-        };
-      });
+        try {
+          const apiKey = decrypt(connection.apiKey, getEncryptionKey());
 
-      await ctx.runMutation(internal.bitpanda.syncHoldings, {
-        userId: args.userId,
-        connectionId: args.connectionId,
-        holdings,
-      });
+          const [assetWallets, fiatWallets, ticker] = await Promise.all([
+            fetchAssetWallets(apiKey),
+            fetchFiatWallets(apiKey),
+            fetchTicker(),
+          ]);
 
-      await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
-        connectionId: args.connectionId,
-        status: "active",
-        lastSyncAt: now,
-      });
-      return { ok: true };
-    } catch (error) {
-      console.error("Bitpanda sync error:", describeError(error));
-      // Only a rejected key (401/403) asks the user to reconnect; a
-      // timeout, rate limit or 5xx keeps the key for the next sync
-      const failure = bitpandaFailureStatus(error);
-      await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
-        connectionId: args.connectionId,
-        status: failure.status,
-        errorMessage: failure.errorMessage,
-      });
-      return { ok: false };
-    }
+          const normalized = normalizeHoldings(assetWallets, fiatWallets, ticker);
+          const now = Date.now();
+
+          const holdings = normalized.map((h) => {
+            const classification = classifyBitpandaPosition({
+              assetType: h.assetType,
+              symbol: h.symbol,
+              name: h.name ?? null,
+            });
+            const fields = getClassificationFields(classification);
+
+            return {
+              assetType: h.assetType,
+              symbol: h.symbol,
+              name: h.name,
+              quantity: h.quantity,
+              currentPrice: h.currentPrice,
+              marketValue: h.marketValue,
+              currency: h.currency,
+              investmentCategory: fields.investmentCategory,
+              investmentSubcategory: fields.investmentSubcategory,
+              classificationSource: fields.classificationSource,
+              classificationRule: fields.classificationRule,
+              // Holdings are already valued in EUR by the normalizer. Fiat
+              // holdings retain the actual native→EUR rate used for traceability.
+              // syncHoldings swaps in the last known price where the ticker had
+              // none (holdingPrice.ts).
+              valueInBaseCurrency: h.marketValue,
+              exchangeRateUsed:
+                h.assetType === "fiat" ? h.currentPrice : 1,
+              exchangeRateTimestamp: now,
+              baseCurrency: "EUR",
+            };
+          });
+
+          await ctx.runMutation(internal.bitpanda.syncHoldings, {
+            userId: args.userId,
+            connectionId: args.connectionId,
+            holdings,
+          });
+
+          await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
+            connectionId: args.connectionId,
+            status: "active",
+            lastSyncAt: now,
+          });
+          return { ok: true };
+        } catch (error) {
+          console.error("Bitpanda sync error:", describeError(error));
+          outcome = { status: "failed", errorCode: syncErrorCode(error) };
+          // Only a rejected key (401/403) asks the user to reconnect; a
+          // timeout, rate limit or 5xx keeps the key for the next sync
+          const failure = bitpandaFailureStatus(error);
+          await ctx.runMutation(internal.bitpanda.updateConnectionStatus, {
+            connectionId: args.connectionId,
+            status: failure.status,
+            errorMessage: failure.errorMessage,
+          });
+          return { ok: false };
+        }
+      },
+      () => outcome ?? { status: "success" },
+    );
   },
 });
 
@@ -365,6 +381,7 @@ export const syncTransactionsInternal = internalAction({
   args: {
     userId: v.string(),
     connectionId: v.id("bitpandaConnections"),
+    trigger: syncTriggerValidator,
   },
   handler: async (ctx, args) => {
     const connection = await ctx.runQuery(
@@ -373,55 +390,69 @@ export const syncTransactionsInternal = internalAction({
     );
     if (!connection) return;
 
-    try {
-      const apiKey = decrypt(connection.apiKey, getEncryptionKey());
+    // Failures are logged, not thrown: kept for the ledger
+    let failure: SyncOutcome | undefined;
+    await withSyncRun(
+      ctx,
+      {
+        provider: "bitpanda-transactions",
+        userId: args.userId,
+        trigger: args.trigger,
+      },
+      async () => {
+        try {
+          const apiKey = decrypt(connection.apiKey, getEncryptionKey());
 
-      const syncState = await ctx.runQuery(
-        internal.bitpanda.getTransactionSyncStateInternal,
-        { connectionId: args.connectionId },
-      );
-      const fullSyncDue =
-        syncState.transactionsFullSyncAt === undefined ||
-        Date.now() - syncState.transactionsFullSyncAt >
-          BITPANDA_FULL_SYNC_INTERVAL_MS;
-      const cutoff = fullSyncDue
-        ? undefined
-        : bitpandaSyncCutoff(syncState.newestTransactionDate);
-      const listOptions = cutoff
-        ? {
-            stopAfterPage: (page: unknown[]) =>
-              pageReachesCutoff(page.map(bitpandaRecordDate), cutoff),
+          const syncState = await ctx.runQuery(
+            internal.bitpanda.getTransactionSyncStateInternal,
+            { connectionId: args.connectionId },
+          );
+          const fullSyncDue =
+            syncState.transactionsFullSyncAt === undefined ||
+            Date.now() - syncState.transactionsFullSyncAt >
+              BITPANDA_FULL_SYNC_INTERVAL_MS;
+          const cutoff = fullSyncDue
+            ? undefined
+            : bitpandaSyncCutoff(syncState.newestTransactionDate);
+          const listOptions = cutoff
+            ? {
+                stopAfterPage: (page: unknown[]) =>
+                  pageReachesCutoff(page.map(bitpandaRecordDate), cutoff),
+              }
+            : undefined;
+
+          const [trades, cryptoTransactions, fiatTransactions, commodityTransactions] =
+            await Promise.all([
+              fetchTrades(apiKey, listOptions),
+              fetchCryptoTransactions(apiKey, listOptions),
+              fetchFiatTransactions(apiKey, listOptions),
+              fetchCommodityTransactions(apiKey, listOptions),
+            ]);
+
+          const transactions = normalizeTransactions({
+            trades,
+            cryptoTransactions,
+            fiatTransactions,
+            commodityTransactions,
+          });
+
+          // An empty read keeps what is stored: the window starts before the
+          // newest stored row, so it is never legitimately empty
+          if (transactions.length > 0) {
+            await ctx.runMutation(internal.bitpanda.syncTransactions, {
+              userId: args.userId,
+              connectionId: args.connectionId,
+              cutoff,
+              transactions,
+            });
           }
-        : undefined;
-
-      const [trades, cryptoTransactions, fiatTransactions, commodityTransactions] =
-        await Promise.all([
-          fetchTrades(apiKey, listOptions),
-          fetchCryptoTransactions(apiKey, listOptions),
-          fetchFiatTransactions(apiKey, listOptions),
-          fetchCommodityTransactions(apiKey, listOptions),
-        ]);
-
-      const transactions = normalizeTransactions({
-        trades,
-        cryptoTransactions,
-        fiatTransactions,
-        commodityTransactions,
-      });
-
-      // An empty read keeps what is stored: the window starts before the
-      // newest stored row, so it is never legitimately empty
-      if (transactions.length > 0) {
-        await ctx.runMutation(internal.bitpanda.syncTransactions, {
-          userId: args.userId,
-          connectionId: args.connectionId,
-          cutoff,
-          transactions,
-        });
-      }
-    } catch (error) {
-      console.error("Bitpanda transaction sync error:", describeError(error));
-    }
+        } catch (error) {
+          console.error("Bitpanda transaction sync error:", describeError(error));
+          failure = { status: "failed", errorCode: syncErrorCode(error) };
+        }
+      },
+      () => failure ?? { status: "success" },
+    );
   },
 });
 
@@ -452,6 +483,7 @@ export const scheduledSyncAllAction = internalAction({
           userId: connection.userId,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           connectionId: connection.connectionId as any,
+          trigger: "scheduled",
         },
       );
       await ctx.scheduler.runAfter(
@@ -461,6 +493,7 @@ export const scheduledSyncAllAction = internalAction({
           userId: connection.userId,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           connectionId: connection.connectionId as any,
+          trigger: "scheduled",
         },
       );
     }
@@ -473,14 +506,14 @@ export const scheduledSyncAllAction = internalAction({
  * Internal: sync all Bitpanda data for one user (used by the daily sync).
  */
 export const syncAllForUserInternal = internalAction({
-  args: { userId: v.string() },
+  args: { userId: v.string(), trigger: syncTriggerValidator },
   returns: v.object({
     success: v.boolean(),
     connectionsSynced: v.number(),
   }),
   handler: async (
     ctx,
-    { userId },
+    { userId, trigger },
   ): Promise<{ success: boolean; connectionsSynced: number }> => {
     const connections = await ctx.runQuery(
       internal.bitpanda.getConnectionsByUserInternal,
@@ -496,11 +529,11 @@ export const syncAllForUserInternal = internalAction({
       try {
         const holdingsSync: { ok: boolean } = await ctx.runAction(
           internal.actions.bitpanda.syncConnectionInternal,
-          { userId, connectionId: connection._id },
+          { userId, connectionId: connection._id, trigger },
         );
         await ctx.runAction(
           internal.actions.bitpanda.syncTransactionsInternal,
-          { userId, connectionId: connection._id },
+          { userId, connectionId: connection._id, trigger },
         );
         if (holdingsSync.ok) connectionsSynced++;
       } catch (error) {

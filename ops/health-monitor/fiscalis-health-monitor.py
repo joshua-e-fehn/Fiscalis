@@ -27,8 +27,12 @@ five minutes; ``fiscalis-health-audit.timer`` starts ``--audit`` daily at
 - **Audit** (``--audit``): HEADs every ledger day's S3 object (SigV4, stdlib)
   and compares its stored SHA-256 and size with the ledger, and lists the
   bucket to check that every UTC day since 2024-07-09 has an object.
+- **Digest** (``--digest``, daily at 07:30 UTC): fetches
+  ``/health/sync-digest`` with the shared secret ``FISCALIS_MONITOR_SECRET``
+  and posts the last 24 hours of provider sync failures and the stale feeds
+  to Slack, once per UTC day. It does not ping the watchdog.
 - **Credentials**: systemd credentials ``monitor-env`` (Slack, WhatsApp
-  number, ping URL) and, for the audit, ``audit-env`` (a read-only IAM key).
+  number, ping URL, digest secret) and, for the audit, ``audit-env`` (a read-only IAM key).
   ``FISCALIS_HEALTH_ENV`` / ``FISCALIS_AUDIT_ENV`` name other files. Values
   are never printed.
 - **State**: ``/var/lib/fiscalis-health-monitor/state.json`` (a v1 file from
@@ -72,6 +76,11 @@ LEDGER_URL = os.environ.get(
     "FISCALIS_HEALTH_LEDGER_URL",
     HEALTH_URL.rsplit("/health/", 1)[0] + "/health/metal-archive-ledger?days=1000",
 )
+DIGEST_URL = os.environ.get(
+    "FISCALIS_HEALTH_DIGEST_URL", HEALTH_URL.rsplit("/health/", 1)[0] + "/health/sync-digest"
+)
+#: The header /health/sync-digest reads the shared secret from (frontend/convex/http.ts).
+DIGEST_SECRET_HEADER = "X-Fiscalis-Monitor-Secret"
 STATE_DIR = pathlib.Path(
     os.environ.get("FISCALIS_HEALTH_STATE_DIR", "/var/lib/fiscalis-health-monitor")
 )
@@ -89,7 +98,10 @@ SLACK_API = "https://slack.com/api"
 DEFAULT_CONTAINER = "hermes-agent-vspa-hermes-agent-1"
 BRIDGE_SEND = "http://127.0.0.1:3000/send"
 CHANNELS = ("slack", "whatsapp")
-MONITOR_KEYS = ("SLACK_BOT_TOKEN", "SLACK_HOME_CHANNEL", "WHATSAPP_ALLOWED_USERS", "FISCALIS_HC_PING_URL")
+MONITOR_KEYS = (
+    "SLACK_BOT_TOKEN", "SLACK_HOME_CHANNEL", "WHATSAPP_ALLOWED_USERS", "FISCALIS_HC_PING_URL",
+    "FISCALIS_MONITOR_SECRET",
+)  # fmt: skip
 AUDIT_KEYS = (
     "FISCALIS_ARCHIVE_AUDIT_ACCESS_KEY_ID",
     "FISCALIS_ARCHIVE_AUDIT_SECRET_ACCESS_KEY",
@@ -204,8 +216,16 @@ def parse_report(status: int, raw: bytes) -> dict[str, Any]:
         return _pseudo("unreachable", f"HTTP {status}, not JSON")
     if not isinstance(body, dict) or not isinstance(body.get("checks"), list):
         return _pseudo("invalid", f"HTTP {status}, no health report")
+    checks = failing_checks(body)
+    if not checks and (status != 200 or body.get("ok") is not True):
+        checks = [failing_check("invalid", detail=f"HTTP {status} but no failing check named")]
+    return {"ok": not checks, "failing": checks, "detail": "healthy" if not checks else f"HTTP {status}"}
+
+
+def failing_checks(body: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """The failing checks of a health report body (``{"checks": [...]}``), shape-checked."""
     failing: dict[str, dict[str, Any]] = {}
-    for check in body["checks"]:
+    for check in body.get("checks") or []:
         if not isinstance(check, dict):
             failing["invalid"] = failing_check("invalid", detail="a check is not an object")
             continue
@@ -221,10 +241,7 @@ def parse_report(status: int, raw: bytes) -> dict[str, Any]:
             name, severity, _number(check.get("ageSeconds")), _number(check.get("threshold")),
             check.get("detail") if isinstance(check.get("detail"), str) else "",
         )  # fmt: skip
-    if not failing and (status != 200 or body.get("ok") is not True):
-        failing["invalid"] = failing_check("invalid", detail=f"HTTP {status} but no failing check named")
-    checks = [failing[n] for n in sorted(failing)]
-    return {"ok": not checks, "failing": checks, "detail": "healthy" if not checks else f"HTTP {status}"}
+    return [failing[n] for n in sorted(failing)]
 
 
 def audit_checks(state: Mapping[str, Any], now: float) -> list[dict[str, Any]]:
@@ -730,18 +747,22 @@ def audit_archive(ledger: Any, s3: Any, bucket: str, yesterday: datetime.date) -
     return problems, {"ledger_days": len(ledger["days"]), "objects": len(objects), "expected_days": expected}
 
 
-def fetch_json(url: str, opener: Opener, sleep: Callable[[float], None] = time.sleep) -> Any:
-    request = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "fiscalis-health-monitor"})
+def fetch_json(url: str, opener: Opener, sleep: Callable[[float], None] = time.sleep,
+               headers: Mapping[str, str] | None = None, what: str = "ledger") -> Any:  # fmt: skip
+    """GET JSON, 3 tries on 5xx and transport errors; errors name `what`, never a header."""
+    request = urllib.request.Request(
+        url, headers={"Accept": "application/json", "User-Agent": "fiscalis-health-monitor", **(headers or {})}
+    )
     for attempt in range(3):
         try:
             with opener(request, timeout=HTTP_TIMEOUT) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as error:
             if error.code < 500 or attempt == 2:
-                raise NotifyError(f"ledger HTTP {error.code}") from None
+                raise NotifyError(f"{what} HTTP {error.code}") from None
         except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError) as error:
             if attempt == 2:
-                raise NotifyError(f"ledger {type(error).__name__}") from None
+                raise NotifyError(f"{what} {type(error).__name__}") from None
         sleep(2 * (attempt + 1))
     raise AssertionError("unreachable")
 
@@ -772,6 +793,120 @@ def record_audit(state: dict, result: Mapping[str, Any]) -> dict:
     previous = state.get("audit") if isinstance(state.get("audit"), dict) else {}
     last_success = result["at"] if result["ok"] else previous.get("last_success")
     return {**state, "audit": {**result, "last_success": last_success}}
+
+
+# --- daily sync digest --------------------------------------------------------------------
+
+
+def _count(value: Any) -> int:
+    number = _number(value)
+    return int(number) if number is not None and number >= 0 else 0
+
+
+def describe_provider(entry: Mapping[str, Any], slack: bool) -> str | None:
+    """One line per provider of /health/sync-digest; None for a malformed entry."""
+    name = entry.get("provider")
+    if not isinstance(name, str) or not CHECK_NAME.fullmatch(name):
+        return None
+    runs, ok = _count(entry.get("runs")), _count(entry.get("succeeded"))
+    partial, failed, stuck = _count(entry.get("partial")), _count(entry.get("failed")), _count(entry.get("stuck"))
+    if partial + failed + stuck == 0:
+        return f"- {name}: {runs} runs, all ok"
+    parts = [f"{ok} ok"]
+    parts += [f"{partial} partial"] if partial else []
+    parts += [f"{failed} failed ({_count(entry.get('scheduledFailed'))} scheduled)"] if failed else []
+    parts += [f"{stuck} stuck"] if stuck else []
+    line = f"- {name}: {runs} runs, " + ", ".join(parts) + f"; {_count(entry.get('usersAffected'))} user(s) affected"
+    codes = []
+    for item in (entry.get("topErrorCodes") or [])[:5]:
+        if isinstance(item, dict) and isinstance(item.get("code"), str):
+            codes.append(f"{flatten(item['code'], 40)} x{_count(item.get('count'))}")
+    if codes:
+        text = ", ".join(codes)
+        line += f"; codes: {slack_escape(text) if slack else text}"
+    if ok == 0:
+        line += " (no successful run in 24h)"
+    return line
+
+
+def compose_digest(digest: Any, now: float, slack: bool = True) -> str:
+    """The daily Slack message from /health/sync-digest: counts and codes, no user ids."""
+    at = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    if not isinstance(digest, dict) or not isinstance(digest.get("providers"), list):
+        return f":warning: Fiscalis daily sync digest ({at}): the digest was not readable"
+    lines = [describe_provider(p, slack) for p in digest["providers"] if isinstance(p, dict)]
+    lines = [ln for ln in lines if ln]
+    health = digest.get("health") if isinstance(digest.get("health"), dict) else {}
+    stale = failing_checks(health) if isinstance(health.get("checks"), list) else []
+    problems = _count(digest.get("problems"))
+    mark = ":white_check_mark:" if not problems and not stale else ":warning:"
+    out = [f"{mark} Fiscalis daily sync digest, 24h to {at}",
+           f"Sync runs: {_count(digest.get('runs'))}, with problems: {problems}"]  # fmt: skip
+    out += lines or ["- no provider syncs ran"]
+    if digest.get("truncated") is True:
+        out.append("(more runs than the digest reads: counts are a lower bound)")
+    if stale:
+        out += ["Stale feeds:"] + [describe(c, slack) for c in stale]
+    elif isinstance(health.get("checks"), list):
+        out.append("Feeds: all fresh")
+    else:
+        out.append("Feeds: no health report in the digest")
+    return "\n".join(out)
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects: urllib would resend the secret header to the new location."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: ANN001
+        return None
+
+
+def no_redirect_urlopen(request: urllib.request.Request, timeout: float) -> Any:
+    """``urlopen`` for requests that carry a secret: a 3xx is an HTTPError, not followed."""
+    return urllib.request.build_opener(_NoRedirect).open(request, timeout=timeout)
+
+
+def run_digest(settings: Mapping[str, str], opener: Opener, now: float,
+               sleep: Callable[[float], None] = time.sleep) -> str:  # fmt: skip
+    """The digest message; a digest that cannot be fetched is itself reported."""
+    secret = settings.get("FISCALIS_MONITOR_SECRET", "")
+    at = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    if not secret:
+        return f":warning: Fiscalis daily sync digest ({at}): no FISCALIS_MONITOR_SECRET in monitor-env"
+    if not DIGEST_URL.startswith("https://"):
+        return f":warning: Fiscalis daily sync digest ({at}): the digest URL is not https, secret not sent"
+    try:
+        digest = fetch_json(DIGEST_URL, opener, sleep, headers={DIGEST_SECRET_HEADER: secret}, what="digest")
+    except NotifyError as error:
+        return f":warning: Fiscalis daily sync digest ({at}) unavailable: {error}"
+    return compose_digest(digest, now)
+
+
+def digest_main(state_dir: pathlib.Path, settings: Mapping[str, str], opener: Opener,
+                clock: Callable[[], float], sleep: Callable[[float], None], dry_run: bool) -> int:  # fmt: skip
+    """Post the digest to Slack once per UTC day (a timer catch-up or restart never repeats it)."""
+    now = clock()
+    day = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%d")
+    text = run_digest(settings, opener, now, sleep)
+    if dry_run:
+        print(json.dumps({"mode": "digest", "dry_run": True, "message": text}, ensure_ascii=False))
+        return 0
+    state_file = state_dir / "state.json"
+    with locked(state_dir):
+        state = load_state(read_state(state_file), now)
+        if (state.get("digest") or {}).get("day") == day:
+            print(json.dumps({"mode": "digest", "skipped": f"already posted for {day}"}))
+            return 0
+        try:
+            slack_post(settings, text, opener)
+            result = "sent"
+        except NotifyError as error:
+            result = str(error)
+        if result == "sent":
+            state["digest"] = {"day": day, "at": now}
+            save_state(state_file, state)
+    print(json.dumps({"mode": "digest", "sent": result}))
+    return 0 if result == "sent" else 1
 
 
 # --- main ---------------------------------------------------------------------------------
@@ -831,7 +966,10 @@ def main(
     mode.add_argument("--dry-run", action="store_true", help="poll and print; send, ping and save nothing")
     mode.add_argument("--audit", action="store_true", help="audit the S3 archive, then run as usual")
     mode.add_argument("--test-alert", action="store_true", help="send one TEST message to Slack and WhatsApp")
+    parser.add_argument("--digest", action="store_true", help="post the daily sync digest to Slack")
     args = parser.parse_args(argv)
+    if args.digest and (args.audit or args.test_alert):
+        parser.error("--digest runs alone (or with --dry-run)")
     environ = os.environ if environ is None else environ
     state_dir = pathlib.Path(environ.get("FISCALIS_HEALTH_STATE_DIR", str(STATE_DIR)))
     confirm = int(environ.get("FISCALIS_HEALTH_CONFIRM_RUNS", CONFIRM_RUNS))
@@ -841,6 +979,10 @@ def main(
     send = make_sender(settings, environ, opener, runner, docker)
     if args.test_alert:
         return test_alert(send, clock(), environ)
+    if args.digest:
+        # The digest request carries the secret: never follow a redirect with it
+        digest_opener = no_redirect_urlopen if opener is urllib.request.urlopen else opener
+        return digest_main(state_dir, settings, digest_opener, clock, sleep, args.dry_run)
 
     audit = None
     if args.audit:  # the slow network part, outside the lock

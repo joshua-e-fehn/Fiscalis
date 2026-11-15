@@ -1,5 +1,5 @@
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
+import { httpAction, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   hashApiKey,
@@ -8,6 +8,7 @@ import {
 import { netWorthApiCurrency } from "../../services/portfolio/aggregate";
 import { DISPLAY_CURRENCIES } from "../../services/finance/displayCurrency";
 import { evaluateFreshness } from "../../services/health/freshness";
+import { monitorSecretMatches } from "../../services/health/syncRuns";
 import {
   metalArchiveEnabled,
   metalArchivePrefix,
@@ -22,6 +23,20 @@ import {
 // ═══════════════════════════════════════════════════════════════
 
 const http = httpRouter();
+
+/** The /health/deep report at `now`, with this deployment's settings. */
+async function deepHealthReport(ctx: ActionCtx, now: number) {
+  const inputs = await ctx.runQuery(internal.health.freshnessInputs, {});
+  return evaluateFreshness(
+    inputs,
+    {
+      archiveEnabled: metalArchiveEnabled(),
+      archiveRequired: metalArchiveRequired(),
+      scheduledSyncEnabled: scheduledSyncEnabled(),
+    },
+    now,
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════
 // HEALTH CHECK
@@ -59,16 +74,7 @@ http.route({
       "Cache-Control": "no-store, max-age=0",
     };
     try {
-      const inputs = await ctx.runQuery(internal.health.freshnessInputs, {});
-      const report = evaluateFreshness(
-        inputs,
-        {
-          archiveEnabled: metalArchiveEnabled(),
-          archiveRequired: metalArchiveRequired(),
-          scheduledSyncEnabled: scheduledSyncEnabled(),
-        },
-        Date.now(),
-      );
+      const report = await deepHealthReport(ctx, Date.now());
       return new Response(JSON.stringify(report), {
         status: report.ok ? 200 : 503,
         headers,
@@ -113,6 +119,51 @@ http.route({
     } catch {
       console.error("GET /health/metal-archive-ledger failed");
       return new Response(JSON.stringify({ error: "ledger unavailable" }), {
+        status: 503,
+        headers,
+      });
+    }
+  }),
+});
+
+// The last 24 hours of provider syncs (convex/syncRuns.ts failureDigest)
+// plus the /health/deep checks, for the monitor's daily Slack digest
+// (ops/health-monitor/, --digest). Counts and error codes per provider, no
+// user ids, but still operational detail: only the monitor may read it,
+// with the FISCALIS_MONITOR_SECRET env var in the X-Fiscalis-Monitor-Secret
+// header. Unset or wrong, it answers 401 like any other bad request.
+http.route({
+  path: "/health/sync-digest",
+  method: "GET",
+  handler: httpAction(async (ctx, request) => {
+    const headers = {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store, max-age=0",
+      "X-Content-Type-Options": "nosniff",
+    };
+    const authorized = await monitorSecretMatches(
+      request.headers.get("X-Fiscalis-Monitor-Secret"),
+      process.env.FISCALIS_MONITOR_SECRET,
+    );
+    if (!authorized) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers,
+      });
+    }
+    try {
+      const now = Date.now();
+      const [digest, health] = await Promise.all([
+        ctx.runQuery(internal.syncRuns.failureDigest, { now }),
+        deepHealthReport(ctx, now),
+      ]);
+      return new Response(JSON.stringify({ ...digest, health }), {
+        status: 200,
+        headers,
+      });
+    } catch {
+      console.error("GET /health/sync-digest failed");
+      return new Response(JSON.stringify({ error: "digest unavailable" }), {
         status: 503,
         headers,
       });

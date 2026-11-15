@@ -30,6 +30,9 @@ import { providerSyncSnapshot } from "../../../services/portfolio/aggregate";
 import { describeError } from "../../../services/security/providerError";
 import { snaptradeFailureStatus } from "../../../services/security/connectionStatus";
 import { enforceUserRateLimit } from "../lib/rateLimit";
+import { withSyncRun, type SyncTrigger } from "../lib/syncRuns";
+import { syncTriggerValidator } from "../lib/syncRunValidators";
+import { itemsOutcome } from "../../../services/health/syncRuns";
 
 // TODO: [Post-Launch] Implement SnapTrade webhooks for real-time updates
 // After deploying to production, add webhook handler at:
@@ -545,6 +548,8 @@ interface SnaptradeSyncResult {
   positionsProcessed: number;
   /** One user-facing message per connection or account that failed */
   errors: string[];
+  /** The first failure's user error code, for the syncRuns ledger */
+  errorCode?: string;
 }
 
 /** Whether a sync takes a snapshot: accounts stored vs failures reported. */
@@ -564,10 +569,12 @@ async function syncConnectionAndSnapshot(
   connectionId: Id<"brokerConnections">,
   source: "snaptrade-connect" | "snaptrade-reconnect",
 ): Promise<void> {
-  const syncResult = await syncSnaptrade(ctx, userId, {
-    kind: "connection",
-    connectionId,
-  });
+  const syncResult = await syncSnaptrade(
+    ctx,
+    userId,
+    { kind: "connection", connectionId },
+    "manual",
+  );
   const snapshot = syncResult && snaptradeSyncSnapshot(syncResult);
   if (snapshot?.take) {
     await ctx.runMutation(internal.portfolioSnapshots.takeSnapshot, {
@@ -630,19 +637,36 @@ async function refreshConnectionLogo(
  *   failure there is logged, not reported: the holdings are current and
  *   the snapshot falls back to the cost proxy.
  *
- * Returns null when the user is not registered with SnapTrade.
+ * Returns null when the user is not registered with SnapTrade (and records
+ * no run); otherwise the sync is one row of the syncRuns ledger.
  */
 async function syncSnaptrade(
   ctx: ActionCtx,
   userId: string,
   scope: SnaptradeSyncScope,
+  trigger: SyncTrigger,
 ): Promise<SnaptradeSyncResult | null> {
   const snaptradeUser: Doc<"snaptradeUsers"> | null = await ctx.runQuery(
     internal.brokers.getSnaptradeUserInternal,
     { userId },
   );
   if (!snaptradeUser) return null;
+  return withSyncRun(
+    ctx,
+    { provider: "snaptrade", userId, trigger },
+    () => syncRegisteredSnaptradeUser(ctx, userId, snaptradeUser, scope),
+    (result) =>
+      itemsOutcome(result.accountsProcessed, result.errors.length, result.errorCode),
+  );
+}
 
+/** syncSnaptrade for a user registered with SnapTrade. */
+async function syncRegisteredSnaptradeUser(
+  ctx: ActionCtx,
+  userId: string,
+  snaptradeUser: Doc<"snaptradeUsers">,
+  scope: SnaptradeSyncScope,
+): Promise<SnaptradeSyncResult> {
   const snaptrade = getSnaptradeClient();
   const credentials = {
     userId: snaptradeUser.snaptradeUserId,
@@ -695,6 +719,7 @@ async function syncSnaptrade(
       });
     }
     result.errors.push(`SnapTrade accounts: ${parsedError.message}`);
+    result.errorCode ??= parsedError.userCode;
     return result;
   }
 
@@ -718,6 +743,7 @@ async function syncSnaptrade(
     result.errors.push(
       `Account ${account.name || account.id}: the broker did not say which connection it belongs to, so its holdings were not synced`,
     );
+    result.errorCode ??= "snaptradeAccountsUnplaced";
   }
 
   // An account belongs to the connection whose authorization it reports;
@@ -833,6 +859,7 @@ async function syncSnaptrade(
           if (!parsed.isRetryable) allFailuresRetryable = false;
           if (parsed.requiresReauth) reauthError = parsed.userCode;
           result.errors.push(`Account ${accountName}: ${parsed.message}`);
+          result.errorCode ??= parsed.userCode;
         }
       }
 
@@ -870,6 +897,7 @@ async function syncSnaptrade(
       result.errors.push(
         `Connection ${connection.brokerName}: ${parsedError.message}`,
       );
+      result.errorCode ??= parsedError.userCode;
       await ctx.runMutation(internal.brokers.updateConnectionStatus, {
         connectionId: connection._id,
         status: snaptradeFailureStatus(parsedError),
@@ -953,10 +981,12 @@ export const syncAccounts = action({
       userError("connectionNotFound");
     }
 
-    const result = await syncSnaptrade(ctx, userId, {
-      kind: "connection",
-      connectionId: args.connectionId,
-    });
+    const result = await syncSnaptrade(
+      ctx,
+      userId,
+      { kind: "connection", connectionId: args.connectionId },
+      "manual",
+    );
     if (!result) userError("snaptradeNotRegistered");
     if (result.errors.length > 0) {
       console.error("[SNAPTRADE SYNC]", result.errors.join("; "));
@@ -979,10 +1009,12 @@ export const syncPositions = action({
     if (!identity) throw new Error("Not authenticated");
     await enforceUserRateLimit(ctx, "providerRefresh", identity.subject);
 
-    const result = await syncSnaptrade(ctx, identity.subject, {
-      kind: "account",
-      accountId: args.accountId,
-    });
+    const result = await syncSnaptrade(
+      ctx,
+      identity.subject,
+      { kind: "account", accountId: args.accountId },
+      "manual",
+    );
     if (!result) userError("snaptradeNotRegistered");
     if (result.errors.length > 0) {
       console.error("[SNAPTRADE SYNC]", result.errors.join("; "));
@@ -1120,7 +1152,7 @@ export const syncAll = action({
     const userId = identity.subject;
     await enforceUserRateLimit(ctx, "providerRefresh", userId);
 
-    const result = await syncSnaptrade(ctx, userId, { kind: "all" });
+    const result = await syncSnaptrade(ctx, userId, { kind: "all" }, "manual");
     if (!result) {
       return { success: true, message: "No SnapTrade user registered" };
     }
@@ -1236,6 +1268,7 @@ export const searchBrokers = action({
 export const syncAllForUserInternal = internalAction({
   args: {
     userId: v.string(),
+    trigger: syncTriggerValidator,
   },
   returns: v.object({
     success: v.boolean(),
@@ -1246,7 +1279,7 @@ export const syncAllForUserInternal = internalAction({
   }),
   handler: async (
     ctx,
-    { userId },
+    { userId, trigger },
   ): Promise<{
     success: boolean;
     connectionsProcessed: number;
@@ -1255,7 +1288,7 @@ export const syncAllForUserInternal = internalAction({
     error?: string;
   }> => {
     try {
-      const result = await syncSnaptrade(ctx, userId, { kind: "all" });
+      const result = await syncSnaptrade(ctx, userId, { kind: "all" }, trigger);
       if (!result) {
         return {
           success: true,
@@ -1264,10 +1297,12 @@ export const syncAllForUserInternal = internalAction({
           positionsProcessed: 0,
         };
       }
-      const { errors, ...counts } = result;
+      const { errors } = result;
       return {
         success: errors.length === 0,
-        ...counts,
+        connectionsProcessed: result.connectionsProcessed,
+        accountsProcessed: result.accountsProcessed,
+        positionsProcessed: result.positionsProcessed,
         ...(errors.length > 0 ? { error: errors.join("; ") } : {}),
       };
     } catch (error) {

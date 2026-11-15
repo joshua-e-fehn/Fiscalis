@@ -111,6 +111,7 @@ export const syncAllProviders = action({
       const plaidResult: { success: boolean; itemsSynced: number } =
         await ctx.runAction(internal.actions.plaid.syncAccountsForUserAdmin, {
           userId,
+          trigger: "manual",
         });
       result.plaid = {
         success: plaidResult.success,
@@ -129,7 +130,7 @@ export const syncAllProviders = action({
     try {
       const snaptradeResult: SyncAllResult["snaptrade"] = await ctx.runAction(
         internal.actions.snaptrade.syncAllForUserInternal,
-        { userId },
+        { userId, trigger: "manual" },
       );
       result.snaptrade = snaptradeResult;
     } catch (error) {
@@ -148,6 +149,7 @@ export const syncAllProviders = action({
       const bitpandaResult: { success: boolean; connectionsSynced: number } =
         await ctx.runAction(internal.actions.bitpanda.syncAllForUserInternal, {
           userId,
+          trigger: "manual",
         });
       result.bitpanda = bitpandaResult;
     } catch (error) {
@@ -246,6 +248,7 @@ export const syncAllForUserInternal = internalAction({
       const plaidResult: { success: boolean; itemsSynced: number } =
         await ctx.runAction(internal.actions.plaid.syncAccountsForUserAdmin, {
           userId,
+          trigger: "scheduled",
         });
       plaidSuccess = plaidResult.success;
       console.log(
@@ -262,7 +265,7 @@ export const syncAllForUserInternal = internalAction({
         connectionsProcessed: number;
       } = await ctx.runAction(
         internal.actions.snaptrade.syncAllForUserInternal,
-        { userId },
+        { userId, trigger: "scheduled" },
       );
       snaptradeSuccess = snaptradeResult.success;
       console.log(
@@ -280,6 +283,7 @@ export const syncAllForUserInternal = internalAction({
       const bitpandaResult: { success: boolean; connectionsSynced: number } =
         await ctx.runAction(internal.actions.bitpanda.syncAllForUserInternal, {
           userId,
+          trigger: "scheduled",
         });
       bitpandaSuccess = bitpandaResult.success;
       console.log(

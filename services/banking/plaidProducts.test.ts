@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { plaidLinkProducts } from "./plaidProducts";
+import { plaidLinkLanguage, plaidLinkProducts } from "./plaidProducts";
 
 describe("plaidLinkProducts", () => {
   it("defaults to transactions only", () => {
@@ -21,5 +21,20 @@ describe("plaidLinkProducts", () => {
 
   it("falls back to the default when only forbidden products are listed", () => {
     expect(plaidLinkProducts("auth, identity")).toEqual(["transactions"]);
+  });
+});
+
+describe("plaidLinkLanguage", () => {
+  it("passes Plaid's primary subtag for supported languages", () => {
+    expect(plaidLinkLanguage("de")).toBe("de");
+    expect(plaidLinkLanguage("pt-PT")).toBe("pt");
+    expect(plaidLinkLanguage("es")).toBe("es");
+    expect(plaidLinkLanguage("hi")).toBe("hi");
+  });
+
+  it("falls back to English for languages Plaid does not offer", () => {
+    expect(plaidLinkLanguage(undefined)).toBe("en");
+    expect(plaidLinkLanguage("zh-Hans")).toBe("en");
+    expect(plaidLinkLanguage("ar")).toBe("en");
   });
 });

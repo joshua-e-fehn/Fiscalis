@@ -99,10 +99,27 @@ export function intlLocaleFor(language: Language): IntlLocale {
   return INTL_TAGS[language];
 }
 
+/**
+ * The language among `candidates` a BCP 47 tag belongs to: the one it names
+ * exactly ("pt-PT"), else the first that shares its primary subtag ("de-CH"
+ * → "de", "pt-BR" → "pt-PT"), case-insensitively. Region-qualified app codes
+ * such as "pt-PT" make the exact match necessary.
+ */
+export function matchLanguage<Code extends string = Language>(
+  tag: string,
+  candidates: readonly Code[] = LANGUAGES as readonly string[] as readonly Code[],
+): Code | undefined {
+  const lower = tag.toLowerCase();
+  const primary = lower.split("-")[0];
+  return (
+    candidates.find((code) => code.toLowerCase() === lower) ??
+    candidates.find((code) => code.toLowerCase().split("-")[0] === primary)
+  );
+}
+
 /** The app language an Intl tag belongs to (e.g. "de-DE" or "de-CH" → "de"). */
 export function languageForLocale(locale: string): Language {
-  const primary = locale.split("-")[0].toLowerCase();
-  return isLanguage(primary) ? primary : DEFAULT_LANGUAGE;
+  return matchLanguage(locale) ?? DEFAULT_LANGUAGE;
 }
 
 /**
@@ -141,12 +158,10 @@ export function resolveLocale({
   acceptLanguage?: string | null;
   rendered?: readonly Language[];
 }): Language {
-  const isRendered = (code: string): code is Language =>
-    isLanguage(code) && rendered.includes(code);
-  if (cookie && isRendered(cookie)) return cookie;
+  if (cookie && isLanguage(cookie) && rendered.includes(cookie)) return cookie;
   for (const range of parseAcceptLanguage(acceptLanguage)) {
-    const primary = range.split("-")[0].toLowerCase();
-    if (isRendered(primary)) return primary;
+    const match = matchLanguage(range, rendered);
+    if (match) return match;
   }
   return DEFAULT_LANGUAGE;
 }

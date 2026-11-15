@@ -46,8 +46,8 @@ import {
   attributesFor,
   MANUAL_ASSET_ATTRIBUTE_KINDS,
   MANUAL_ASSET_SUBCATEGORIES,
-  localeDecimalMark,
   parseTypedAmount,
+  typedAmountText,
   validateManualAsset,
   type ManualAssetAttribute,
   type ManualAssetAttributes,
@@ -96,12 +96,6 @@ interface ValuationRow {
   value: string;
 }
 
-/** A stored amount as the form shows it, with the locale's decimal mark. */
-function amountText(value: number, locale: string): string {
-  const text = String(value);
-  return localeDecimalMark(locale) === "," ? text.replace(".", ",") : text;
-}
-
 function firstSubcategory(category: ManualAssetCategory): string {
   return MANUAL_ASSET_SUBCATEGORIES[category][0];
 }
@@ -140,12 +134,12 @@ function ManualAssetForm({
       ? asset.valuations.map((v, key) => ({
           key,
           date: v.date,
-          value: amountText(v.value, locale),
+          value: typedAmountText(v.value, locale),
         }))
       : [{ key: 0, date: todayLocalISO(), value: "" }],
   );
   const [costBasis, setCostBasis] = useState(
-    asset?.costBasis !== undefined ? amountText(asset.costBasis, locale) : "",
+    asset?.costBasis !== undefined ? typedAmountText(asset.costBasis, locale) : "",
   );
   const [linkedLoanId, setLinkedLoanId] = useState<string>(
     asset?.linkedLoanId ?? NO_LOAN,

@@ -15,6 +15,7 @@ import {
   PLANNED_LOCALES,
   languageForLocale,
   localeDirection,
+  matchLanguage,
   RENDERED_LANGUAGES,
   parseAcceptLanguage,
   renderedLanguage,
@@ -215,8 +216,10 @@ describe("resolveLocale", () => {
 
 // The defaults assume NEXT_PUBLIC_I18N_PREVIEW is unset.
 describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered languages", () => {
-  it("renders English, German, Spanish, French and Italian", () => {
-    expect(RENDERED_LANGUAGES).toEqual(["en", "de", "es", "fr", "it"]);
+  it("renders English and German, and only supported languages", () => {
+    expect(RENDERED_LANGUAGES).toEqual(expect.arrayContaining(["en", "de"]));
+    const supported: readonly string[] = LANGUAGES;
+    expect(RENDERED_LANGUAGES.filter((l) => !supported.includes(l))).toEqual([]);
   });
 
   it("renders Italian for Italian visitors", () => {
@@ -240,11 +243,22 @@ describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered language
 
 describe("locale helpers", () => {
   it("formats English day-first, German as de-DE, Spanish as es-ES, French as fr-FR and Italian as it-IT", () => {
-    expect(INTL_TAGS).toEqual({ en: "en-GB", de: "de-DE", es: "es-ES", fr: "fr-FR", it: "it-IT" });
+    expect(INTL_TAGS).toMatchObject({ en: "en-GB", de: "de-DE", es: "es-ES", fr: "fr-FR", it: "it-IT" });
+    expect(Object.keys(INTL_TAGS).sort()).toEqual([...LANGUAGES].sort());
   });
 
   it("maps Italian Intl tags to Italian", () => {
     expect(languageForLocale("it-CH")).toBe("it");
+  });
+
+  it("matches tags exactly first, then by primary subtag", () => {
+    const codes = ["en", "de", "pt-PT"];
+    expect(matchLanguage("pt-PT", codes)).toBe("pt-PT");
+    expect(matchLanguage("pt-pt", codes)).toBe("pt-PT");
+    expect(matchLanguage("pt-BR", codes)).toBe("pt-PT");
+    expect(matchLanguage("pt", codes)).toBe("pt-PT");
+    expect(matchLanguage("de-CH", codes)).toBe("de");
+    expect(matchLanguage("fr-FR", codes)).toBeUndefined();
   });
 
   it("maps Intl tags back to app languages", () => {

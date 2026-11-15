@@ -351,15 +351,22 @@ export function localeDecimalMark(locale: string): "." | "," {
   }
 }
 
+/** A stored amount as a form shows it, with the locale's decimal mark. */
+export function typedAmountText(value: number, locale: string): string {
+  const text = String(value);
+  return localeDecimalMark(locale) === "," ? text.replace(".", ",") : text;
+}
+
 /**
  * An amount as typed in the form, as a number: undefined when blank, NaN
  * when it is not a number. Spaces and apostrophes group digits. With both
  * "." and "," in it, the last one is the decimal mark ("1.250,50",
  * "1,250.50"). With one of them only, repeated it groups ("1.250.000"),
  * and once it is the decimal mark, except the locale's grouping mark
- * before exactly three digits: in German, Spanish, French or Italian "250.000" is
- * 250000, in English "1,500" is 1500. So a typed "250.000" is never read as
- * 250.
+ * before exactly three digits: in German, Spanish, French, Italian or
+ * Portuguese "250.000" is 250000, in English "1,500" is 1500. So a typed
+ * "250.000" is never read as 250. The grouping mark is "." in every locale
+ * whose decimal mark is ",", else ",".
  */
 export function parseTypedAmount(
   text: string,

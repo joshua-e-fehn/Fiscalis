@@ -1,6 +1,6 @@
 "use node";
 
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import { action, internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { encrypt, decrypt } from "../lib/encryption";
@@ -29,6 +29,7 @@ import { describeError } from "../../../services/security/providerError";
 import { classifyProviderFailure } from "../../../services/security/providerFailure";
 import { bitpandaFailureStatus } from "../../../services/security/connectionStatus";
 import { enforceUserRateLimit } from "../lib/rateLimit";
+import { userError } from "../lib/userError";
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -65,20 +66,18 @@ export const connect = action({
     const userId = identity.subject;
     const apiKey = args.apiKey.trim();
 
-    if (!apiKey) throw new Error("API key is required");
+    if (!apiKey) userError("bitpandaKeyRequired");
 
     // Validate the key against Bitpanda before persisting anything
     try {
       await validateApiKey(apiKey);
     } catch (error) {
       // Codes, not text: the client shows them in the user's language
-      // (integrations.bitpanda.connect.errors), and ConvexError data
-      // survives production error redaction
       if (error instanceof BitpandaAuthError) {
-        throw new ConvexError({ code: "bitpandaKeyRejected" });
+        userError("bitpandaKeyRejected");
       }
       if (classifyProviderFailure(error) === "transient") {
-        throw new ConvexError({ code: "bitpandaUnavailable" });
+        userError("bitpandaUnavailable");
       }
       throw error;
     }
@@ -128,7 +127,7 @@ export const deleteConnection = action({
       { connectionId: args.connectionId },
     );
     if (!connection || connection.userId !== userId) {
-      throw new Error("Connection not found or unauthorized");
+      userError("connectionNotFound");
     }
 
     await ctx.runMutation(internal.bitpanda.deleteConnectionData, {
@@ -165,7 +164,7 @@ export const syncConnection = action({
       { connectionId: args.connectionId },
     );
     if (!connection || connection.userId !== userId) {
-      throw new Error("Connection not found or unauthorized");
+      userError("connectionNotFound");
     }
 
     const holdingsSync: { ok: boolean } = await ctx.runAction(

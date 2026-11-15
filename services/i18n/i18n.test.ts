@@ -21,6 +21,7 @@ import {
   resolveLocale,
   validTimeZone,
 } from "@/i18n/locales";
+import { USER_ERROR_CODES, isUserErrorCode } from "./userErrorCodes";
 
 const MESSAGES_DIR = path.resolve(__dirname, "../../frontend/messages");
 const SOURCE = "en";
@@ -125,6 +126,29 @@ describe("message catalogues", () => {
       });
     });
   }
+});
+
+describe("user error codes", () => {
+  it("are unique", () => {
+    expect(new Set(USER_ERROR_CODES).size).toBe(USER_ERROR_CODES.length);
+  });
+
+  for (const language of languageDirs) {
+    it(`each have a message under common.errors in ${language}`, () => {
+      const common = loadLanguage(language).common ?? {};
+      const missing = USER_ERROR_CODES.filter(
+        (code) => !common[`errors.${code}`]?.trim(),
+      );
+      expect(missing).toEqual([]);
+    });
+  }
+
+  it("recognises codes and rejects stored English text", () => {
+    expect(isUserErrorCode("bitpandaReauthRequired")).toBe(true);
+    expect(isUserErrorCode("birthDate.future")).toBe(true);
+    expect(isUserErrorCode("Bitpanda API error 400")).toBe(false);
+    expect(isUserErrorCode(undefined)).toBe(false);
+  });
 });
 
 describe("icuArguments", () => {

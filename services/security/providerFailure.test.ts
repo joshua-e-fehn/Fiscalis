@@ -8,6 +8,7 @@ import {
 } from "./providerFailure";
 import {
   BITPANDA_REAUTH_MESSAGE,
+  BITPANDA_SYNC_FAILED_MESSAGE,
   BITPANDA_TRANSIENT_MESSAGE,
   bitpandaFailureStatus,
   snaptradeFailureStatus,
@@ -86,10 +87,10 @@ describe("bitpandaFailureStatus", () => {
     ).toBe("transient_error");
   });
 
-  it("reports anything else as an error with its message", () => {
+  it("reports anything else as a failed sync", () => {
     expect(bitpandaFailureStatus(statusError(400))).toEqual({
       status: "error",
-      errorMessage: "Bitpanda API error 400",
+      errorMessage: BITPANDA_SYNC_FAILED_MESSAGE,
     });
   });
 });

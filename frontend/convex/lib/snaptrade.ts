@@ -10,8 +10,10 @@
  * 3. The userSecret is used to authenticate API calls for that user
  */
 
+import { ConvexError } from "convex/values";
 import { Snaptrade } from "snaptrade-typescript-sdk";
 import { PROVIDER_TIMEOUT_MS, withRetry } from "./retry";
+import { userError, type UserErrorCode } from "./userError";
 
 /**
  * Get a configured SnapTrade client instance
@@ -66,37 +68,15 @@ export function normalizeAccountType(
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * SnapTrade error codes and their meanings
- */
-export const SNAPTRADE_ERROR_CODES = {
-  // Authentication errors
-  INVALID_CREDENTIALS: "Invalid SnapTrade credentials",
-  USER_NOT_FOUND: "User not registered with SnapTrade",
-  USER_SECRET_INVALID: "User secret is invalid or expired",
-
-  // Connection errors
-  CONNECTION_NOT_FOUND: "Broker connection not found",
-  CONNECTION_EXPIRED:
-    "Broker connection has expired - re-authentication required",
-  CONNECTION_DISABLED: "Broker connection has been disabled",
-  BROKERAGE_ERROR: "The brokerage reported an error",
-
-  // Rate limiting
-  RATE_LIMITED: "Too many requests - please try again in a moment",
-
-  // General errors
-  NETWORK_ERROR: "Network error - please check your connection",
-  TIMEOUT: "Request timed out - please try again",
-  UNKNOWN: "An unexpected error occurred",
-} as const;
-
-/**
- * Parsed SnapTrade error with user-friendly message
+ * Parsed SnapTrade error: `message` is the provider's text (for logs),
+ * `userCode` the user-facing error code (services/i18n/userErrorCodes.ts),
+ * which the actions throw (snaptradeUserError) and persist as a
+ * connection's errorMessage.
  */
 export interface SnapTradeError {
   code: string;
   message: string;
-  userMessage: string;
+  userCode: UserErrorCode;
   isRetryable: boolean;
   requiresReauth: boolean;
   retryAfterMs?: number;
@@ -110,7 +90,7 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
   const defaultError: SnapTradeError = {
     code: "UNKNOWN",
     message: error instanceof Error ? error.message : String(error),
-    userMessage: SNAPTRADE_ERROR_CODES.UNKNOWN,
+    userCode: "snaptradeUnknown",
     isRetryable: false,
     requiresReauth: false,
   };
@@ -149,7 +129,7 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
     return {
       code: "RATE_LIMITED",
       message: errorMessage,
-      userMessage: SNAPTRADE_ERROR_CODES.RATE_LIMITED,
+      userCode: "snaptradeRateLimited",
       isRetryable: true,
       requiresReauth: false,
       retryAfterMs,
@@ -167,9 +147,9 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
     return {
       code: isConnectionAuth ? "CONNECTION_EXPIRED" : "USER_SECRET_INVALID",
       message: errorMessage,
-      userMessage: isConnectionAuth
-        ? SNAPTRADE_ERROR_CODES.CONNECTION_EXPIRED
-        : SNAPTRADE_ERROR_CODES.USER_SECRET_INVALID,
+      userCode: isConnectionAuth
+        ? "snaptradeConnectionExpired"
+        : "snaptradeSessionExpired",
       isRetryable: false,
       requiresReauth: true,
     };
@@ -184,9 +164,9 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
     return {
       code: isConnection ? "CONNECTION_NOT_FOUND" : "USER_NOT_FOUND",
       message: errorMessage,
-      userMessage: isConnection
-        ? SNAPTRADE_ERROR_CODES.CONNECTION_NOT_FOUND
-        : SNAPTRADE_ERROR_CODES.USER_NOT_FOUND,
+      userCode: isConnection
+        ? "snaptradeConnectionNotFound"
+        : "snaptradeNotRegistered",
       isRetryable: false,
       requiresReauth: false,
     };
@@ -197,7 +177,7 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
     return {
       code: "SERVER_ERROR",
       message: errorMessage,
-      userMessage: "SnapTrade is experiencing issues. Please try again later.",
+      userCode: "snaptradeUnavailable",
       isRetryable: true,
       requiresReauth: false,
       retryAfterMs: 5000,
@@ -209,7 +189,7 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
     return {
       code: "TIMEOUT",
       message: errorMessage,
-      userMessage: SNAPTRADE_ERROR_CODES.TIMEOUT,
+      userCode: "snaptradeTimeout",
       isRetryable: true,
       requiresReauth: false,
       retryAfterMs: 2000,
@@ -220,7 +200,7 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
     return {
       code: "NETWORK_ERROR",
       message: errorMessage,
-      userMessage: SNAPTRADE_ERROR_CODES.NETWORK_ERROR,
+      userCode: "snaptradeNetworkError",
       isRetryable: true,
       requiresReauth: false,
       retryAfterMs: 5000,
@@ -235,7 +215,7 @@ export function parseSnapTradeError(error: unknown): SnapTradeError {
     return {
       code: "BROKERAGE_ERROR",
       message: errorMessage,
-      userMessage: `${SNAPTRADE_ERROR_CODES.BROKERAGE_ERROR}: ${errorMessage}`,
+      userCode: "snaptradeBrokerageError",
       isRetryable: false,
       requiresReauth: false,
     };
@@ -260,11 +240,12 @@ export function withSnaptradeRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * Format error for user display
+ * Throws a SnapTrade failure as its coded user error (convex/lib/userError.ts);
+ * an error that already is one (thrown inside the same try) passes unchanged.
  */
-export function formatErrorForUser(error: unknown): string {
-  const parsed = parseSnapTradeError(error);
-  return parsed.userMessage;
+export function snaptradeUserError(error: unknown): never {
+  if (error instanceof ConvexError) throw error;
+  userError(parseSnapTradeError(error).userCode);
 }
 
 /**

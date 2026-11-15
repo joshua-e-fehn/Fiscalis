@@ -17,6 +17,7 @@ import {
   brokerAccountValue,
 } from "@/../services/portfolio/categorySummary";
 import { useSyncContextSafe } from "@/providers/syncProvider";
+import { useStoredErrorMessage } from "@/i18n/errors";
 import {
   IntegrationConnectionCard,
   IntegrationAccountItem,
@@ -83,6 +84,7 @@ export function BrokerAccountsCard({
 }: BrokerAccountsCardProps) {
   const t = useTranslations("integrations.brokers.connection");
   const tNotices = useTranslations("integrations.connectionNotices");
+  const storedError = useStoredErrorMessage();
   const {
     deleteConnection,
     isLoading: isDeleting,
@@ -134,7 +136,9 @@ export function BrokerAccountsCard({
       totalCashEur={totalCash}
       lastSyncAt={connection.lastSyncAt}
       errorMessage={
-        deleteError ? tNotices("disconnectFailed") : connection.errorMessage
+        deleteError
+          ? tNotices("disconnectFailed")
+          : storedError(connection.errorMessage)
       }
       secondaryInfo={t("accounts", { count: accounts.length })}
       onSync={handleSync}

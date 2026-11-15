@@ -29,6 +29,7 @@ import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Skeleton } from "@/components/ui/shadcn/skeleton";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useStoredErrorMessage } from "@/i18n/errors";
 
 export function BitpandaConnectionsCard() {
   const t = useTranslations("integrations.bitpanda");
@@ -36,6 +37,7 @@ export function BitpandaConnectionsCard() {
   const tConnection = useTranslations("integrations.connection");
   const tActions = useTranslations("common.actions");
   const format = useFormatter();
+  const storedError = useStoredErrorMessage();
   const connections = useBitpandaConnections();
   const holdings = useBitpandaHoldings();
   const { sync } = useSyncBitpandaConnection();
@@ -116,12 +118,12 @@ export function BitpandaConnectionsCard() {
                   {conn.status === "needs_reauth" ? (
                     <>
                       <AlertCircle className="h-3 w-3 text-destructive" />
-                      {conn.errorMessage ?? t("keyRejected")}
+                      {storedError(conn.errorMessage) ?? t("keyRejected")}
                     </>
                   ) : conn.status === "error" ? (
                     <>
                       <AlertCircle className="h-3 w-3 text-destructive" />
-                      {conn.errorMessage ?? t("syncFailed")}
+                      {storedError(conn.errorMessage) ?? t("syncFailed")}
                     </>
                   ) : conn.status === "transient_error" ? (
                     <>

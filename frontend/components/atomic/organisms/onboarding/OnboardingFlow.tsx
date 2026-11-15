@@ -136,7 +136,7 @@ export function OnboardingFlow() {
 
       {/* Progress indicator - hide on welcome step */}
       {currentStep !== OnboardingStepEnum.WELCOME && (
-        <div className="fixed top-0 left-0 right-0 z-50 px-4 py-6 md:px-8 bg-gradient-to-b from-[#050505] via-[#050505]/80 to-transparent pb-10">
+        <div className="fixed top-0 start-0 end-0 z-50 px-4 py-6 md:px-8 bg-gradient-to-b from-[#050505] via-[#050505]/80 to-transparent pb-10">
           {/* Desktop progress */}
           <div className="hidden md:block max-w-2xl mx-auto">
             <OnboardingProgress

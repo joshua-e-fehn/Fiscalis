@@ -22,6 +22,7 @@ import { SignInButton, SignedOut, SignedIn } from "@clerk/nextjs";
 import { Button } from "@/components/ui/shadcn/button";
 import { LanguageToggle } from "@/components/i18n/LanguageToggle";
 import { formatCurrency, formatPercent } from "@/lib/utils/currency";
+import { useInlineSign } from "@/hooks/useInlineSign";
 import { SiteFooter } from "@/components/atomic/organisms/siteFooter";
 
 // Animation variants
@@ -71,16 +72,17 @@ const goldHighlight = gradient("from-[#D4AF37] to-[#F4CF57]");
 
 export default function HomePage() {
   const t = useTranslations("landing");
+  const sign = useInlineSign();
   return (
     <div className="min-h-screen bg-[#050505] overflow-x-hidden">
       {/* Animated Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#D4AF37]/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[#3B82F6]/5 rounded-full blur-[100px]" />
+        <div className="absolute top-0 start-1/4 w-[500px] h-[500px] bg-[#D4AF37]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 end-1/4 w-[400px] h-[400px] bg-[#3B82F6]/5 rounded-full blur-[100px]" />
       </div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-white/[0.05]">
+      <nav className="fixed top-0 start-0 end-0 z-50 bg-[#050505]/80 backdrop-blur-xl border-b border-white/[0.05]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -142,7 +144,7 @@ export default function HomePage() {
                 <Link href="/dashboard">
                   <Button className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-medium">
                     {t("nav.dashboard")}
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                    <ArrowRight className="w-4 h-4 ms-2 rtl:-scale-x-100" />
                   </Button>
                 </Link>
               </SignedIn>
@@ -227,7 +229,7 @@ export default function HomePage() {
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-8 py-6 text-lg"
                   >
                     {t("nav.joinWaitlist")}
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-5 h-5 ms-2 rtl:-scale-x-100" />
                   </Button>
                 </Link>
                 {/* TODO: Add demo video
@@ -247,7 +249,7 @@ export default function HomePage() {
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-8 py-6 text-lg"
                   >
                     {t("nav.goToDashboard")}
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-5 h-5 ms-2 rtl:-scale-x-100" />
                   </Button>
                 </Link>
               </SignedIn>
@@ -417,7 +419,7 @@ export default function HomePage() {
 
             <motion.div
               className="relative"
-              initial={{ opacity: 0, x: 40 }}
+              initial={{ opacity: 0, x: 40 * sign }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
@@ -462,7 +464,7 @@ export default function HomePage() {
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-10 py-6 text-lg"
                   >
                     {t("nav.joinWaitlist")}
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-5 h-5 ms-2 rtl:-scale-x-100" />
                   </Button>
                 </Link>
               </SignedOut>
@@ -473,7 +475,7 @@ export default function HomePage() {
                     className="bg-gradient-to-r from-[#D4AF37] to-[#B8962E] hover:from-[#E5C048] hover:to-[#D4AF37] text-black font-semibold px-10 py-6 text-lg"
                   >
                     {t("nav.goToDashboard")}
-                    <ArrowRight className="w-5 h-5 ml-2" />
+                    <ArrowRight className="w-5 h-5 ms-2 rtl:-scale-x-100" />
                   </Button>
                 </Link>
               </SignedIn>

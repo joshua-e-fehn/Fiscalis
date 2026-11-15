@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { pageTransition } from "@/lib/types/onboarding";
+import { useInlineSign } from "@/hooks/useInlineSign";
 
 interface OnboardingStepProps {
   children: React.ReactNode;
@@ -17,10 +18,11 @@ export function OnboardingStep({
   className,
   direction = "forward",
 }: OnboardingStepProps) {
+  const sign = useInlineSign();
   const variants = {
     initial: {
       opacity: 0,
-      x: direction === "forward" ? 50 : -50,
+      x: (direction === "forward" ? 50 : -50) * sign,
     },
     animate: {
       opacity: 1,
@@ -28,7 +30,7 @@ export function OnboardingStep({
     },
     exit: {
       opacity: 0,
-      x: direction === "forward" ? -50 : 50,
+      x: (direction === "forward" ? -50 : 50) * sign,
     },
   };
 

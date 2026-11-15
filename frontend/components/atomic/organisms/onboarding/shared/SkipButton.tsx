@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { useInlineSign } from "@/hooks/useInlineSign";
 import { ChevronRight } from "lucide-react";
 
 interface SkipButtonProps {
@@ -19,6 +20,7 @@ export function SkipButton({
   disabled = false,
 }: SkipButtonProps) {
   const t = useTranslations("onboarding.shared");
+  const sign = useInlineSign();
   return (
     <motion.button
       type="button"
@@ -30,11 +32,11 @@ export function SkipButton({
         "disabled:opacity-50 disabled:cursor-not-allowed",
         className,
       )}
-      whileHover={{ x: 3 }}
+      whileHover={{ x: 3 * sign }}
       whileTap={{ scale: 0.98 }}
     >
       {text ?? t("skip")}
-      <ChevronRight className="w-4 h-4" />
+      <ChevronRight className="w-4 h-4 rtl:-scale-x-100" />
     </motion.button>
   );
 }

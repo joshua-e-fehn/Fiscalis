@@ -84,7 +84,7 @@ export async function LegalPage({
             href="/"
             className="flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 rtl:-scale-x-100" />
             {t("common.home")}
           </Link>
         </div>
@@ -138,7 +138,7 @@ function LegalBlockView({
 }) {
   if (block.type === "list") {
     return (
-      <ul className="list-disc pl-6 space-y-1">
+      <ul className="list-disc ps-6 space-y-1">
         {block.items.map((item, i) => (
           <li key={i}>
             <LegalLineView line={item} placeholderLabel={placeholderLabel} />

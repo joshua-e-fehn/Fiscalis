@@ -120,7 +120,7 @@ export function WelcomeStep({ onNext }: WelcomeStepProps) {
           <OnboardingButton
             onClick={onNext}
             size="lg"
-            icon={<ArrowRight className="w-5 h-5" />}
+            icon={<ArrowRight className="w-5 h-5 rtl:-scale-x-100" />}
           >
             {t("getStarted")}
           </OnboardingButton>
@@ -168,7 +168,7 @@ function DashboardMockup() {
   return (
     <div className="w-full max-w-lg mx-auto p-6">
       {/* Net Worth Header */}
-      <div className="text-left mb-6">
+      <div className="text-start mb-6">
         <p className="text-white/40 text-sm mb-1">
           {t("mockupNetWorth")}
         </p>
@@ -240,7 +240,7 @@ function MockupBar({ label, value, color, delay }: MockupBarProps) {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-white/50 text-xs w-36 text-left truncate">
+      <span className="text-white/50 text-xs w-36 text-start truncate">
         {label}
       </span>
       <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
@@ -253,7 +253,7 @@ function MockupBar({ label, value, color, delay }: MockupBarProps) {
         />
       </div>
       <span
-        className={`text-xs w-10 text-right ${
+        className={`text-xs w-10 text-end ${
           isNegative ? "text-red-400" : "text-white/60"
         }`}
       >

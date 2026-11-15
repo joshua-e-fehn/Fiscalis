@@ -201,7 +201,7 @@ describe("resolveLocale", () => {
   it("takes the first supported browser language", () => {
     expect(
       resolveLocale({
-        acceptLanguage: "fr-FR,fr;q=0.9,de;q=0.8,en;q=0.7",
+        acceptLanguage: "nl-NL,nl;q=0.9,de;q=0.8,en;q=0.7",
         rendered,
       }),
     ).toBe("de");
@@ -209,7 +209,7 @@ describe("resolveLocale", () => {
 
   it("falls back to English", () => {
     expect(resolveLocale({ rendered })).toBe("en");
-    expect(resolveLocale({ acceptLanguage: "fr, it", rendered })).toBe("en");
+    expect(resolveLocale({ acceptLanguage: "nl, sv", rendered })).toBe("en");
   });
 });
 
@@ -241,7 +241,7 @@ describe("locale helpers", () => {
     expect(languageForLocale("de-DE")).toBe("de");
     expect(languageForLocale("de-CH")).toBe("de");
     expect(languageForLocale("en-GB")).toBe("en");
-    expect(languageForLocale("fr-FR")).toBe("en");
+    expect(languageForLocale("nl-NL")).toBe("en");
   });
 
   it("is right-to-left only for Arabic", () => {

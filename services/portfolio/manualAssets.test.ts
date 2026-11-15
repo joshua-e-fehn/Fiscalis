@@ -288,6 +288,13 @@ describe("parseTypedAmount", () => {
     expect(parseTypedAmount("1250,5", "es")).toBe(1250.5);
   });
 
+  it("reads French input", () => {
+    expect(parseTypedAmount("250.000", "fr-FR")).toBe(250_000);
+    expect(parseTypedAmount("1 250,50", "fr-FR")).toBe(1250.5);
+    expect(parseTypedAmount("1\u202f250,5", "fr")).toBe(1250.5);
+    expect(parseTypedAmount("1,500", "fr")).toBe(1.5);
+  });
+
   it("reads English input", () => {
     expect(parseTypedAmount("1,500", "en")).toBe(1500);
     expect(parseTypedAmount("1,250.50", "en")).toBe(1250.5);
@@ -302,6 +309,9 @@ describe("localeDecimalMark", () => {
     expect(localeDecimalMark("en")).toBe(".");
     expect(localeDecimalMark("en-GB")).toBe(".");
     expect(localeDecimalMark("de")).toBe(",");
+    expect(localeDecimalMark("de-DE")).toBe(",");
     expect(localeDecimalMark("es-ES")).toBe(",");
+    expect(localeDecimalMark("fr-FR")).toBe(",");
+    expect(localeDecimalMark("not a locale")).toBe(".");
   });
 });

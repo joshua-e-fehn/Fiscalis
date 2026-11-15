@@ -11,6 +11,11 @@ import {
   getClassificationFields,
 } from "../../services/classification";
 import { getUserId } from "./lib/auth";
+import { notify } from "./lib/notifications";
+import {
+  connectionStatusNotification,
+  consentNotification,
+} from "../../services/notifications/notifications";
 import { requireConnectionSlot } from "./lib/plan";
 import { ensureSyncTarget } from "./lib/syncTargets";
 import { loadFxRates } from "./fxRates";
@@ -334,11 +339,21 @@ export const updateItemStatus = internalMutation({
 
     if (!item) throw new Error("Item not found");
 
+    const now = Date.now();
     await ctx.db.patch(item._id, {
       status: args.status,
       errorCode: args.errorCode,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
+    const alert = connectionStatusNotification({
+      provider: "plaid",
+      connection: item.itemId,
+      name: item.institutionName ?? item.institutionId ?? item.itemId,
+      status: args.status,
+      errorCode: args.errorCode,
+      nowMs: now,
+    });
+    if (alert) await notify(ctx, item.userId, alert);
   },
 });
 
@@ -362,6 +377,23 @@ export const updateItemConsent = internalMutation({
       .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
       .first();
     if (!item) return;
+
+    // The nearer of the end of consent and an expected disconnect, as the
+    // card's notice (services/banking/consentExpiry.ts consentNotice)
+    const now = Date.now();
+    const ends = [
+      args.consentExpiresAt === undefined ? item.consentExpiresAt : args.consentExpiresAt,
+      args.disconnectExpectedAt === undefined ? item.disconnectExpectedAt : args.disconnectExpectedAt,
+    ].filter((at): at is number => typeof at === "number");
+    if (ends.length > 0) {
+      const alert = consentNotification({
+        itemId: item.itemId,
+        name: item.institutionName ?? item.institutionId ?? item.itemId,
+        consentExpiresAt: Math.min(...ends),
+        nowMs: now,
+      });
+      if (alert) await notify(ctx, item.userId, alert);
+    }
 
     await ctx.db.patch(item._id, {
       ...(args.consentExpiresAt !== undefined

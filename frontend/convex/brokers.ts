@@ -10,6 +10,8 @@ import {
 } from "../../services/classification";
 import { loadFxRates } from "./fxRates";
 import { requireConnectionSlot } from "./lib/plan";
+import { notify } from "./lib/notifications";
+import { connectionStatusNotification } from "../../services/notifications/notifications";
 import { ensureSyncTarget } from "./lib/syncTargets";
 import { deleteOverridesByKeyPrefix } from "./valuationOverrides";
 import { brokerPositionKey } from "../../services/portfolio/flows";
@@ -373,14 +375,25 @@ export const updateConnectionStatus = internalMutation({
     lastSyncAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) throw new Error("Connection not found");
+    const now = Date.now();
     // errorMessage is cleared when absent; lastSyncAt is only ever moved
     // forward, so a failed or in-progress sync keeps the last good time
     await ctx.db.patch(args.connectionId, {
       status: args.status,
       errorMessage: args.errorMessage,
       ...(args.lastSyncAt !== undefined ? { lastSyncAt: args.lastSyncAt } : {}),
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
+    const alert = connectionStatusNotification({
+      provider: "snaptrade",
+      connection: connection._id,
+      name: connection.brokerName,
+      status: args.status,
+      nowMs: now,
+    });
+    if (alert) await notify(ctx, connection.userId, alert);
   },
 });
 

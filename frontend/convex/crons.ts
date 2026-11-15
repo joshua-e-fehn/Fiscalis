@@ -115,4 +115,15 @@ crons.daily(
   internal.syncRuns.pruneRuns,
 );
 
+// ═══════════════════════════════════════════════════════════════
+// Notifications (ENG-207)
+// Daily at 04:45 UTC: delete notifications older than 90 days
+// (services/notifications/notifications.ts NOTIFICATION_RETENTION_MS)
+// ═══════════════════════════════════════════════════════════════
+crons.daily(
+  "prune-notifications",
+  { hourUTC: 4, minuteUTC: 45 },
+  internal.notifications.pruneNotifications,
+);
+
 export default crons;

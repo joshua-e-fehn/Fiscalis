@@ -76,6 +76,8 @@ export const DEMO_TABLES = [
   "portfolioSnapshots",
   "apiKeys",
   "valuationOverrides",
+  "notifications",
+  "notificationPreferences",
 ] as const satisfies readonly TableNames[];
 
 type DemoTable = (typeof DEMO_TABLES)[number];
@@ -561,5 +563,37 @@ export async function insertDemoData(
       source: "demo-seed",
     });
   }
+
+  // ── Notifications ──────────────────────────────────────────────
+  // One unread alert (the bell's badge) and one read
+  await insert("notifications", {
+    userId,
+    type: "consentExpiring",
+    titleKey: "messages.consentExpiring.title",
+    bodyKey: "messages.consentExpiring.body",
+    params: { connection: "Demo Bank", at: now + 10 * DAY_MS },
+    link: "/integrations/banking",
+    dedupeKey: `consentExpiring:${itemId}:${isoDay(now + 10 * DAY_MS)}`,
+    inApp: true,
+    createdAt: now - DAY_MS,
+  });
+  await insert("notifications", {
+    userId,
+    type: "syncFailed",
+    titleKey: "messages.syncFailed.title",
+    bodyKey: "messages.syncFailed.body",
+    params: { connection: "Demo Broker" },
+    link: "/integrations/brokers",
+    inApp: true,
+    createdAt: now - 3 * DAY_MS,
+    readAt: now - 2 * DAY_MS,
+  });
+  await insert("notificationPreferences", {
+    userId,
+    type: "netWorthChange",
+    inApp: true,
+    email: false,
+    updatedAt: now,
+  });
   return ids;
 }

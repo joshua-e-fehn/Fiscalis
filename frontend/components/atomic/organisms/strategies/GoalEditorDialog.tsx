@@ -96,6 +96,11 @@ interface Row {
 
 let nextKey = 1;
 
+/** A checklist step id unique across page loads (ids are stored with the rule). */
+function newStepId(): string {
+  return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
 function blankRow(kind: RuleLeafKind, trackers: readonly TrackerView[]): Row {
   const counts = trackers.filter((t) => t.kind === "count");
   const measures = trackers.filter((t) => t.kind === "measurement");
@@ -116,7 +121,7 @@ function blankRow(kind: RuleLeafKind, trackers: readonly TrackerView[]): Row {
     period: "week",
     comparison: "atLeast",
     basis: "best",
-    items: kind === "checklist" ? [{ id: `s${nextKey++}`, label: "" }] : [],
+    items: kind === "checklist" ? [{ id: newStepId(), label: "" }] : [],
   };
 }
 
@@ -236,7 +241,10 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
     !goal && backdateUntil !== undefined && Date.parse(`${today}T00:00:00Z`) < backdateUntil;
   const [startDate, setStartDate] = useState(today);
   const [saving, setSaving] = useState(false);
-  const [invalid, setInvalid] = useState(false);
+  /** Why the last save was refused, shown under the form until the next try */
+  const [problem, setProblem] = useState<{ message: string; rule: boolean } | null>(null);
+  /** The rule is a single check rather than a group (kept so a save does not reshape it) */
+  const bare = initialRule ? !isGroup(initialRule) : true;
 
   const patch = (key: number, change: Partial<Row>) =>
     setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...change } : r)));
@@ -244,9 +252,9 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
   const buildRule = (): RuleNode => {
     if (keepRule && initialRule) return initialRule;
     const leaves = rows.map((r) => toLeaf(r, locale));
-    if (leaves.length === 1 && combinator === "all") return leaves[0];
+    if (leaves.length === 1 && combinator === "all" && bare) return leaves[0];
     return combinator === "atLeast"
-      ? { kind: "atLeast", count: Number(atLeast), children: leaves }
+      ? { kind: "atLeast", count: parseTypedAmount(atLeast, locale) ?? Number.NaN, children: leaves }
       : { kind: combinator, children: leaves };
   };
 
@@ -260,10 +268,12 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
     };
     const checked = normalizeGoal(input);
     if (!checked.ok) {
-      setInvalid(true);
-      toast.error(errorMessage(null, checked.error as ErrorCode));
+      const message = errorMessage(null, checked.error as ErrorCode);
+      setProblem({ message, rule: checked.error === "goalRuleInvalid" });
+      toast.error(message);
       return;
     }
+    setProblem(null);
     setSaving(true);
     try {
       if (goal) await updateGoal({ goalId: goal._id, ...input });
@@ -414,7 +424,9 @@ function GoalEditorForm({ onOpenChange, goal, trackers, backdateUntil }: GoalEdi
             </>
           )}
         </div>
-        {invalid && <p className="text-sm text-destructive">{t("invalid")}</p>}
+        {problem && (
+          <p className="text-sm text-destructive">{problem.rule ? t("invalid") : problem.message}</p>
+        )}
       </div>
 
       <DialogFooter>
@@ -555,7 +567,7 @@ function RowFields({ row, patch, counts, measures, currency }: RowFieldsProps) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => patch({ items: [...row.items, { id: `s${Date.now()}`, label: "" }] })}
+            onClick={() => patch({ items: [...row.items, { id: newStepId(), label: "" }] })}
           >
             <Plus className="me-1 h-4 w-4" />
             {t("addStep")}

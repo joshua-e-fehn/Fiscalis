@@ -69,7 +69,8 @@ function PurchaseForm({ goal, trackers, currency, onOpenChange }: GoalPurchaseDi
   const metricName = useMetricName(trackers);
   const [price, setPrice] = useState(typedAmountText(goal.price, locale));
   const [saving, setSaving] = useState(false);
-  const parsed = parseTypedAmount(price, locale) ?? null;
+  const typed = parseTypedAmount(price, locale);
+  const parsed = typed !== undefined && Number.isFinite(typed) && typed > 0 ? typed : null;
   // Preview the price once typing pauses: each new price is a full evaluation
   const [settled, setSettled] = useState(parsed);
   useEffect(() => {
@@ -108,7 +109,7 @@ function PurchaseForm({ goal, trackers, currency, onOpenChange }: GoalPurchaseDi
           <Label htmlFor="goal-paid">{t("pricePaid", { currency: goal.currency })}</Label>
           <Input id="goal-paid" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
         </div>
-        {(preview === undefined && settled !== null) || settled !== parsed ? (
+        {parsed !== null && (preview === undefined || settled !== parsed) ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : preview ? (
           <div className="space-y-2 text-sm">
@@ -136,7 +137,7 @@ function PurchaseForm({ goal, trackers, currency, onOpenChange }: GoalPurchaseDi
         </Button>
         <Button
           onClick={() => void submit()}
-          disabled={saving || parsed === null || parsed <= 0}
+          disabled={saving || parsed === null}
           variant={preview && !preview.earned ? "destructive" : "default"}
         >
           {saving && <Loader2 className="me-2 h-4 w-4 animate-spin" />}

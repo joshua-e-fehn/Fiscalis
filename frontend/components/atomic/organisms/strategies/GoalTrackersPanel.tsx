@@ -37,10 +37,10 @@ import {
   useRemoveEntry,
   useRemoveTracker,
   useTrackerEntries,
-  useUtcToday,
   type TrackerView,
 } from "@/hooks/convex/goals";
 import { useErrorMessage } from "@/i18n/errors";
+import { useLocalToday } from "@/hooks/useLocalToday";
 import { parseTypedAmount } from "@/../services/i18n/typedAmount";
 
 export function GoalTrackersPanel({ trackers }: { trackers: readonly TrackerView[] }) {
@@ -106,8 +106,10 @@ function TrackerRow({ tracker }: { tracker: TrackerView }) {
   const errorMessage = useErrorMessage();
   const logEntry = useLogEntry();
   const removeTracker = useRemoveTracker();
-  const today = useUtcToday();
+  // The viewer's own day: the server accepts days up to the furthest time zone ahead of UTC
+  const today = useLocalToday();
   const [date, setDate] = useState(today);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [value, setValue] = useState(tracker.kind === "count" ? "1" : "");
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -158,9 +160,15 @@ function TrackerRow({ tracker }: { tracker: TrackerView }) {
           <Button variant="ghost" size="icon" aria-label={t(open ? "hideEntries" : "showEntries")} onClick={() => setOpen(!open)}>
             {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
-          <Button variant="ghost" size="icon" aria-label={t("delete")} onClick={() => void remove()}>
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {confirmDelete ? (
+            <Button variant="destructive" size="sm" onClick={() => void remove()} onBlur={() => setConfirmDelete(false)}>
+              {t("delete")}
+            </Button>
+          ) : (
+            <Button variant="ghost" size="icon" aria-label={t("delete")} onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
       {open && <EntryList trackerId={tracker._id} />}

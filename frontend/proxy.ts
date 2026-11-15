@@ -58,7 +58,7 @@ export default clerkMiddleware(
     contentSecurityPolicy: {
       ...(isProd && { strict: true }),
       directives: {
-        // Convex real-time (WebSocket + HTTP), Clerk FAPI, World Bank API, CARTO tiles, Vezgo
+        // Convex real-time (WebSocket + HTTP), Clerk FAPI, World Bank API, CARTO tiles
         // Note: both bare domain and wildcard are needed — *.x.com only matches subdomains, not x.com itself
         // wss: scheme is required separately — schemeless entries only match https:
         "connect-src": [
@@ -67,15 +67,14 @@ export default clerkMiddleware(
           "api.worldbank.org",
           "basemaps.cartocdn.com",
           "*.basemaps.cartocdn.com",
-          "connect.vezgo.com",
           // Dev tools (e.g. console-ninja) connect via WebSocket on random local ports.
           // 'self' only matches the exact dev server origin, not other ports or 127.0.0.1.
           ...(!isProd ? ["ws://localhost:*", "ws://127.0.0.1:*"] : []),
         ],
         // Plaid Link script loaded at runtime
         "script-src": ["cdn.plaid.com"],
-        // Plaid Link iframe, Vezgo Connect widget, SnapTrade portal, Cloudflare challenges
-        "frame-src": ["*.plaid.com", "connect.vezgo.com", "app.snaptrade.com"],
+        // Plaid Link iframe, SnapTrade portal
+        "frame-src": ["*.plaid.com", "app.snaptrade.com"],
         // Clerk avatars, CARTO map sprites, data URIs (inline SVGs), blob URLs (MapLibre)
         "img-src": [
           "data:",

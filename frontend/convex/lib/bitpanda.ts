@@ -3,7 +3,7 @@
 /**
  * Bitpanda public API client.
  *
- * Unlike the OAuth aggregators (Plaid, SnapTrade, Vezgo), the Bitpanda
+ * Unlike the OAuth aggregators (Plaid, SnapTrade), the Bitpanda
  * consumer API is a direct REST API authenticated with a per-user,
  * read-only API key sent in the `X-Api-Key` header. There is no SDK and
  * no token refresh — a connection is just an encrypted API key.

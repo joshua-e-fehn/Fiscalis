@@ -5,7 +5,7 @@
  *
  * Crypto is an asset class aggregated across all providers (brokers + Bitpanda)
  * via the unified `categories.getCrypto` / `categories.getCryptoTransactions`
- * queries. (Vezgo has been removed.)
+ * queries.
  *
  * The server values positions in EUR; these hooks return them in the
  * display currency at the latest rate (`currency`). A position's native

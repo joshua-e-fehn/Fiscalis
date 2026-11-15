@@ -30,6 +30,10 @@ export interface UserRateLimit {
  *   SnapTrade sync, Bitpanda sync). A burst of 5, then one every 6 minutes.
  * - providerLink: Plaid link / update-mode link tokens and SnapTrade Connect
  *   URLs (connect and reconnect). A burst of 5, then one every 6 minutes.
+ * - quoteRefresh: the scheduled SnapTrade quote refresh (ENG-239,
+ *   services/pricing/livePrices.ts), one token per user and run. Two an
+ *   hour, so the hourly cron always passes and a re-run or a backlog of
+ *   scheduled runs cannot call SnapTrade more often for one user.
  */
 export const USER_RATE_LIMITS = {
   manualSync: { kind: "token bucket", rate: 6, period: HOUR_MS, capacity: 3 },
@@ -44,6 +48,12 @@ export const USER_RATE_LIMITS = {
     rate: 10,
     period: HOUR_MS,
     capacity: 5,
+  },
+  quoteRefresh: {
+    kind: "token bucket",
+    rate: 2,
+    period: HOUR_MS,
+    capacity: 2,
   },
 } as const satisfies Record<string, UserRateLimit>;
 

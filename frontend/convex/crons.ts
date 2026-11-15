@@ -4,6 +4,10 @@
 
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
+import {
+  BITPANDA_TICKER_REFRESH_MINUTES,
+  SNAPTRADE_QUOTES_CRON,
+} from "../../services/pricing/livePrices";
 
 const crons = cronJobs();
 
@@ -37,6 +41,26 @@ crons.interval(
   "sync-bitpanda-connections",
   { hours: 6 },
   internal.actions.bitpanda.scheduledSyncAllAction,
+);
+
+// ═══════════════════════════════════════════════════════════════
+// Live Provider Prices (ENG-239, services/pricing/livePrices.ts)
+// Every 10 minutes: Bitpanda's public ticker into assetPrices, then the
+// Bitpanda holdings a live feed covers (no key, every deployment).
+// Hourly 07:05-20:05 UTC on weekdays: SnapTrade quotes for held symbols,
+// within a per-user token bucket, only with SCHEDULED_SYNC_ENABLED=true.
+// ═══════════════════════════════════════════════════════════════
+crons.interval(
+  "refresh-bitpanda-ticker",
+  { minutes: BITPANDA_TICKER_REFRESH_MINUTES },
+  internal.actions.livePrices.refreshBitpandaTicker,
+);
+
+crons.cron(
+  "refresh-snaptrade-quotes",
+  SNAPTRADE_QUOTES_CRON,
+  internal.actions.livePrices.refreshSnaptradeQuotes,
+  {},
 );
 
 // ═══════════════════════════════════════════════════════════════

@@ -65,10 +65,10 @@ export function BitpandaConnectionsCard() {
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         {hasConnections && (
-          <div className="text-right">
+          <div className="text-end">
             {/* No figure before the display rate arrives */}
             {display.isLoading ? (
-              <Skeleton className="ml-auto h-6 w-24" />
+              <Skeleton className="ms-auto h-6 w-24" />
             ) : (
               <p className="text-lg font-semibold">
                 {formatCurrency(display.fromEur(totalValue), display.currency)}

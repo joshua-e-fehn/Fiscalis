@@ -109,24 +109,24 @@ export function CategoryOverrideMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onSelect={() => setOpen(true)}>
-            <Tags className="mr-2 h-4 w-4" />
+            <Tags className="me-2 h-4 w-4" />
             {t("action")}
           </DropdownMenuItem>
           {isManual && (
             <DropdownMenuItem onSelect={handleReset} disabled={isPending}>
-              <RotateCcw className="mr-2 h-4 w-4" />
+              <RotateCcw className="me-2 h-4 w-4" />
               {t("reset")}
             </DropdownMenuItem>
           )}
           {valuation && (
             <DropdownMenuItem onSelect={() => setPriceOpen(true)}>
-              <CircleDollarSign className="mr-2 h-4 w-4" />
+              <CircleDollarSign className="me-2 h-4 w-4" />
               {tValuation("action")}
             </DropdownMenuItem>
           )}
           {valuation?.override && (
             <DropdownMenuItem onSelect={handleClearValuation}>
-              <RotateCcw className="mr-2 h-4 w-4" />
+              <RotateCcw className="me-2 h-4 w-4" />
               {tValuation("reset")}
             </DropdownMenuItem>
           )}

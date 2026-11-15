@@ -84,7 +84,7 @@ export function IntegrationConnectionMenu({
             className="cursor-pointer"
           >
             <RefreshCw
-              className={`mr-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
+              className={`me-2 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
             />
             {isSyncing ? t("syncing") : t("sync")}
           </DropdownMenuItem>
@@ -94,7 +94,7 @@ export function IntegrationConnectionMenu({
             disabled={isDisconnecting}
             className="cursor-pointer text-destructive focus:text-destructive"
           >
-            <Unlink className="mr-2 h-4 w-4" />
+            <Unlink className="me-2 h-4 w-4" />
             {t("disconnect")}
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -110,7 +110,7 @@ export function IntegrationConnectionMenu({
               <Unlink className="h-5 w-5 text-destructive" />
               {t("disconnectTitle", { name: connectionName })}
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-left">
+            <AlertDialogDescription className="text-start">
               {disconnectDescription || defaultDescription}
               <br />
               <br />
@@ -127,7 +127,7 @@ export function IntegrationConnectionMenu({
             >
               {isDisconnecting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" />
                   {t("disconnecting")}
                 </>
               ) : (

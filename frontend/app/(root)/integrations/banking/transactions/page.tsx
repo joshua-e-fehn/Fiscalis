@@ -41,9 +41,9 @@ export default function BankTransactionsPage() {
   const syncButton = (
     <Button onClick={sync} disabled={isSyncing} size="lg">
       {isSyncing ? (
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        <Loader2 className="me-2 h-4 w-4 animate-spin" />
       ) : (
-        <RefreshCw className="mr-2 h-4 w-4" />
+        <RefreshCw className="me-2 h-4 w-4" />
       )}
       {isSyncing ? t("syncing") : t("sync")}
     </Button>

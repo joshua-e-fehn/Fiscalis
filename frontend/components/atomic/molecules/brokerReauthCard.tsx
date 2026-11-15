@@ -144,7 +144,7 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
               variant="outline"
               className="border-yellow-500 text-yellow-600"
             >
-              <AlertTriangle className="h-3 w-3 mr-1" />
+              <AlertTriangle className="h-3 w-3 me-1" />
               {tStatus("reauthRequired")}
             </Badge>
           </div>
@@ -159,16 +159,16 @@ export function BrokerReauthCard({ connection }: BrokerReauthCardProps) {
               size="sm"
               onClick={handleReauthenticate}
               disabled={isCreatingUrl}
-              className="ml-4 shrink-0"
+              className="ms-4 shrink-0"
             >
               {isCreatingUrl ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-4 w-4 me-2 animate-spin" />
                   {tActions("loading")}
                 </>
               ) : (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
+                  <RefreshCw className="h-4 w-4 me-2" />
                   {t("reauth.reconnect")}
                 </>
               )}

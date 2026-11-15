@@ -55,7 +55,7 @@ export function BankAccountCard({ account }: { account: ConvexAccount }) {
             {account.officialName || account.subtype || t("fallbackName")}
           </CardDescription>
         </div>
-        <div className="ml-auto">
+        <div className="ms-auto">
           <AccountIcon type={account.type} />
         </div>
       </CardHeader>

@@ -373,7 +373,7 @@ function ManualAssetForm({
             className="justify-self-start"
             onClick={addRow}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             {t("fields.addValuation")}
           </Button>
         </div>
@@ -427,7 +427,7 @@ function ManualAssetForm({
           {tActions("cancel")}
         </Button>
         <Button type="button" onClick={handleSave} disabled={isPending}>
-          {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
           {tActions("save")}
         </Button>
       </DialogFooter>

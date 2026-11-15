@@ -4,7 +4,8 @@
  * UnifiedPositionsTable Component
  *
  * Displays all positions across all financial providers
- * (Plaid, SnapTrade, Bitpanda) in a unified, sortable table.
+ * (Plaid, SnapTrade, Bitpanda, manual entries) in a unified, sortable
+ * table, or only one subcategory's (the generic subcategory page).
  */
 
 import {
@@ -64,12 +65,20 @@ import {
   CategoryOverrideMenu,
   ManualCategoryBadge,
 } from "@/components/atomic/molecules/classification";
+import { ManualAssetRowMenu } from "@/components/atomic/molecules/manualAssets";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { HoldingSource } from "@/../services/portfolio/aggregate";
 
 interface UnifiedPositionsTableProps {
   className?: string;
   showFilters?: boolean;
   maxRows?: number;
   compact?: boolean;
+  /** Only the positions of this category (and subcategory, when given) */
+  category?: string;
+  subcategory?: string;
+  /** The empty state's hint, in place of the default (connect a provider) */
+  emptyHint?: string;
 }
 
 // Position type returned from useUnifiedPositions
@@ -77,6 +86,7 @@ interface UnifiedPositionData {
   id: string;
   _id: string;
   provider: FinancialProvider;
+  source: HoldingSource;
   category: string;
   subcategory?: string;
   symbol: string;
@@ -178,6 +188,9 @@ export function UnifiedPositionsTable({
   showFilters = true,
   maxRows,
   compact = false,
+  category: onlyCategory,
+  subcategory: onlySubcategory,
+  emptyHint,
 }: UnifiedPositionsTableProps) {
   // Values and P/L in the display currency (`currency`); each position's
   // native amount in its own
@@ -206,7 +219,15 @@ export function UnifiedPositionsTable({
 
   // Valued on the server (vault metals at spot included), with the
   // classified category and P/L (convex/portfolio.ts)
-  const positions = rawPositions as UnifiedPositionData[];
+  const positions = useMemo(
+    () =>
+      (rawPositions as UnifiedPositionData[]).filter(
+        (p) =>
+          (!onlyCategory || p.category === onlyCategory) &&
+          (!onlySubcategory || p.subcategory === onlySubcategory),
+      ),
+    [rawPositions, onlyCategory, onlySubcategory],
+  );
 
   // Get unique categories from positions
   const categories = useMemo(() => {
@@ -324,7 +345,7 @@ export function UnifiedPositionsTable({
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
             <Filter className="h-12 w-12 mb-2 opacity-50" />
             <p>{t("empty")}</p>
-            <p className="text-sm">{t("emptyHint")}</p>
+            <p className="text-sm">{emptyHint ?? t("emptyHint")}</p>
           </div>
         </CardContent>
       </Card>
@@ -476,12 +497,13 @@ export function UnifiedPositionsTable({
                 // Defensive lookups: an unrecognized provider must never crash
                 // the row (e.g. legacy data from a removed provider).
                 const Icon = providerIcons[position.provider] ?? PenLine;
-                // Manual entries are either vault metals or loans
+                // Manual entries: vault metals, loans and manual assets
                 const providerRoute =
-                  position.provider === "manual" &&
-                  position.category === "liabilities"
+                  position.source === "loan"
                     ? `/liabilities/loans/${position.id}`
-                    : (providerRoutes[position.provider] ?? "/dashboard");
+                    : position.source === "manualAsset"
+                      ? `/assets/${position.category}/${position.subcategory}`
+                      : (providerRoutes[position.provider] ?? "/dashboard");
                 const providerColor = providerColors[position.provider] ?? "";
                 const providerLabel = isProvider(position.provider)
                   ? t(`providers.${position.provider}`)
@@ -627,8 +649,14 @@ export function UnifiedPositionsTable({
                       </TableCell>
                     )}
 
-                    {/* Change category */}
+                    {/* Change category; edit or delete a manual asset */}
                     <TableCell className="p-1">
+                      {position.source === "manualAsset" && (
+                        <ManualAssetRowMenu
+                          assetId={position._id as Id<"manualAssets">}
+                          name={position.name}
+                        />
+                      )}
                       {position.classification && (
                         <CategoryOverrideMenu
                           item={{

@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   InvestmentDashboardSection,
   SubcategoryCardSection,
   PageHeader,
 } from "@/components/atomic/molecules/investments";
+import { ManualAssetDialog } from "@/components/atomic/molecules/manualAssets";
 import { useBondsSummary } from "@/hooks/convex/bonds";
 import { bondsCategoryCards, useCategoryLabels } from "@/lib/config/categoryUI";
 
@@ -14,6 +16,7 @@ export default function BondsPage() {
   const t = useTranslations("assets.bonds");
   const labels = useCategoryLabels();
   const tAction = useTranslations("assets.actions");
+  const [adding, setAdding] = useState(false);
 
   return (
     <div className="container mx-auto py-6 space-y-8">
@@ -21,6 +24,11 @@ export default function BondsPage() {
         title={labels.categoryName("bonds")}
         subtitle={t("subtitle")}
         actions={[
+          {
+            label: tAction("addItem"),
+            onClick: () => setAdding(true),
+            variant: "outline",
+          },
           { label: tAction("connectBroker"), href: "/integrations/brokers" },
         ]}
       />
@@ -37,6 +45,12 @@ export default function BondsPage() {
         title={t("categories")}
         cards={bondsCategoryCards}
         actionLabel={tAction("viewHoldings")}
+      />
+
+      <ManualAssetDialog
+        open={adding}
+        onOpenChange={setAdding}
+        category="bonds"
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
   manualAssetGainLoss,
   manualAssetInBase,
   normalizeValuations,
+  localeDecimalMark,
   parseTypedAmount,
   validateManualAsset,
   type ManualAssetInput,
@@ -281,11 +282,26 @@ describe("parseTypedAmount", () => {
     expect(parseTypedAmount("1.250.000", "de")).toBe(1_250_000);
   });
 
+  it("reads Spanish input", () => {
+    expect(parseTypedAmount("250.000", "es")).toBe(250_000);
+    expect(parseTypedAmount("1.250,50", "es-ES")).toBe(1250.5);
+    expect(parseTypedAmount("1250,5", "es")).toBe(1250.5);
+  });
+
   it("reads English input", () => {
     expect(parseTypedAmount("1,500", "en")).toBe(1500);
     expect(parseTypedAmount("1,250.50", "en")).toBe(1250.5);
     expect(parseTypedAmount("1.5", "en")).toBe(1.5);
     expect(parseTypedAmount("1,5", "en")).toBe(1.5);
     expect(parseTypedAmount("1 250 000", "en")).toBe(1_250_000);
+  });
+});
+
+describe("localeDecimalMark", () => {
+  it("follows the locale", () => {
+    expect(localeDecimalMark("en")).toBe(".");
+    expect(localeDecimalMark("en-GB")).toBe(".");
+    expect(localeDecimalMark("de")).toBe(",");
+    expect(localeDecimalMark("es-ES")).toBe(",");
   });
 });

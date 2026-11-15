@@ -219,6 +219,8 @@ export const getCashHoldings = query({
       bankAccounts,
       brokerCash: toCategoryPositions(cash),
       brokerAccountCash,
+      // Manual assets recorded as cash (treasury bills), in EUR
+      manualHoldings: await toManualHoldings(ctx, cash),
       summary: {
         totalValue: summary.value,
         bankTotal,

@@ -46,6 +46,8 @@ import billingEn from "@/messages/en/billing.json";
 import notificationsEn from "@/messages/en/notifications.json";
 import billingDe from "@/messages/de/billing.json";
 import notificationsDe from "@/messages/de/notifications.json";
+import teamsEn from "@/messages/en/teams.json";
+import teamsDe from "@/messages/de/teams.json";
 import commonEs from "@/messages/es/common.json";
 import worldMapEs from "@/messages/es/worldMap.json";
 import calculatorsEs from "@/messages/es/calculators.json";
@@ -65,6 +67,7 @@ import strategiesEs from "@/messages/es/strategies.json";
 import docsEs from "@/messages/es/docs.json";
 import billingEs from "@/messages/es/billing.json";
 import notificationsEs from "@/messages/es/notifications.json";
+import teamsEs from "@/messages/es/teams.json";
 import commonFr from "@/messages/fr/common.json";
 import worldMapFr from "@/messages/fr/worldMap.json";
 import calculatorsFr from "@/messages/fr/calculators.json";
@@ -84,6 +87,7 @@ import strategiesFr from "@/messages/fr/strategies.json";
 import docsFr from "@/messages/fr/docs.json";
 import billingFr from "@/messages/fr/billing.json";
 import notificationsFr from "@/messages/fr/notifications.json";
+import teamsFr from "@/messages/fr/teams.json";
 import commonIt from "@/messages/it/common.json";
 import worldMapIt from "@/messages/it/worldMap.json";
 import calculatorsIt from "@/messages/it/calculators.json";
@@ -103,6 +107,7 @@ import strategiesIt from "@/messages/it/strategies.json";
 import docsIt from "@/messages/it/docs.json";
 import billingIt from "@/messages/it/billing.json";
 import notificationsIt from "@/messages/it/notifications.json";
+import teamsIt from "@/messages/it/teams.json";
 
 import ptPT from "@/messages/pt-PT";
 import { ru } from "@/messages/ru";
@@ -131,6 +136,7 @@ const en = {
   docs: docsEn,
   billing: billingEn,
   notifications: notificationsEn,
+  teams: teamsEn,
 };
 
 export type Messages = typeof en;
@@ -155,6 +161,7 @@ const de = {
   docs: docsDe,
   billing: billingDe,
   notifications: notificationsDe,
+  teams: teamsDe,
 } satisfies Messages;
 
 const es = {
@@ -177,6 +184,7 @@ const es = {
   docs: docsEs,
   billing: billingEs,
   notifications: notificationsEs,
+  teams: teamsEs,
 } satisfies Messages;
 
 const fr = {
@@ -199,6 +207,7 @@ const fr = {
   docs: docsFr,
   billing: billingFr,
   notifications: notificationsFr,
+  teams: teamsFr,
 } satisfies Messages;
 
 const it = {
@@ -221,6 +230,7 @@ const it = {
   docs: docsIt,
   billing: billingIt,
   notifications: notificationsIt,
+  teams: teamsIt,
 } satisfies Messages;
 
 const MESSAGES: Record<Language, Messages> = {

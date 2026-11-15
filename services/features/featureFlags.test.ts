@@ -18,7 +18,6 @@ describe("parseFeatureFlags", () => {
   it("turns on the listed flags and ignores unknown names", () => {
     const flags = parseFeatureFlags(" plannedCategories , unknown");
     expect(flags.plannedCategories).toBe(true);
-    expect(flags.teamSettings).toBe(false);
     expect("unknown" in flags).toBe(false);
   });
 
@@ -30,18 +29,19 @@ describe("parseFeatureFlags", () => {
 
 describe("filterByFeature", () => {
   it("keeps unflagged items and flagged ones that are on", () => {
-    const items = [{ id: 1 }, { id: 2, feature: "plannedCategories" as const }, { id: 3, feature: "teamSettings" as const }];
-    expect(filterByFeature(items, parseFeatureFlags("teamSettings")).map((i) => i.id)).toEqual([1, 3]);
+    const items = [{ id: 1 }, { id: 2, feature: "plannedCategories" as const }];
+    expect(filterByFeature(items, parseFeatureFlags(undefined)).map((i) => i.id)).toEqual([1]);
+    expect(filterByFeature(items, parseFeatureFlags("plannedCategories")).map((i) => i.id)).toEqual([1, 2]);
   });
 });
 
 describe("filterMenuByFeature", () => {
   const menu = [
     { title: "Dashboard", items: [] },
-    { title: "Account", items: [{ title: "Team", feature: "teamSettings" as const }] },
+    { title: "Account", items: [{ title: "Soon", feature: "plannedCategories" as const }] },
     {
       title: "Settings",
-      items: [{ title: "General" }, { title: "Team", feature: "teamSettings" as const }],
+      items: [{ title: "General" }, { title: "Soon", feature: "plannedCategories" as const }],
     },
     { title: "Planned", feature: "plannedCategories" as const, items: [{ title: "Soon" }] },
   ];
@@ -64,7 +64,8 @@ describe("filterMenuByFeature", () => {
 
 describe("isFeatureFlag", () => {
   it("recognises known flags only", () => {
-    expect(isFeatureFlag("teamSettings")).toBe(true);
+    expect(isFeatureFlag("plannedCategories")).toBe(true);
+    expect(isFeatureFlag("teamSettings")).toBe(false);
     expect(isFeatureFlag("nope")).toBe(false);
   });
 });

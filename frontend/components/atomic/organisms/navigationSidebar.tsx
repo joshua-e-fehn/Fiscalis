@@ -233,8 +233,7 @@ const data: Record<
 				},
 				{
 					titleKey: "team",
-					url: "#",
-					feature: "teamSettings",
+					url: "/settings/team",
 				},
 				{
 					titleKey: "billing",

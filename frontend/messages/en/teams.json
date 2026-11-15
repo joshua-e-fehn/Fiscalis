@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "Team",
+    "subtitle": "Share one net worth with your household. Everyone keeps their own data; the data of members who share it appears in the team workspace, read-only."
+  },
+  "proRequired": {
+    "title": "Teams are part of Pro",
+    "description": "Upgrade to create a team and invite members. Joining a team through an invite link works on every plan.",
+    "upgrade": "See plans"
+  },
+  "create": {
+    "title": "Create a team",
+    "description": "You become its owner. Nobody's data is shared until they turn sharing on.",
+    "name": "Team name",
+    "namePlaceholder": "e.g. Household",
+    "submit": "Create team"
+  },
+  "empty": "You are not in a team yet.",
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member"
+  },
+  "team": {
+    "members": "Members",
+    "you": "you",
+    "unnamed": "Member",
+    "joined": "Joined {date}",
+    "sharing": "Sharing",
+    "notSharing": "Not sharing"
+  },
+  "sharing": {
+    "title": "Share my data with this team",
+    "description": "Members see your net worth, positions and history in the team workspace, read-only. You can turn this off at any time."
+  },
+  "invite": {
+    "title": "Invite members",
+    "description": "Email invites are not available yet. Create a link and send it yourself. It works once and for 7 days.",
+    "role": "Role",
+    "create": "Create invite link",
+    "linkTitle": "Invite link",
+    "linkDescription": "Copy this link now: it is shown only once.",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "done": "Done",
+    "open": "Open invites",
+    "expires": "Expires {date}",
+    "revoke": "Revoke",
+    "none": "No open invites."
+  },
+  "actions": {
+    "changeRole": "Change role",
+    "makeOwner": "Make owner",
+    "remove": "Remove",
+    "leave": "Leave team",
+    "rename": "Rename",
+    "delete": "Delete team",
+    "save": "Save"
+  },
+  "confirm": {
+    "removeTitle": "Remove {name}?",
+    "removeDescription": "They lose access to the team workspace. Their own data is not affected.",
+    "leaveTitle": "Leave {team}?",
+    "leaveDescription": "You lose access to the team workspace. Your own data is not affected.",
+    "deleteTitle": "Delete {team}?",
+    "deleteDescription": "All members lose access and open invites stop working. Nobody's own data is deleted.",
+    "ownerTitle": "Make {name} owner?",
+    "ownerDescription": "You become an admin. Only the new owner can change roles or delete the team.",
+    "confirm": "Confirm"
+  },
+  "join": {
+    "title": "Join a team",
+    "loading": "Checking the invite…",
+    "invalid": "This invite link is invalid, expired or already used. Ask for a new one.",
+    "prompt": "You were invited to join {team} as {role}.",
+    "alreadyMember": "You are already a member of {team}.",
+    "accept": "Join team",
+    "joined": "You joined {team}. Turn on sharing in Settings > Team when you are ready.",
+    "goToTeam": "Go to Settings > Team"
+  },
+  "workspace": {
+    "label": "Workspace",
+    "personal": "Personal",
+    "switchTo": "Switch workspace",
+    "manage": "Manage teams",
+    "readOnlyBanner": "You are viewing {team}: the combined data of {count, plural, one {# sharing member} other {# sharing members}}, read-only. Switch to Personal to make changes.",
+    "owner": "Owner"
+  }
+}

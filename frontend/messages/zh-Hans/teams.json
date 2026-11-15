@@ -1,0 +1,89 @@
+{
+  "page": {
+    "title": "团队",
+    "subtitle": "与家人共享一个净资产视图。每个人保留自己的数据；选择共享的成员的数据会以只读方式显示在团队工作区中。"
+  },
+  "proRequired": {
+    "title": "团队是 Pro 的功能",
+    "description": "升级后即可创建团队并邀请成员。通过邀请链接加入团队适用于所有方案。",
+    "upgrade": "查看方案"
+  },
+  "create": {
+    "title": "创建团队",
+    "description": "你将成为团队所有者。在成员自行开启共享之前，不会共享任何人的数据。",
+    "name": "团队名称",
+    "namePlaceholder": "例如：家庭",
+    "submit": "创建团队"
+  },
+  "empty": "你还没有加入任何团队。",
+  "roles": {
+    "owner": "所有者",
+    "admin": "管理员",
+    "member": "成员"
+  },
+  "team": {
+    "members": "成员",
+    "you": "你",
+    "unnamed": "成员",
+    "joined": "{date} 加入",
+    "sharing": "共享中",
+    "notSharing": "未共享"
+  },
+  "sharing": {
+    "title": "与此团队共享我的数据",
+    "description": "成员可以在团队工作区中只读查看你的净资产、持仓和历史。你可以随时关闭。"
+  },
+  "invite": {
+    "title": "邀请成员",
+    "description": "暂不支持邮件邀请。请创建链接并自行发送。链接仅可使用一次，有效期 7 天。",
+    "role": "角色",
+    "create": "创建邀请链接",
+    "linkTitle": "邀请链接",
+    "linkDescription": "请立即复制此链接：它只显示一次。",
+    "copy": "复制链接",
+    "copied": "已复制",
+    "done": "完成",
+    "open": "未使用的邀请",
+    "expires": "{date} 过期",
+    "revoke": "撤销",
+    "none": "没有未使用的邀请。"
+  },
+  "actions": {
+    "changeRole": "更改角色",
+    "makeOwner": "设为所有者",
+    "remove": "移除",
+    "leave": "退出团队",
+    "rename": "重命名",
+    "delete": "删除团队",
+    "save": "保存"
+  },
+  "confirm": {
+    "removeTitle": "移除 {name}？",
+    "removeDescription": "对方将无法访问团队工作区。其自己的数据不受影响。",
+    "leaveTitle": "退出 {team}？",
+    "leaveDescription": "你将无法访问团队工作区。你自己的数据不受影响。",
+    "deleteTitle": "删除 {team}？",
+    "deleteDescription": "所有成员将失去访问权限，未使用的邀请将失效。不会删除任何人自己的数据。",
+    "ownerTitle": "将 {name} 设为所有者？",
+    "ownerDescription": "你将成为管理员。只有新的所有者可以更改角色或删除团队。",
+    "confirm": "确认"
+  },
+  "join": {
+    "title": "加入团队",
+    "loading": "正在检查邀请…",
+    "invalid": "此邀请链接无效、已过期或已被使用。请索取新的链接。",
+    "prompt": "你受邀以{role}身份加入 {team}。",
+    "alreadyMember": "你已经是 {team} 的成员。",
+    "accept": "加入团队",
+    "joined": "你已加入 {team}。准备好后，请在 设置 > 团队 中开启共享。",
+    "goToTeam": "前往 设置 > 团队"
+  },
+  "workspace": {
+    "label": "工作区",
+    "personal": "个人",
+    "switchTo": "切换工作区",
+    "manage": "管理团队",
+    "readOnlyBanner": "你正在查看 {team}：{count, plural, other {# 位共享成员}}的合并数据，只读。切换到“个人”以进行更改。",
+    "owner": "所有者"
+  }
+}

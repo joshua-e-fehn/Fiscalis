@@ -500,7 +500,7 @@ export function LoanScenariosTab({
                 variant="outline"
                 onClick={handleAddRecurringExtra}
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-4 w-4 me-1" />
                 {t("addRecurring")}
               </Button>
             </div>
@@ -520,7 +520,7 @@ export function LoanScenariosTab({
                     className="flex flex-wrap items-end gap-2 p-2 rounded-lg bg-muted"
                   >
                     <div className="relative w-36">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                      <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                         {loan.currency}
                       </span>
                       <Input
@@ -535,7 +535,7 @@ export function LoanScenariosTab({
                             amount: Math.max(0, parseFloat(e.target.value) || 0),
                           })
                         }
-                        className="pl-12"
+                        className="ps-12"
                       />
                     </div>
                     <div>
@@ -650,7 +650,7 @@ export function LoanScenariosTab({
                 className="w-40"
               />
               <div className="relative flex-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                <span className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
                   {loan.currency}
                 </span>
                 <Input
@@ -659,7 +659,7 @@ export function LoanScenariosTab({
                   aria-label={t("amount")}
                   value={newPrepaymentAmount}
                   onChange={(e) => setNewPrepaymentAmount(e.target.value)}
-                  className="pl-12"
+                  className="ps-12"
                 />
               </div>
               <Button
@@ -739,7 +739,7 @@ export function LoanScenariosTab({
             </div>
 
             <div className="flex items-center justify-center">
-              <ArrowRight className="h-8 w-8 text-muted-foreground" />
+              <ArrowRight className="h-8 w-8 text-muted-foreground rtl:-scale-x-100" />
             </div>
 
             <div className="space-y-4 p-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
@@ -842,7 +842,7 @@ export function LoanScenariosTab({
           {hasChanges && (
             <div className="flex justify-end">
               <Button onClick={() => setShowSaveDialog(true)}>
-                <Save className="h-4 w-4 mr-2" />
+                <Save className="h-4 w-4 me-2" />
                 {t("saveThis")}
               </Button>
             </div>
@@ -1093,7 +1093,7 @@ export function LoanScenariosTab({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-2 end-2 opacity-0 group-hover:opacity-100 transition-opacity"
                         disabled={deletingId === scenario._id}
                       >
                         {deletingId === scenario._id ? (
@@ -1270,7 +1270,7 @@ export function LoanScenariosTab({
               disabled={!scenarioName || isSubmitting}
             >
               {isSubmitting && (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
               )}
               {t("save")}
             </Button>

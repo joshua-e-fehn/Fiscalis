@@ -72,7 +72,7 @@ export function PageHeader({
                 >
                   <Link href={action.href}>
                     <Icon
-                      className={action.iconOnly ? "h-4 w-4" : "mr-2 h-4 w-4"}
+                      className={action.iconOnly ? "h-4 w-4" : "me-2 h-4 w-4"}
                     />
                     {!action.iconOnly && displayLabel}
                   </Link>
@@ -89,7 +89,7 @@ export function PageHeader({
                 size={action.iconOnly ? "icon" : "default"}
               >
                 <Icon
-                  className={`${action.iconOnly ? "h-4 w-4" : "mr-2 h-4 w-4"} ${action.isLoading ? "animate-spin" : ""}`}
+                  className={`${action.iconOnly ? "h-4 w-4" : "me-2 h-4 w-4"} ${action.isLoading ? "animate-spin" : ""}`}
                 />
                 {!action.iconOnly && displayLabel}
               </Button>

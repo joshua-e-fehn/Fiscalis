@@ -136,7 +136,7 @@ export default function PiesPage() {
               }}
               disabled={isDeleting}
             >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t("delete.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>

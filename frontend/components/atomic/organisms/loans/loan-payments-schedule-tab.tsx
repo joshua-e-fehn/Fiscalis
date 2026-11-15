@@ -295,11 +295,11 @@ export function LoanPaymentsScheduleTab({
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={exportToCSV}>
-                <Download className="h-4 w-4 mr-2" />
+                <Download className="h-4 w-4 me-2" />
                 {t("exportCsv")}
               </Button>
               <Button onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 me-2" />
                 {t("recordPayment")}
               </Button>
             </div>
@@ -379,7 +379,7 @@ export function LoanPaymentsScheduleTab({
                           <div className="flex gap-2">
                             {paidInYear.length > 0 && (
                               <Badge className="bg-green-100 text-green-700">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                <CheckCircle2 className="h-3 w-3 me-1" />
                                 {t("yearPaidCount", {
                                   count: paidInYear.length,
                                 })}
@@ -387,7 +387,7 @@ export function LoanPaymentsScheduleTab({
                             )}
                             {extraInYear.length > 0 && (
                               <Badge className="bg-blue-100 text-blue-700">
-                                <Plus className="h-3 w-3 mr-1" />
+                                <Plus className="h-3 w-3 me-1" />
                                 {t("yearPrepaymentCount", {
                                   count: extraInYear.length,
                                 })}
@@ -395,7 +395,7 @@ export function LoanPaymentsScheduleTab({
                             )}
                             {overdueInYear.length > 0 && (
                               <Badge className="bg-red-100 text-red-700">
-                                <AlertCircle className="h-3 w-3 mr-1" />
+                                <AlertCircle className="h-3 w-3 me-1" />
                                 {t("yearOverdueCount", {
                                   count: overdueInYear.length,
                                 })}
@@ -403,7 +403,7 @@ export function LoanPaymentsScheduleTab({
                             )}
                             {scheduledInYear.length > overdueInYear.length && (
                               <Badge variant="secondary">
-                                <CircleDashed className="h-3 w-3 mr-1" />
+                                <CircleDashed className="h-3 w-3 me-1" />
                                 {t("yearScheduledCount", {
                                   count:
                                     scheduledInYear.length -
@@ -482,19 +482,19 @@ export function LoanPaymentsScheduleTab({
                               <TableHead className="w-16">#</TableHead>
                               <TableHead>{t("columns.date")}</TableHead>
                               <TableHead>{t("columns.status")}</TableHead>
-                              <TableHead className="text-right">
+                              <TableHead className="text-end">
                                 {t("columns.openingBalance")}
                               </TableHead>
-                              <TableHead className="text-right">
+                              <TableHead className="text-end">
                                 {t("columns.payment")}
                               </TableHead>
-                              <TableHead className="text-right">
+                              <TableHead className="text-end">
                                 {t("columns.principal")}
                               </TableHead>
-                              <TableHead className="text-right">
+                              <TableHead className="text-end">
                                 {t("columns.interest")}
                               </TableHead>
-                              <TableHead className="text-right">
+                              <TableHead className="text-end">
                                 {t("columns.closingBalance")}
                               </TableHead>
                               <TableHead className="w-24"></TableHead>
@@ -526,42 +526,42 @@ export function LoanPaymentsScheduleTab({
                                 <TableCell>
                                   {row.overdue ? (
                                     <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
-                                      <AlertCircle className="h-3 w-3 mr-1" />
+                                      <AlertCircle className="h-3 w-3 me-1" />
                                       {t("rowStatus.overdue")}
                                     </Badge>
                                   ) : row.status === "paid" ? (
                                     <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      <CheckCircle2 className="h-3 w-3 me-1" />
                                       {t("rowStatus.paid")}
                                     </Badge>
                                   ) : row.status === "extra" ? (
                                     <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                                      <Plus className="h-3 w-3 mr-1" />
+                                      <Plus className="h-3 w-3 me-1" />
                                       {t("rowStatus.prepayment")}
                                     </Badge>
                                   ) : (
                                     <Badge variant="secondary">
-                                      <CircleDashed className="h-3 w-3 mr-1" />
+                                      <CircleDashed className="h-3 w-3 me-1" />
                                       {t("rowStatus.scheduled")}
                                     </Badge>
                                   )}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-end">
                                   {formatCurrency(
                                     row.openingBalance,
                                     loan.currency,
                                   )}
                                 </TableCell>
-                                <TableCell className="text-right font-medium">
+                                <TableCell className="text-end font-medium">
                                   {formatCurrency(row.payment, loan.currency)}
                                 </TableCell>
-                                <TableCell className="text-right text-green-600">
+                                <TableCell className="text-end text-green-600">
                                   {formatCurrency(row.principal, loan.currency)}
                                 </TableCell>
-                                <TableCell className="text-right text-orange-600">
+                                <TableCell className="text-end text-orange-600">
                                   {formatCurrency(row.interest, loan.currency)}
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className="text-end">
                                   {formatCurrency(
                                     row.closingBalance,
                                     loan.currency,

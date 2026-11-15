@@ -395,9 +395,9 @@ export function UnifiedPositionsTable({
             >
               {showAll ? t("showLess") : t("viewAll")}
               {showAll ? (
-                <ChevronUp className="ml-2 h-3 w-3" />
+                <ChevronUp className="ms-2 h-3 w-3" />
               ) : (
-                <ChevronDown className="ml-2 h-3 w-3" />
+                <ChevronDown className="ms-2 h-3 w-3" />
               )}
             </Button>
           )}
@@ -413,12 +413,12 @@ export function UnifiedPositionsTable({
             )}
           >
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder={t("searchPlaceholder")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={cn("pl-9", compact && "h-8 text-sm")}
+                className={cn("ps-9", compact && "h-8 text-sm")}
               />
             </div>
             <Select value={providerFilter} onValueChange={setProviderFilter}>
@@ -462,46 +462,46 @@ export function UnifiedPositionsTable({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 font-medium -ml-3"
+                    className="h-8 font-medium -ms-3"
                     onClick={() => toggleSort("name")}
                   >
                     {t("columns.position")}
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                    <ArrowUpDown className="ms-2 h-4 w-4" />
                   </Button>
                 </TableHead>
                 {!compact && <TableHead>{t("columns.category")}</TableHead>}
-                <TableHead className="text-right">
+                <TableHead className="text-end">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 font-medium -mr-3 float-right"
+                    className="h-8 font-medium -me-3 float-end"
                     onClick={() => toggleSort("quantity")}
                   >
                     {t("columns.quantity")}
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                    <ArrowUpDown className="ms-2 h-4 w-4" />
                   </Button>
                 </TableHead>
-                <TableHead className="text-right">
+                <TableHead className="text-end">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 font-medium -mr-3 float-right"
+                    className="h-8 font-medium -me-3 float-end"
                     onClick={() => toggleSort("value")}
                   >
                     {t("columns.value")}
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                    <ArrowUpDown className="ms-2 h-4 w-4" />
                   </Button>
                 </TableHead>
                 {!compact && (
-                  <TableHead className="text-right">
+                  <TableHead className="text-end">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 font-medium -mr-3 float-right"
+                      className="h-8 font-medium -me-3 float-end"
                       onClick={() => toggleSort("profitLoss")}
                     >
                       {t("columns.profitLoss")}
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                      <ArrowUpDown className="ms-2 h-4 w-4" />
                     </Button>
                   </TableHead>
                 )}
@@ -561,7 +561,7 @@ export function UnifiedPositionsTable({
                         >
                           {position.name}
                           {compact && position.classification?.isManual && (
-                            <ManualCategoryBadge className="ml-1" />
+                            <ManualCategoryBadge className="ms-1" />
                           )}
                         </span>
                         <span className="text-xs text-muted-foreground">
@@ -587,7 +587,7 @@ export function UnifiedPositionsTable({
                         </Badge>
                         {position.subcategory &&
                           position.subcategory !== position.category && (
-                            <span className="ml-1 text-xs text-muted-foreground">
+                            <span className="ms-1 text-xs text-muted-foreground">
                               {subcategoryName(
                                 position.category,
                                 position.subcategory,
@@ -595,13 +595,13 @@ export function UnifiedPositionsTable({
                             </span>
                           )}
                         {position.classification?.isManual && (
-                          <ManualCategoryBadge className="ml-1" />
+                          <ManualCategoryBadge className="ms-1" />
                         )}
                       </TableCell>
                     )}
 
                     {/* Quantity - hide for bank accounts and loans where quantity doesn't make sense */}
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className="text-end font-mono text-sm">
                       {(position.provider === "plaid" &&
                         position.category === "cash") ||
                       position.category === "liabilities"
@@ -612,7 +612,7 @@ export function UnifiedPositionsTable({
                     {/* Value */}
                     <TableCell
                       className={cn(
-                        "text-right font-medium",
+                        "text-end font-medium",
                         isNegativeValue && "text-red-500",
                       )}
                     >
@@ -620,7 +620,7 @@ export function UnifiedPositionsTable({
                       {position.valuation && (
                         <ValuationBadge
                           kind={position.valuation.kind}
-                          className="ml-1"
+                          className="ms-1"
                         />
                       )}
                       {position.currency !== currency.toUpperCase() && (
@@ -635,7 +635,7 @@ export function UnifiedPositionsTable({
 
                     {/* P&L */}
                     {!compact && (
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         {hasPL ? (
                           <div
                             className={cn(

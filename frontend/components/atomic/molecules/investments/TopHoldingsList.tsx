@@ -108,7 +108,7 @@ export function TopHoldingsList({
             </div>
 
             {/* Holdings list */}
-            <div className="space-y-1 pl-5">
+            <div className="space-y-1 ps-5">
               {subcategory.topHoldings
                 .slice(0, maxHoldingsPerSubcategory)
                 .map((holding, index) => (

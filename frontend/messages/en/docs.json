@@ -1,0 +1,146 @@
+{
+  "meta": {
+    "title": "{page} · Fiscalis docs"
+  },
+  "nav": {
+    "label": "Documentation",
+    "previous": "Previous",
+    "next": "Next",
+    "onThisPage": "On this page"
+  },
+  "introduction": {
+    "subtitle": "What Fiscalis is, where your numbers come from and how they are calculated.",
+    "sections": {
+      "whatIs": {
+        "title": "What Fiscalis is",
+        "body": "Fiscalis is a private net worth and wealth tracker. It brings your bank accounts, brokers, Bitpanda, a precious-metals vault, assets you enter by hand and your loans together in one place, values everything in one currency and shows how your wealth develops over time.\n\nFiscalis only reads your data. It cannot move money, place trades or change anything at your bank or broker."
+      },
+      "sources": {
+        "title": "Where your numbers come from",
+        "body": "- Banks via Plaid: balances of checking, savings and credit card accounts, plus your transaction history.\n- Brokers via SnapTrade: brokerage accounts, positions, cash and activities.\n- Bitpanda via a read-only API key: crypto, metals, stocks, ETFs and cash wallets.\n- Precious-metals vault: coins and bars you record yourself, valued at the live spot price.\n- Manual assets: real estate, collectibles, private equity, bonds and anything else no connected account reports.\n- Loans: mortgages and other loans you enter, with their full repayment schedule.",
+        "linkLabel": "Connect your first account"
+      },
+      "netWorth": {
+        "title": "How your net worth is calculated",
+        "body": "Your net worth is everything you own minus your liabilities. The same calculation feeds the dashboard, the daily snapshots that draw your history and the API, so every place shows the same number.\n\nHoldings are grouped into categories such as cash, equities, bonds, crypto, commodities, real estate and collectibles. If a holding lands in the wrong category, you can move it under Settings > Categories.\n\nPerformance for your investments is flow-adjusted: money you add or buy with counts as invested, not as a gain, so a deposit never looks like a good day on the market.",
+        "linkLabel": "Open the dashboard"
+      },
+      "metals": {
+        "title": "How metals are valued",
+        "body": "Gold, silver, platinum and palladium in your vault are valued at the live spot price, which updates every minute. Fiscalis applies calibrated dealer premiums: the buy premium is what you would pay above spot, the sell premium what a dealer would pay you. You can override both for each item."
+      },
+      "currency": {
+        "title": "Display currency and language",
+        "body": "Everything is stored in euros. You can show your totals in EUR, USD, GBP or CHF: totals are converted at the latest daily exchange rate and your history at each day's rate. Loans and individual account rows keep their own currency.\n\nFiscalis is available in English and German. Change the display currency and the language under Settings > General.",
+        "linkLabel": "Open Settings > General"
+      },
+      "sync": {
+        "title": "When data updates",
+        "body": "- All connected banks and brokers sync once a day, early in the morning.\n- Bitpanda syncs every six hours.\n- Metal spot prices update every minute and exchange rates several times a day.\n- You can sync everything yourself at any time with the sync button at the top of the page."
+      },
+      "tools": {
+        "title": "Planning tools",
+        "body": "- Retirement planner: works out whether your current net worth, savings and pensions cover the retirement you want.\n- Interest and loan calculators: try out savings plans and repayment options without saving anything.\n- World map: economic, demographic and development indicators from the World Bank on an interactive map.\n- API: read your current net worth from your own scripts with a personal API key."
+      },
+      "privacy": {
+        "title": "Privacy and security",
+        "body": "Access tokens from your banks and brokers and your Bitpanda key are encrypted at rest. API keys are stored only as a hash, so not even Fiscalis can read them back. You sign in to your bank and broker in their own windows; Fiscalis never sees those passwords.\n\nUnder Settings > Privacy you can download everything Fiscalis stores about you or delete your account.",
+        "linkLabel": "Open Settings > Privacy"
+      },
+      "access": {
+        "title": "Access",
+        "body": "Fiscalis is currently invite-only. New users join the waitlist and get access once their spot is approved."
+      }
+    }
+  },
+  "getStarted": {
+    "subtitle": "From your first sign-in to a complete picture of your wealth.",
+    "sections": {
+      "account": {
+        "title": "1. Your account",
+        "body": "Sign-up runs through the waitlist. Once your access is approved, sign in with your email address. The first time you sign in, a short setup guides you through your profile and your first connections. You can skip every connection step and come back later."
+      },
+      "profile": {
+        "title": "2. Set up your profile",
+        "body": "Choose your display name, your display currency and a theme. Your date of birth is optional; the retirement planner uses it. You can change all of this later under Settings > General, together with the language.",
+        "linkLabel": "Open Settings > General"
+      },
+      "connect": {
+        "title": "3. Connect your accounts",
+        "body": "- Banks: Integrations > Banking, then Connect bank.\n- Brokers: Integrations > Brokers, then Connect broker.\n- Bitpanda: also on Integrations > Brokers, with Connect Bitpanda and a read-only API key.\n\nThe first sync can take a moment. After that your accounts update automatically.",
+        "linkLabel": "Open Banking"
+      },
+      "manual": {
+        "title": "4. Add what no account reports",
+        "body": "- Coins and bars go into the precious-metals vault under Investments > Commodities.\n- Real estate, collectibles, private equity, bonds and similar assets are added as manual assets from their category page.\n- Mortgages and other loans go under Liabilities > Loans, so your net worth subtracts what you still owe.",
+        "linkLabel": "See the tutorials"
+      },
+      "explore": {
+        "title": "5. Explore your dashboard",
+        "body": "The dashboard shows your net worth, how it is split across categories and how it has developed. Every category under Investments has its own page with the holdings behind it. From now on Fiscalis takes a snapshot every day, so your history grows by itself.",
+        "linkLabel": "Open the dashboard"
+      },
+      "next": {
+        "title": "Next steps",
+        "body": "- Plan your retirement with the retirement planner, funded from your real net worth.\n- Create an API key if you want to read your net worth from your own tools.\n- Check the changelog to see what is new."
+      }
+    }
+  },
+  "tutorials": {
+    "subtitle": "Step-by-step guides for the most common tasks.",
+    "sections": {
+      "connectBank": {
+        "title": "Connect a bank",
+        "body": "Bank accounts are connected through Plaid. Fiscalis gets read-only access to balances and transactions.",
+        "steps": "- Open Integrations > Banking.\n- Click Connect bank. The Plaid window opens.\n- Choose your bank and sign in there. Your bank credentials go to Plaid and your bank, never to Fiscalis.\n- Select the accounts you want to share and confirm.\n- Your balances appear on the page. Open Transactions to see your transaction history.",
+        "note": "If a bank shows Re-auth required, or your consent is about to end, click Reconnect and sign in again. Your data stays in place.",
+        "linkLabel": "Open Banking"
+      },
+      "connectBroker": {
+        "title": "Connect a broker or Bitpanda",
+        "body": "Brokers are connected through SnapTrade. Bitpanda is connected directly with a read-only API key.",
+        "steps": "- Open Integrations > Brokers.\n- For a broker, click Connect broker, pick your broker in the SnapTrade connection portal and sign in there.\n- For Bitpanda, click Connect Bitpanda. Use the link Create a read-only key in Bitpanda, create a key with read access only and copy it.\n- Paste the key, optionally give it a label, and click Connect.\n- Your positions and cash appear after the first sync.",
+        "note": "Bitpanda syncs every six hours; use Sync now to update it straight away. Never give Fiscalis a Bitpanda key that can trade or withdraw.",
+        "linkLabel": "Open Brokers"
+      },
+      "manualAsset": {
+        "title": "Add a manual asset",
+        "body": "Manual assets cover anything no connected account reports, such as a flat, a watch, wine, private equity or government bonds.",
+        "steps": "- Open the matching category under Investments, for example Real Estate or Collectibles.\n- Click Add Item, or open a subcategory and click Add asset.\n- Choose the category and subcategory and give the asset a name.\n- Pick its currency and add a valuation: a date and what the asset was worth on that day. The latest valuation counts in your net worth.\n- Optionally enter the purchase price to see your gain or loss, and pick the loan that financed it under Financed by.\n- Save. To update the value later, edit the asset and click Add valuation.",
+        "linkLabel": "Open Real Estate"
+      },
+      "vaultPurchase": {
+        "title": "Record a vault purchase",
+        "body": "The vault holds physical gold, silver, platinum and palladium. Items are valued at the live spot price with dealer premiums.",
+        "steps": "- Open Investments > Commodities > Precious metals and switch to the Holdings tab.\n- Click Add item.\n- Pick a coin or bar From catalogue, or choose Custom item and enter its name, metal, category, weight in grams and purity in ‰.\n- Under Purchase details enter the quantity, the price per unit and its currency, and the purchase date.\n- Optionally add a storage location and notes, then click Add to vault.",
+        "note": "The purchase date matters: performance counts the purchase as money invested on that day, not as a gain. When you sell an item, use Sell item instead of deleting it, so the sale and your realised gain are recorded.",
+        "linkLabel": "Open the vault"
+      },
+      "loan": {
+        "title": "Set up a loan",
+        "body": "Loans count as liabilities and reduce your net worth by their outstanding balance. Fiscalis calculates the full repayment schedule.",
+        "steps": "- Open Liabilities > Loans and click Add Loan.\n- Name & type: give the loan a name and choose its type: Fixed Payment, Declining Payment, Balloon/Bullet or Interest-Only Period.\n- Amount & rate: enter the original amount, the current balance if it differs, the annual interest rate and the currency.\n- Dates & payments: set the payment frequency, the term and the start date. Use the calculated payment or enter your actual payment.\n- Extra payments: say whether the loan allows prepayments and how much per year.\n- Confirm details and save.",
+        "note": "Open a loan to see its schedule, record payments you have made and try what-if scenarios such as a higher payment or a one-off extra payment.",
+        "linkLabel": "Open Loans"
+      },
+      "apiKey": {
+        "title": "Use the API",
+        "body": "With a personal API key you can read your current net worth from a script, a spreadsheet or a home dashboard. Keys are read-only and belong to your account.",
+        "steps": "- Open Settings > API Keys.\n- Enter a name for the key, choose when it expires (30 days, 90 days, 1 year or never) and click Create key.\n- Copy the key right away and store it in a password manager or secret store. It is shown only once.\n- Send it in the Authorization header as a bearer token to the endpoint shown on the API keys page, as in the example below.\n- To get the amounts in another currency, add ?currency=USD, GBP or CHF to the URL. Without it the amounts are in EUR.",
+        "note": "You can have up to {maxKeys} active keys, and each key is limited to {rateLimit} requests per minute. Keys in URLs are not accepted, and keys must never be used in browser code. Revoke a key on the same page if it may have leaked.",
+        "linkLabel": "Open Settings > API Keys"
+      }
+    }
+  },
+  "changelog": {
+    "subtitle": "New features and fixes, newest first.",
+    "empty": "No changes recorded yet.",
+    "entryLanguage": "Each entry is the title of the change as it was released.",
+    "types": {
+      "feature": "New",
+      "fix": "Fix"
+    },
+    "pr": "#{number}",
+    "count": "{count, plural, one {# change} other {# changes}}"
+  }
+}

@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p convex",
     "test:services": "cd ../services && bun run test --run",
     "test:convex": "vitest run",
-    "check": "bun run lint && bun run typecheck && bun run test:convex && bun run test:services"
+    "check": "bun run lint && bun run typecheck && bun run test:convex && bun run test:services",
+    "changelog": "bun scripts/changelog.ts"
   },
   "dependencies": {
     "@clerk/backend": "^2.29.5",

@@ -41,6 +41,7 @@ import {
 	filterMenuByFeature,
 	type FeatureFlag,
 } from "@/lib/config/features";
+import { DOC_PAGES, DOC_ROUTES } from "@/lib/config/docs";
 import type { Messages } from "@/i18n/messages";
 
 /** A sidebar label: a key under navigation.sidebar.items */
@@ -192,27 +193,12 @@ const data: Record<
 	others: [
 		{
 			titleKey: "documentation",
-			url: "#",
+			url: DOC_ROUTES.introduction,
 			icon: BookOpen,
-			feature: "documentation",
-			items: [
-				{
-					titleKey: "introduction",
-					url: "#",
-				},
-				{
-					titleKey: "getStarted",
-					url: "#",
-				},
-				{
-					titleKey: "tutorials",
-					url: "#",
-				},
-				{
-					titleKey: "changelog",
-					url: "#",
-				},
-			],
+			items: DOC_PAGES.map((page) => ({
+				titleKey: page,
+				url: DOC_ROUTES[page],
+			})),
 		},
 		{
 			titleKey: "settings",

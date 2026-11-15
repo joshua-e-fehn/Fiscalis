@@ -13,7 +13,11 @@
  * Framework-free: imported by Convex functions, the app and vitest.
  */
 
-import { BASE_CURRENCY, normalizeCurrency } from "../finance/currency";
+import {
+  BASE_CURRENCY,
+  MIRRORED_CURRENCIES,
+  normalizeCurrency,
+} from "../finance/currency";
 import type { ToBaseAmount } from "../finance/metalsLedger";
 import type { UserErrorCode } from "../i18n/userErrorCodes";
 import { holdingProfitLoss } from "./categorySummary";
@@ -266,11 +270,17 @@ export function isIsoDate(date: string): boolean {
 
 /**
  * The stored currency code of an input currency (upper case), or null when
- * it is not an ISO code of a major unit.
+ * it is not a major unit with an exchange rate: the base currency or one
+ * the FX mirror holds (MIRRORED_CURRENCIES, the list the form offers). Any
+ * other code would count as 0 in net worth, so it is refused up front.
  */
 export function manualAssetCurrency(currency: string): string | null {
   const normalized = normalizeCurrency(currency);
-  return normalized && normalized.divisor === 1 ? normalized.code : null;
+  if (!normalized || normalized.divisor !== 1) return null;
+  const { code } = normalized;
+  return code === BASE_CURRENCY || MIRRORED_CURRENCIES.includes(code)
+    ? code
+    : null;
 }
 
 /**

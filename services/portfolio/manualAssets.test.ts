@@ -205,6 +205,13 @@ describe("validateManualAsset", () => {
     expect(validateManualAsset(input({ currency: "usd" }), NOW)).toBeNull();
   });
 
+  it("requires a currency with an exchange rate, so the asset never counts 0", () => {
+    expect(validateManualAsset(input({ currency: "EUE" }), NOW)).toBe(
+      "manualAssetCurrencyInvalid",
+    );
+    expect(validateManualAsset(input({ currency: "chf" }), NOW)).toBeNull();
+  });
+
   it("requires at least one valid, non-future, non-negative valuation", () => {
     expect(validateManualAsset(input({ valuations: [] }), NOW)).toBe(
       "manualAssetValuationRequired",

@@ -6,6 +6,7 @@ import {
 	metalPriceSnapshotFields,
 } from "./lib/metalPriceValidators";
 import { manualAssetFields } from "./lib/manualAssetValidators";
+import { pieFields } from "./lib/pieValidators";
 import {
 	syncProviderValidator,
 	syncRunStatusValidator,
@@ -374,6 +375,17 @@ export default defineSchema({
 	})
 		.index("by_user", ["userId"])
 		.index("by_user_key", ["userId", "holdingKey"]),
+
+	// ═══════════════════════════════════════════════════════════════
+	// PIES (Investment Strategies: target allocations, convex/pies.ts)
+	// ═══════════════════════════════════════════════════════════════
+
+	pies: defineTable({
+		userId: v.string(), // Clerk user ID
+		...pieFields, // name, description, slices (weights sum to 100)
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	}).index("by_user", ["userId"]),
 
 	// ═══════════════════════════════════════════════════════════════
 	// LOANS (Debt Management)

@@ -69,6 +69,19 @@ export const USER_ERROR_CODES = [
   "valuationInvalidDate",
   "valuationDateInFuture",
   "valuationRateInvalid",
+  // Pies (convex/pies.ts, services/portfolio/pies.ts)
+  "pieNotFound",
+  "pieNameRequired",
+  "pieNameTooLong",
+  "pieDescriptionTooLong",
+  "pieLabelTooLong",
+  "pieSlicesRequired",
+  "pieTooManySlices",
+  "pieWeightInvalid",
+  "pieWeightsNotHundred",
+  "pieSliceTargetInvalid",
+  "pieSliceDuplicate",
+  "pieHoldingNotFound",
 
   // Profile and onboarding (frontend/lib/utils/date.ts BirthDateError)
   "birthDate.format",

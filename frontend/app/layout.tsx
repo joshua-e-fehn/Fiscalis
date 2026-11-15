@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Devanagari } from "next/font/google";
+import { Inter, Noto_Sans_Arabic, Noto_Sans_Devanagari } from "next/font/google";
 import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { NextIntlClientProvider } from "next-intl";
@@ -8,6 +8,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ConvexClientProvider } from "@/components/ConvexClientProvider";
 import { clerkLocalization } from "@/i18n/clerk";
 import { languageForLocale, localeDirection } from "@/i18n/locales";
+import { DirectionProvider } from "@/providers/directionProvider";
 import { LocaleSync } from "@/providers/localeSync";
 import { ThemeProvider, ThemeSync } from "@/providers/themeProvider";
 import { Toaster } from "@/components/ui/shadcn/sonner";
@@ -33,6 +34,15 @@ const inter = Inter({
 // fetch it for Hindi text; not preloaded because most pages never render any.
 const devanagari = Noto_Sans_Devanagari({
   subsets: ["devanagari"],
+  preload: false,
+  adjustFontFallback: false,
+});
+// Inter has no Arabic glyphs. Same approach as Devanagari: an Arabic-only
+// unicode-range, listed first without a fallback face (Inter's adjusted
+// fallback is local Arial, which has Arabic glyphs and would otherwise win),
+// so Latin text (brands, amounts) stays in Inter and only Arabic text fetches it.
+const notoArabic = Noto_Sans_Arabic({
+  subsets: ["arabic"],
   preload: false,
   adjustFontFallback: false,
 });
@@ -74,19 +84,21 @@ export default async function AppLayout({
         <body
           className={inter.className}
           style={{
-            fontFamily: `${devanagari.style.fontFamily}, ${inter.style.fontFamily}`,
+            fontFamily: `${devanagari.style.fontFamily}, ${notoArabic.style.fontFamily}, ${inter.style.fontFamily}`,
           }}
         >
           {/* Inherits locale, messages, time zone and formats from i18n/request.ts */}
           <NextIntlClientProvider>
-            <ThemeProvider nonce={nonce}>
-              <ConvexClientProvider>
-                <ThemeSync />
-                <LocaleSync />
-                {children}
-                <Toaster richColors closeButton />
-              </ConvexClientProvider>
-            </ThemeProvider>
+            <DirectionProvider>
+              <ThemeProvider nonce={nonce}>
+                <ConvexClientProvider>
+                  <ThemeSync />
+                  <LocaleSync />
+                  {children}
+                  <Toaster richColors closeButton />
+                </ConvexClientProvider>
+              </ThemeProvider>
+            </DirectionProvider>
           </NextIntlClientProvider>
         </body>
       </html>

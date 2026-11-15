@@ -30,14 +30,14 @@ export const DEFAULT_LANGUAGE: Language = "en";
  * catalogue never claim a language the content is not in (browsers would
  * offer to translate the page, screen readers would mispronounce it). English,
  * German, Spanish, French, Italian, European Portuguese, Russian, Simplified
- * Chinese and Hindi are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
+ * Chinese, Hindi and Arabic are rendered. NEXT_PUBLIC_I18N_PREVIEW=1 renders every language
  * in LANGUAGES, for checking a new catalogue locally (inlined at build time on
  * both server and client).
  */
 export const RENDERED_LANGUAGES: readonly Language[] =
   process.env.NEXT_PUBLIC_I18N_PREVIEW === "1"
     ? LANGUAGES
-    : ["en", "de", "es", "fr", "it", "pt-PT", "ru", "zh-Hans", "hi"];
+    : ["en", "de", "es", "fr", "it", "pt-PT", "ru", "zh-Hans", "hi", "ar"];
 
 /** The language a stored or requested language is rendered in. */
 export function renderedLanguage(

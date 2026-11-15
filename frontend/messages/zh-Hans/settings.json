@@ -1,0 +1,98 @@
+{
+  "general": {
+    "title": "通用",
+    "subtitle": "你的个人资料、显示货币、语言和主题。",
+    "profile": {
+      "title": "个人资料",
+      "description": "Fiscalis 如何称呼你。",
+      "displayName": "显示名称",
+      "displayNamePlaceholder": "你的名字",
+      "birthDate": "出生日期",
+      "birthDateHint": "选填。用于退休规划等规划工具。"
+    },
+    "region": {
+      "title": "地区",
+      "description": "货币和语言。",
+      "currency": "显示货币",
+      "currencyHint": "总额、图表和收益按最新汇率换算，历史数据按当日汇率换算。贷款和账户行保留各自的货币。"
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "“跟随系统”会使用你设备的设置。",
+      "theme": "主题"
+    },
+    "saveFailed": "无法保存你的设置，请重试。"
+  },
+  "apiKeys": {
+    "title": "API 密钥",
+    "subtitle": "通过程序读取你的净资产。密钥是私密的，仅限于你的账户。",
+    "create": {
+      "title": "创建密钥",
+      "description": "密钥提供对你当前净资产的只读访问权限。请像对待密码一样对待它：切勿将其提交到代码库或在浏览器代码中使用。",
+      "name": "名称",
+      "namePlaceholder": "例如：家庭仪表盘",
+      "expires": "有效期",
+      "submit": "创建密钥"
+    },
+    "expiry": {
+      "30": "30 天",
+      "90": "90 天",
+      "365": "1 年",
+      "never": "永不过期"
+    },
+    "list": {
+      "title": "你的密钥",
+      "empty": "还没有 API 密钥。",
+      "name": "名称",
+      "key": "密钥",
+      "status": "状态",
+      "created": "创建时间",
+      "expires": "过期时间",
+      "lastUsed": "上次使用",
+      "never": "从未",
+      "none": "—"
+    },
+    "status": {
+      "active": "有效",
+      "revoked": "已撤销",
+      "expired": "已过期"
+    },
+    "revoke": {
+      "button": "撤销",
+      "title": "撤销“{name}”？",
+      "description": "使用此密钥的请求将立即被拒绝。此操作无法撤消。",
+      "confirm": "撤销"
+    },
+    "usage": {
+      "title": "用法",
+      "description": "在 Authorization 请求头中发送密钥。不接受放在 URL 中的密钥。每个密钥每分钟最多 {limit} 次请求。金额以 EUR 计；添加 <code>?currency=USD</code>、<code>GBP</code> 或 <code>CHF</code> 即可按最新汇率换算。"
+    },
+    "newKey": {
+      "title": "复制你的新 API 密钥",
+      "description": "密钥只会显示这一次。请把它保存在安全的地方，例如密码管理器或密钥存储库。",
+      "copy": "复制 API 密钥",
+      "done": "完成"
+    }
+  },
+  "privacy": {
+    "title": "隐私",
+    "subtitle": "下载 Fiscalis 存储的关于你的所有数据，或删除你的账户。",
+    "export": {
+      "title": "下载我的数据",
+      "description": "一个 JSON 文件，包含你账户中的每条记录，按数据表分组。加密的服务商凭据和 API 密钥哈希不包含在内。",
+      "button": "下载我的数据",
+      "preparing": "正在准备…",
+      "failed": "无法准备你的数据，请重试。"
+    },
+    "delete": {
+      "title": "删除我的账户",
+      "description": "在 Plaid 和 SnapTrade 断开你的银行和券商连接，删除你的所有数据，然后删除你的登录信息。此操作无法撤消。",
+      "button": "删除我的账户",
+      "dialogTitle": "删除你的账户？",
+      "dialogDescription": "首先撤销你的连接。然后删除所有账户、头寸、交易、贷款、保管库物品、快照和设置，最后删除你的登录信息。如需副本，请先下载你的数据。",
+      "confirmLabel": "输入 {phrase} 以确认",
+      "confirm": "永久删除账户",
+      "deleting": "正在删除…"
+    }
+  }
+}

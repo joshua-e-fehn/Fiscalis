@@ -1,0 +1,244 @@
+{
+  "status": {
+    "connected": "已连接",
+    "syncing": "同步中",
+    "error": "错误",
+    "reauthRequired": "需要重新验证",
+    "pending": "待处理",
+    "retrying": "正在重试",
+    "disconnected": "已断开"
+  },
+  "connection": {
+    "openMenu": "打开菜单",
+    "sync": "同步",
+    "syncing": "同步中…",
+    "disconnect": "断开连接",
+    "disconnecting": "正在断开…",
+    "disconnectTitle": "断开 {name}？",
+    "disconnectInfo": "这会从你的仪表盘中移除 {info} 及其数据。",
+    "disconnectDefault": "这会从你的仪表盘中移除此连接及所有相关数据。",
+    "notAffected": "你的实际账户不会受到影响。你可以随时重新连接。",
+    "cash": "现金 {amount}",
+    "syncedJustNow": "刚刚"
+  },
+  "banking": {
+    "title": "银行账户",
+    "subtitle": "连接你的银行账户，自动追踪余额和交易。",
+    "connectBank": "连接银行",
+    "unknownBank": "未知银行",
+    "accounts": "{count, plural, other {# 个账户}}",
+    "stats": {
+      "netBalance": "净余额",
+      "netBalanceDescription": "{accounts, plural, other {# 个账户}}，已扣除债务",
+      "netBalanceDescriptionUnconverted": "{accounts, plural, other {# 个账户}}，已扣除债务 · {unconverted} 个没有汇率",
+      "checking": "活期",
+      "savings": "储蓄",
+      "owed": "欠款",
+      "cards": "{cards, plural, other {# 张卡}}",
+      "cardsAndLoans": "{cards, plural, other {# 张卡}}，{loans, plural, other {# 笔贷款}}"
+    },
+    "empty": {
+      "loadFailedTitle": "无法加载账户",
+      "loadFailedDescription": "无法加载你的银行账户。请尝试刷新页面。",
+      "refreshPage": "刷新页面",
+      "syncTitle": "同步你的账户",
+      "syncDescription": "{count, plural, other {你有 # 个银行连接，但还没有同步任何账户。}}点击下方按钮获取你的账户数据。",
+      "syncAccounts": "同步账户",
+      "noAccountsTitle": "没有关联的账户",
+      "noAccountsDescription": "连接你的银行账户，在一处追踪财务、查看余额并监控交易。"
+    },
+    "accountTypes": {
+      "checking": "活期账户",
+      "savings": "储蓄账户",
+      "moneyMarket": "货币市场",
+      "cd": "定期存单",
+      "cashManagement": "现金管理",
+      "prepaid": "预付卡",
+      "paypal": "PayPal",
+      "depository": "银行账户",
+      "creditCard": "信用卡",
+      "credit": "信贷",
+      "loan": "贷款",
+      "mortgage": "房贷",
+      "student": "学生贷款",
+      "auto": "车贷",
+      "investment": "投资",
+      "brokerage": "券商账户"
+    },
+    "account": {
+      "fallbackName": "银行账户",
+      "available": "可用：{amount}"
+    },
+    "link": {
+      "connecting": "正在连接…",
+      "connectAnother": "连接其他银行",
+      "connectFirst": "连接你的银行",
+      "connected": "银行连接成功"
+    },
+    "reauth": {
+      "needsReauth": "此连接需要重新验证",
+      "disconnectBank": "断开银行",
+      "expiredTitle": "连接已过期",
+      "expiredDescription": "出于安全原因，你的银行要求你重新登录。点击“重新连接”以恢复对账户的访问。",
+      "disconnectDescription": "这会从你的仪表盘中完全移除此连接。",
+      "notAffected": "你的实际银行账户不会受到影响。你可以随时重新连接。",
+      "reconnect": "重新连接",
+      "reconnecting": "正在重新连接…",
+      "alertTitle": "{count, plural, other {银行连接需要处理}}",
+      "alertOne": "你与 {name} 的连接需要重新验证。",
+      "alertOneUnnamed": "你与某家银行的连接需要重新验证。",
+      "alertMany": "{count, plural, other {# 个银行连接需要重新验证。}}"
+    },
+    "transactions": {
+      "title": "交易",
+      "subtitle": "你所有已连接账户中的银行交易。",
+      "open": "交易",
+      "sync": "同步交易",
+      "syncing": "正在同步交易…",
+      "syncDone": "{count, plural, =0 {已是最新：没有新交易。} other {已更新 # 笔交易。}}",
+      "syncPartial": "{failed, plural, other {# 家银行无法同步。}}请稍后重试。",
+      "syncFailed": "无法同步交易。请稍后重试。",
+      "filters": {
+        "account": "账户",
+        "allAccounts": "所有账户",
+        "from": "从",
+        "to": "至",
+        "search": "搜索",
+        "searchPlaceholder": "搜索描述…",
+        "clear": "清除筛选"
+      },
+      "columns": {
+        "date": "日期",
+        "description": "描述",
+        "account": "账户",
+        "amount": "金额"
+      },
+      "pending": "待处理",
+      "moneyIn": "收入",
+      "moneyOut": "支出",
+      "loadMore": "加载更多",
+      "loadingMore": "加载中…",
+      "searchOrder": "搜索结果按匹配度排序。",
+      "empty": {
+        "noBankTitle": "未连接银行",
+        "noBankDescription": "连接银行即可在这里查看其交易。",
+        "noTransactionsTitle": "暂无交易",
+        "noTransactionsDescription": "同步你的交易即可从银行获取。新交易也会随每日同步到达。",
+        "noMatchesTitle": "没有匹配的交易",
+        "noMatchesDescription": "请尝试其他账户、日期范围或搜索词。"
+      }
+    },
+    "consent": {
+      "expiringTitle": "{days, plural, other {你对此银行的授权将在 # 天后到期}}",
+      "expiringDescription": "请在 {date} 前续期，以保持余额同步。",
+      "expiredTitle": "你对此银行的授权已到期",
+      "expiredDescription": "续期后即可重新同步余额。"
+    }
+  },
+  "brokers": {
+    "title": "券商",
+    "subtitle": "连接你的券商和交易所。目前支持：SnapTrade 券商和 Bitpanda——更多即将推出。",
+    "refresh": "刷新",
+    "connectBroker": "连接券商",
+    "stats": {
+      "totalValue": "总价值",
+      "positions": "{count, plural, other {# 个头寸}}",
+      "brokers": "券商",
+      "connectedBrokers": "已连接的券商",
+      "accounts": "账户",
+      "tradingAccounts": "券商账户",
+      "cash": "现金",
+      "availableCash": "可用现金"
+    },
+    "connect": {
+      "connectFirst": "连接你的券商",
+      "connectAnother": "连接其他券商",
+      "add": "添加券商",
+      "preparing": "正在准备…",
+      "connecting": "正在连接…",
+      "connected": "券商已连接",
+      "connectingAccount": "正在连接你的券商账户…",
+      "portalTitle": "SnapTrade 连接门户",
+      "failed": "无法连接你的券商，请重试。"
+    },
+    "connection": {
+      "unknownBroker": "未知券商",
+      "fallbackName": "券商",
+      "accounts": "{count, plural, other {# 个账户}}",
+      "status": "状态",
+      "accountId": "账户 ID",
+      "username": "用户名",
+      "lastSynced": "上次同步",
+      "never": "从未",
+      "pendingNotice": "API 集成待处理。连接后数据将同步。",
+      "transientNotice": "券商暂时出现问题，将自动重试。",
+      "disconnectTitle": "断开券商",
+      "disconnectDescription": "确定要断开“{name}”吗？这会从你的账户中移除该券商连接及其所有头寸数据。此操作无法撤消。"
+    },
+    "connections": {
+      "title": "券商连接",
+      "description": "管理你的券商连接",
+      "loadFailed": "无法加载券商连接。请稍后重试。",
+      "connectedCount": "{count, plural, other {已连接 # 家券商}}",
+      "connectPrompt": "连接你的券商账户以追踪你的投资",
+      "emptyTitle": "未连接券商",
+      "emptyDescription": "连接你的券商账户，自动追踪你的投资和投资组合表现。"
+    },
+    "account": {
+      "fallbackType": "投资",
+      "accountNumber": "账户 {number}",
+      "totalValue": "总价值",
+      "cash": "现金",
+      "invested": "已投资"
+    },
+    "empty": {
+      "syncTitle": "同步你的账户",
+      "syncDescription": "{count, plural, other {你有 # 个券商连接，但还没有同步任何账户。}}点击下方按钮获取你的账户数据。",
+      "syncAccounts": "同步账户",
+      "noBrokersTitle": "未连接券商",
+      "noBrokersDescription": "连接你的券商账户，在一处追踪你的投资、头寸和投资组合表现。"
+    },
+    "reauth": {
+      "needsAttention": "连接需要处理",
+      "description": "此连接已过期或需要重新验证。请重新连接以继续同步数据。",
+      "reconnect": "重新连接",
+      "dialogTitle": "重新连接 {name}",
+      "dialogDescription": "重新验证你的连接以继续同步数据。",
+      "completing": "正在完成重新验证…",
+      "success": "重新验证成功！",
+      "failedTitle": "连接失败",
+      "failed": "重新连接失败，请重试。",
+      "portalTitle": "SnapTrade 重新连接"
+    }
+  },
+  "bitpanda": {
+    "title": "Bitpanda",
+    "subtitle": "通过只读 API 密钥同步加密货币、贵金属、大宗商品、股票和现金。",
+    "holdings": "{count, plural, other {# 项持仓}}",
+    "emptyDescription": "使用只读 API 密钥连接你的 Bitpanda 账户，追踪你的所有持仓。",
+    "fallbackLabel": "Bitpanda 账户",
+    "keyRejected": "API 密钥被拒绝——请使用新的只读密钥重新连接",
+    "syncFailed": "同步失败——请重试",
+    "transient": "Bitpanda 暂时出现问题——将自动重试",
+    "lastSynced": "上次同步于 {date}",
+    "syncNow": "立即同步",
+    "addAnother": "添加其他 Bitpanda 密钥",
+    "connect": {
+      "button": "连接 Bitpanda",
+      "title": "连接 Bitpanda",
+      "description": "粘贴一个<strong>只读</strong> Bitpanda API 密钥。Fiscalis 用它同步你的加密货币、贵金属、大宗商品、股票和现金持仓。密钥经过加密，绝不会被共享。",
+      "apiKey": "API 密钥",
+      "apiKeyPlaceholder": "你的只读 Bitpanda API 密钥",
+      "createKey": "在 Bitpanda 中创建只读密钥",
+      "label": "标签（选填）",
+      "labelPlaceholder": "例如：我的 Bitpanda",
+      "submit": "连接",
+      "connecting": "正在连接…",
+      "keyMissing": "请粘贴你的 Bitpanda API 密钥。"
+    }
+  },
+  "connectionNotices": {
+    "disconnectFailed": "无法断开连接。未移除任何内容，请重试。",
+    "transientError": "服务商暂时出现问题。你的连接没有问题，将自动重试。"
+  }
+}

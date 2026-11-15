@@ -1,0 +1,143 @@
+{
+  "page": {
+    "title": "仪表盘",
+    "subtitle": "你完整的财务概览",
+    "performanceTitle": "投资组合走势",
+    "investmentCategories": "投资类别"
+  },
+  "netWorth": {
+    "title": "总净资产",
+    "unrealized": "（{percent}）未实现",
+    "unrealizedCoverage": "（{percent}）未实现，覆盖 {covered}% 的资产"
+  },
+  "kpi": {
+    "totalAssets": "总资产",
+    "totalLiabilities": "总负债"
+  },
+  "ytdNetWorth": {
+    "title": "年初至今净资产",
+    "changeSinceJan1": "自 1 月 1 日以来变动 {percent}",
+    "fxEffectHint": "以 {currency} 计：包含自 1 月 1 日以来欧元汇率的变动。",
+    "partial": "数据不完整：某个服务商同步失败或缺少价格",
+    "trackingSince": "历史数据不足（自 {date} 起追踪）",
+    "noData": "今年暂无数据"
+  },
+  "allocation": {
+    "title": "资产配置",
+    "description": "各投资类别的分布",
+    "empty": "没有可显示的资产",
+    "emptyHint": "添加投资即可查看你的资产配置"
+  },
+  "categoryCard": {
+    "holdings": "{count, plural, other {# 项持仓}}",
+    "noHoldings": "暂无持仓",
+    "comingSoon": "即将推出"
+  },
+  "liabilitiesCard": {
+    "title": "负债",
+    "accounts": "{accounts, plural, other {# 个账户}}",
+    "loans": "{loans, plural, other {# 笔贷款}}",
+    "accountsAndLoans": "{accounts, plural, other {# 个账户}} · {loans, plural, other {# 笔贷款}}",
+    "monthlyPayments": "每月还贷 {amount}"
+  },
+  "section": {
+    "totalValue": "投资组合总值",
+    "totalCash": "现金总额",
+    "profitLoss": "总盈亏",
+    "profitLossSinceTracking": "自开始追踪以来的盈亏",
+    "changeSinceTracking": "自开始追踪以来的变动",
+    "since": "自 {date} 起",
+    "sinceNetOfFlows": "自 {date} 起，已扣除买入和存入",
+    "coverage": "基于 {percent}% 的价值：没有成本的持仓未计入",
+    "addCostData": "添加成本数据以追踪表现",
+    "noHoldings": "暂无持仓",
+    "ytdChange": "年初至今变动",
+    "ytdReturn": "年初至今收益",
+    "ytdReturnEstimated": "年初至今收益（估算）",
+    "sincePartial": "自 {date} 起 · 数据不完整：某次同步失败或缺少价格",
+    "trackedSince": "历史数据不足（自 {date} 起追踪）",
+    "noDataThisYear": "今年暂无数据",
+    "portfolioAllocation": "投资组合配置",
+    "highCash": "现金比例较高（保守）",
+    "lowCash": "现金储备较低",
+    "ofTotalPortfolio": "占投资组合总额",
+    "addAssets": "添加资产即可查看配置",
+    "activeAccounts": "活跃账户",
+    "accountsLinked": "{count, plural, other {个账户已关联}}",
+    "historyHint": "历史数据将在下一次每日快照后显示"
+  },
+  "allocationChart": {
+    "title": "配置",
+    "empty": "暂无持仓",
+    "other": "其他（<2%）"
+  },
+  "performanceChart": {
+    "portfolioTitle": "投资组合表现",
+    "netWorthTitle": "净资产表现",
+    "portfolio": "投资组合",
+    "netWorth": "净资产",
+    "value": "价值",
+    "costBasis": "成本",
+    "empty": "暂无表现数据",
+    "emptyHint": "添加持仓以追踪投资组合表现",
+    "tooltipRow": "{series}：{amount}",
+    "partial": "数据不完整：某个服务商同步失败或缺少价格"
+  },
+  "topHoldings": {
+    "title": "最大持仓",
+    "empty": "暂无持仓",
+    "count": "（{count, plural, other {# 项持仓}}）"
+  },
+  "positions": {
+    "title": "全部头寸",
+    "description": "所有金融服务商的统一视图",
+    "empty": "未找到头寸",
+    "emptyHint": "连接你的账户即可查看持仓",
+    "shownOfTotal": "{shown} / {total, plural, other {# 个头寸}}",
+    "showLess": "收起",
+    "viewAll": "查看全部",
+    "searchPlaceholder": "搜索头寸…",
+    "provider": "服务商",
+    "allProviders": "所有服务商",
+    "category": "类别",
+    "allCategories": "所有类别",
+    "providers": {
+      "plaid": "银行",
+      "snaptrade": "券商",
+      "bitpanda": "Bitpanda",
+      "manual": "手动"
+    },
+    "providerFilter": {
+      "plaid": "银行",
+      "snaptrade": "券商",
+      "bitpanda": "Bitpanda",
+      "manual": "手动"
+    },
+    "columns": {
+      "source": "来源",
+      "position": "头寸",
+      "category": "类别",
+      "quantity": "数量",
+      "value": "价值",
+      "profitLoss": "盈亏",
+      "actions": "操作"
+    },
+    "shown": "{count, plural, other {显示 # 个头寸}}",
+    "total": "合计：{amount}",
+    "costFxEstimated": "（估算）",
+    "costFxEstimatedHint": "成本按今日汇率换算：购买日期未知"
+  },
+  "cashHoldings": {
+    "bankAccount": "银行账户",
+    "cashPosition": "现金头寸",
+    "brokerCash": "{account} - 现金"
+  },
+  "emptyState": {
+    "title": "连接你的第一个账户",
+    "description": "当 Fiscalis 了解你拥有什么之后，你的仪表盘就会填满。连接银行或券商、导入 Bitpanda，或手动添加贵金属和贷款。",
+    "bank": "连接银行",
+    "broker": "连接券商",
+    "metals": "添加贵金属",
+    "loan": "添加贷款"
+  }
+}

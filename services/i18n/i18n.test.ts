@@ -260,6 +260,11 @@ describe.skipIf(process.env.NEXT_PUBLIC_I18N_PREVIEW === "1")("rendered language
     expect(renderedLanguage("it")).toBe("it");
   });
 
+  it("renders Simplified Chinese for Chinese visitors", () => {
+    expect(RENDERED_LANGUAGES).toContain("zh-Hans");
+    expect(resolveLocale({ acceptLanguage: "zh-CN,zh;q=0.9" })).toBe("zh-Hans");
+  });
+
   it("renders German for German visitors and users by default", () => {
     expect(resolveLocale({ cookie: "de", acceptLanguage: "en-GB" })).toBe("de");
     expect(resolveLocale({ acceptLanguage: "de-CH,de;q=0.9" })).toBe("de");
@@ -294,12 +299,17 @@ describe("locale helpers", () => {
     expect(matchLanguage("fr-FR", codes)).toBeUndefined();
   });
 
+  it("formats Simplified Chinese as zh-CN", () => {
+    expect(INTL_TAGS["zh-Hans"]).toBe("zh-CN");
+  });
+
   it("maps Intl tags back to app languages", () => {
     expect(languageForLocale("de-DE")).toBe("de");
     expect(languageForLocale("de-CH")).toBe("de");
     expect(languageForLocale("en-GB")).toBe("en");
     expect(languageForLocale("fr-CA")).toBe("fr");
     expect(languageForLocale("nl-NL")).toBe("en");
+    expect(languageForLocale("zh-CN")).toBe("zh-Hans");
   });
 
   it("is right-to-left only for Arabic", () => {

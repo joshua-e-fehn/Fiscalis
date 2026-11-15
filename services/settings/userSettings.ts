@@ -6,7 +6,7 @@
  */
 import { isDisplayCurrency, type DisplayCurrency } from "../finance/displayCurrency";
 
-export const LANGUAGES = ["en", "de", "es", "fr", "it", "pt-PT", "ru"] as const;
+export const LANGUAGES = ["en", "de", "es", "fr", "it", "pt-PT", "ru", "zh-Hans"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 export const THEMES = ["light", "dark", "system"] as const;

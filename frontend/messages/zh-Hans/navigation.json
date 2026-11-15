@@ -1,0 +1,75 @@
+{
+  "sidebar": {
+    "groups": {
+      "portfolio": "投资组合",
+      "tools": "工具",
+      "integrations": "集成",
+      "others": "其他"
+    },
+    "items": {
+      "dashboard": "仪表盘",
+      "investments": "投资",
+      "equities": "股票",
+      "commodities": "大宗商品",
+      "bonds": "债券",
+      "realEstate": "房地产",
+      "cash": "现金与货币市场",
+      "crypto": "加密货币",
+      "collectibles": "收藏品",
+      "liabilities": "负债",
+      "liabilitiesOverview": "全部负债",
+      "loans": "贷款",
+      "investmentStrategies": "投资策略",
+      "pies": "投资组合包",
+      "banking": "银行",
+      "brokers": "券商",
+      "retirementPlanner": "退休规划",
+      "interestCalculators": "利息计算器",
+      "loanCalculators": "贷款计算器",
+      "worldMap": "世界地图",
+      "documentation": "文档",
+      "introduction": "简介",
+      "getStarted": "快速入门",
+      "tutorials": "教程",
+      "changelog": "更新日志",
+      "settings": "设置",
+      "general": "通用",
+      "apiKeys": "API 密钥",
+      "categories": "类别",
+      "privacy": "隐私",
+      "team": "团队",
+      "billing": "账单",
+      "limits": "限额"
+    }
+  },
+  "brand": {
+    "logoAlt": "Fiscalis 标志"
+  },
+  "userMenu": {
+    "upgrade": "升级到 Pro",
+    "account": "账户",
+    "billing": "账单",
+    "notifications": "通知",
+    "logOut": "退出登录"
+  },
+  "header": {
+    "signIn": "登录",
+    "joinWaitlist": "加入候补名单",
+    "dashboard": "仪表盘"
+  },
+  "sync": {
+    "syncAll": "同步所有账户",
+    "syncing": "正在同步所有账户…",
+    "complete": "同步完成",
+    "failed": "同步失败",
+    "synced": "已同步：{providers}",
+    "failedProviders": "失败：{providers}",
+    "partial": "已同步：{synced}。失败：{failed}",
+    "providerCount": "{provider}（{count}）",
+    "providers": {
+      "plaid": "银行",
+      "snaptrade": "券商",
+      "bitpanda": "Bitpanda"
+    }
+  }
+}

@@ -1,0 +1,295 @@
+{
+  "index": {
+    "title": "计算器",
+    "subtitle": "帮助你做出更好投资和借贷决策的财务工具。",
+    "interestDescription": "利率、增长时长，以及按单利或复利计算的终值和现值。",
+    "loanDescription": "等额本息、等额本金、先息后本和到期一次还本贷款的还款额、总利息和摊销，支持提前还款。"
+  },
+  "intervals": {
+    "label": {
+      "minute": "分钟",
+      "hour": "小时",
+      "day": "天",
+      "week": "周",
+      "month": "月",
+      "quarter": "季度",
+      "year": "年"
+    },
+    "unitPlural": {
+      "minute": "分钟",
+      "hour": "小时",
+      "day": "天",
+      "week": "周",
+      "month": "月",
+      "quarter": "季度",
+      "year": "年"
+    },
+    "per": {
+      "minute": "每分钟",
+      "hour": "每小时",
+      "day": "每天",
+      "week": "每周",
+      "month": "每月",
+      "quarter": "每季度",
+      "year": "每年"
+    },
+    "count": {
+      "minute": "{count, plural, other {# 分钟}}",
+      "hour": "{count, plural, other {# 小时}}",
+      "day": "{count, plural, other {# 天}}",
+      "week": "{count, plural, other {# 周}}",
+      "month": "{count, plural, other {# 个月}}",
+      "quarter": "{count, plural, other {# 个季度}}",
+      "year": "{count, plural, other {# 年}}"
+    },
+    "countAfter": {
+      "minute": "{count, plural, other {# 分钟}}",
+      "hour": "{count, plural, other {# 小时}}",
+      "day": "{count, plural, other {# 天}}",
+      "week": "{count, plural, other {# 周}}",
+      "month": "{count, plural, other {# 个月}}",
+      "quarter": "{count, plural, other {# 个季度}}",
+      "year": "{count, plural, other {# 年}}"
+    }
+  },
+  "interest": {
+    "title": "利息计算器",
+    "subtitle": "帮助你做出更好投资决策的强大财务工具。计算复利、增长率、终值等。",
+    "tabs": {
+      "rate": "利率",
+      "duration": "时长",
+      "futureValue": "终值",
+      "startingValue": "初始值"
+    },
+    "fields": {
+      "initialValue": "初始值",
+      "finalValue": "最终值",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "interval": "计息周期",
+      "intervalPlaceholder": "选择周期",
+      "startingCapital": "初始资本",
+      "targetCapital": "目标资本",
+      "interestRate": "利率（%）",
+      "timePeriod": "时间（{unit}）"
+    },
+    "calculate": "计算",
+    "results": "结果",
+    "empty": "输入数值并计算即可查看结果",
+    "compoundInterest": "复利",
+    "simpleInterest": "单利",
+    "withCompound": "按复利",
+    "withSimple": "按单利",
+    "gainAfter": "{duration}后收益：{amount}",
+    "growthAfter": "{duration}后增长：{amount}",
+    "rate": {
+      "title": "计算利率",
+      "description": "求出两个时间点之间按复利和单利计算的平均利率",
+      "resultsHint": "根据你的输入，计算出的利率如下"
+    },
+    "duration": {
+      "title": "计算时长",
+      "description": "根据初始值和利率，算出达到目标资本需要多长时间",
+      "resultsHint": "达到目标资本所需的时间"
+    },
+    "futureValue": {
+      "title": "计算终值",
+      "description": "根据利率和时间，算出你的投资将来价值多少",
+      "resultsHint": "你的投资的预计终值"
+    },
+    "startingValue": {
+      "title": "计算初始值",
+      "description": "算出你现在需要投资多少才能在将来达到目标",
+      "resultsHint": "达到目标所需的初始投资"
+    }
+  },
+  "loan": {
+    "title": "贷款计算器",
+    "subtitle": "了解不同的贷款类型，直观查看你的还款，找到最适合你的方案。我们会清楚地告诉你钱都花在了哪里。",
+    "tabs": {
+      "calculate": "计算贷款",
+      "compare": "比较所有类型"
+    },
+    "chooseType": "1. 选择贷款类型",
+    "calculateSection": "2. 计算你的贷款",
+    "understanding": "了解{name}",
+    "howItWorks": "运作方式",
+    "bestFor": "适合人群",
+    "watchOut": "注意事项",
+    "intervals": {
+      "MONTHLY": {
+        "label": "每月",
+        "payment": "月还款额",
+        "perPeriod": "每月",
+        "recurring": "额外本金（每月）"
+      },
+      "QUARTERLY": {
+        "label": "每季度",
+        "payment": "季度还款额",
+        "perPeriod": "每季度",
+        "recurring": "额外本金（每季度）"
+      },
+      "SEMI_ANNUAL": {
+        "label": "每半年",
+        "payment": "半年还款额",
+        "perPeriod": "每半年",
+        "recurring": "额外本金（每半年）"
+      },
+      "ANNUAL": {
+        "label": "每年",
+        "payment": "年还款额",
+        "perPeriod": "每年",
+        "recurring": "额外本金（每年）"
+      }
+    },
+    "types": {
+      "ANNUITY": {
+        "name": "等额本息贷款",
+        "shortName": "等额本息",
+        "shortDescription": "每期还款额相同，最常见的类型",
+        "calculatorTitle": "等额本息贷款计算器",
+        "calculatorDescription": "计算你的每期还款额，查看其随时间的构成。",
+        "howItWorks1": "在整个贷款期限内，每期还款金额相同",
+        "howItWorks2": "前期还款大部分是利息，后期还款大部分是本金",
+        "howItWorks3": "总债务随时间稳步减少",
+        "bestFor1": "希望预算可预测的购房者",
+        "bestFor2": "长期贷款（15-30 年）",
+        "bestFor3": "相比灵活性更看重稳定性的人",
+        "watchOut1": "前几年支付的利息较多",
+        "watchOut2": "收入变化时灵活性较低"
+      },
+      "CONSTANT_PRINCIPAL": {
+        "name": "等额本金贷款",
+        "shortName": "等额本金",
+        "shortDescription": "还款额起初较高，随后逐渐减少",
+        "calculatorTitle": "等额本金贷款计算器",
+        "calculatorDescription": "查看随着本金偿还，你的还款额如何逐渐减少。",
+        "howItWorks1": "每期偿还固定金额的本金，外加利息",
+        "howItWorks2": "随着债务减少，利息也减少，还款额随之变小",
+        "howItWorks3": "支付的总利息少于等额本息贷款",
+        "bestFor1": "预计以后收入会降低的人（临近退休）",
+        "bestFor2": "能承受较高初期还款的人",
+        "bestFor3": "希望尽量减少总利息的借款人",
+        "watchOut1": "初期还款可能比等额本息贷款高 20-30%",
+        "watchOut2": "如果收入仅勉强覆盖首期还款，可能无法获批"
+      },
+      "INTEREST_ONLY": {
+        "name": "先息后本贷款",
+        "shortName": "先息后本",
+        "shortDescription": "先只付利息，之后再还本金",
+        "calculatorTitle": "先息后本贷款计算器",
+        "calculatorDescription": "在一段时间内只付利息，之后开始偿还本金。",
+        "howItWorks1": "在约定期间内只付利息——债务不会减少",
+        "howItWorks2": "只付利息期结束后，开始同时偿还本金",
+        "howItWorks3": "开始偿还本金时，还款额会大幅上升",
+        "bestFor1": "预计在开始偿还本金前出售房产的房地产投资者",
+        "bestFor2": "预计将来收入更高的人",
+        "bestFor3": "短期融资需求",
+        "watchOut1": "只付利息期间不会积累任何权益",
+        "watchOut2": "开始正常还款时面临还款冲击",
+        "watchOut3": "存在欠款超过资产价值的风险"
+      },
+      "BULLET": {
+        "name": "到期一次还本贷款",
+        "shortName": "一次还本",
+        "shortDescription": "只付利息，全部本金到期偿还",
+        "calculatorTitle": "到期一次还本贷款计算器",
+        "calculatorDescription": "全程只付利息，全部本金在期末到期。",
+        "howItWorks1": "在整个贷款期限内只付利息",
+        "howItWorks2": "全部本金在期末一次性到期",
+        "howItWorks3": "每期还款额很低，但你需要为最后一笔还款做好计划",
+        "bestFor1": "过桥融资（在安排好长期融资之前的短期贷款）",
+        "bestFor2": "计划在贷款到期前出售资产的投资者",
+        "bestFor3": "建筑贷款或开发项目",
+        "watchOut1": "风险高——你必须有还清或再融资的计划",
+        "watchOut2": "如果无法支付尾款，你可能会失去该资产",
+        "watchOut3": "贷款期间不会积累任何权益"
+      }
+    },
+    "fields": {
+      "loanAmount": "贷款金额",
+      "annualInterestRate": "年利率（%）",
+      "interestRate": "利率（%）",
+      "termYears": "贷款期限（年）",
+      "termYearsShort": "期限（年）",
+      "paymentSchedule": "还款计划",
+      "interestOnlyYears": "只付利息期（年）",
+      "interestOnlyHint": "多少年后开始偿还本金？"
+    },
+    "prepayments": {
+      "title": "提前还款",
+      "enabled": "已启用",
+      "disabled": "已停用",
+      "recurringHint": "此金额将加到每笔正常还款上。",
+      "oneTime": "一次性提前还款",
+      "add": "添加提前还款",
+      "oneTimeHint": "在特定年份安排提前还款（例如年终奖、遗产）。",
+      "year": "年份",
+      "amountPlaceholder": "金额",
+      "fixedAmount": "固定金额",
+      "percentOfBalance": "余额的 %",
+      "remove": "删除提前还款"
+    },
+    "calculate": "计算我的贷款",
+    "yourResults": "你的结果",
+    "summary": {
+      "totalInterest": "总利息",
+      "totalCost": "总成本",
+      "interestToPrincipal": "利息 / 本金",
+      "savingsTitle": "提前还款节省",
+      "interestSaved": "节省利息",
+      "periodsSaved": "节省期数",
+      "originalTerm": "原期限",
+      "newTerm": "新期限",
+      "payments": "{count, plural, other {# 笔还款}}"
+    },
+    "charts": {
+      "principal": "本金",
+      "interest": "利息",
+      "balance": "剩余余额",
+      "payment": "还款额",
+      "yearTick": "第{year}年",
+      "principalValue": "本金：{amount}",
+      "interestValue": "利息：{amount}",
+      "totalValue": "合计：{amount}",
+      "balanceValue": "余额：{amount}",
+      "breakdownByYear": "按年还款构成",
+      "breakdownHint": "本金（绿色）与利息（橙色）随时间的变化。",
+      "balanceOverTime": "剩余余额变化",
+      "balanceHint": "看着你的债务随还款逐渐减少。",
+      "breakdown": "还款构成"
+    },
+    "schedule": {
+      "view": "查看完整还款计划",
+      "period": "#",
+      "payment": "还款额",
+      "principal": "本金",
+      "interest": "利息",
+      "extra": "额外",
+      "balance": "余额",
+      "showAll": "{count, plural, other {显示全部 # 笔还款}}"
+    },
+    "warnings": {
+      "savingsTitle": "💰 还款节省",
+      "savingsBody": "你的还款额从 {first} 降到 {last}——到最后每期少付 {difference}！",
+      "shockTitle": "⚠️ 还款冲击警告",
+      "shockBody": "{years, plural, other {# 年}}后，你的还款额将从 {from} 跳升到 {to}——增加 {difference}（多 {percent}%）。请确保你能负担得起！",
+      "balloonTitle": "🚨 尾款警告",
+      "balloonBody": "在 {years, plural, other {# 年}}期满时，你必须一次性支付 {amount}。这被称为“尾款”（气球还款）。",
+      "balloonOptions": "<strong>尾款到期时你的选择：</strong>再融资为新贷款、出售资产或用储蓄支付。如果以上都做不到，你可能会失去该资产。"
+    },
+    "compare": {
+      "title": "并排比较",
+      "description": "查看在相同金额、利率和期限下不同贷款类型的对比。",
+      "button": "比较所有贷款类型",
+      "loanType": "贷款类型",
+      "firstPayment": "首期还款",
+      "totalInterest": "总利息",
+      "totalCost": "总成本",
+      "interestChart": "总利息对比",
+      "byType": "按贷款类型的还款构成与余额",
+      "insightTitle": "💡 关键洞察",
+      "insightBody": "与等额本息贷款相比，<strong>等额本金贷款</strong>可为你节省 {saved} 利息，但你的首期还款要高出 {extra}。请根据你当前的预算和对未来收入的预期做出选择。"
+    }
+  }
+}

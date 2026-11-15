@@ -1,0 +1,361 @@
+{
+  "equities": {
+    "name": "股票",
+    "subcategories": {
+      "stocks": {
+        "name": "上市股票",
+        "description": "在公开证券交易所交易的个股",
+        "examples": "苹果、微软、特斯拉、亚马逊"
+      },
+      "etfs": {
+        "name": "ETF 与指数基金",
+        "description": "跟踪市场指数、实现分散投资的被动型基金",
+        "examples": "S&P 500、MSCI World、NASDAQ-100、DAX"
+      },
+      "funds": {
+        "name": "共同基金",
+        "description": "由专业人士管理投资组合的主动型投资基金",
+        "examples": "成长型基金、价值型基金、行业基金、平衡型基金"
+      },
+      "options": {
+        "name": "期权",
+        "description": "用于对冲或杠杆敞口的衍生品合约",
+        "examples": "看涨期权、看跌期权、价差组合、备兑看涨"
+      },
+      "private": {
+        "name": "私募股权",
+        "description": "对非上市公司、初创企业的投资以及天使投资",
+        "examples": "初创企业、风险投资、天使投资、私募股权基金"
+      }
+    }
+  },
+  "commodities": {
+    "name": "大宗商品",
+    "subcategories": {
+      "metals": {
+        "name": "贵金属",
+        "description": "通过实时图表追踪黄金、白银、铂金和钯金价格",
+        "examples": "黄金、白银、铂金、钯金"
+      },
+      "energy": {
+        "name": "能源",
+        "description": "石油、天然气及其他能源商品价格",
+        "examples": "原油、天然气、取暖油、汽油"
+      },
+      "industrial": {
+        "name": "工业金属",
+        "description": "用于制造和建筑的基本金属",
+        "examples": "铜、铝、锌、镍"
+      },
+      "agricultural": {
+        "name": "农产品",
+        "description": "谷物、软商品及其他农产品",
+        "examples": "小麦、玉米、大豆、咖啡"
+      },
+      "rare-earth": {
+        "name": "稀土",
+        "description": "用于科技和国防的战略性稀土元素",
+        "examples": "钕、镝、锂、钴"
+      },
+      "gemstones": {
+        "name": "宝石",
+        "description": "钻石、红宝石、蓝宝石及其他珍贵宝石",
+        "examples": "钻石、红宝石、蓝宝石、祖母绿"
+      }
+    }
+  },
+  "bonds": {
+    "name": "债券",
+    "subcategories": {
+      "government": {
+        "name": "政府债券",
+        "description": "各国政府发行的短期国库券、中期票据和债券，包括通胀保值证券",
+        "examples": "美国国债、德国国债、英国金边债券、TIPS/I 债券"
+      },
+      "corporate": {
+        "name": "公司债券",
+        "description": "企业发行的投资级和高收益债券",
+        "examples": "投资级、高收益、可转换债券、绿色债券"
+      },
+      "municipal": {
+        "name": "市政债券",
+        "description": "州、市及地方政府发行的税收优惠债券",
+        "examples": "一般责任债券、收益债券、免税市政债券、Build America 债券"
+      },
+      "savings": {
+        "name": "储蓄债券",
+        "description": "政府担保的储蓄凭证和零售债券",
+        "examples": "I 系列债券、EE 系列债券、有奖债券、储蓄凭证"
+      },
+      "funds": {
+        "name": "债券基金与 ETF",
+        "description": "通过基金和 ETF 实现分散的固定收益敞口",
+        "examples": "综合债券、短期、长期、国际"
+      }
+    }
+  },
+  "real-estate": {
+    "name": "房地产",
+    "subcategories": {
+      "residential": {
+        "name": "住宅",
+        "description": "独栋住宅、公寓、共管公寓和度假房产",
+        "examples": "自住房、出租房产、度假屋、共管公寓"
+      },
+      "commercial": {
+        "name": "商业地产",
+        "description": "办公楼、零售空间、仓库和工业地产",
+        "examples": "办公空间、零售、仓库、综合用途"
+      },
+      "reits": {
+        "name": "REIT",
+        "description": "房地产投资信托——公开交易的房地产证券",
+        "examples": "权益型 REIT、抵押型 REIT、混合型 REIT、REIT ETF"
+      },
+      "crowdfunding": {
+        "name": "众筹",
+        "description": "通过众筹平台进行的房地产投资",
+        "examples": "Fundrise、CrowdStreet、RealtyMogul、Groundfloor"
+      },
+      "land": {
+        "name": "土地",
+        "description": "未开发土地、农田和未开发地产投资",
+        "examples": "生地、农田、林地、开发用地"
+      }
+    }
+  },
+  "cash": {
+    "name": "现金与储蓄",
+    "subcategories": {
+      "checking-accounts": {
+        "name": "活期账户",
+        "description": "通过银行连接关联的日常交易账户",
+        "examples": "个人活期、企业活期、联名账户"
+      },
+      "savings-accounts": {
+        "name": "储蓄账户",
+        "description": "高收益储蓄账户和普通银行储蓄",
+        "examples": "高收益储蓄、普通储蓄、网上储蓄、企业储蓄"
+      },
+      "money-market": {
+        "name": "货币市场基金",
+        "description": "流动性高的短期低风险投资基金",
+        "examples": "政府货币基金、优质货币基金、免税货币基金、零售货币基金"
+      },
+      "cds": {
+        "name": "定期存单",
+        "description": "利率有保障的定期存款",
+        "examples": "3 个月存单、6 个月存单、1 年期存单、存单阶梯"
+      },
+      "treasury-bills": {
+        "name": "短期国库券",
+        "description": "期限不足一年的短期政府证券",
+        "examples": "4 周国库券、8 周国库券、13 周国库券、26 周国库券"
+      },
+      "forex": {
+        "name": "外币（外汇）",
+        "description": "外币持有和外汇头寸",
+        "examples": "EUR、GBP、JPY、CHF"
+      },
+      "broker-cash": {
+        "name": "券商现金",
+        "description": "券商账户中未投资的现金，从券商连接中自动识别",
+        "examples": "结算现金、扫款账户、保证金现金"
+      }
+    }
+  },
+  "crypto": {
+    "name": "加密货币",
+    "subcategories": {
+      "bitcoin": {
+        "name": "比特币",
+        "description": "比特币及封装比特币代币",
+        "examples": "BTC、WBTC"
+      },
+      "ethereum": {
+        "name": "以太坊",
+        "description": "以太坊及流动性质押代币",
+        "examples": "ETH、stETH、rETH、WETH"
+      },
+      "altcoins": {
+        "name": "山寨币",
+        "description": "BTC 和 ETH 以外的其他加密货币",
+        "examples": "SOL、ADA、AVAX、DOT、MATIC"
+      },
+      "stablecoins": {
+        "name": "稳定币",
+        "description": "与法定货币挂钩、价格稳定的加密货币",
+        "examples": "USDT、USDC、DAI、FRAX"
+      },
+      "defi": {
+        "name": "DeFi",
+        "description": "去中心化金融头寸，包括质押和流动性",
+        "examples": "质押、LP 头寸、流动性挖矿、借贷"
+      }
+    },
+    "groups": {
+      "btc-eth": {
+        "name": "比特币与以太坊",
+        "description": "两大加密货币及其生态代币",
+        "examples": "BTC、WBTC、ETH、stETH、rETH、WETH"
+      }
+    }
+  },
+  "collectibles": {
+    "name": "收藏品",
+    "subcategories": {
+      "art": {
+        "name": "艺术品",
+        "description": "美术作品、绘画、雕塑和艺术收藏品",
+        "examples": "绘画、雕塑、版画、摄影"
+      },
+      "watches": {
+        "name": "手表",
+        "description": "奢华腕表和古董表收藏",
+        "examples": "Rolex、Patek Philippe、Audemars Piguet、Omega"
+      },
+      "wine": {
+        "name": "葡萄酒",
+        "description": "作为投资资产的精品葡萄酒和年份酒",
+        "examples": "波尔多、勃艮第、香槟、纳帕谷"
+      },
+      "cars": {
+        "name": "经典汽车",
+        "description": "古董汽车和收藏级车辆",
+        "examples": "Porsche、Ferrari、Mercedes-Benz、肌肉车"
+      },
+      "jewelry": {
+        "name": "珠宝",
+        "description": "贵重珠宝、宝石和设计师作品",
+        "examples": "钻石、彩色宝石、古董珠宝、设计师作品"
+      },
+      "trading-cards": {
+        "name": "集换式卡牌",
+        "description": "体育卡、宝可梦、万智牌及其他收藏卡牌",
+        "examples": "体育卡、宝可梦、万智牌、游戏王"
+      },
+      "memorabilia": {
+        "name": "纪念品与历史藏品",
+        "description": "收藏币、邮票、明信片和历史收藏品（不含投资金银）",
+        "examples": "收藏币、邮票、明信片、历史物品"
+      },
+      "nfts": {
+        "name": "NFT",
+        "description": "非同质化代币和数字收藏品",
+        "examples": "艺术 NFT、头像系列、游戏 NFT、音乐 NFT"
+      },
+      "other": {
+        "name": "其他收藏品",
+        "description": "其他类别未涵盖的任何收藏品",
+        "examples": "玩具、纪念品、古董、珍本书"
+      }
+    }
+  },
+  "liabilities": {
+    "name": "负债",
+    "subcategories": {
+      "mortgages": {
+        "name": "房贷",
+        "description": "住房贷款和房产抵押贷款",
+        "examples": "自住房、投资性房产、第二套住房"
+      },
+      "loans": {
+        "name": "贷款",
+        "description": "个人贷款、车贷、学生贷款及其他贷款",
+        "examples": "车贷、学生贷款、个人贷款"
+      },
+      "credit-cards": {
+        "name": "信用卡",
+        "description": "信用卡余额和循环信贷",
+        "examples": "Visa、Mastercard、Amex、商店卡"
+      },
+      "margin-loans": {
+        "name": "保证金贷款",
+        "description": "从券商账户借入的资金",
+        "examples": "券商融资、证券借贷"
+      }
+    }
+  },
+  "unclassified": {
+    "name": "未分类"
+  },
+  "card": {
+    "comingSoon": "即将推出",
+    "comingSoonButton": "即将推出",
+    "viewPortfolio": "查看投资组合"
+  },
+  "override": {
+    "action": "更改类别",
+    "reset": "恢复为自动",
+    "manual": "手动",
+    "manualHint": "这是你选择的类别。服务商同步时会保留。",
+    "actionsLabel": "{name} 的操作",
+    "dialog": {
+      "title": "更改类别",
+      "description": "选择 {name} 在你的总额中计入哪个类别。服务商同步时会保留你的选择。",
+      "category": "类别",
+      "subcategory": "子类别",
+      "bankHint": "银行账户可以计为现金或负债。",
+      "saveFailed": "无法保存类别，请重试。",
+      "resetFailed": "无法重置类别，请重试。"
+    },
+    "list": {
+      "title": "类别",
+      "subtitle": "你自己归入某个类别的账户和持仓。",
+      "cardTitle": "手动类别",
+      "count": "{count, plural, other {# 项}}",
+      "empty": "你还没有更改过任何类别。请在头寸或银行账户上使用“更改类别”。",
+      "columns": {
+        "name": "名称",
+        "source": "来源",
+        "category": "类别",
+        "automatic": "自动"
+      },
+      "sources": {
+        "plaid": "银行账户",
+        "broker": "券商",
+        "bitpanda": "Bitpanda"
+      },
+      "edit": "更改"
+    }
+  },
+  "valuation": {
+    "action": "设定价格",
+    "reset": "使用服务商价格",
+    "badges": {
+      "live": "实时",
+      "manualPrice": "手动价格",
+      "markToModel": "模型"
+    },
+    "badgeHints": {
+      "live": "你的服务商提供的价格，在两次同步之间的白天会刷新。",
+      "manualPrice": "按你输入的价格估值，而不是服务商的价格。",
+      "markToModel": "按你的模型估值：起始价格按你设定的年增长率增长。"
+    },
+    "kinds": {
+      "manualPrice": "手动价格",
+      "markToModel": "按模型估值"
+    },
+    "kindHints": {
+      "manualPrice": "由你自己更新的固定单价。",
+      "markToModel": "以固定年增长率增长（或下降）的起始价格，适用于没有市场价格的持仓。"
+    },
+    "dialog": {
+      "title": "设定价格",
+      "description": "按你自己的价格为 {name} 估值。服务商同步时会保留你的价格；数量仍然来自服务商。",
+      "kind": "方法",
+      "price": "单价",
+      "modelPrice": "开始日期的单价",
+      "currency": "货币",
+      "date": "价格日期",
+      "modelDate": "开始日期",
+      "rate": "年增长率（%）",
+      "rateHint": "如果价值会随时间下降，请使用负的增长率。",
+      "preview": "今天：单价 {price}，总计 {value}"
+    },
+    "toast": {
+      "saved": "已为 {name} 保存价格",
+      "reset": "{name} 已重新使用服务商价格"
+    }
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "actions": {
+    "connectBroker": "连接券商",
+    "connectBank": "连接银行",
+    "connectCrypto": "连接加密货币",
+    "addItem": "添加物品",
+    "addProperty": "添加房产",
+    "viewHoldings": "查看持仓",
+    "viewAccounts": "查看账户",
+    "viewPortfolio": "查看投资组合",
+    "viewProperties": "查看房产",
+    "viewCollection": "查看收藏"
+  },
+  "bonds": {
+    "subtitle": "追踪你的固定收益投资——政府债券、公司债券和债券基金。",
+    "categories": "债券类别"
+  },
+  "cash": {
+    "title": "现金与货币市场",
+    "subtitle": "追踪你的流动资产——储蓄账户、货币市场基金、定期存单和外币持有。",
+    "balanceHistory": "现金余额历史",
+    "categories": "现金类别"
+  },
+  "equities": {
+    "subtitle": "追踪你的股票组合、ETF、共同基金和私募股权投资。",
+    "publicMarkets": "公开市场",
+    "privateMarkets": "私募市场"
+  },
+  "realEstate": {
+    "subtitle": "追踪你的房地产投资——住宅、商业地产、REIT 等。",
+    "categories": "房产类别"
+  },
+  "collectibles": {
+    "subtitle": "追踪你的收藏品投资——艺术品、葡萄酒、手表、经典汽车等。",
+    "categories": "收藏品类别"
+  },
+  "commodities": {
+    "subtitle": "追踪实时价格，管理你在各类大宗商品中的持仓",
+    "categories": "大宗商品类别"
+  },
+  "metals": {
+    "signIn": "请登录以查看你的贵金属投资组合。"
+  },
+  "crypto": {
+    "title": "加密资产",
+    "subtitle": "追踪你的加密货币投资和投资组合表现",
+    "tabs": {
+      "overview": "概览",
+      "holdings": "持仓",
+      "transactions": "交易"
+    },
+    "categories": "加密货币类别",
+    "holdings": {
+      "title": "全部加密货币持仓",
+      "description": "你在所有已连接交易所和钱包中的加密货币持仓完整列表",
+      "emptyTitle": "尚未连接加密货币账户",
+      "emptyDescription": "连接你的加密货币交易所和钱包，即可查看完整持仓",
+      "connect": "连接加密货币账户"
+    },
+    "transactions": {
+      "title": "交易记录",
+      "connectDescription": "连接你的加密货币账户即可查看交易记录",
+      "notConnected": "尚未连接加密货币账户。连接你的交易所和钱包即可查看交易记录。",
+      "description": "你所有已连接加密货币账户中的交易",
+      "empty": "未找到交易。同步后，你的交易记录将显示在这里。",
+      "justNow": "刚刚",
+      "unknownDate": "未知日期",
+      "types": {
+        "buy": "买入",
+        "sell": "卖出",
+        "deposit": "存入",
+        "withdraw": "提取",
+        "withdrawal": "提取",
+        "receive": "接收",
+        "send": "发送",
+        "transfer": "转账",
+        "reward": "奖励",
+        "staking": "质押",
+        "dividend": "股息",
+        "interest": "利息",
+        "fee": "手续费"
+      }
+    },
+    "allocation": {
+      "title": "按头寸配置",
+      "empty": "暂无持仓",
+      "other": "其他（<2%）",
+      "otherShort": "其他"
+    },
+    "positions": {
+      "title": "全部头寸",
+      "count": "{shown} / {total, plural, other {# 个头寸}}",
+      "search": "按代币搜索…",
+      "loading": "正在加载头寸…",
+      "noMatch": "没有与搜索匹配的头寸",
+      "empty": "未找到头寸",
+      "token": "代币",
+      "quantity": "数量",
+      "value": "价值",
+      "category": "类别",
+      "priceUnavailable": "价格不可用",
+      "staleHint": "Bitpanda 没有当前价格；显示的是最后已知价格",
+      "priceAsOf": "价格截至 {date}",
+      "lastKnownPrice": "最后已知价格"
+    }
+  },
+  "manualAssets": {
+    "add": "添加资产",
+    "emptyHint": "添加资产即可在这里追踪。它会按最新估值计入你的净资产。",
+    "addTitle": "添加资产",
+    "editTitle": "编辑 {name}",
+    "description": "记录已连接账户无法报告的资产。它会按最新估值计入你的净资产。",
+    "actionsLabel": "{name} 的操作",
+    "fields": {
+      "category": "类别",
+      "subcategory": "子类别",
+      "name": "名称",
+      "namePlaceholder": "例如：慕尼黑的公寓、劳力士潜航者",
+      "currency": "货币",
+      "valuations": "估值",
+      "valuationsHint": "该资产在各日期的价值。以最新一条为准。",
+      "date": "日期",
+      "value": "价值",
+      "addValuation": "添加估值",
+      "removeValuation": "删除估值",
+      "costBasis": "购买价格",
+      "optional": "选填",
+      "costBasisHint": "填写购买价格后会显示盈亏。如有用于购买该资产的贷款，请关联它。",
+      "linkedLoan": "融资来源",
+      "noLoan": "无贷款"
+    },
+    "attributes": {
+      "artist": "艺术家",
+      "brand": "品牌",
+      "model": "型号",
+      "referenceNumber": "型号编号",
+      "producer": "生产商",
+      "vintage": "年份",
+      "year": "年份",
+      "address": "地址",
+      "grade": "评级"
+    },
+    "toast": {
+      "created": "已添加 {name}",
+      "updated": "已保存 {name}",
+      "deleted": "已删除 {name}"
+    },
+    "deleteDialog": {
+      "title": "删除 {name}？",
+      "description": "该资产及其所有估值将被删除，不再计入你的净资产。此操作无法撤消。"
+    }
+  }
+}

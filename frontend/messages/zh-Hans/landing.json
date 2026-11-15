@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "subheadline": "追踪你所有的投资、资产和负债。银行账户、股票、加密货币、贵金属等自动更新，让你了解真实的净资产。",
+    "badge": "财富管理，化繁为简",
+    "headline": "你完整的<highlight>财富全貌</highlight><br></br>尽在一处",
+    "tagline": "就像 Finanzguru，但覆盖你的全部净资产。"
+  },
+  "trust": {
+    "readOnly": "只读连接",
+    "dailySync": "每日自动同步",
+    "multiCurrency": "多币种"
+  },
+  "features": {
+    "cryptoDescription": "使用只读 API 密钥自动导入你的 Bitpanda 持仓。",
+    "metalsTitle": "贵金属",
+    "metalsDescription": "追踪金银条和金银币，按当前经销商价格估值。",
+    "liabilitiesDescription": "追踪你的贷款和还款计划，看清你真实的净资产。",
+    "headline": "<highlight>掌控财富</highlight>所需的一切",
+    "subheadline": "从银行账户到加密钱包，在一个统一的仪表盘中追踪你的所有资产。",
+    "banksTitle": "银行账户",
+    "banksDescription": "通过 Plaid 安全连接你的银行账户。追踪活期、储蓄和信用卡账户。",
+    "investmentsTitle": "投资组合",
+    "investmentsDescription": "从主要券商自动导入股票、ETF、债券和共同基金。",
+    "cryptoTitle": "加密货币",
+    "liabilitiesTitle": "债务与负债",
+    "netWorthTitle": "净资产追踪",
+    "netWorthDescription": "通过清晰的图表和洞察，见证你的财富随时间增长。"
+  },
+  "steps": {
+    "createDescription": "使用电子邮件或社交账号注册。通过候补名单逐步开放访问。无需信用卡。",
+    "netWorthDescription": "看着你完整的财富全貌逐渐成形，每天自动刷新。",
+    "headline": "<highlight>几分钟</highlight>即可上手",
+    "subheadline": "简单三步，看清你完整的财务状况。",
+    "createTitle": "创建你的账户",
+    "connectTitle": "连接你的账户",
+    "connectDescription": "安全连接你的银行、券商和加密货币交易所。仅限只读访问。",
+    "netWorthTitle": "查看你的净资产"
+  },
+  "security": {
+    "description": "我们永远看不到你的银行凭据。访问令牌和 API 密钥均加密存储，每个连接都是只读的。",
+    "badge": "安全源于设计",
+    "headline": "你的数据<highlight>在我们这里很安全</highlight>",
+    "encryption": "所有敏感令牌均采用 AES-256-GCM 加密",
+    "readOnly": "只读访问：我们永远无法转移你的资金",
+    "credentials": "你的银行凭据永远不会经过我们的服务器",
+    "providers": "值得信赖的服务商：Plaid、SnapTrade、Bitpanda",
+    "ownership": "你的数据归你所有：我们绝不出售"
+  },
+  "cta": {
+    "description": "把你的账户、持仓和贷款汇集在一起，在一处看清你的全部净资产。",
+    "headline": "准备好掌控<highlight>你的财富了吗？</highlight>"
+  },
+  "nav": {
+    "features": "功能",
+    "howItWorks": "使用方式",
+    "security": "安全",
+    "signIn": "登录",
+    "joinWaitlist": "加入候补名单",
+    "dashboard": "仪表盘",
+    "goToDashboard": "前往仪表盘"
+  },
+  "logoAlt": "Fiscalis 标志",
+  "mockup": {
+    "totalNetWorth": "总净资产",
+    "yearChange": "今年 {change}",
+    "banks": "{count, plural, other {# 家银行}}",
+    "brokers": "{count, plural, other {# 家券商}}",
+    "wallets": "{count, plural, other {# 个钱包}}",
+    "equities": "股票",
+    "crypto": "加密货币",
+    "cash": "现金",
+    "realEstate": "房地产"
+  },
+  "languageToggle": {
+    "label": "语言"
+  }
+}

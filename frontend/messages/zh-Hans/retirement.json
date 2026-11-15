@@ -1,0 +1,272 @@
+{
+  "years": "{count, plural, other {# 年}}",
+  "yearsDative": "{count, plural, other {# 年}}",
+  "perMonth": "{amount}/月",
+  "perMonthUnit": "/ 月",
+  "pensions": "养老金",
+  "steps": {
+    "intro": "开始",
+    "personal": "年龄",
+    "expenses": "支出",
+    "housing": "住房",
+    "pensions": "养老金",
+    "portfolio": "投资组合",
+    "assumptions": "假设",
+    "results": "结果"
+  },
+  "stepShell": {
+    "saving": "正在保存…"
+  },
+  "progress": {
+    "stepOf": "第 {current} 步，共 {total} 步"
+  },
+  "wizard": {
+    "defaultPensionLabel": "国家养老金",
+    "editingBanner": "你正在编辑已保存的计划。保存后更改才会生效。",
+    "discardChanges": "放弃更改",
+    "currencyChanged": "你的显示货币已更改为 {display}。此表单中的金额仍以 {form} 计，并以 {form} 保存。",
+    "reloadInCurrency": "以 {currency} 重新加载",
+    "storedCurrency": "你的计划是以 {stored} 输入的。其金额按今日汇率以 {shown} 显示，下次保存时将以 {shown} 保存。",
+    "birthDateRequired": "必须填写出生日期",
+    "saveFailed": "无法保存你的计划，请重试。"
+  },
+  "dashboard": {
+    "title": "退休计划",
+    "subtitle": "目标退休年龄为 {age} 岁。此计划会随你的投资组合变化自动更新。",
+    "subtitleFallback": "你已保存的退休计划。",
+    "editPlan": "编辑计划",
+    "startOver": {
+      "button": "重新开始",
+      "title": "要重新制定计划吗？",
+      "description": "这会删除你已保存的退休计划及其所有回答。你的出生日期仍保留在个人资料中。此操作无法撤消。",
+      "confirm": "删除计划",
+      "resetting": "正在删除…",
+      "failed": "无法删除你的计划，请重试。"
+    }
+  },
+  "results": {
+    "timelineTitle": "检查你的退休年龄",
+    "timelineBody": "退休年龄必须大于你当前的年龄，才能制定计划。",
+    "assumptionsTitle": "检查你的假设",
+    "editHint": "编辑你的计划进行调整。",
+    "backHint": "返回进行调整。"
+  },
+  "progressCard": {
+    "title": "你的退休目标",
+    "target": "所需目标投资组合",
+    "in": "距今",
+    "progressToday": "当前进度（保守）",
+    "growth": "按每年 {rate} 的谨慎增长率，你当前的 <b>{current}</b> 到退休时将增长到 <b>{projected}</b>——相当于上方目标的 <b>{pct}%</b>（尚未计入任何每月储蓄）。按预期的 {expectedRate} 计算则为 {expectedPct}%。",
+    "netDebt": "你的负债比资产多 {debt}。你的计划从 {zero} 开始，因此偿还这笔债务需要在我们计算的每月储蓄之外额外进行。",
+    "pensionsCoverAll": "你的养老金收入已足以覆盖预期支出——无需动用投资组合。"
+  },
+  "savingsCard": {
+    "title": "每月需要储蓄多少",
+    "pensionsCoverAll": "你的养老金足以覆盖预期支出，因此你无需为退休投资组合储蓄。",
+    "onTrack": "根据你当前的资产和预期增长，你无需额外储蓄就能实现目标。继续保持！",
+    "expectedCase": "预期情形",
+    "conservativeCase": "保守情形",
+    "expectedHint": "假设每年 {rate}——投资组合大约每 {years, plural, other {# 年}}翻一番",
+    "expectedHintNoGrowth": "假设每年 {rate}",
+    "conservativeHint": "假设每年谨慎增长 {rate}",
+    "indexed": "首月金额，随通胀上升——到退休时达到 {amount}（预期）。",
+    "flat": "退休前每月固定的名义金额；通胀会使后期付款的实际价值降低。",
+    "netDebt": "这些金额从 {zero} 开始计算，不包括偿还你当前的债务。",
+    "mortgageNotProjected": "你的房贷全部余额 {balance} 视为退休时仍未还清，并计入你的目标：请在计划中添加其利率和还款额以进行预测。",
+    "mortgageOwedAtRetirement": "此外，你每月 {payment} 的房贷还款继续由你的收入支付；退休时仍欠的 {balance} 计入你的目标。",
+    "mortgageRepaidBefore": "此外，你每月 {payment} 的房贷还款继续由你的收入支付，直到贷款还清。"
+  },
+  "coverage": {
+    "title": "退休时的每月支出",
+    "expensesGrow": "按通胀计算，你今天每月 <b>{today}</b> 的支出在 {years}后将增长到每月 <b>{future}</b>。",
+    "pensions": "按今天的币值，你每月 <b>{today}</b> 的养老金届时相当于每月 <b>{future}</b>。",
+    "pensionsAfterDeductions": "按今天的币值，你每月 <b>{today}</b> 的养老金（扣除每月 {deductions} 的税款和医疗保险后）届时相当于每月 <b>{future}</b>。",
+    "coveredByPensions": "由养老金覆盖",
+    "fundedByPortfolio": "由投资组合提供"
+  },
+  "chart": {
+    "title": "预计投资组合增长",
+    "age": "{age} 岁",
+    "target": "目标",
+    "expectedSaving": "预期 + 储蓄",
+    "conservativeSaving": "保守 + 储蓄",
+    "expectedNoSaving": "预期，无储蓄",
+    "conservativeNoSaving": "保守，无储蓄",
+    "footnote": "四条路径：你的预期收益和保守收益，分别显示按每月储蓄计划的情况，以及仅让当前投资组合自行增长的情况。虚线是你的目标。"
+  },
+  "explainer": {
+    "trigger": "为什么是这些数字？4% 法则详解",
+    "rule": "<b>4% 法则</b>是一条简单的准则：每年提取投资组合约 4%，就能在漫长的退休生活中不把它耗尽。反过来说，你的投资组合需要达到它每年需覆盖金额的 <b>25 倍</b>。",
+    "customRate": "你的计划改用 <b>{rate}</b>，因此你的投资组合需要达到该金额的 <b>{multiple} 倍</b>。",
+    "whereFrom": "4% 从何而来？",
+    "marketReturn": "<b>≈ 7–8%</b> 的长期预期年市场收益",
+    "inflation": "<b>− 约 2%</b> 的通胀，让你的钱保持购买力",
+    "buffer": "<b>− 一定的缓冲</b>，以便在市场不好的年份保持安全",
+    "result": "= 每年约 4% 可供支出",
+    "inflationHandlingRate": "由于提取率已经考虑了退休期间的通胀，我们不会重复计算通胀。在退休之前，我们让你的支出和养老金每年增长 {rate}，并让投资组合的各部分按各自的预期收益增长——保持一切一致。",
+    "inflationHandling": "由于提取率已经考虑了退休期间的通胀，我们不会重复计算通胀。在退休之前，我们让你的支出和养老金按通胀率增长，并让投资组合的各部分按各自的预期收益增长——保持一切一致。",
+    "simpleTarget": "就你的计划而言，按今天的支出和今天的养老金（不计通胀）计算，目标为 <b>{target}</b>。",
+    "adjustedTargetRate": "按 {years}、每年 {rate} 的通胀调整后，现实的目标为 <b>{target}</b>。",
+    "adjustedTarget": "按 {years}的通胀调整后，现实的目标为 <b>{target}</b>。",
+    "difference": "{reason, select, fixedPensionsAndMortgage {差额来自通胀（你的固定养老金跟不上通胀），以及退休时仍欠的房贷。} fixedPensions {差额来自通胀，你的固定养老金跟不上通胀。} mortgage {差额来自通胀，以及退休时仍欠的房贷。} other {差额来自通胀。}}",
+    "taxIncluded": "两者均包含提取时 {rate} 的税款。",
+    "taxExcluded": "两者均为税前金额：不包含提取时的税款。"
+  },
+  "teaser": {
+    "titleActive": "你的退休计划",
+    "titleDraft": "完成你的退休计划",
+    "titleNew": "规划你的退休",
+    "needsReview": "你的计划需要快速复核——打开它来调整你的退休年龄或假设。",
+    "pensionsCoverAll": "你的养老金已足以覆盖预期支出。",
+    "netDebt": "你的负债目前超过了资产——偿还负债是第一步。",
+    "onTrack": "你正按计划实现 {target} 的目标。",
+    "onTrackExpected": "按预期 {rate} 的收益可以实现目标；每月储蓄 {amount} 可覆盖保守情形。",
+    "progress": "你已完成 {target} 目标的 {pct}%。",
+    "draft": "从上次中断的地方继续，看看你的目标数字。",
+    "new": "只需几分钟，把你的退休目标变成每月储蓄计划。",
+    "viewPlan": "查看计划",
+    "getStarted": "开始"
+  },
+  "introStep": {
+    "title": "规划你的退休",
+    "body": "回答几个简单的问题，把你的退休目标变成一个具体、可追踪的储蓄计划——以你真实的投资组合为基础。",
+    "points": {
+      "age": {
+        "title": "选择你的退休年龄",
+        "body": "告诉我们你想什么时候停止工作，以及你想要的生活方式。"
+      },
+      "pensions": {
+        "title": "添加你的养老金收入",
+        "body": "国家、企业或私人养老金可覆盖你每月开支的一部分。"
+      },
+      "number": {
+        "title": "看看你的目标数字",
+        "body": "我们使用 4% 法则计算你需要的投资组合——以及每月需要储蓄多少才能达到。"
+      }
+    },
+    "reviewPlan": "复核我的计划",
+    "getStarted": "开始"
+  },
+  "personalStep": {
+    "title": "你的时间线",
+    "description": "你是哪年出生的？想在什么时候退休？",
+    "birthDate": "出生日期",
+    "retirementAge": "退休年龄",
+    "currentAge": "{age, plural, other {你今年 <b>#</b> 岁。}}",
+    "yearsLeft": "你还有 <b>{years}</b>来建立你的退休投资组合。",
+    "enterBirthDate": "输入你的出生日期，以便我们算出你的年龄。"
+  },
+  "expensesStep": {
+    "title": "理想的生活方式",
+    "description": "按今天的币值，你在退休后希望拥有的最低月收入。",
+    "label": "每月生活开支（当前）",
+    "hint": "如果你拥有自己的住房，请不要计入房租——拥有住房已经降低了这个数字。",
+    "future": "经过 {years}、每年 {rate} 的通胀，到你退休时约为 <b>{amount}</b>——同样的生活方式只是花费更多。"
+  },
+  "housingStep": {
+    "title": "你的住房",
+    "description": "房产的处理方式与投资不同——让我们把它处理好。",
+    "ownsHome": "我拥有自己居住的住房",
+    "ownsHomeHint": "自住房不计入退休资金。",
+    "homeNotCounted": "我们<b>不会</b>把你的住房计入用于退休的投资组合——你不能卖掉它又继续住在里面。它真正的好处已经体现在你较低的每月支出中（无需房租）。",
+    "mortgageLabel": "此住房的房贷 <muted>（选填）</muted>",
+    "noMortgage": "无房贷 / 未追踪",
+    "trackedLoans": "已追踪的贷款",
+    "bankMortgages": "银行房贷账户",
+    "mortgageOption": "{name}——{balance}",
+    "mortgageHint": "其余额不会从你的退休资金中扣除：在退休前，你像付房租一样用收入偿还。退休时仍未还清的余额会加到你的目标中。",
+    "bankBalanceOnly": "你的银行只报告余额。请添加利率和每月还款额，以预测退休时仍欠多少。",
+    "interestRate": "利率（年 %）",
+    "monthlyRepayment": "每月还款额（{symbol}）",
+    "withoutTerms": "如果两者缺一，当前全部余额将视为退休时仍未还清。",
+    "equityLabel": "可出售、用于退休的房产净值 <muted>（选填）</muted>",
+    "equityHint": "适用于你计划出售的出租房或第二套房产：其价值减去 Fiscalis 中未追踪的相关贷款（已追踪的贷款已从你的净资产中扣除）。如果没有，请保留为 0。"
+  },
+  "pensionsStep": {
+    "title": "养老金收入",
+    "description": "在动用投资组合之前，你在退休后每月将获得的收入。请按今天的币值输入，例如你的 Renteninformation（养老金信息）上的税前金额。我们会从税前金额中扣除税款和医疗保险，并像支出一样按通胀调整指数化养老金。",
+    "source": "来源",
+    "sourcePlaceholder": "例如：国家养老金",
+    "amountLabel": "{symbol} / 月（当前）",
+    "removeSource": "删除来源",
+    "gross": "税前（扣除税款和医疗保险前）",
+    "net": "税后（已扣除）",
+    "indexed": "随通胀上涨",
+    "fixed": "固定金额（例如很多企业养老金）",
+    "addSource": "添加收入来源",
+    "deductionLabel": "税前养老金的税款和医疗保险",
+    "deductionHint": "医疗和护理保险的统一费率（KVdR 中约 11–12%）加上所得税。默认的 {rate} 会将税前 {gross} 变为约 {net} 税后。",
+    "totalNet": "养老金总收入，税后（按今天的币值）",
+    "asEntered": "按输入为 {amount}"
+  },
+  "portfolioStep": {
+    "title": "你当前的投资组合",
+    "description": "这是我们向目标增长的起点。选择每个部分的预期增长方式，或者排除你不打算投资的钱，例如应急基金。",
+    "noAssets": "尚未追踪任何资产——你的计划从 {zero} 开始。",
+    "growthLabel": "{category}：增长",
+    "categories": {
+      "equities": "股票",
+      "real-estate": "房地产基金",
+      "crypto": "加密货币",
+      "bonds": "债券",
+      "commodities": "大宗商品与贵金属",
+      "cash": "现金与储蓄",
+      "collectibles": "收藏品",
+      "property": "可出售的房产"
+    },
+    "treatments": {
+      "growth": "按情景收益增长",
+      "moderate": "介于收益和通胀之间",
+      "inflation": "与通胀同步",
+      "exclude": "不计入（例如应急基金）"
+    },
+    "fundable": "可用于退休的资产",
+    "expectedGrowth": "预期年增长 {expected}（保守 {conservative}）",
+    "netDebt": "你的负债比资产多 <b>{debt}</b>。你的计划从 {zero} 开始——债务不按投资收益增长——因此偿还债务需要在我们计算的储蓄之外额外进行。",
+    "mortgageWithPayment": "你住房的 <b>{balance}</b> 房贷不在此扣除：其 {payment} 的还款在退休前由你的收入支付。",
+    "mortgage": "你住房的 <b>{balance}</b> 房贷不在此扣除：其还款在退休前由你的收入支付。",
+    "mortgageNotProjected": "如果没有利率和还款额，全部余额将视为退休时仍未还清。",
+    "footnote": "资产价值会随账户同步自动更新，让你的进度始终保持最新。每个部分按各自的增长率增长；新增储蓄按情景收益增长。不包括你自住的住房。"
+  },
+  "assumptionsStep": {
+    "title": "假设",
+    "description": "已填入合理的默认值——只有在你清楚自己在做什么时才需调整。",
+    "seePlan": "查看我的计划",
+    "fields": {
+      "optimisticReturn": {
+        "label": "预期年收益",
+        "hint": "长期市场增长。默认的 {rate} 会让投资组合每 10 年翻一番。"
+      },
+      "conservativeReturn": {
+        "label": "保守年收益",
+        "hint": "用于更稳妥估算的谨慎增长假设。"
+      },
+      "inflationRate": {
+        "label": "通胀率",
+        "hint": "物价上涨的速度；会提高你未来的支出目标。"
+      },
+      "withdrawalRate": {
+        "label": "安全提取率",
+        "hint": "4% 法则。越低越安全，但需要更大的投资组合。"
+      }
+    },
+    "withdrawalTax": "提取时的税款",
+    "withdrawalTaxHint": "你提取金额的实际税率（例如收益部分的资本利得税）。为 0% 时，目标为税前金额。",
+    "indexContributions": "让我的储蓄随通胀增加",
+    "indexContributionsHint": "关闭：按今天币值的固定金额，每年实际价值都会降低。开启：首期金额较低，之后随通胀增长。",
+    "reset": "恢复为推荐的默认值"
+  },
+  "resultsStep": {
+    "save": "保存我的计划",
+    "fixToSave": "{reason}。请修正后再保存你的计划。"
+  },
+  "validation": {
+    "ageRange": "{field, select, currentAge {当前年龄} retirementAge {退休年龄} other {年龄}}必须是介于 {min} 和 {max} 之间的整数",
+    "retirementNotAfterCurrent": "退休年龄必须大于你当前的年龄",
+    "rateRange": "{field, select, optimisticReturn {预期收益} conservativeReturn {保守收益} inflationRate {通胀率} primaryResidenceMortgageRate {房贷利率} pensionDeductionRate {养老金税款和医疗保险} withdrawalTaxRate {提取时的税款} other {该比率}}必须介于 0% 和 {max}% 之间",
+    "withdrawalRateRange": "提取率必须大于 0% 且不超过 {max}%",
+    "conservativeAboveExpected": "保守收益不能高于预期收益",
+    "amountNegative": "{field, select, monthlyExpensesToday {每月支出必须大于或等于零} fundableRealEstateEquity {房产价值必须大于或等于零} primaryResidenceMortgagePayment {房贷还款额必须大于或等于零} other {养老金金额必须大于或等于零}}",
+    "expensesNotPositive": "每月支出必须大于零"
+  }
+}

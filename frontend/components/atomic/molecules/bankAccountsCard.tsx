@@ -13,8 +13,9 @@ import {
   Wallet,
   PiggyBank,
   Building2,
+  AlertCircle,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useDeletePlaidItem, useRefreshAccounts } from "@/hooks/convex";
 import { useSyncContextSafe } from "@/providers/syncProvider";
 import {
@@ -31,6 +32,11 @@ import {
 } from "@/components/atomic/molecules/classification";
 import { hasUserOverride } from "@/../services/classification";
 import { useCategoryLabels } from "@/lib/config/categoryUI";
+import { PlaidUpdateButton } from "@/components/atomic/atoms/plaidUpdateButton";
+import {
+  consentNotice,
+  type ConsentFields,
+} from "@/../services/banking/consentExpiry";
 
 // Type for Convex account data, with the stored EUR value the totals read
 interface ConvexAccount extends BankAccountTotalsLike {
@@ -58,6 +64,56 @@ interface BankAccountsCardProps {
   institutionLogo?: string; // Base64-encoded PNG from Plaid
   institutionPrimaryColor?: string; // Hex color code from Plaid
   accounts: ConvexAccount[];
+  /** End of consent and expected disconnect, for the renewal notice */
+  consent?: ConsentFields;
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * Asks the user to renew the bank's consent (Plaid update mode) once it
+ * ends within CONSENT_WARNING_DAYS or has ended (ENG-240).
+ */
+function ConsentNotice({
+  itemId,
+  institutionName,
+  consent,
+}: {
+  itemId: string;
+  institutionName: string;
+  consent: ConsentFields;
+}) {
+  const t = useTranslations("integrations.banking.consent");
+  const format = useFormatter();
+  const now = useNow({ updateInterval: HOUR_MS });
+  const notice = consentNotice(consent, now.getTime());
+  if (!notice) return null;
+
+  return (
+    <div
+      role="status"
+      className="mb-3 flex flex-col gap-3 rounded-lg border border-yellow-200 bg-yellow-50/50 p-3 sm:flex-row sm:items-center sm:justify-between dark:border-yellow-900 dark:bg-yellow-950/20"
+    >
+      <div className="flex items-start gap-2">
+        <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+        <div>
+          <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+            {notice.kind === "expired"
+              ? t("expiredTitle")
+              : t("expiringTitle", { days: notice.daysLeft })}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {notice.kind === "expired"
+              ? t("expiredDescription")
+              : t("expiringDescription", {
+                  date: format.dateTime(notice.at, "date"),
+                })}
+          </p>
+        </div>
+      </div>
+      <PlaidUpdateButton item={{ itemId, institutionName, status: "active" }} />
+    </div>
+  );
 }
 
 /** Plaid account types and subtypes with a label under banking.accountTypes */
@@ -113,6 +169,7 @@ export function BankAccountsCard({
   institutionLogo,
   institutionPrimaryColor,
   accounts,
+  consent,
 }: BankAccountsCardProps) {
   const t = useTranslations("integrations.banking");
   const tNotices = useTranslations("integrations.connectionNotices");
@@ -191,6 +248,13 @@ export function BankAccountsCard({
       isSyncing={isSyncing}
       isDisconnecting={deleteItem.isLoading}
     >
+      {consent && (
+        <ConsentNotice
+          itemId={itemId}
+          institutionName={institutionName}
+          consent={consent}
+        />
+      )}
       <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
         {[...accounts]
           .sort((a, b) => {

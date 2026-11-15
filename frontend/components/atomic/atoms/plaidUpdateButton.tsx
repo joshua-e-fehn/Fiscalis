@@ -69,7 +69,7 @@ export function PlaidUpdateButton({
     // In update mode, no public_token is returned
     // Refresh accounts to update item status
     try {
-      await refreshAccounts.mutate(item.itemId);
+      await refreshAccounts.mutate(item.itemId, { afterReconnect: true });
     } catch (error) {
       console.error("Failed to refresh accounts after reconnect", error);
       setErrorMessage(toErrorMessage(error));

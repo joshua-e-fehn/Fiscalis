@@ -168,6 +168,10 @@ export function BanksCard({}: BanksCardProps) {
               institutionLogo={item.institutionLogo}
               institutionPrimaryColor={item.institutionPrimaryColor}
               accounts={itemAccounts}
+              consent={{
+                consentExpiresAt: item.consentExpiresAt,
+                disconnectExpectedAt: item.disconnectExpectedAt,
+              }}
             />
           );
         })}

@@ -127,6 +127,12 @@
         "noMatchesTitle": "Keine passenden Transaktionen",
         "noMatchesDescription": "Probier ein anderes Konto, einen anderen Zeitraum oder Suchbegriff."
       }
+    },
+    "consent": {
+      "expiringTitle": "{days, plural, one {Deine Zustimmung für diese Bank endet in # Tag} other {Deine Zustimmung für diese Bank endet in # Tagen}}",
+      "expiringDescription": "Erneuere sie bis zum {date}, damit deine Kontostände weiter synchronisiert werden.",
+      "expiredTitle": "Deine Zustimmung für diese Bank ist abgelaufen",
+      "expiredDescription": "Erneuere sie, um deine Kontostände wieder zu synchronisieren."
     }
   },
   "brokers": {

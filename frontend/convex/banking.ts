@@ -51,6 +51,8 @@ export const getItems = query({
       status: item.status,
       errorCode: item.errorCode,
       transactionsSyncedAt: item.transactionsSyncedAt,
+      consentExpiresAt: item.consentExpiresAt,
+      disconnectExpectedAt: item.disconnectExpectedAt,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
     }));
@@ -280,6 +282,7 @@ export const saveItem = internalMutation({
         accessToken: args.accessToken,
         status: "active",
         errorCode: undefined,
+        disconnectExpectedAt: undefined,
         updatedAt: now,
         // Update logo fields if provided (they might have changed)
         ...(args.institutionLogo && { institutionLogo: args.institutionLogo }),
@@ -330,6 +333,39 @@ export const updateItemStatus = internalMutation({
     await ctx.db.patch(item._id, {
       status: args.status,
       errorCode: args.errorCode,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Store an item's consent dates (ENG-240). `consentExpiresAt` is Plaid's
+ * end of consent, written by every balance sync (cleared when Plaid reports
+ * none) and by the PENDING_EXPIRATION webhook. `disconnectExpectedAt` is
+ * set by PENDING_DISCONNECT and cleared after the user renews. A field
+ * left out of the args is not touched; null clears it. Unknown items are
+ * ignored (a webhook may arrive for an item already disconnected).
+ */
+export const updateItemConsent = internalMutation({
+  args: {
+    itemId: v.string(),
+    consentExpiresAt: v.optional(v.union(v.number(), v.null())),
+    disconnectExpectedAt: v.optional(v.union(v.number(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const item = await ctx.db
+      .query("plaidItems")
+      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
+      .first();
+    if (!item) return;
+
+    await ctx.db.patch(item._id, {
+      ...(args.consentExpiresAt !== undefined
+        ? { consentExpiresAt: args.consentExpiresAt ?? undefined }
+        : {}),
+      ...(args.disconnectExpectedAt !== undefined
+        ? { disconnectExpectedAt: args.disconnectExpectedAt ?? undefined }
+        : {}),
       updatedAt: Date.now(),
     });
   },
@@ -565,5 +601,20 @@ export const getItemsByUserInternal = internalQuery({
       .query("plaidItems")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
+  },
+});
+
+/**
+ * Every Plaid item's id and encrypted token, for the one-off webhook URL
+ * update (actions/plaid.ts updateItemWebhooks). Internal only.
+ */
+export const listAllItemsInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const items = await ctx.db.query("plaidItems").collect();
+    return items.map((item) => ({
+      itemId: item.itemId,
+      accessToken: item.accessToken,
+    }));
   },
 });

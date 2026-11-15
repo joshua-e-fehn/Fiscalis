@@ -65,7 +65,8 @@ export function LanguageToggle({ className }: { className?: string }) {
                 : "text-white/50 hover:text-white",
             )}
           >
-            {language}
+            {/* Primary subtag only: "pt-PT" shows as "PT", not "PT-PT" */}
+            {language.split("-")[0]}
           </button>
         );
       })}

@@ -48,7 +48,10 @@ import {
   type InvestmentCategory,
 } from "@/lib/types/classification";
 import { formatCurrency } from "@/lib/utils/currency";
-import { parseTypedAmount } from "@/../services/portfolio/manualAssets";
+import {
+  parseTypedAmount,
+  typedAmountText,
+} from "@/../services/i18n/typedAmount";
 import {
   evenWeights,
   PIE_CATEGORIES,
@@ -99,12 +102,6 @@ interface SliceRow {
   weight: string;
 }
 
-/** A weight as the form shows it, with the locale's decimal mark. */
-function weightText(value: number, locale: string): string {
-  const text = String(value);
-  return locale.toLowerCase().startsWith("de") ? text.replace(".", ",") : text;
-}
-
 function subcategoriesOf(category: PieCategory): readonly string[] {
   return category === "unclassified"
     ? []
@@ -125,7 +122,7 @@ function toRow(slice: PieSlice, key: number, locale: string): SliceRow {
       target.kind === "category" ? (target.subcategory ?? ALL) : ALL,
     holdingKeys: target.kind === "holdings" ? target.holdingKeys : [],
     label: slice.label ?? "",
-    weight: weightText(slice.weight, locale),
+    weight: typedAmountText(slice.weight, locale),
   };
 }
 
@@ -179,7 +176,7 @@ function PieEditorForm({ onOpenChange, pie }: PieEditorDialogProps) {
   const splitEvenly = () =>
     setRows((current) => {
       const weights = evenWeights(current.length);
-      return current.map((r, i) => ({ ...r, weight: weightText(weights[i], locale) }));
+      return current.map((r, i) => ({ ...r, weight: typedAmountText(weights[i], locale) }));
     });
   const toggleHolding = (row: SliceRow, holdingKey: string, checked: boolean) =>
     setRow(row.key, {

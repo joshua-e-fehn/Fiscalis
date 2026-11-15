@@ -40,7 +40,10 @@ import {
 import { useErrorMessage } from "@/i18n/errors";
 import { formatCurrency } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
-import { parseTypedAmount } from "@/../services/portfolio/manualAssets";
+import {
+  parseTypedAmount,
+  typedAmountText,
+} from "@/../services/i18n/typedAmount";
 import {
   BASE_CURRENCY,
   MIRRORED_CURRENCIES,
@@ -85,20 +88,6 @@ export function ValuationOverrideDialog(props: ValuationOverrideDialogProps) {
 }
 
 /**
- * A stored amount as the form shows it, with the locale's decimal mark.
- * Twelve significant digits and never an exponent, so a micro-priced token
- * (0.00001234) keeps its digits and parseTypedAmount reads it back.
- */
-function amountText(value: number | undefined, locale: string): string {
-  if (value === undefined || !Number.isFinite(value)) return "";
-  const text = value.toLocaleString("en-US", {
-    useGrouping: false,
-    maximumSignificantDigits: 12,
-  });
-  return locale.toLowerCase().startsWith("de") ? text.replace(".", ",") : text;
-}
-
-/**
  * The provider's price in a currency the form offers, in major units
  * ("GBp" pence become GBP pounds), or null when its currency is not offered
  * and the price would be mislabelled as another currency.
@@ -137,14 +126,14 @@ function ValuationOverrideForm({
     override?.kind ?? "manualPrice",
   );
   const [price, setPrice] = useState(() =>
-    amountText(override?.pricePerUnit ?? provider?.price, locale),
+    typedAmountText(override?.pricePerUnit ?? provider?.price ?? Number.NaN, locale),
   );
   const [currency, setCurrency] = useState(
     override?.currency ?? provider?.currency ?? BASE_CURRENCY,
   );
   const [asOf, setAsOf] = useState(override?.asOf ?? todayLocalISO());
   const [rate, setRate] = useState(() =>
-    amountText(override?.annualRatePercent ?? 0, locale),
+    typedAmountText(override?.annualRatePercent ?? 0, locale),
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);

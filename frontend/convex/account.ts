@@ -108,6 +108,8 @@ export const exportMyData = action({
 //    deleteSnapTradeUser (removes every brokerage authorization).
 //    Bitpanda keys are created by the user at Bitpanda and cannot be
 //    revoked through its API; the purge drops the stored key.
+//    Stripe: the customer is deleted, which cancels any subscription at
+//    once so the user is not charged again (billing.deleteStripeCustomer).
 // 2. Purge every user-owned document, PURGE_BATCH_SIZE at a time, one
 //    scheduled mutation per batch (purgeUserData).
 // 3. Delete the Clerk user. Clerk then sends user.deleted to
@@ -141,6 +143,15 @@ async function revokeProviderAccess(
     if (snaptrade.failed) failed++;
   } catch {
     console.error("Account deletion: SnapTrade revocation threw");
+    failed++;
+  }
+  try {
+    const stripe = await ctx.runAction(internal.billing.deleteStripeCustomer, {
+      userId,
+    });
+    if (stripe.failed) failed++;
+  } catch {
+    console.error("Account deletion: Stripe customer deletion threw");
     failed++;
   }
   return failed;

@@ -1067,3 +1067,49 @@ export const remapUserIdBatch = internalMutation({
     });
   },
 });
+
+/**
+ * Migration (ENG-199): grandfather every existing user onto Pro, so the
+ * Free limits introduced with billing (two connections, no API keys) take
+ * nothing away from anyone who signed up before them. A user is anyone
+ * with a row in USER_DATA_TABLES (convex/onboarding.ts) or
+ * onboardingProgress. Inserts an open-ended "grandfathered" planGrant where the
+ * user has none; idempotent. Run once on prod right after the deploy that
+ * adds planGrants. Dry run is the default:
+ *   npx convex run migrations:grantProToExistingUsers
+ *   npx convex run migrations:grantProToExistingUsers '{"dryRun": false}'
+ */
+export const grantProToExistingUsers = internalMutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const dryRun = args.dryRun ?? true;
+    const userIds = await distinctUserIds(ctx, [
+      ...USER_DATA_TABLES,
+      "onboardingProgress",
+    ]);
+
+    const granted: string[] = [];
+    let alreadyGranted = 0;
+    for (const userId of userIds) {
+      const existing = await ctx.db
+        .query("planGrants")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      if (existing) {
+        alreadyGranted++;
+        continue;
+      }
+      granted.push(userId);
+      if (!dryRun) {
+        await ctx.db.insert("planGrants", {
+          userId,
+          plan: "pro",
+          reason: "grandfathered",
+          grantedAt: Date.now(),
+        });
+      }
+    }
+
+    return { dryRun, users: userIds.size, alreadyGranted, granted };
+  },
+});

@@ -54,6 +54,7 @@ export const USER_DATA_TABLES = [
   { table: "worldBankFavorites", excludedFields: [] },
   { table: "onboardingProgress", excludedFields: [] },
   { table: "userSettings", excludedFields: [] },
+  { table: "planGrants", excludedFields: [] },
 ] as const satisfies readonly UserDataTable[];
 
 export type UserDataTableName = (typeof USER_DATA_TABLES)[number]["table"];

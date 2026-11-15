@@ -254,6 +254,15 @@ async function seededTest(): Promise<{ t: TestConvex; ids: SeedIds }> {
       await ctx.db.patch(row._id, { apiKey: secret });
     }
   });
+  // The owner is on Pro by grant, so plan reads have an owner row to leak
+  await t.run((ctx) =>
+    ctx.db.insert("planGrants", {
+      userId: OWNER,
+      plan: "pro",
+      reason: "complimentary",
+      grantedAt: NOW,
+    }),
+  );
   const plaidItemId = await t.run(async (ctx) => {
     const item = await ctx.db.get(owner.plaidItems![0]);
     return item!.itemId;

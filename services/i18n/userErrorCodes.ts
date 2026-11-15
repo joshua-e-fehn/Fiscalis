@@ -19,6 +19,15 @@ export const USER_ERROR_CODES = [
   "apiKeyNotFound",
   "apiKeyLimit",
 
+  // Plans and billing (convex/lib/plan.ts, convex/billing.ts)
+  "planConnectionLimit",
+  "planApiKeysRequirePro",
+  "planPiesRequirePro",
+  "billingUnavailable",
+  "billingAlreadySubscribed",
+  "billingNoCustomer",
+  "billingProviderError",
+
   // Account deletion (convex/account.ts)
   "accountDeleteConfirmationMismatch",
   "accountDeleteRevokeFailed",

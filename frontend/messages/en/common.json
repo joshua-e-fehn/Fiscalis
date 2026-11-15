@@ -139,14 +139,21 @@
     "snaptradeAccountsUnplaced": "Your broker didn't say which accounts belong to this connection, so none were synced.",
     "snaptradeSyncFailed": "Some of your broker accounts couldn't be synced. Please try again later.",
     "accountDeleteConfirmationMismatch": "Type the confirmation phrase exactly to delete your account.",
-    "accountDeleteRevokeFailed": "A bank or broker connection couldn't be revoked at the provider, so nothing was deleted. Please try again in a few minutes.",
+    "accountDeleteRevokeFailed": "A bank or broker connection, or your subscription, couldn't be ended at the provider, so nothing was deleted. Please try again in a few minutes.",
     "holdingNotFound": "This holding no longer exists. Refresh the page and try again.",
     "valuationNotSupported": "This holding can't be valued manually: cash and liabilities are valued by their balance.",
     "valuationPriceInvalid": "Enter a price of 0 or more.",
     "valuationCurrencyInvalid": "Choose a currency with an exchange rate.",
     "valuationInvalidDate": "Enter a valid date.",
     "valuationDateInFuture": "The date can't be in the future.",
-    "valuationRateInvalid": "Enter an annual rate between -100 % and 100 %."
+    "valuationRateInvalid": "Enter an annual rate between -100 % and 100 %.",
+    "planConnectionLimit": "The Free plan includes up to {max} connections. Upgrade to Pro to connect more, or remove one first.",
+    "planApiKeysRequirePro": "API keys are part of Pro. Upgrade to create one.",
+    "planPiesRequirePro": "Pies are part of Pro. Upgrade to create one.",
+    "billingUnavailable": "Billing isn't available right now. Please try again later.",
+    "billingAlreadySubscribed": "You already have a Pro subscription. Manage it under Billing.",
+    "billingNoCustomer": "There's no subscription to manage yet.",
+    "billingProviderError": "Our payment provider couldn't be reached. Please try again in a few minutes."
   },
   "a11y": {
     "toggleSidebar": "Toggle sidebar",

@@ -62,6 +62,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
   const t = useTranslations("onboarding.profile");
   const tActions = useTranslations("common.actions");
   const tLanguage = useTranslations("common.language");
+  const tErrors = useTranslations("common.errors");
   // Preselect the language the app is shown in (cookie or browser language,
   // limited to RENDERED_LANGUAGES, so English until German is rendered)
   const currentLanguage = languageForLocale(useLocale());
@@ -83,7 +84,7 @@ export function ProfileStep({ onNext, onBack }: ProfileStepProps) {
     : null;
   const birthDateError =
     birthDateCheck && !birthDateCheck.ok
-      ? t(`birthDateErrors.${birthDateCheck.code}`)
+      ? tErrors(`birthDate.${birthDateCheck.code}`)
       : null;
 
   // Pre-fill from Clerk user and existing settings

@@ -4,7 +4,6 @@ import {
   aggregateNetWorth,
   buildSnapshotBreakdown,
   isFlowAdjustedCategory,
-  liabilityCountsLabel,
   netWorthApiBody,
   netWorthApiBreakdown,
   netWorthApiCurrency,
@@ -1030,20 +1029,5 @@ describe("snapshotPartial", () => {
   it("leaves a complete or new row unflagged on a manual write", () => {
     expect(snapshotPartial(undefined, undefined)).toBeUndefined();
     expect(snapshotPartial(false, undefined)).toBeUndefined();
-  });
-});
-
-describe("liabilityCountsLabel", () => {
-  it("shows loans when there are no liability accounts", () => {
-    expect(liabilityCountsLabel(0, 2)).toBe("2 loans");
-  });
-
-  it("joins accounts and loans, each pluralised", () => {
-    expect(liabilityCountsLabel(1, 1)).toBe("1 account · 1 loan");
-    expect(liabilityCountsLabel(3, 0)).toBe("3 accounts");
-  });
-
-  it("is null when there is nothing to count", () => {
-    expect(liabilityCountsLabel(0, 0)).toBeNull();
   });
 });

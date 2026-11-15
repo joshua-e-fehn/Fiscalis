@@ -228,11 +228,7 @@
       "labelPlaceholder": "e.g. My Bitpanda",
       "submit": "Connect",
       "connecting": "Connecting…",
-      "keyMissing": "Please paste your Bitpanda API key.",
-      "errors": {
-        "bitpandaKeyRejected": "That Bitpanda API key was rejected. Make sure it's a valid read-only key.",
-        "bitpandaUnavailable": "Bitpanda is not responding right now. Please try again in a few minutes."
-      }
+      "keyMissing": "Please paste your Bitpanda API key."
     }
   },
   "connectionNotices": {

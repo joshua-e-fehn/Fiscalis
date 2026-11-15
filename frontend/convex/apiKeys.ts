@@ -1,4 +1,4 @@
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import {
   action,
   internalMutation,
@@ -25,6 +25,7 @@ import {
   netWorthApiCurrency,
 } from "../../services/portfolio/aggregate";
 import { loadDisplayRate } from "./fxRates";
+import { userError } from "./lib/userError";
 
 /**
  * API keys for the public, user-scoped REST API (see convex/http.ts).
@@ -70,13 +71,9 @@ export const create = action({
     try {
       normalizedName = normalizeApiKeyName(name);
     } catch (err) {
-      // ConvexError so the code survives prod error redaction; the client
-      // renders it in the user's language (settings.apiKeys.errors).
+      // A code, not text: the client renders common.errors.<code>.
       if (err instanceof ApiKeyNameError) {
-        throw new ConvexError({
-          code: err.code,
-          params: { max: MAX_API_KEY_NAME_LENGTH },
-        });
+        userError(err.code, { max: MAX_API_KEY_NAME_LENGTH });
       }
       throw err;
     }
@@ -143,7 +140,7 @@ export const revoke = mutation({
     const key = await ctx.db.get(keyId);
     // Same error whether the key is missing or someone else's: no ownership oracle.
     if (!key || key.userId !== identity.subject) {
-      throw new ConvexError({ code: "apiKeyNotFound" });
+      userError("apiKeyNotFound");
     }
     if (key.revokedAt === undefined) {
       await ctx.db.patch(keyId, { revokedAt: Date.now() });
@@ -174,10 +171,7 @@ export const insert = internalMutation({
       isApiKeyUsable(k, "networth:read", now),
     );
     if (active.length >= MAX_ACTIVE_API_KEYS_PER_USER) {
-      throw new ConvexError({
-        code: "apiKeyLimit",
-        params: { max: MAX_ACTIVE_API_KEYS_PER_USER },
-      });
+      userError("apiKeyLimit", { max: MAX_ACTIVE_API_KEYS_PER_USER });
     }
 
     return await ctx.db.insert("apiKeys", {

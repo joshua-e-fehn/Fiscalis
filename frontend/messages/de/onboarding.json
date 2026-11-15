@@ -36,12 +36,6 @@
     "displayNamePlaceholder": "Dein Name",
     "birthDate": "Geburtsdatum",
     "birthDateHint": "Wird für Planungstools wie deine Ruhestandsprognose verwendet.",
-    "birthDateErrors": {
-      "format": "Das Geburtsdatum muss im Format JJJJ-MM-TT angegeben werden.",
-      "invalid": "Das Geburtsdatum ist kein gültiges Kalenderdatum.",
-      "future": "Das Geburtsdatum darf nicht in der Zukunft liegen.",
-      "outOfRange": "Das Geburtsdatum liegt außerhalb des unterstützten Bereichs."
-    },
     "currency": "Bevorzugte Währung",
     "currencies": {
       "EUR": "Euro (€)",

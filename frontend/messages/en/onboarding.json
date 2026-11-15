@@ -36,12 +36,6 @@
     "displayNamePlaceholder": "Your name",
     "birthDate": "Date of birth",
     "birthDateHint": "Used to personalise planning tools like your retirement forecast.",
-    "birthDateErrors": {
-      "format": "Date of birth must be in YYYY-MM-DD format.",
-      "invalid": "Date of birth is not a valid calendar date.",
-      "future": "Date of birth cannot be in the future.",
-      "outOfRange": "Date of birth is out of the supported range."
-    },
     "currency": "Preferred currency",
     "currencies": {
       "EUR": "Euro (€)",

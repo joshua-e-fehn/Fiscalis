@@ -60,7 +60,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useErrorMessage } from "@/i18n/errors";
 import {
   API_KEY_RATE_LIMIT,
-  MAX_ACTIVE_API_KEYS_PER_USER,
   MAX_API_KEY_NAME_LENGTH,
 } from "@/../services/apiKeys/apiKeyService";
 
@@ -118,16 +117,6 @@ export default function ApiKeysPage() {
   const formatDate = (ms: number | undefined) =>
     ms === undefined ? t("list.none") : format.dateTime(new Date(ms), "date");
 
-  // Codes convex/apiKeys.ts throws, until they move to common.errors.
-  const errorOverrides = {
-    apiKeyNameRequired: t("errors.apiKeyNameRequired"),
-    apiKeyNameTooLong: t("errors.apiKeyNameTooLong", {
-      max: MAX_API_KEY_NAME_LENGTH,
-    }),
-    apiKeyNotFound: t("errors.apiKeyNotFound"),
-    apiKeyLimit: t("errors.apiKeyLimit", { max: MAX_ACTIVE_API_KEYS_PER_USER }),
-  };
-
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -141,7 +130,7 @@ export default function ApiKeysPage() {
       setNewKey(result.key);
       setName("");
     } catch (err) {
-      setError(errorMessage(err, "generic", errorOverrides));
+      setError(errorMessage(err));
     } finally {
       setIsCreating(false);
     }
@@ -152,7 +141,7 @@ export default function ApiKeysPage() {
     try {
       await revokeKey({ keyId });
     } catch (err) {
-      setError(errorMessage(err, "generic", errorOverrides));
+      setError(errorMessage(err));
     }
   };
 

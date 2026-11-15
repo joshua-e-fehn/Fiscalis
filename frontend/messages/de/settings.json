@@ -72,12 +72,6 @@
       "description": "Der Schlüssel wird nur dieses eine Mal angezeigt. Bewahre ihn sicher auf, zum Beispiel in einem Passwort-Manager oder Secret Store.",
       "copy": "API-Schlüssel kopieren",
       "done": "Fertig"
-    },
-    "errors": {
-      "apiKeyNameRequired": "Gib einen Namen für den Schlüssel ein.",
-      "apiKeyNameTooLong": "Der Name darf höchstens {max} Zeichen lang sein.",
-      "apiKeyNotFound": "Dieser API-Schlüssel existiert nicht mehr. Lade die Seite neu und versuche es erneut.",
-      "apiKeyLimit": "Du kannst höchstens {max} aktive API-Schlüssel haben. Widerrufe zuerst einen."
     }
   }
 }

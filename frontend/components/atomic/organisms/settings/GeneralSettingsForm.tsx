@@ -93,6 +93,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
   // Currency, theme and birth-date wording is shared with onboarding.
   const tProfile = useTranslations("onboarding.profile");
   const tLanguage = useTranslations("common.language");
+  const tErrors = useTranslations("common.errors");
   const tActions = useTranslations("common.actions");
   const updateSettings = useUpdateSettings();
   const { setTheme } = useTheme();
@@ -127,7 +128,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
     : null;
   const birthDateError =
     birthDateCheck && !birthDateCheck.ok
-      ? tProfile(`birthDateErrors.${birthDateCheck.code}`)
+      ? tErrors(`birthDate.${birthDateCheck.code}`)
       : null;
 
   const update = (patch: Partial<ProfileFormData>) => {

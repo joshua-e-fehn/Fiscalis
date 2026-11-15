@@ -72,12 +72,6 @@
       "description": "This is the only time the key will be shown. Store it somewhere safe, such as a password manager or secret store.",
       "copy": "Copy API key",
       "done": "Done"
-    },
-    "errors": {
-      "apiKeyNameRequired": "Enter a name for the key.",
-      "apiKeyNameTooLong": "The name can be at most {max} characters.",
-      "apiKeyNotFound": "This API key no longer exists. Reload the page and try again.",
-      "apiKeyLimit": "You can have at most {max} active API keys. Revoke one first."
     }
   }
 }

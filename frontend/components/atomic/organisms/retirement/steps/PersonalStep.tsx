@@ -42,6 +42,7 @@ export function PersonalStep({
 	onBirthDateChange,
 }: PersonalStepProps) {
 	const t = useTranslations("retirement");
+	const tErrors = useTranslations("common.errors");
 	const issueMessage = useRetirementIssueMessage();
 	// The wizard derives data.currentAge from the date of birth and saves the
 	// date to the profile together with the plan.
@@ -116,7 +117,9 @@ export function PersonalStep({
 						{t("personalStep.enterBirthDate")}
 					</p>
 				) : !dob.ok ? (
-					<p className="text-destructive">{dob.error}.</p>
+					<p className="text-destructive">
+						{tErrors(`birthDate.${dob.code}`)}
+					</p>
 				) : (
 					<p className="text-destructive">
 						{ageIssue && issueMessage(ageIssue)}.

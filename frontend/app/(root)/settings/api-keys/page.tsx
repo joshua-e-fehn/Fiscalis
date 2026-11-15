@@ -204,9 +204,9 @@ export default function ApiKeysPage() {
             </div>
             <Button type="submit" disabled={isCreating || !name.trim()}>
               {isCreating ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="me-2 h-4 w-4 animate-spin" />
               ) : (
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
               )}
               {t("create.submit")}
             </Button>
@@ -255,7 +255,7 @@ export default function ApiKeysPage() {
                           : formatDate(k.expiresAt)}
                       </TableCell>
                       <TableCell>{formatDate(k.lastUsedAt)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-end">
                         {k.revokedAt === undefined && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>

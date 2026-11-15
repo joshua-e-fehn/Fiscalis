@@ -1,7 +1,12 @@
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 
-import fiscalis from "./eslint-rules/no-raw-error-log.mjs";
+import physicalDirection from "./eslint-rules/no-physical-direction.mjs";
+import rawErrorLog from "./eslint-rules/no-raw-error-log.mjs";
+
+const fiscalis = {
+  rules: { ...rawErrorLog.rules, ...physicalDirection.rules },
+};
 
 const eslintConfig = [
   ...nextCoreWebVitals,
@@ -58,6 +63,16 @@ const eslintConfig = [
         },
       ],
     },
+  },
+  {
+    // RTL guard (ENG-188): page code uses logical start/end classes so the
+    // layout mirrors in Arabic. The shadcn primitives in components/ui pick
+    // physical sides on purpose (sheet sides, centred dialogs) and were
+    // converted where needed in #157.
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
+    ignores: ["components/ui/**", "app/(api)/**"],
+    plugins: { fiscalis },
+    rules: { "fiscalis/no-physical-direction": "error" },
   },
   {
     // Server code must not log caught errors raw: provider SDK errors carry

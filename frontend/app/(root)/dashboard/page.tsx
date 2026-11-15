@@ -451,7 +451,7 @@ function AllocationChart({
                   <span className="text-sm text-muted-foreground">
                     {cat.percent.toFixed(1)}%
                   </span>
-                  <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity rtl:-scale-x-100" />
                 </div>
               </Link>
             ))}
@@ -493,7 +493,7 @@ function CategoryCard({ category, currency }: CategoryCardProps) {
                 {labels.categoryName(category.id)}
               </CardTitle>
             </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground rtl:-scale-x-100" />
           </div>
         </CardHeader>
         <CardContent>
@@ -574,7 +574,7 @@ function LiabilitiesCard({
               <CreditCard className="h-4 w-4" />
               {t("title")}
             </CardTitle>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <ArrowRight className="h-4 w-4 text-muted-foreground rtl:-scale-x-100" />
           </div>
         </CardHeader>
         <CardContent>
@@ -631,7 +631,7 @@ function DashboardEmptyState() {
         {EMPTY_STATE_ACTIONS.map(({ key, href, icon: Icon }, i) => (
           <Button key={key} asChild variant={i === 0 ? "default" : "outline"}>
             <Link href={href}>
-              <Icon className="mr-2 h-4 w-4" />
+              <Icon className="me-2 h-4 w-4" />
               {t(key)}
             </Link>
           </Button>

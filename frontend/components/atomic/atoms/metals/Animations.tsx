@@ -2,6 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { ReactNode } from "react";
+import { useInlineSign } from "@/hooks/useInlineSign";
 
 interface FadeInProps {
   children: ReactNode;
@@ -79,9 +80,11 @@ export function SlideIn({
   duration = 0.3,
   className,
 }: SlideInProps) {
+  const sign = useInlineSign();
+  // "left"/"right" are the inline start/end side: they mirror in RTL.
   const directionMap = {
-    left: { x: -20, y: 0 },
-    right: { x: 20, y: 0 },
+    left: { x: -20 * sign, y: 0 },
+    right: { x: 20 * sign, y: 0 },
     up: { x: 0, y: -20 },
     down: { x: 0, y: 20 },
   };

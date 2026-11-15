@@ -30,7 +30,7 @@ export function HoldingCardSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "border rounded-lg p-4 space-y-3 border-l-4 border-l-muted",
+        "border rounded-lg p-4 space-y-3 border-s-4 border-s-muted",
         className,
       )}
     >
@@ -50,9 +50,9 @@ export function HoldingCardSkeleton({ className }: { className?: string }) {
           <ShimmerSkeleton className="h-4 w-16" />
           <ShimmerSkeleton className="h-3 w-12" />
         </div>
-        <div className="text-right space-y-1">
+        <div className="text-end space-y-1">
           <ShimmerSkeleton className="h-6 w-24" />
-          <ShimmerSkeleton className="h-4 w-16 ml-auto" />
+          <ShimmerSkeleton className="h-4 w-16 ms-auto" />
         </div>
       </div>
     </div>
@@ -62,10 +62,10 @@ export function HoldingCardSkeleton({ className }: { className?: string }) {
 import { MetalsType } from "@/lib/types/metals-extended";
 
 const metalBorderColors: Record<MetalsType, string> = {
-  gold: "border-l-metal-gold",
-  silver: "border-l-metal-silver",
-  platinum: "border-l-metal-platinum",
-  palladium: "border-l-metal-palladium",
+  gold: "border-s-metal-gold",
+  silver: "border-s-metal-silver",
+  platinum: "border-s-metal-platinum",
+  palladium: "border-s-metal-palladium",
 };
 
 /**
@@ -81,8 +81,8 @@ export function SummaryCardSkeleton({
   return (
     <div
       className={cn(
-        "border rounded-lg p-4 space-y-3 border-l-4",
-        metal ? metalBorderColors[metal] : "border-l-muted",
+        "border rounded-lg p-4 space-y-3 border-s-4",
+        metal ? metalBorderColors[metal] : "border-s-muted",
         className,
       )}
     >

@@ -1,0 +1,244 @@
+{
+  "status": {
+    "connected": "مرتبط",
+    "syncing": "جارٍ المزامنة",
+    "error": "خطأ",
+    "reauthRequired": "يلزم إعادة المصادقة",
+    "pending": "قيد الانتظار",
+    "retrying": "جارٍ إعادة المحاولة",
+    "disconnected": "غير متصل"
+  },
+  "connection": {
+    "openMenu": "فتح القائمة",
+    "sync": "مزامنة",
+    "syncing": "جارٍ المزامنة…",
+    "disconnect": "فصل",
+    "disconnecting": "جارٍ الفصل…",
+    "disconnectTitle": "فصل {name}؟",
+    "disconnectInfo": "سيؤدي هذا إلى إزالة {info} وبياناتها من لوحة التحكم.",
+    "disconnectDefault": "سيؤدي هذا إلى إزالة هذا الاتصال وكل البيانات المرتبطة به من لوحة التحكم.",
+    "notAffected": "لن يتأثر حسابك الفعلي. يمكنك إعادة الربط في أي وقت.",
+    "cash": "{amount} نقدًا",
+    "syncedJustNow": "الآن"
+  },
+  "banking": {
+    "title": "الحسابات المصرفية",
+    "subtitle": "اربط حساباتك المصرفية لتتبّع الأرصدة والمعاملات تلقائيًا.",
+    "connectBank": "ربط بنك",
+    "unknownBank": "بنك غير معروف",
+    "accounts": "{count, plural, zero {لا حسابات} one {حساب واحد} two {حسابان} few {# حسابات} many {# حسابًا} other {# حساب}}",
+    "stats": {
+      "netBalance": "صافي الرصيد",
+      "netBalanceDescription": "{accounts, plural, zero {لا حسابات} one {حساب واحد} two {حسابان} few {# حسابات} many {# حسابًا} other {# حساب}}، بعد خصم الديون",
+      "netBalanceDescriptionUnconverted": "{accounts, plural, zero {لا حسابات} one {حساب واحد} two {حسابان} few {# حسابات} many {# حسابًا} other {# حساب}}، بعد خصم الديون · {unconverted} دون سعر صرف",
+      "checking": "جاري",
+      "savings": "ادخار",
+      "owed": "مستحق",
+      "cards": "{cards, plural, zero {لا بطاقات} one {بطاقة واحدة} two {بطاقتان} few {# بطاقات} many {# بطاقة} other {# بطاقة}}",
+      "cardsAndLoans": "{cards, plural, zero {لا بطاقات} one {بطاقة واحدة} two {بطاقتان} few {# بطاقات} many {# بطاقة} other {# بطاقة}}، {loans, plural, zero {لا قروض} one {قرض واحد} two {قرضان} few {# قروض} many {# قرضًا} other {# قرض}}"
+    },
+    "empty": {
+      "loadFailedTitle": "تعذّر تحميل الحسابات",
+      "loadFailedDescription": "تعذّر تحميل حساباتك المصرفية. جرّب تحديث الصفحة.",
+      "refreshPage": "تحديث الصفحة",
+      "syncTitle": "زامن حساباتك",
+      "syncDescription": "{count, plural, one {لديك اتصال بنكي واحد لكن لم تتم مزامنة أي حسابات بعد.} two {لديك اتصالان بنكيان لكن لم تتم مزامنة أي حسابات بعد.} few {لديك # اتصالات بنكية لكن لم تتم مزامنة أي حسابات بعد.} many {لديك # اتصالًا بنكيًا لكن لم تتم مزامنة أي حسابات بعد.} other {لديك # اتصال بنكي لكن لم تتم مزامنة أي حسابات بعد.}} انقر أدناه لجلب بيانات حساباتك.",
+      "syncAccounts": "مزامنة الحسابات",
+      "noAccountsTitle": "لا توجد حسابات مرتبطة",
+      "noAccountsDescription": "اربط حساباتك المصرفية لتتبّع أموالك وعرض الأرصدة ومراقبة المعاملات في مكان واحد."
+    },
+    "accountTypes": {
+      "checking": "حساب جارٍ",
+      "savings": "حساب ادخار",
+      "moneyMarket": "سوق المال",
+      "cd": "شهادة إيداع",
+      "cashManagement": "إدارة النقد",
+      "prepaid": "مسبق الدفع",
+      "paypal": "PayPal",
+      "depository": "حساب مصرفي",
+      "creditCard": "بطاقة ائتمان",
+      "credit": "ائتمان",
+      "loan": "قرض",
+      "mortgage": "رهن عقاري",
+      "student": "قرض دراسي",
+      "auto": "قرض سيارة",
+      "investment": "استثمار",
+      "brokerage": "حساب وساطة"
+    },
+    "account": {
+      "fallbackName": "حساب مصرفي",
+      "available": "المتاح: {amount}"
+    },
+    "link": {
+      "connecting": "جارٍ الربط…",
+      "connectAnother": "ربط بنك آخر",
+      "connectFirst": "اربط بنكك",
+      "connected": "تم ربط البنك بنجاح"
+    },
+    "reauth": {
+      "needsReauth": "يحتاج هذا الاتصال إلى إعادة المصادقة",
+      "disconnectBank": "فصل البنك",
+      "expiredTitle": "انتهت صلاحية الاتصال",
+      "expiredDescription": "يطلب منك بنكك تسجيل الدخول مجددًا لأسباب أمنية. انقر «إعادة الربط» لاستعادة الوصول إلى حساباتك.",
+      "disconnectDescription": "سيؤدي هذا إلى إزالة الاتصال بالكامل من لوحة التحكم.",
+      "notAffected": "لن يتأثر حسابك المصرفي الفعلي. يمكنك إعادة الربط في أي وقت.",
+      "reconnect": "إعادة الربط",
+      "reconnecting": "جارٍ إعادة الربط…",
+      "alertTitle": "{count, plural, one {اتصال بنكي يحتاج إلى انتباهك} other {اتصالات بنكية تحتاج إلى انتباهك}}",
+      "alertOne": "يحتاج اتصالك بـ {name} إلى إعادة المصادقة.",
+      "alertOneUnnamed": "يحتاج اتصالك بأحد البنوك إلى إعادة المصادقة.",
+      "alertMany": "{count, plural, one {اتصال بنكي واحد يحتاج إلى إعادة المصادقة.} two {اتصالان بنكيان يحتاجان إلى إعادة المصادقة.} few {# اتصالات بنكية تحتاج إلى إعادة المصادقة.} many {# اتصالًا بنكيًا يحتاج إلى إعادة المصادقة.} other {# اتصال بنكي يحتاج إلى إعادة المصادقة.}}"
+    },
+    "transactions": {
+      "title": "المعاملات",
+      "subtitle": "معاملاتك المصرفية عبر كل الحسابات المرتبطة.",
+      "open": "المعاملات",
+      "sync": "مزامنة المعاملات",
+      "syncing": "جارٍ مزامنة المعاملات…",
+      "syncDone": "{count, plural, =0 {محدّث: لا توجد معاملات جديدة.} one {تم تحديث معاملة واحدة.} two {تم تحديث معاملتين.} few {تم تحديث # معاملات.} many {تم تحديث # معاملة.} other {تم تحديث # معاملة.}}",
+      "syncPartial": "{failed, plural, one {تعذّرت مزامنة بنك واحد.} two {تعذّرت مزامنة بنكين.} few {تعذّرت مزامنة # بنوك.} many {تعذّرت مزامنة # بنكًا.} other {تعذّرت مزامنة # بنك.}} حاول مجددًا لاحقًا.",
+      "syncFailed": "تعذّرت مزامنة المعاملات. حاول مجددًا لاحقًا.",
+      "filters": {
+        "account": "الحساب",
+        "allAccounts": "كل الحسابات",
+        "from": "من",
+        "to": "إلى",
+        "search": "بحث",
+        "searchPlaceholder": "ابحث في الأوصاف…",
+        "clear": "مسح عوامل التصفية"
+      },
+      "columns": {
+        "date": "التاريخ",
+        "description": "الوصف",
+        "account": "الحساب",
+        "amount": "المبلغ"
+      },
+      "pending": "معلّقة",
+      "moneyIn": "وارد",
+      "moneyOut": "صادر",
+      "loadMore": "تحميل المزيد",
+      "loadingMore": "جارٍ التحميل…",
+      "searchOrder": "نتائج البحث مرتبة حسب أفضل تطابق.",
+      "empty": {
+        "noBankTitle": "لا يوجد بنك مرتبط",
+        "noBankDescription": "اربط بنكًا لترى معاملاته هنا.",
+        "noTransactionsTitle": "لا توجد معاملات بعد",
+        "noTransactionsDescription": "زامن معاملاتك لجلبها من بنكك. تصل المعاملات الجديدة أيضًا مع المزامنة اليومية.",
+        "noMatchesTitle": "لا توجد معاملات مطابقة",
+        "noMatchesDescription": "جرّب حسابًا آخر أو نطاقًا زمنيًا أو كلمة بحث أخرى."
+      }
+    },
+    "consent": {
+      "expiringTitle": "{days, plural, one {تنتهي موافقتك لهذا البنك خلال يوم واحد} two {تنتهي موافقتك لهذا البنك خلال يومين} few {تنتهي موافقتك لهذا البنك خلال # أيام} many {تنتهي موافقتك لهذا البنك خلال # يومًا} other {تنتهي موافقتك لهذا البنك خلال # يوم}}",
+      "expiringDescription": "جدّدها قبل {date} لتستمر مزامنة أرصدتك.",
+      "expiredTitle": "انتهت موافقتك لهذا البنك",
+      "expiredDescription": "جدّدها لمزامنة أرصدتك مجددًا."
+    }
+  },
+  "brokers": {
+    "title": "الوسطاء",
+    "subtitle": "اربط وسطاءك ومنصات التداول. حاليًا: وسطاء SnapTrade وBitpanda — والمزيد قادم.",
+    "refresh": "تحديث",
+    "connectBroker": "ربط وسيط",
+    "stats": {
+      "totalValue": "القيمة الإجمالية",
+      "positions": "{count, plural, zero {لا مراكز} one {مركز واحد} two {مركزان} few {# مراكز} many {# مركزًا} other {# مركز}}",
+      "brokers": "الوسطاء",
+      "connectedBrokers": "الوسطاء المرتبطون",
+      "accounts": "الحسابات",
+      "tradingAccounts": "حسابات الوساطة",
+      "cash": "النقد",
+      "availableCash": "النقد المتاح"
+    },
+    "connect": {
+      "connectFirst": "اربط وسيطك",
+      "connectAnother": "ربط وسيط آخر",
+      "add": "إضافة وسيط",
+      "preparing": "جارٍ التحضير…",
+      "connecting": "جارٍ الربط…",
+      "connected": "تم ربط الوسيط",
+      "connectingAccount": "جارٍ ربط حساب الوساطة…",
+      "portalTitle": "بوابة اتصال SnapTrade",
+      "failed": "تعذّر ربط وسيطك. حاول مجددًا."
+    },
+    "connection": {
+      "unknownBroker": "وسيط غير معروف",
+      "fallbackName": "وسيط",
+      "accounts": "{count, plural, zero {لا حسابات} one {حساب واحد} two {حسابان} few {# حسابات} many {# حسابًا} other {# حساب}}",
+      "status": "الحالة",
+      "accountId": "معرّف الحساب",
+      "username": "اسم المستخدم",
+      "lastSynced": "آخر مزامنة",
+      "never": "أبدًا",
+      "pendingNotice": "تكامل API قيد الانتظار. ستتم مزامنة البيانات بعد الربط.",
+      "transientNotice": "مشكلة مؤقتة لدى الوسيط. ستُعاد المحاولة تلقائيًا.",
+      "disconnectTitle": "فصل الوسيط",
+      "disconnectDescription": "هل تريد حقًا فصل «{name}»؟ سيؤدي هذا إلى إزالة اتصال الوسيط وكل بيانات مراكزه من حسابك. لا يمكن التراجع عن ذلك."
+    },
+    "connections": {
+      "title": "اتصالات الوسطاء",
+      "description": "أدر اتصالات الوساطة الخاصة بك",
+      "loadFailed": "تعذّر تحميل اتصالات الوسطاء. حاول مجددًا لاحقًا.",
+      "connectedCount": "{count, plural, zero {لا وسطاء مرتبطون} one {وسيط واحد مرتبط} two {وسيطان مرتبطان} few {# وسطاء مرتبطون} many {# وسيطًا مرتبطًا} other {# وسيط مرتبط}}",
+      "connectPrompt": "اربط حسابات الوساطة لتتبّع استثماراتك",
+      "emptyTitle": "لا يوجد وسطاء مرتبطون",
+      "emptyDescription": "اربط حساب الوساطة لتتبّع استثماراتك وأداء محفظتك تلقائيًا."
+    },
+    "account": {
+      "fallbackType": "استثمار",
+      "accountNumber": "الحساب {number}",
+      "totalValue": "القيمة الإجمالية",
+      "cash": "النقد",
+      "invested": "المستثمَر"
+    },
+    "empty": {
+      "syncTitle": "زامن حساباتك",
+      "syncDescription": "{count, plural, one {لديك اتصال وساطة واحد لكن لم تتم مزامنة أي حسابات بعد.} two {لديك اتصالا وساطة لكن لم تتم مزامنة أي حسابات بعد.} few {لديك # اتصالات وساطة لكن لم تتم مزامنة أي حسابات بعد.} many {لديك # اتصال وساطة لكن لم تتم مزامنة أي حسابات بعد.} other {لديك # اتصال وساطة لكن لم تتم مزامنة أي حسابات بعد.}} انقر أدناه لجلب بيانات حساباتك.",
+      "syncAccounts": "مزامنة الحسابات",
+      "noBrokersTitle": "لا يوجد وسطاء مرتبطون",
+      "noBrokersDescription": "اربط حسابات الوساطة لتتبّع استثماراتك ومراكزك وأداء محفظتك في مكان واحد."
+    },
+    "reauth": {
+      "needsAttention": "الاتصال يحتاج إلى انتباهك",
+      "description": "انتهت صلاحية هذا الاتصال أو يحتاج إلى إعادة المصادقة. أعد الربط لمواصلة مزامنة بياناتك.",
+      "reconnect": "إعادة الربط",
+      "dialogTitle": "إعادة ربط {name}",
+      "dialogDescription": "أعد مصادقة اتصالك لمواصلة مزامنة البيانات.",
+      "completing": "جارٍ إكمال إعادة المصادقة…",
+      "success": "تمت إعادة المصادقة بنجاح!",
+      "failedTitle": "فشل الاتصال",
+      "failed": "فشلت إعادة الربط. حاول مجددًا.",
+      "portalTitle": "إعادة الربط عبر SnapTrade"
+    }
+  },
+  "bitpanda": {
+    "title": "Bitpanda",
+    "subtitle": "العملات المشفرة والمعادن والسلع والأسهم والنقد عبر مفتاح API للقراءة فقط.",
+    "holdings": "{count, plural, zero {لا مقتنيات} one {مقتنى واحد} two {مقتنيان} few {# مقتنيات} many {# مقتنى} other {# مقتنى}}",
+    "emptyDescription": "اربط حساب Bitpanda بمفتاح API للقراءة فقط لتتبّع كل مقتنياتك.",
+    "fallbackLabel": "حساب Bitpanda",
+    "keyRejected": "تم رفض مفتاح API — أعد الربط بمفتاح جديد للقراءة فقط",
+    "syncFailed": "فشلت المزامنة — حاول مجددًا",
+    "transient": "مشكلة مؤقتة لدى Bitpanda — ستُعاد المحاولة تلقائيًا",
+    "lastSynced": "آخر مزامنة {date}",
+    "syncNow": "مزامنة الآن",
+    "addAnother": "إضافة مفتاح Bitpanda آخر",
+    "connect": {
+      "button": "ربط Bitpanda",
+      "title": "ربط Bitpanda",
+      "description": "الصق مفتاح Bitpanda API <strong>للقراءة فقط</strong>. يستخدمه Fiscalis لمزامنة مقتنياتك من العملات المشفرة والمعادن والسلع والأسهم والنقد. المفتاح مشفّر ولا تتم مشاركته أبدًا.",
+      "apiKey": "مفتاح API",
+      "apiKeyPlaceholder": "مفتاح Bitpanda API للقراءة فقط",
+      "createKey": "أنشئ مفتاحًا للقراءة فقط في Bitpanda",
+      "label": "التسمية (اختياري)",
+      "labelPlaceholder": "مثال: Bitpanda الخاص بي",
+      "submit": "ربط",
+      "connecting": "جارٍ الربط…",
+      "keyMissing": "الصق مفتاح Bitpanda API الخاص بك."
+    }
+  },
+  "connectionNotices": {
+    "disconnectFailed": "تعذّر الفصل. لم يُحذف أي شيء؛ حاول مجددًا.",
+    "transientError": "مشكلة مؤقتة لدى المزوّد. اتصالك سليم؛ ستُعاد المحاولة تلقائيًا."
+  }
+}

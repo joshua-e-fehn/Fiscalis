@@ -1,0 +1,109 @@
+{
+  "steps": {
+    "welcome": "مرحبًا",
+    "profile": "الملف الشخصي",
+    "banking": "البنوك",
+    "brokers": "الوسطاء",
+    "crypto": "العملات المشفرة",
+    "completion": "اكتمل"
+  },
+  "progress": {
+    "stepOf": "الخطوة {current} من {total}"
+  },
+  "shared": {
+    "skip": "تخطَّ مؤقتًا",
+    "noConnections": "لا توجد اتصالات بعد",
+    "accounts": "{count, plural, zero {لا حسابات} one {حساب واحد} two {حسابان} few {# حسابات} many {# حسابًا} other {# حساب}}"
+  },
+  "welcome": {
+    "logoAlt": "شعار Fiscalis",
+    "title": "مرحبًا بك في <brand>Fiscalis</brand>",
+    "subtitle": "صورة ثروتك الكاملة، في مكان واحد.",
+    "trackTitle": "تتبّع كل شيء",
+    "trackDescription": "الأسهم والعملات المشفرة والعقارات والنقد والمعادن الثمينة — كلها في عرض واحد",
+    "debtsTitle": "اعرف ديونك",
+    "debtsDescription": "القروض والرهون العقارية وبطاقات الائتمان بلمحة واحدة",
+    "netWorthTitle": "صافي ثروتك الحقيقي",
+    "netWorthDescription": "الأصول ناقص الالتزامات، محدّث لحظيًا",
+    "mockupNetWorth": "إجمالي صافي الثروة",
+    "mockupChange": "{change} هذا العام",
+    "getStarted": "لنبدأ"
+  },
+  "profile": {
+    "title": "خصّص تجربتك",
+    "subtitle": "اضبط تفضيلاتك لتستفيد من Fiscalis إلى أقصى حد",
+    "displayName": "الاسم المعروض",
+    "displayNamePlaceholder": "اسمك",
+    "birthDate": "تاريخ الميلاد",
+    "birthDateHint": "يُستخدم لتخصيص أدوات التخطيط مثل توقعات تقاعدك.",
+    "currency": "العملة المفضلة",
+    "currencies": {
+      "EUR": "اليورو (€)",
+      "USD": "الدولار الأمريكي ($)",
+      "GBP": "الجنيه الإسترليني (£)",
+      "CHF": "الفرنك السويسري (CHF)"
+    },
+    "theme": "السمة",
+    "themes": {
+      "light": "فاتح",
+      "dark": "داكن",
+      "system": "النظام"
+    },
+    "saveFailed": "تعذّر حفظ ملفك الشخصي. حاول مجددًا."
+  },
+  "banking": {
+    "title": "اربط حساباتك المصرفية",
+    "subtitle": "اعرض حساباتك الجارية والادخارية وبطاقات الائتمان في عرض واحد",
+    "benefitBalances": "تحديث تلقائي للأرصدة",
+    "benefitTransactions": "سجل المعاملات وتصنيفها",
+    "benefitCurrencies": "دعم العملات المتعددة",
+    "connected": "الحسابات المرتبطة",
+    "connecting": "جارٍ الربط…",
+    "addAnother": "إضافة بنك آخر",
+    "connect": "ربط حساب مصرفي",
+    "security": "تشفير بمستوى البنوك • وصول للقراءة فقط",
+    "continueWithout": "المتابعة دون بنوك"
+  },
+  "brokers": {
+    "title": "اربط حساباتك الاستثمارية",
+    "subtitle": "استورد أسهمك وصناديقك المتداولة وسنداتك تلقائيًا",
+    "benefitRealtime": "تحديثات المحفظة لحظيًا",
+    "benefitBrokerages": "دعم أكثر من 15 شركة وساطة",
+    "benefitDividends": "تتبّع توزيعات الأرباح والأداء",
+    "connected": "الوسطاء المرتبطون",
+    "supported": "الوسطاء المدعومون",
+    "opening": "جارٍ فتح الاتصال…",
+    "addAnother": "إضافة وسيط آخر",
+    "connect": "ربط حساب وساطة",
+    "newWindow": "من المفترض أن تكون نافذة جديدة قد فُتحت. أكمل الربط هناك.",
+    "security": "اتصال آمن عبر SnapTrade • وصول للقراءة فقط",
+    "continueWithout": "المتابعة دون وسطاء"
+  },
+  "crypto": {
+    "title": "ربط Bitpanda",
+    "subtitle": "تتبّع Bitcoin وEthereum وأكثر من 100 أصل آخر — إضافة إلى المعادن والأسهم والنقد",
+    "benefitAssets": "العملات المشفرة والمعادن الثمينة والسلع والأسهم في مكان واحد",
+    "benefitApiKey": "اربط بمفتاح API للقراءة فقط",
+    "benefitValuation": "تقييم تلقائي بعملتك الأساسية",
+    "connected": "مرتبط",
+    "addAnother": "إضافة حساب آخر",
+    "connect": "ربط Bitpanda",
+    "security": "مفتاح API للقراءة فقط • مشفّر أثناء التخزين",
+    "continueWithout": "المتابعة دون Bitpanda"
+  },
+  "completion": {
+    "title": "كل شيء جاهز! 🎉",
+    "subtitle": "لوحة ثروتك جاهزة للاستكشاف",
+    "summaryConnected": "ما قمت بربطه",
+    "summaryEmpty": "ملخص الإعداد",
+    "bankAccounts": "الحسابات المصرفية",
+    "brokerageAccounts": "حسابات الوساطة",
+    "cryptoWallets": "محافظ العملات المشفرة",
+    "notConnected": "غير مرتبط",
+    "connectLater": "يمكنك ربط حساباتك في أي وقت من الإعدادات",
+    "syncing": "تتم مزامنة حساباتك. انتقل إلى لوحة التحكم لترى صورة ثروتك الكاملة.",
+    "goToDashboard": "الذهاب إلى لوحة التحكم",
+    "goBack": "رجوع",
+    "addAccounts": "إضافة حسابات"
+  }
+}

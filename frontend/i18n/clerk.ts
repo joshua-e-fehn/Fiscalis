@@ -1,4 +1,4 @@
-import { deDE, enGB, esES, frFR, hiIN, itIT, ptPT, ruRU, zhCN } from "@clerk/localizations";
+import { arSA, deDE, enGB, esES, frFR, hiIN, itIT, ptPT, ruRU, zhCN } from "@clerk/localizations";
 
 import type { Language } from "./locales";
 
@@ -12,6 +12,7 @@ const CLERK_LOCALIZATIONS = {
   ru: ruRU,
   "zh-Hans": zhCN,
   hi: hiIN,
+  ar: arSA,
 } satisfies Record<
   Language,
   unknown

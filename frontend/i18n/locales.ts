@@ -67,6 +67,7 @@ export const INTL_TAGS = {
   ru: "ru-RU",
   "zh-Hans": "zh-CN",
   hi: "hi-IN",
+  ar: "ar-u-nu-latn",
 } as const satisfies Record<Language, string>;
 
 export type IntlLocale = (typeof INTL_TAGS)[Language];
@@ -82,15 +83,14 @@ export const LANGUAGE_ENDONYMS: Record<Language, string> = {
   ru: "Русский",
   "zh-Hans": "简体中文",
   hi: "हिन्दी",
+  ar: "العربية",
 };
 
 /**
  * Locales planned but not enabled: no catalogue exists yet. Adding one means
  * moving it into LANGUAGES, adding messages/<code>/ and an INTL_TAGS entry.
  */
-export const PLANNED_LOCALES = [
-  "ar",
-] as const;
+export const PLANNED_LOCALES: readonly string[] = [];
 
 const RTL_LOCALES: readonly string[] = ["ar"];
 

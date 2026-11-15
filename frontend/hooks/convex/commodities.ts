@@ -9,8 +9,7 @@
  * (InvestmentDashboardSection, useCategoryChartData).
  */
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useCategoryPositionsQuery } from "./workspace";
 import type { CategorySummary } from "@/lib/types/investments";
 import { commoditiesSubcategoryUI } from "@/lib/config/categoryUI";
 import { subcategoryCards, useCategorySummary } from "./categorySummary";
@@ -22,7 +21,7 @@ export function useCommoditiesSummary(): {
   isLoading: boolean;
 } {
   return useCategorySummary(
-    useQuery(api.categories.getCommodities),
+    useCategoryPositionsQuery("commodities"),
     SUBCATEGORIES,
     5,
   );

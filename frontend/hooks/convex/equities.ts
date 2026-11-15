@@ -1,5 +1,4 @@
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useCategoryPositionsQuery } from "./workspace";
 import type { CategorySummary } from "@/lib/types/investments";
 import { equitiesSubcategoryUI } from "@/lib/config/categoryUI";
 import { subcategoryCards, useCategorySummary } from "./categorySummary";
@@ -15,7 +14,7 @@ export function useEquitiesSummary(): {
   isLoading: boolean;
 } {
   return useCategorySummary(
-    useQuery(api.categories.getEquities),
+    useCategoryPositionsQuery("equities"),
     SUBCATEGORIES,
   );
 }

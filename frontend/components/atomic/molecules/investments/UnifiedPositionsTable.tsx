@@ -47,6 +47,7 @@ import {
   ChevronUp,
   PenLine,
   HandCoins,
+  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -130,6 +131,8 @@ interface UnifiedPositionData {
   classification?: { target: ClassificationTarget; isManual: boolean };
   /** How a broker or Bitpanda price is known, and the user's override */
   valuation?: PositionValuation;
+  /** Whose position it is, in a team workspace (convex/teamViews.ts) */
+  owner?: { displayName: string | null; isMe: boolean } | null;
 }
 
 type SortField = "name" | "value" | "quantity" | "profitLoss";
@@ -225,6 +228,7 @@ export function UnifiedPositionsTable({
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showAll, setShowAll] = useState(false);
   const t = useTranslations("dashboard.positions");
+  const tTeams = useTranslations("teams");
   const labels = useCategoryLabels();
 
   /** A stored subcategory slug's name; an unknown slug as stored */
@@ -576,6 +580,17 @@ export function UnifiedPositionsTable({
                             <> • {position.metadata.providerName}</>
                           )}
                         </span>
+                        {position.owner && (
+                          <span
+                            className="flex items-center gap-1 text-xs text-muted-foreground"
+                            title={tTeams("workspace.owner")}
+                          >
+                            <UserRound className="h-3 w-3" aria-label={tTeams("workspace.owner")} />
+                            {position.owner.isMe
+                              ? tTeams("team.you")
+                              : (position.owner.displayName ?? tTeams("team.unnamed"))}
+                          </span>
+                        )}
                       </div>
                     </TableCell>
 

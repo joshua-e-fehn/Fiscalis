@@ -10,8 +10,7 @@
  */
 
 import { useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useUnifiedPositionsQuery } from "./workspace";
 import type { FinancialProvider } from "@/lib/types/portfolio";
 import { scaleMoney } from "@/../services/finance/displayCurrency";
 import { useDisplayCurrency } from "./displayCurrency";
@@ -34,7 +33,7 @@ export function useUnifiedPositions(options?: {
   limit?: number;
   provider?: FinancialProvider;
 }) {
-  const result = useQuery(api.portfolio.getUnifiedPositions, {
+  const result = useUnifiedPositionsQuery({
     limit: options?.limit,
     provider: options?.provider,
   });

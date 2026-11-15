@@ -1,5 +1,4 @@
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { useCategoryPositionsQuery } from "./workspace";
 import type { CategorySummary } from "@/lib/types/investments";
 import { bondsSubcategoryUI } from "@/lib/config/categoryUI";
 import { subcategoryCards, useCategorySummary } from "./categorySummary";
@@ -14,5 +13,5 @@ export function useBondsSummary(): {
   summary: CategorySummary | null;
   isLoading: boolean;
 } {
-  return useCategorySummary(useQuery(api.categories.getBonds), SUBCATEGORIES);
+  return useCategorySummary(useCategoryPositionsQuery("bonds"), SUBCATEGORIES);
 }

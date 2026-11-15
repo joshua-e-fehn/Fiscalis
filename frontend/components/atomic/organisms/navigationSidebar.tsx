@@ -30,6 +30,7 @@ import type * as React from "react";
 import { NavigationDropdown } from "@/components/atomic/molecules/navigationDropdown";
 import { NavigationBrand } from "@/components/atomic/molecules/navigationBrand";
 import { NavigationUserMenu } from "@/components/atomic/molecules/navigationUserMenu";
+import { WorkspaceSwitcher } from "@/components/atomic/molecules/workspaceSwitcher";
 import {
 	Sidebar,
 	SidebarContent,
@@ -294,6 +295,7 @@ export function NavigationSidebar({
 		<Sidebar collapsible="icon" {...props}>
 			<SidebarHeader>
 				<NavigationBrand />
+				<WorkspaceSwitcher />
 			</SidebarHeader>
 			<SidebarContent>
 				<NavigationDropdown

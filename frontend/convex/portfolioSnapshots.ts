@@ -7,6 +7,17 @@
  * one point per day however often the data changed. Manual changes schedule
  * the snapshot through scheduleSnapshot, debounced. Each category entry
  * records its net external flow since the previous day's row.
+ *
+ * Days are UTC days throughout, on purpose: the snapshot `date`, the fxRates
+ * mirror (one rate per UTC day), the trade-date conversions
+ * (categorySummary.ts tradeDay) and the YTD range start
+ * (financeService.ts getTimeRangeStartTimestamp, 1 January 00:00 UTC) all
+ * cut at UTC midnight, so a snapshot, its flows and the rates they use
+ * always agree on which day a figure belongs to. The viewer's day is not
+ * used: for a viewer in Europe/Berlin the cut falls at 01:00 (02:00 in
+ * summer) local time, so a change made just after local midnight still
+ * lands on the previous day's row, and "YTD" starts an hour or two into
+ * 1 January. Charts plot by `timestamp` and are unaffected.
  */
 
 import { v } from "convex/values";

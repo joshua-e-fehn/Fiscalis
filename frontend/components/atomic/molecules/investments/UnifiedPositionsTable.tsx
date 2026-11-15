@@ -92,6 +92,8 @@ interface UnifiedPositionData {
   costBasis?: number;
   unrealizedPL?: number;
   unrealizedPLPercent?: number;
+  /** Cost (and P/L) at today's exchange rate: the trade dates are unknown */
+  costFxEstimated?: boolean;
   lastSyncAt: number;
   metadata?: {
     accountId?: string;
@@ -608,6 +610,14 @@ export function UnifiedPositionsTable({
                               <span className="text-xs">
                                 ({isPositive ? "+" : ""}
                                 {position.unrealizedPLPercent.toFixed(2)}%)
+                              </span>
+                            )}
+                            {position.costFxEstimated && (
+                              <span
+                                className="text-xs text-muted-foreground"
+                                title={t("costFxEstimatedHint")}
+                              >
+                                {t("costFxEstimated")}
                               </span>
                             )}
                           </div>

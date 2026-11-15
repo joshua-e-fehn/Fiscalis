@@ -24,7 +24,9 @@ import {
   loanMonthlyPaymentInBase,
   positionCostBasis,
   positionValue,
+  tradeDay,
 } from "../../../services/portfolio/categorySummary";
+import { tradeDateCostBasis } from "../../../services/portfolio/tradeDateCost";
 import {
   aggregateNetWorth,
   buildSnapshotBreakdown,
@@ -72,6 +74,11 @@ import {
  *   the synced trades (rewards at no cost) times the quantity held, and
  *   none when more is held than the trades account for (categorySummary.ts
  *   averageCostPerUnit, bitpandaCostBasis); Bitpanda reports none itself.
+ * - Costs are in EUR at the rates of their trade dates (loadToBaseOn): a
+ *   Bitpanda buy at its day's rate, a foreign-currency broker position's
+ *   cost at the rates of the account's trades in it (tradeDateCost.ts),
+ *   falling back to today's rate, flagged costFxEstimated, when its trades
+ *   do not explain it. Vault rows carry their trade-date EUR price.
  * - Each holding carries a key that survives provider re-syncs, and a
  *   foreign-currency position its native cost, for the snapshot flows
  *   (aggregate.ts holdingNetFlow). A holding traded since the previous
@@ -81,7 +88,11 @@ import {
  */
 
 type BankAccountDoc = Doc<"plaidAccounts">;
-type BrokerPositionDoc = Doc<"brokerPositions">;
+/**
+ * A broker position with its EUR cost at trade-date rates (and the P/L
+ * from it); costFxEstimated: at today's rate, the trade dates unknown
+ */
+type BrokerPositionDoc = Doc<"brokerPositions"> & { costFxEstimated?: boolean };
 type BrokerAccountDoc = Doc<"brokerAccounts">;
 /** A Bitpanda holding with its cost basis derived from the synced trades */
 type BitpandaHoldingDoc = Doc<"bitpandaHoldings"> & {
@@ -120,6 +131,11 @@ export async function loadHoldings(
   };
   const now = Date.now();
   const holdings: LoadedHolding[] = [];
+  /** Today's rate when a trade's date has no readable day */
+  const toBaseOnOrToday =
+    (toBaseOn: ToBaseOn): ToBaseOn =>
+    (amount, currency, date) =>
+      toBaseOn(amount, currency, date) ?? toBaseAmount(amount, currency);
 
   // 1. Bank accounts (Plaid)
   const bankAccounts = await ctx.db
@@ -150,8 +166,9 @@ export async function loadHoldings(
     .query("brokerPositions")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
+  const tradeDateCost = await loadTradeDateCosts(ctx, brokerPositions);
   for (const raw of brokerPositions) {
-    const doc = positionWithBaseFields(raw, rates);
+    const doc = tradeDateCost(positionWithBaseFields(raw, rates));
     const category = toHoldingCategory(doc.investmentCategory);
     const value = positionValue(doc);
     const costBase = positionCostBasis(doc);
@@ -204,16 +221,20 @@ export async function loadHoldings(
     .query("bitpandaHoldings")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
-  const averageCost =
-    bitpandaHoldings.length > 0
-      ? averageCostPerUnit(
-          await ctx.db
-            .query("bitpandaTransactions")
-            .withIndex("by_user", (q) => q.eq("userId", userId))
-            .collect(),
-          toBaseAmount,
-        )
-      : new Map<string, AverageCost>();
+  let averageCost = new Map<string, AverageCost>();
+  if (bitpandaHoldings.length > 0) {
+    const trades = await ctx.db
+      .query("bitpandaTransactions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const toBaseOn = await loadToBaseOn(
+      ctx,
+      trades
+        .filter((t) => t.type === "buy")
+        .map((t) => ({ date: t.transactionDate, currency: t.currency })),
+    );
+    averageCost = averageCostPerUnit(trades, toBaseOnOrToday(toBaseOn));
+  }
   for (const raw of bitpandaHoldings) {
     const category = toHoldingCategory(raw.investmentCategory);
     const value = positionValue(raw);
@@ -310,6 +331,110 @@ export async function loadHoldings(
 }
 
 /**
+ * Conversion at the rate of a trade's date for the dated amounts given:
+ * one rate table per UTC day (tradeDay), for the currencies of that day,
+ * each the nearest earlier mirrored rate (loadFxRates `asOf`; a day before
+ * the mirror's history takes its earliest rate). A date or currency not
+ * among `dated` converts only from EUR; null otherwise.
+ */
+async function loadToBaseOn(
+  ctx: QueryCtx,
+  dated: readonly { date: string; currency: string }[],
+): Promise<ToBaseOn> {
+  const currenciesByDay = new Map<string, Set<string>>();
+  for (const { date, currency } of dated) {
+    const day = tradeDay(date);
+    const code = normalizeCurrency(currency)?.code;
+    if (!day || !code || code === BASE_CURRENCY) continue;
+    currenciesByDay.set(day, (currenciesByDay.get(day) ?? new Set()).add(code));
+  }
+  const ratesByDay = new Map<string, FxRates>(
+    await Promise.all(
+      [...currenciesByDay].map(
+        async ([day, codes]) =>
+          [day, await loadFxRates(ctx, { asOf: day, currencies: [...codes] })] as const,
+      ),
+    ),
+  );
+  return (amount, currency, date) => {
+    const day = tradeDay(date);
+    const converted = toBase(
+      amount,
+      currency,
+      (day && ratesByDay.get(day)) || {},
+    );
+    return converted.ok ? converted.value : null;
+  };
+}
+
+/**
+ * The EUR cost of each foreign-currency broker position at the rates of
+ * its trade dates (services/portfolio/tradeDateCost.ts), from the synced
+ * activities of its account, with the P/L from it. A position whose trades
+ * do not explain it keeps its cost at today's rate, flagged
+ * costFxEstimated. Reads the activities only of accounts that hold such a
+ * position.
+ */
+async function loadTradeDateCosts(
+  ctx: QueryCtx,
+  positions: readonly Doc<"brokerPositions">[],
+): Promise<(doc: Doc<"brokerPositions">) => BrokerPositionDoc> {
+  const costed = (p: Doc<"brokerPositions">) =>
+    p.totalCostBasis !== undefined &&
+    normalizeCurrency(p.currency)?.code !== BASE_CURRENCY;
+  const accountIds = [
+    ...new Set(positions.filter(costed).map((p) => p.accountId)),
+  ];
+  if (accountIds.length === 0) return (doc) => doc;
+  const trades = (
+    await Promise.all(
+      accountIds.map((accountId) =>
+        ctx.db
+          .query("brokerTransactions")
+          .withIndex("by_account", (q) => q.eq("accountId", accountId))
+          .collect(),
+      ),
+    )
+  ).flat();
+  const bySymbol = new Map<string, Doc<"brokerTransactions">[]>();
+  for (const t of trades) {
+    const key = `${t.accountId}:${t.symbol}`;
+    const group = bySymbol.get(key);
+    if (group) group.push(t);
+    else bySymbol.set(key, [t]);
+  }
+  const toBaseOn = await loadToBaseOn(
+    ctx,
+    trades
+      .filter((t) => t.type.toUpperCase() === "BUY")
+      .map((t) => ({ date: t.tradeDate, currency: t.currency })),
+  );
+  return (doc) => {
+    if (!costed(doc) || doc.costBasisInBaseCurrency === undefined) return doc;
+    const cost = tradeDateCostBasis(
+      {
+        quantity: doc.quantity,
+        totalCostBasis: doc.totalCostBasis!,
+        currency: doc.currency,
+      },
+      bySymbol.get(`${doc.accountId}:${doc.symbol}`) ?? [],
+      toBaseOn,
+      doc.costBasisInBaseCurrency,
+      BASE_CURRENCY,
+    );
+    return {
+      ...doc,
+      costBasisInBaseCurrency: cost.base,
+      unrealizedPLInBaseCurrency:
+        doc.valueInBaseCurrency !== undefined
+          ? doc.valueInBaseCurrency - cost.base
+          : undefined,
+      ...(cost.estimated ? { costFxEstimated: true } : {}),
+    };
+  };
+}
+
+/**
  * Exact flow per holding key since the previous snapshot (`from`, ms) from
  * the trade logs: Bitpanda transactions, the vault ledger and the synced
  * SnapTrade activities (brokerTransactions), each amount at the rate of
@@ -345,38 +470,10 @@ async function loadExactFlows(
       .collect(),
   ]);
 
-  // One rate table per trade day, for the currencies traded that day
-  const dayOf = (date: string) => {
-    const t = Date.parse(date);
-    return Number.isFinite(t) ? new Date(t).toISOString().slice(0, 10) : null;
-  };
-  const currenciesByDay = new Map<string, Set<string>>();
-  for (const { date, currency } of [
+  const toBaseOn = await loadToBaseOn(ctx, [
     ...bitpanda.map((t) => ({ date: t.transactionDate, currency: t.currency })),
     ...broker.map((t) => ({ date: t.tradeDate, currency: t.currency })),
-  ]) {
-    const day = dayOf(date);
-    const code = normalizeCurrency(currency)?.code;
-    if (!day || !code || code === BASE_CURRENCY) continue;
-    currenciesByDay.set(day, (currenciesByDay.get(day) ?? new Set()).add(code));
-  }
-  const ratesByDay = new Map<string, FxRates>(
-    await Promise.all(
-      [...currenciesByDay].map(
-        async ([day, codes]) =>
-          [day, await loadFxRates(ctx, { asOf: day, currencies: [...codes] })] as const,
-      ),
-    ),
-  );
-  const toBaseOn: ToBaseOn = (amount, currency, date) => {
-    const day = dayOf(date);
-    const converted = toBase(
-      amount,
-      currency,
-      (day && ratesByDay.get(day)) || {},
-    );
-    return converted.ok ? converted.value : null;
-  };
+  ]);
 
   const bitpandaKeys = bitpandaTradeKeys([
     ...holdings.map((h) => h.key ?? h.id),

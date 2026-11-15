@@ -134,15 +134,18 @@ export interface ProviderTrade {
 
 /** A symbol's cost book from its trades. */
 export interface AverageCost {
-  /** EUR cost per unit of the quantity the trades account for */
+  /**
+   * EUR cost per unit of the quantity the trades account for, each buy
+   * converted at the rate `toEur` gives for its date (the trade-date rate
+   * on the server, lib/netWorth.ts)
+   */
   perUnit: number;
   /** Units the trades account for: bought plus rewarded, less sold or withdrawn */
   quantity: number;
   /**
    * Cost per unit in the currency every buy in the book was paid in, when
-   * that is one currency other than EUR. perUnit converts it at today's
-   * rate and so moves with the exchange rate; this does not, so a snapshot
-   * flow can be read from it (holdingNetFlow).
+   * that is one currency other than EUR. A snapshot flow is read from it
+   * (holdingNetFlow), so an exchange rate move is never taken for a trade.
    */
   native?: { perUnit: number; currency: string };
 }
@@ -150,7 +153,7 @@ export interface AverageCost {
 /** A symbol's running cost book while its trades are replayed. */
 interface CostBook {
   quantity: number;
-  /** EUR, each buy converted at today's rate */
+  /** EUR, each buy converted at the rate of its date (toEur) */
   cost: number;
   /** Cost by the currency it was paid in */
   native: Map<string, number>;
@@ -172,8 +175,20 @@ function tradeTime(date: string): number {
 }
 
 /**
+ * The UTC day (YYYY-MM-DD) of a stored trade date (ISO 8601 or epoch
+ * seconds/ms as a string, see tradeTime); null when it cannot be read. FX
+ * rates are mirrored per UTC day (convex/fxRates.ts), so a trade is
+ * converted at the rate of its UTC day.
+ */
+export function tradeDay(date: string): string | null {
+  const t = tradeTime(date);
+  return t > 0 ? new Date(t).toISOString().slice(0, 10) : null;
+}
+
+/**
  * Cost book in EUR by symbol (upper-case), from the trades replayed in
- * date order: a buy adds its quantity and EUR amount; a reward adds its
+ * date order: a buy adds its quantity and its amount in EUR at
+ * `toEur(amount, currency, transactionDate)`, the rate of the trade date; a reward adds its
  * quantity at zero cost (it is income, so it shows as P/L, never as money
  * put in); a sell removes its quantity at the running average (so the
  * average does not change), and so does a withdrawal (units sent out of
@@ -183,12 +198,11 @@ function tradeTime(date: string): number {
  * symbol is missing when nothing bought is still held or a buy since the
  * book last emptied has a currency without a rate. A book paid in one
  * foreign currency also keeps its cost in that currency (AverageCost.native);
- * one paid in several keeps only the EUR cost at today's rates, which an
- * exchange rate move shifts.
+ * one paid in several keeps only the EUR cost.
  */
 export function averageCostPerUnit(
   trades: readonly ProviderTrade[],
-  toEur: (amount: number, currency: string) => number | null,
+  toEur: (amount: number, currency: string, date: string) => number | null,
 ): Map<string, AverageCost> {
   const books = new Map<string, CostBook>();
   const ordered = [...trades].sort(
@@ -216,7 +230,7 @@ export function averageCostPerUnit(
     if (t.type === "buy") {
       const paid = Math.abs(t.amount);
       const currency = t.currency.toUpperCase();
-      const eur = toEur(paid, t.currency);
+      const eur = toEur(paid, t.currency, t.transactionDate);
       if (eur === null) book.unknown = true;
       else {
         book.cost += eur;
@@ -264,7 +278,7 @@ const UNTRADED_QUANTITY_TOLERANCE = 0.001;
 
 /** A Bitpanda holding's cost basis (bitpandaCostBasis). */
 export interface BitpandaCost {
-  /** EUR at today's rates */
+  /** EUR, each buy at the rate of its date (averageCostPerUnit) */
   base: number;
   /** In the one foreign currency it was paid in (AverageCost.native) */
   native?: { amount: number; currency: string };

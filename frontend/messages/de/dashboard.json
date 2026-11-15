@@ -123,7 +123,9 @@
       "actions": "Aktionen"
     },
     "shown": "{count, plural, one {# Position angezeigt} other {# Positionen angezeigt}}",
-    "total": "Gesamt: {amount}"
+    "total": "Gesamt: {amount}",
+    "costFxEstimated": "(geschätzt)",
+    "costFxEstimatedHint": "Kosten zum heutigen Wechselkurs umgerechnet: die Kaufdaten sind unbekannt"
   },
   "cashHoldings": {
     "bankAccount": "Bankkonto",

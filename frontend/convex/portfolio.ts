@@ -100,6 +100,12 @@ export interface UnifiedPosition {
   /** valueInBaseCurrency − costBasis (EUR) */
   unrealizedPL?: number;
   unrealizedPLPercent?: number;
+  /**
+   * The cost basis (and so the P/L) is converted at today's exchange rate,
+   * because the trade dates of a foreign-currency position are unknown
+   * (lib/netWorth.ts loadTradeDateCosts)
+   */
+  costFxEstimated?: boolean;
   lastSyncAt: number;
   metadata?: Record<string, unknown>;
   /**
@@ -219,6 +225,7 @@ export const getUnifiedPositions = query({
             name: p.name || p.symbol,
             quantity: p.quantity,
             currentPrice: p.currentPrice,
+            ...(p.costFxEstimated && pl ? { costFxEstimated: true } : {}),
             marketValue: signed(p.marketValue ?? 0),
             currency: p.currency,
             lastSyncAt: p.lastSyncAt || p.createdAt,

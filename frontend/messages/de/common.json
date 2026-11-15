@@ -125,7 +125,9 @@
     "snaptradeUnknown": "Bei deinem Broker ist etwas schiefgelaufen. Bitte versuch es erneut.",
     "snaptradeAccountUnavailable": "Dieses Konto ist bei deinem Broker nicht mehr verfügbar.",
     "snaptradeAccountsUnplaced": "Dein Broker hat nicht angegeben, welche Konten zu dieser Verbindung gehören, daher wurde keines synchronisiert.",
-    "snaptradeSyncFailed": "Einige deiner Broker-Konten konnten nicht synchronisiert werden. Bitte versuch es später erneut."
+    "snaptradeSyncFailed": "Einige deiner Broker-Konten konnten nicht synchronisiert werden. Bitte versuch es später erneut.",
+    "accountDeleteConfirmationMismatch": "Gib den Bestätigungstext genau ein, um dein Konto zu löschen.",
+    "accountDeleteRevokeFailed": "Eine Bank- oder Broker-Verbindung konnte beim Anbieter nicht widerrufen werden, deshalb wurde nichts gelöscht. Bitte versuch es in ein paar Minuten erneut."
   },
   "a11y": {
     "toggleSidebar": "Seitenleiste ein-/ausblenden",

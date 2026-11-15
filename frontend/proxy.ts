@@ -67,6 +67,10 @@ export default clerkMiddleware(
           "api.worldbank.org",
           "basemaps.cartocdn.com",
           "*.basemaps.cartocdn.com",
+          // Clerk production bot protection probes these hosts on several ports
+          // (443, 8443, 18443, 2082, 992); without them sign-in can stall.
+          "https://*.client.protect.clerk.com",
+          "https://*.client.protect.clerk.com:*",
           // Dev tools (e.g. console-ninja) connect via WebSocket on random local ports.
           // 'self' only matches the exact dev server origin, not other ports or 127.0.0.1.
           ...(!isProd ? ["ws://localhost:*", "ws://127.0.0.1:*"] : []),

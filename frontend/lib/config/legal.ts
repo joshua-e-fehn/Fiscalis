@@ -15,6 +15,6 @@ export const LEGAL_OPERATOR = {
 } as const;
 
 /** Shown as "last updated" on the privacy policy and terms. */
-export const LEGAL_LAST_UPDATED = new Date("2026-11-14T12:00:00Z");
+export const LEGAL_LAST_UPDATED = new Date("2026-11-16T12:00:00Z");
 
 export const CONTACT_MAILTO = `mailto:${LEGAL_OPERATOR.email}`;

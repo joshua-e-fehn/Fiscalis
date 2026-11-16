@@ -64,7 +64,7 @@
       },
       "hosting": {
         "title": "3. Hosting (Vercel)",
-        "body": "Website und App werden von Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA ausgeliefert. Wenn du eine Seite aufrufst, verarbeitet Vercel deine IP-Adresse, die aufgerufene URL, den Zeitpunkt und den User-Agent deines Browsers, um die Seite auszuliefern, sie vor Angriffen zu schützen und kurzlebige Protokolle zu führen. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (unser berechtigtes Interesse an einer sicheren, funktionierenden Website) und, sobald du ein Konto hast, Art. 6 Abs. 1 lit. b DSGVO. Region der Serverless-Funktionen: [PLACEHOLDER: Vercel-Funktionsregion bestätigen]. Datenschutzerklärung: https://vercel.com/legal/privacy-policy"
+        "body": "Website und App werden von Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA ausgeliefert. Wenn du eine Seite aufrufst, verarbeitet Vercel deine IP-Adresse, die aufgerufene URL, den Zeitpunkt und den User-Agent deines Browsers, um die Seite auszuliefern, sie vor Angriffen zu schützen und kurzlebige Protokolle zu führen. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (unser berechtigtes Interesse an einer sicheren, funktionierenden Website) und, sobald du ein Konto hast, Art. 6 Abs. 1 lit. b DSGVO. Region der Serverless-Funktionen: iad1 (Washington, D.C., USA). Datenschutzerklärung: https://vercel.com/legal/privacy-policy"
       },
       "auth": {
         "title": "4. Anmeldung und Konten (Clerk)",
@@ -72,7 +72,7 @@
       },
       "database": {
         "title": "5. Datenbank und Hintergrundjobs (Convex)",
-        "body": "Alles, was dir in Fiscalis gehört (verbundene Konten, Bestände, Transaktionen, Kredite, Edelmetalle, Einstellungen und Vermögens-Snapshots), wird in einer Datenbank von Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, USA gespeichert. Convex führt auch die geplanten Jobs aus, die deine verbundenen Konten aktualisieren (einmal täglich, bei Bitpanda alle sechs Stunden) und täglich einen Snapshot deines Vermögens speichern. Zugangstokens und API-Schlüssel deiner Verbindungen werden verschlüsselt gespeichert (AES-256-GCM). Region des Deployments: [PLACEHOLDER: Convex-Deployment-Region bestätigen]. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Datenschutzerklärung: https://www.convex.dev/legal/privacy"
+        "body": "Alles, was dir in Fiscalis gehört (verbundene Konten, Bestände, Transaktionen, Kredite, Edelmetalle, Einstellungen und Vermögens-Snapshots), wird in einer Datenbank von Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, USA gespeichert. Convex führt auch die geplanten Jobs aus, die deine verbundenen Konten aktualisieren (einmal täglich, bei Bitpanda alle sechs Stunden) und täglich einen Snapshot deines Vermögens speichern. Zugangstokens und API-Schlüssel deiner Verbindungen werden verschlüsselt gespeichert (AES-256-GCM). Region des Deployments: AWS us-east-1 (Nord-Virginia, USA). Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO. Datenschutzerklärung: https://www.convex.dev/legal/privacy"
       },
       "plaid": {
         "title": "6. Bankverbindungen (Plaid)",

@@ -64,7 +64,7 @@
       },
       "hosting": {
         "title": "3. Hébergement (Vercel)",
-        "body": "Le site web et l’application sont servis par Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis. Lorsque tu ouvres une page, Vercel traite ton adresse IP, l’URL demandée, l’heure et l’agent utilisateur de ton navigateur pour fournir la page, la protéger contre les attaques et conserver des journaux de courte durée. Base légale : art. 6(1)(f) RGPD (notre intérêt légitime à disposer d’un site web sûr et fonctionnel) et, dès que tu as un compte, art. 6(1)(b) RGPD. Région des fonctions serverless : [À COMPLÉTER : confirmer la région des fonctions Vercel]. Politique de confidentialité : https://vercel.com/legal/privacy-policy"
+        "body": "Le site web et l’application sont servis par Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis. Lorsque tu ouvres une page, Vercel traite ton adresse IP, l’URL demandée, l’heure et l’agent utilisateur de ton navigateur pour fournir la page, la protéger contre les attaques et conserver des journaux de courte durée. Base légale : art. 6(1)(f) RGPD (notre intérêt légitime à disposer d’un site web sûr et fonctionnel) et, dès que tu as un compte, art. 6(1)(b) RGPD. Région des fonctions serverless : iad1 (Washington, D.C., États-Unis). Politique de confidentialité : https://vercel.com/legal/privacy-policy"
       },
       "auth": {
         "title": "4. Connexion et comptes (Clerk)",
@@ -72,7 +72,7 @@
       },
       "database": {
         "title": "5. Base de données et tâches en arrière-plan (Convex)",
-        "body": "Tout ce que tu possèdes dans Fiscalis (comptes connectés, avoirs, transactions, prêts, métaux, paramètres et instantanés du portefeuille) est stocké dans une base de données exploitée par Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, États-Unis. Convex exécute aussi les tâches planifiées qui actualisent tes comptes connectés (une fois par jour, et toutes les six heures pour Bitpanda) et enregistrent un instantané quotidien du portefeuille. Les jetons d’accès et clés API de tes connexions sont stockés chiffrés (AES-256-GCM). Région de déploiement : [À COMPLÉTER : confirmer la région de déploiement Convex]. Base légale : art. 6(1)(b) RGPD. Politique de confidentialité : https://www.convex.dev/legal/privacy"
+        "body": "Tout ce que tu possèdes dans Fiscalis (comptes connectés, avoirs, transactions, prêts, métaux, paramètres et instantanés du portefeuille) est stocké dans une base de données exploitée par Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, États-Unis. Convex exécute aussi les tâches planifiées qui actualisent tes comptes connectés (une fois par jour, et toutes les six heures pour Bitpanda) et enregistrent un instantané quotidien du portefeuille. Les jetons d’accès et clés API de tes connexions sont stockés chiffrés (AES-256-GCM). Région de déploiement : AWS us-east-1 (Virginie du Nord, États-Unis). Base légale : art. 6(1)(b) RGPD. Politique de confidentialité : https://www.convex.dev/legal/privacy"
       },
       "plaid": {
         "title": "6. Connexions bancaires (Plaid)",

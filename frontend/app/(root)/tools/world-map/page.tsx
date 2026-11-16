@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Map as MapGL,
   Source,
@@ -54,7 +54,6 @@ import {
   RefreshCw,
   Download,
   Loader2,
-  CheckCircle2,
   Calendar,
   FileSpreadsheet,
   ChevronDown,
@@ -74,11 +73,8 @@ import { CountryHistoryPanel } from "@/components/atomic/organisms/worldMap/Coun
 
 // Hooks
 import {
-  useWorldData,
-  useDynamicWorldData,
-  usePrefetchAdjacentYears,
-  usePrefetchAllYears,
-  useIsYearCached,
+  useIndicatorSeries,
+  useYearData,
   useIndicatorsGrouped,
   useTopCountries,
   useIndicatorText,
@@ -91,7 +87,6 @@ import { useTimePlayback } from "@/hooks/useTimePlayback";
 import { useIsIndicatorFavorited, useToggleFavorite } from "@/hooks/convex";
 
 // Types
-import type { IndicatorId } from "@/lib/types/worldbank";
 import { YEAR_RANGE, isIndicatorId } from "@/lib/types/worldbank";
 
 // Auth
@@ -108,6 +103,7 @@ import {
   type CountryDelta,
   type CsvCell,
 } from "@/../services/worldbank/countryViews";
+import { seriesYears, yearSnapshot } from "@/../services/worldbank/series";
 
 // Utils
 import {
@@ -117,8 +113,12 @@ import {
   getColorPalette,
   isInvertedIndicator,
   NO_DATA_COLOR,
+  NO_DATA_VALUE,
 } from "@/lib/utils/mapColors";
-import type { MapColorExpression } from "@/lib/utils/mapColors";
+import type {
+  MapColorExpression,
+  MapValueExpression,
+} from "@/lib/utils/mapColors";
 import { isolateLtr } from "@/../services/i18n/bidi";
 
 // ═══════════════════════════════════════════════════════════════
@@ -142,8 +142,8 @@ type CountryFeatureCollection = GeoJSON.FeatureCollection<
   CountryProperties
 >;
 
-// Use a marker value for "no data" since null doesn't serialize well in GeoJSON
-const NO_DATA_MARKER = -999999999;
+// Value of a country without data in the map's paint expressions
+const NO_DATA_MARKER = NO_DATA_VALUE;
 
 // Default indicator state: the stored (English) name and description come
 // from the registry; the UI shows worldMap.indicators.gdp
@@ -155,13 +155,20 @@ const DEFAULT_INDICATOR: SelectedIndicator = {
   unit: INDICATOR_METADATA.gdp.unit,
 };
 
-// Default years for "Compare years"
-const DEFAULT_COMPARE = { start: 2000, end: 2020 } as const;
+// "Compare years" opens on the last 20 years up to the latest year
+const DEFAULT_COMPARE_SPAN = 20;
 
-const YEARS_DESC = Array.from(
-  { length: YEAR_RANGE.max - YEAR_RANGE.min + 1 },
-  (_, i) => YEAR_RANGE.max - i,
-);
+/**
+ * A GeoJSON country's ISO alpha-2 code: iso_a2, else iso_a2_eh (France,
+ * Norway, Kosovo), else wb_a2, skipping the -99 placeholder. Taiwan is
+ * CN-TW in the GeoJSON but TW in the data.
+ */
+function resolveCountryCode(props: CountryProperties): string | undefined {
+  for (const code of [props.iso_a2, props.iso_a2_eh, props.wb_a2]) {
+    if (code && code !== "-99") return code === "CN-TW" ? "TW" : code;
+  }
+  return undefined;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Main Component
@@ -185,7 +192,6 @@ export default function WorldMapPage() {
   const [firstLabelLayerId, setFirstLabelLayerId] = useState<
     string | undefined
   >(undefined);
-  const [isExporting, setIsExporting] = useState(false);
   const [hoveredCountry, setHoveredCountry] = useState<{
     name: string;
     code: string;
@@ -199,32 +205,46 @@ export default function WorldMapPage() {
     code: string;
     name: string;
   } | null>(null);
-  // "Compare years": the map shows the change between two years
+  // "Compare years": the map shows the change between two years. null
+  // means the default span ending in the indicator's latest year.
   const [compareMode, setCompareMode] = useState(false);
-  const [compareStart, setCompareStart] = useState<number>(
-    DEFAULT_COMPARE.start,
-  );
-  const [compareEnd, setCompareEnd] = useState<number>(DEFAULT_COMPARE.end);
+  const [pickedCompareStart, setCompareStart] = useState<number | null>(null);
+  const [pickedCompareEnd, setCompareEnd] = useState<number | null>(null);
   const [rankOrder, setRankOrder] = useState<ChangeOrder>("increase");
   const [rankMetric, setRankMetric] = useState<ChangeMetric>("absolute");
 
-  // Determine if we're using a dynamic (searched) or featured indicator
+  // A featured (curated) indicator or a World Bank code from the search
   const isFeaturedIndicator =
     !selectedIndicator.isDynamic && isIndicatorId(selectedIndicator.id);
-  // Featured-only hooks need an IndicatorId; they are idle or unused otherwise
-  const featuredId: IndicatorId = isFeaturedIndicator
-    ? (selectedIndicator.id as IndicatorId)
-    : "gdp";
-  // Comparing needs a featured indicator and two different years
-  // Compare mode only applies to featured indicators; a searched indicator
-  // falls back to the single-year view (with its time slider).
-  const compareActive = compareMode && isFeaturedIndicator;
+
+  // The indicator's whole history in one request; every year below is a
+  // local read of it
+  const seriesQuery = useIndicatorSeries(
+    selectedIndicator.id,
+    !isFeaturedIndicator,
+  );
+  const seriesData = seriesQuery.data;
+  const series = seriesData?.series;
+  const isLoading = seriesQuery.isLoading;
+  const error = seriesQuery.error;
+  const refetch = seriesQuery.refetch;
+
+  // The slider spans the years with data; before the series arrives it
+  // keeps the requested range
+  const minYear = series?.firstYear ?? YEAR_RANGE.min;
+  const maxYear = series?.lastYear ?? YEAR_RANGE.max;
+  const latestYear = series?.latestYear ?? maxYear;
+  const yearsDesc = useMemo(
+    () => (series ? seriesYears(series).reverse() : []),
+    [series],
+  );
+
+  const compareEnd = pickedCompareEnd ?? latestYear;
+  const compareStart =
+    pickedCompareStart ?? Math.max(minYear, latestYear - DEFAULT_COMPARE_SPAN);
+  const compareActive = compareMode;
   const isComparing = compareActive && compareStart !== compareEnd;
 
-  // Cache check for playback (only works for featured indicators)
-  const isYearCached = useIsYearCached(featuredId);
-
-  // Time playback - skip uncached years for smooth playback at high speeds
   const {
     year,
     setYear,
@@ -238,33 +258,24 @@ export default function WorldMapPage() {
     speed,
     setSpeed,
   } = useTimePlayback({
-    initialYear: 2020,
-    minYear: YEAR_RANGE.min,
-    maxYear: YEAR_RANGE.max,
+    initialYear: YEAR_RANGE.max,
+    minYear,
+    maxYear,
     intervalMs: 500,
-    isYearCached: isFeaturedIndicator ? isYearCached : () => false,
-    skipUncachedYears: isFeaturedIndicator,
   });
 
-  // Data fetching - use appropriate hook based on indicator type
-  const featuredQuery = useWorldData(featuredId, year);
-  const dynamicQuery = useDynamicWorldData(
-    selectedIndicator.id,
-    year,
-    !isFeaturedIndicator,
-  );
+  // Each indicator opens on its latest well-covered year (and its default
+  // comparison), once its series has loaded
+  const openedIndicatorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!series || openedIndicatorRef.current === selectedIndicator.id) return;
+    openedIndicatorRef.current = selectedIndicator.id;
+    if (series.latestYear !== null) setYear(series.latestYear);
+    setCompareStart(null);
+    setCompareEnd(null);
+  }, [series, selectedIndicator.id, setYear]);
 
-  // Unified data access
-  const worldData = isFeaturedIndicator
-    ? featuredQuery.data
-    : dynamicQuery.data;
-  const isLoading = isFeaturedIndicator
-    ? featuredQuery.isLoading
-    : dynamicQuery.isLoading;
-  const error = isFeaturedIndicator ? featuredQuery.error : dynamicQuery.error;
-  const refetch = isFeaturedIndicator
-    ? featuredQuery.refetch
-    : dynamicQuery.refetch;
+  const worldData = useYearData(seriesData, year);
 
   // Favorites
   const { isFavorited: isCurrentFavorited } = useIsIndicatorFavorited(
@@ -274,17 +285,11 @@ export default function WorldMapPage() {
 
   const { data: indicatorsData } = useIndicatorsGrouped();
 
-  // Top countries only works for featured indicators
-  const { data: topCountries, isLoading: isLoadingTop } = useTopCountries(
-    featuredId,
-    year,
-    5,
-    "desc",
-  );
+  const topCountries = useTopCountries(worldData?.countries, 5, "desc");
 
-  // Change between the two compared years (featured indicators only)
+  // Change between the two compared years
   const delta = useWorldDataDelta(
-    featuredId,
+    seriesData,
     compareStart,
     compareEnd,
     isComparing,
@@ -296,47 +301,11 @@ export default function WorldMapPage() {
   // English names of every country in either compared year
   const comparedNames = useMemo(() => {
     const names = new Map<string, { name: string; code3: string }>();
-    for (const snapshot of [delta.startYearData, delta.endYearData]) {
-      for (const c of snapshot?.countries ?? []) {
-        names.set(c.code, { name: c.name, code3: c.code3 });
-      }
+    for (const c of [...delta.startCountries, ...delta.endCountries]) {
+      names.set(c.code, { name: c.name, code3: c.code3 });
     }
     return names;
-  }, [delta.startYearData, delta.endYearData]);
-
-  // Prefetching (only for featured indicators)
-  const prefetch = usePrefetchAdjacentYears(featuredId, year, 3);
-
-  // Background prefetch for all years (only for featured indicators)
-  const {
-    prefetchAll,
-    progress: prefetchProgress,
-    isPrefetching,
-  } = usePrefetchAllYears(featuredId, YEAR_RANGE.min, YEAR_RANGE.max);
-
-  // Auto-prefetch all years when indicator changes (start in background)
-  useEffect(() => {
-    if (!isFeaturedIndicator) return; // Skip prefetch for dynamic indicators
-    // Start prefetching after a short delay to prioritize current year
-    const timer = setTimeout(() => {
-      prefetchAll();
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [selectedIndicator.id, isFeaturedIndicator, prefetchAll]);
-
-  // Prefetch adjacent years when year changes
-  useEffect(() => {
-    if (!isPlaying && isFeaturedIndicator) {
-      prefetch.prefetchRange();
-    }
-  }, [year, selectedIndicator.id, isPlaying, prefetch, isFeaturedIndicator]);
-
-  // Prefetch decades when indicator changes (only for featured indicators)
-  useEffect(() => {
-    if (isFeaturedIndicator) {
-      prefetch.prefetchDecades();
-    }
-  }, [selectedIndicator.id, isFeaturedIndicator, prefetch]);
+  }, [delta.startCountries, delta.endCountries]);
 
   // Load GeoJSON
   useEffect(() => {
@@ -354,66 +323,56 @@ export default function WorldMapPage() {
     fetchGeoJson();
   }, []);
 
-  // Process GeoJSON with current data
-  const processedGeoJson = useMemo(() => {
-    if (!geoJsonData || !worldData) return null;
-
-    const countryMap = new Map(worldData.countries.map((c) => [c.code, c]));
-
-    const processed: CountryFeatureCollection = JSON.parse(
-      JSON.stringify(geoJsonData),
-    );
-
-    processed.features = processed.features.map((feature) => {
-      const props = feature.properties;
-
-      // Get country code with fallbacks:
-      // 1. iso_a2 (standard)
-      // 2. iso_a2_eh (extended, used for France, Norway, Kosovo)
-      // 3. wb_a2 (World Bank specific code)
-      // Skip -99 placeholder values
-      let countryCode = props.iso_a2;
-      if (!countryCode || countryCode === "-99") {
-        countryCode = props.iso_a2_eh;
-      }
-      if (!countryCode || countryCode === "-99") {
-        countryCode = props.wb_a2;
-      }
-
-      // Handle special cases
-      // Taiwan uses CN-TW in GeoJSON but TW in some datasets
-      if (countryCode === "CN-TW") {
-        countryCode = "TW";
-      }
-
-      const countryData =
-        countryCode === undefined ? undefined : countryMap.get(countryCode);
-
-      // Use marker value for missing data, preserve actual null/0 values from API.
-      // Comparing, the value is the change; missing in either year is no data.
-      const change =
-        isComparing && countryCode !== undefined
-          ? deltaByCode.get(countryCode)?.absolute
-          : undefined;
-      const value = isComparing ? change : countryData?.value;
-      const hasData = value !== null && value !== undefined;
-
-      return {
+  // The country shapes, reduced once to the code and name the map needs.
+  // The data never goes into the GeoJSON: changing the year or indicator
+  // only swaps the paint expression, so the (large) shapes are uploaded to
+  // the map once instead of on every year.
+  const countryShapes = useMemo((): CountryFeatureCollection | null => {
+    if (!geoJsonData) return null;
+    return {
+      ...geoJsonData,
+      features: geoJsonData.features.map((feature) => ({
         ...feature,
         properties: {
-          ...props,
-          // Store the resolved country code for hover
-          resolvedCode: countryCode,
-          dataValue: hasData ? value : NO_DATA_MARKER,
-          hasData: hasData,
-          formattedValue: countryData?.formattedValue ?? "",
-          countryName: countryData?.name ?? props.name ?? props.admin,
+          resolvedCode: resolveCountryCode(feature.properties),
+          name: feature.properties.name ?? feature.properties.admin,
         },
-      };
-    });
+      })),
+    };
+  }, [geoJsonData]);
 
-    return processed;
-  }, [geoJsonData, worldData, isComparing, deltaByCode]);
+  // The value each country is coloured by: the year's value, or the change
+  // when comparing (missing in either year is no data)
+  const countryByCode = useMemo(
+    () => new Map((worldData?.countries ?? []).map((c) => [c.code, c])),
+    [worldData],
+  );
+  const mapValues = useMemo(() => {
+    const values = new Map<string, number>();
+    if (isComparing) {
+      for (const d of delta.data ?? []) {
+        if (d.absolute !== null) values.set(d.code, d.absolute);
+      }
+    } else {
+      for (const c of worldData?.countries ?? []) {
+        if (c.value !== null) values.set(c.code, c.value);
+      }
+    }
+    return values;
+  }, [isComparing, delta.data, worldData]);
+
+  // Looks a feature's value up by its code; NO_DATA_MARKER without one
+  const valueExpression = useMemo((): MapValueExpression => {
+    const pairs = [...mapValues].flat();
+    return pairs.length === 0
+      ? ["literal", NO_DATA_MARKER]
+      : ([
+          "match",
+          ["coalesce", ["get", "resolvedCode"], ""],
+          ...pairs,
+          NO_DATA_MARKER,
+        ] as unknown as MapValueExpression);
+  }, [mapValues]);
 
   // Color expression for map
   const colorExpression = useMemo((): MapColorExpression => {
@@ -423,7 +382,8 @@ export default function WorldMapPage() {
         .map((d) => d.absolute);
       return createDivergingMapColorExpression(
         divergingStops(changes),
-        isInvertedIndicator(featuredId),
+        isInvertedIndicator(selectedIndicator.id),
+        valueExpression,
       );
     }
     if (!worldData) return ["literal", NO_DATA_COLOR];
@@ -432,20 +392,20 @@ export default function WorldMapPage() {
       .map((c) => c.value)
       .filter((v): v is number => v !== null);
 
-    const scaleType = isFeaturedIndicator
-      ? getRecommendedColorScale(selectedIndicator.id as IndicatorId)
-      : "quantile"; // Default to quantile for dynamic indicators
-    const inverted = isFeaturedIndicator
-      ? isInvertedIndicator(selectedIndicator.id as IndicatorId)
-      : false; // Default to non-inverted for dynamic indicators
-    return createMapColorExpression(values, scaleType, inverted);
+    // Searched indicators: quantile, not inverted (the registry knows
+    // neither for them)
+    return createMapColorExpression(
+      values,
+      getRecommendedColorScale(selectedIndicator.id),
+      isInvertedIndicator(selectedIndicator.id),
+      valueExpression,
+    );
   }, [
     worldData,
     selectedIndicator.id,
-    isFeaturedIndicator,
     isComparing,
     delta.data,
-    featuredId,
+    valueExpression,
   ]);
 
   // Map layers - insert before labels to keep text visible
@@ -534,17 +494,17 @@ export default function WorldMapPage() {
       if (feature?.properties) {
         const props = feature.properties;
         const { lng: longitude, lat: latitude } = event.lngLat;
-        const code: string = props.resolvedCode || props.iso_a2;
-        const englishName: string =
-          props.countryName || props.name || props.admin || code;
+        const code: string = props.resolvedCode ?? "";
+        const data = countryByCode.get(code);
+        const englishName: string = data?.name || props.name || code;
 
         setHoveredCountry({
           name: countryName(code, englishName),
           code,
-          value: props.dataValue,
+          value: data?.value ?? null,
           formattedValue: isComparing
             ? displayChange(deltaByCode.get(code))
-            : displayValue(props.dataValue, props.formattedValue),
+            : displayValue(data?.value, data?.formattedValue),
           longitude,
           latitude,
         });
@@ -552,20 +512,27 @@ export default function WorldMapPage() {
         setHoveredCountry(null);
       }
     },
-    [countryName, displayValue, displayChange, isComparing, deltaByCode],
+    [
+      countryName,
+      displayValue,
+      displayChange,
+      isComparing,
+      deltaByCode,
+      countryByCode,
+    ],
   );
 
   // Click handler: open the country's history
   const onClick = useCallback(
     (event: MapLayerMouseEvent) => {
       const props = event.features?.[0]?.properties;
-      const code: string | undefined = props?.resolvedCode || props?.iso_a2;
-      if (!props || !code || code === "-99") return;
+      const code: string | undefined = props?.resolvedCode;
+      if (!props || !code) return;
       const englishName: string =
-        props.countryName || props.name || props.admin || code;
+        countryByCode.get(code)?.name || props.name || code;
       setSelectedCountry({ code, name: countryName(code, englishName) });
     },
-    [countryName],
+    [countryName, countryByCode],
   );
 
   // The selected indicator's name and description in the UI language
@@ -578,7 +545,7 @@ export default function WorldMapPage() {
     : isFeaturedIndicator
       ? selectedText.description
       : worldData?.indicator?.description;
-  const mapLoading = isLoading || delta.isLoading;
+  const mapLoading = isLoading;
   const unitLabel =
     indicatorUnit === "years" ? t("units.years") : indicatorUnit;
 
@@ -648,113 +615,46 @@ export default function WorldMapPage() {
     t,
   ]);
 
-  // Export all years to CSV
-  const exportAllYears = useCallback(async () => {
-    setIsExporting(true);
+  // Export all years to CSV, straight from the loaded series
+  const exportAllYears = useCallback(() => {
+    if (!seriesData) return;
+    const indicatorName = indicatorText(selectedIndicator).name;
+    const unit =
+      seriesData.indicator.unit === "years"
+        ? t("units.years")
+        : seriesData.indicator.unit;
 
-    try {
-      // Get indicator name and unit from either featured or dynamic data
-      const indicatorName = indicatorText(selectedIndicator).name;
-      let indicatorUnit = selectedIndicator.unit || "";
-
-      if (isFeaturedIndicator && indicatorsData?.grouped) {
-        const allIndicators = Object.values(indicatorsData.grouped).flat();
-        const indicator = allIndicators.find(
-          (i) => i.id === selectedIndicator.id,
-        );
-        if (indicator) {
-          indicatorUnit = indicator.unit;
-        }
-      }
-      if (indicatorUnit === "years") indicatorUnit = t("units.years");
-
-      // Fetch all years in parallel (in batches to avoid overwhelming the server)
-      const years = Array.from(
-        { length: YEAR_RANGE.max - YEAR_RANGE.min + 1 },
-        (_, i) => YEAR_RANGE.min + i,
-      );
-
-      // Use batch size of 10 to be gentle on the API
-      const batchSize = 10;
-      const allData: Array<{
-        year: number;
-        countries: NonNullable<typeof worldData>["countries"];
-      }> = [];
-
-      // Use appropriate endpoint for featured vs dynamic indicators
-      const endpoint = isFeaturedIndicator
-        ? `/api/world-data/${selectedIndicator.id}`
-        : `/api/world-data/dynamic/${selectedIndicator.id}`;
-
-      for (let i = 0; i < years.length; i += batchSize) {
-        const batch = years.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
-          batch.map(async (y) => {
-            try {
-              const response = await fetch(`${endpoint}?year=${y}`);
-              if (!response.ok) return null;
-              const data = await response.json();
-              return { year: y, countries: data.countries };
-            } catch {
-              return null;
-            }
-          }),
-        );
-
-        // Filter out failed requests
-        allData.push(
-          ...batchResults.filter((r): r is NonNullable<typeof r> => r !== null),
-        );
-      }
-
-      // Build CSV with all years
-      const headers = [
-        t("csv.countryCode"),
-        t("csv.countryCodeIso3"),
-        t("csv.countryName"),
-        t("csv.year"),
-        t("csv.value", { indicator: indicatorName, unit: indicatorUnit }),
-      ];
-
-      // Collect all unique countries and create rows for each year
-      const rows: Array<[string, string, string, number, number]> = [];
-
-      for (const { year: dataYear, countries } of allData) {
-        for (const country of countries) {
-          if (country.value !== null) {
-            rows.push([
-              country.code,
-              country.code3,
-              country.name,
-              dataYear,
-              country.value,
-            ]);
-          }
-        }
-      }
-
+    const headers = [
+      t("csv.countryCode"),
+      t("csv.countryCodeIso3"),
+      t("csv.countryName"),
+      t("csv.year"),
+      t("csv.value", { indicator: indicatorName, unit }),
+    ];
+    const rows = seriesYears(seriesData.series)
+      .flatMap((y) =>
+        yearSnapshot(seriesData.series, y).map((c) => [
+          c.code,
+          c.code3,
+          c.name,
+          y,
+          c.value,
+        ]),
+      )
       // Sort by country name, then by year
-      rows.sort((a, b) => a[2].localeCompare(b[2]) || a[3] - b[3]);
-
-      downloadCSV(
-        toCsv(headers, rows),
-        `world-data-${selectedIndicator.id}-all-years.csv`,
+      .sort(
+        (a, b) =>
+          String(a[2]).localeCompare(String(b[2])) ||
+          Number(a[3]) - Number(b[3]),
       );
-    } catch (error) {
-      console.error("Failed to export all years:", error);
-    } finally {
-      setIsExporting(false);
-    }
-  }, [
-    selectedIndicator,
-    indicatorsData,
-    downloadCSV,
-    isFeaturedIndicator,
-    indicatorText,
-    t,
-  ]);
 
-  // Export the comparison: both years plus the change columns. A country
+    downloadCSV(
+      toCsv(headers, rows),
+      `world-data-${selectedIndicator.id}-all-years.csv`,
+    );
+  }, [seriesData, selectedIndicator, downloadCSV, indicatorText, t]);
+
+    // Export the comparison: both years plus the change columns. A country
   // missing either year keeps an empty change, never 0.
   const exportComparison = useCallback(() => {
     if (!delta.data) return;
@@ -820,7 +720,7 @@ export default function WorldMapPage() {
         name: countryName(d.code, comparedNames.get(d.code)?.name ?? d.code),
         detail: displayChange(d),
       }))
-    : (topCountries ?? []).map((c) => ({
+    : topCountries.map((c) => ({
         code: c.code,
         name: countryName(c.code, c.name),
         detail: displayValue(c.value, c.formattedValue),
@@ -828,17 +728,15 @@ export default function WorldMapPage() {
 
   // Legend colors
   const legendColors = useMemo(() => {
-    if (isComparing) {
-      return getColorPalette("diverging", 5, isInvertedIndicator(featuredId));
-    }
-    const scaleType = isFeaturedIndicator
-      ? getRecommendedColorScale(selectedIndicator.id as IndicatorId)
-      : "quantile";
-    const inverted = isFeaturedIndicator
-      ? isInvertedIndicator(selectedIndicator.id as IndicatorId)
-      : false;
-    return getColorPalette(scaleType, 5, inverted);
-  }, [selectedIndicator.id, isFeaturedIndicator, isComparing, featuredId]);
+    const inverted = isInvertedIndicator(selectedIndicator.id);
+    return isComparing
+      ? getColorPalette("diverging", 5, inverted)
+      : getColorPalette(
+          getRecommendedColorScale(selectedIndicator.id),
+          5,
+          inverted,
+        );
+  }, [selectedIndicator.id, isComparing]);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -909,17 +807,9 @@ export default function WorldMapPage() {
               {/* Export Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={(!worldData && !indicatorsData) || isExporting}
-                  >
-                    {isExporting ? (
-                      <Loader2 className="h-4 w-4 me-2 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4 me-2" />
-                    )}
-                    {isExporting ? t("export.exporting") : t("export.button")}
+                  <Button variant="outline" size="sm" disabled={!worldData}>
+                    <Download className="h-4 w-4 me-2" />
+                    {t("export.button")}
                     <ChevronDown className="h-4 w-4 ms-2" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -933,13 +823,10 @@ export default function WorldMapPage() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={exportAllYears}
-                    disabled={isExporting}
+                    disabled={!seriesData}
                   >
                     <FileSpreadsheet className="h-4 w-4 me-2" />
-                    {t("export.allYears", {
-                      min: YEAR_RANGE.min,
-                      max: YEAR_RANGE.max,
-                    })}
+                    {t("export.allYears", { min: minYear, max: maxYear })}
                   </DropdownMenuItem>
                   {isComparing && (
                     <DropdownMenuItem
@@ -982,25 +869,22 @@ export default function WorldMapPage() {
                     if (on) pausePlayback();
                     setCompareMode(on);
                   }}
-                  disabled={!isFeaturedIndicator}
+                  disabled={!series}
                 />
                 <Label htmlFor="compare-years">{t("compare.toggle")}</Label>
               </div>
-              {!isFeaturedIndicator && (
-                <span className="text-xs text-muted-foreground">
-                  {t("compare.featuredOnly")}
-                </span>
-              )}
               {compareActive && (
                 <>
                   <CompareYearSelect
                     label={t("compare.from")}
                     value={compareStart}
+                    years={yearsDesc}
                     onChange={setCompareStart}
                   />
                   <CompareYearSelect
                     label={t("compare.to")}
                     value={compareEnd}
+                    years={yearsDesc}
                     onChange={setCompareEnd}
                   />
                   {compareStart === compareEnd && (
@@ -1016,74 +900,17 @@ export default function WorldMapPage() {
               <TimeSlider
                 value={year}
                 onChange={setYear}
-                onChangeCommitted={(y) => prefetch.prefetchYear(y)}
-                min={YEAR_RANGE.min}
-                max={YEAR_RANGE.max}
+                min={minYear}
+                max={maxYear}
                 isPlaying={isPlaying}
                 onPlayToggle={togglePlayback}
                 onStepForward={stepForward}
                 onStepBackward={stepBackward}
                 onJumpToStart={jumpToStart}
                 onJumpToEnd={jumpToEnd}
-                isLoading={
-                  isLoading && (!isFeaturedIndicator || !isYearCached(year))
-                }
+                isLoading={isLoading}
                 showQuickJumps={true}
               />
-            )}
-
-            {/* Prefetch Progress - only show for featured indicators */}
-            {isFeaturedIndicator && (
-              <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {isPrefetching ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>
-                        {t("prefetch.loading", {
-                          loaded: prefetchProgress.loaded,
-                          total: prefetchProgress.total,
-                        })}
-                      </span>
-                    </>
-                  ) : prefetchProgress.isComplete ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      <span>{t("prefetch.complete")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" />
-                      <span>
-                        {t("prefetch.partial", {
-                          loaded: prefetchProgress.loaded,
-                          total: prefetchProgress.total,
-                        })}
-                      </span>
-                    </>
-                  )}
-                </div>
-                {!prefetchProgress.isComplete && !isPrefetching && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={prefetchAll}
-                    className="text-xs"
-                  >
-                    <Download className="h-3 w-3 me-1" />
-                    {t("prefetch.loadAll")}
-                  </Button>
-                )}
-                {/* Progress bar */}
-                <div className="w-32 h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-300"
-                    style={{
-                      width: `${(prefetchProgress.loaded / prefetchProgress.total) * 100}%`,
-                    }}
-                  />
-                </div>
-              </div>
             )}
 
             {/* Dynamic indicator notice */}
@@ -1202,16 +1029,13 @@ export default function WorldMapPage() {
                       cursor={hoveredCountry ? "pointer" : "grab"}
                       onLoad={onMapLoad}
                     >
-                      {processedGeoJson && (
+                      {countryShapes && (
                         <Source
                           id="countries"
                           type="geojson"
-                          data={processedGeoJson}
+                          data={countryShapes}
                         >
-                          <Layer
-                            key={`layer-fill-${selectedIndicator}`}
-                            {...countryLayer}
-                          />
+                          <Layer {...countryLayer} />
                           <Layer {...borderLayer} />
                         </Source>
                       )}
@@ -1285,17 +1109,6 @@ export default function WorldMapPage() {
                       )}
                     </MapGL>
 
-                    {/* Loading Overlay */}
-                    {isLoading && (
-                      <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-                          <span className="text-sm text-muted-foreground">
-                            {t("map.loadingYear", { year })}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </CardContent>
@@ -1351,7 +1164,7 @@ export default function WorldMapPage() {
                 )}
               </CardHeader>
               <CardContent>
-                {(isComparing ? delta.isLoading : isLoadingTop) ? (
+                {isLoading ? (
                   <div className="space-y-3">
                     {[...Array(5)].map((_, i) => (
                       <div key={i} className="flex items-center gap-3">
@@ -1466,10 +1279,13 @@ export default function WorldMapPage() {
 function CompareYearSelect({
   label,
   value,
+  years,
   onChange,
 }: {
   label: string;
   value: number;
+  /** Selectable years, newest first */
+  years: number[];
   onChange: (year: number) => void;
 }) {
   return (
@@ -1480,7 +1296,7 @@ function CompareYearSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {YEARS_DESC.map((y) => (
+          {years.map((y) => (
             <SelectItem key={y} value={String(y)}>
               {y}
             </SelectItem>

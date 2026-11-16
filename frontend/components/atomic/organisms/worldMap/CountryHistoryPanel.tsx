@@ -57,7 +57,7 @@ export function CountryHistoryPanel({
   const first = recorded[0];
   const latest = recorded[recorded.length - 1];
   const hasGaps = recorded.length < history.data.length;
-  const stillLoading = history.isLoading && history.loaded < history.total;
+  const stillLoading = history.isLoading;
 
   return (
     <Sheet open={country !== null} onOpenChange={(open) => !open && onClose()}>
@@ -73,15 +73,19 @@ export function CountryHistoryPanel({
           {stillLoading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              {t("country.loading", {
-                loaded: history.loaded,
-                total: history.total,
-              })}
+              {t("map.loading")}
             </div>
           )}
 
+          {history.isError && (
+            <p className="text-sm text-destructive">
+              {t("errors.loadDescription")}
+            </p>
+          )}
+
           {recorded.length === 0 ? (
-            !stillLoading && (
+            !stillLoading &&
+            !history.isError && (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 {t("country.empty")}
               </p>

@@ -1,40 +1,36 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useFormatter, useLocale, useTranslations } from "next-intl";
 
 import { createRegionNamer } from "@/../services/i18n/regionNames";
 import {
   computeCountryDeltas,
-  countryHistory,
   isCountryCode,
-  type CountryValue,
 } from "@/../services/worldbank/countryViews";
+import {
+  seriesCountryHistory,
+  yearSnapshot,
+  type SnapshotCountry,
+} from "@/../services/worldbank/series";
 
 import {
-  getWorldData,
   getIndicators,
   getIndicatorsGrouped,
+  getIndicatorSeries,
+  INDICATOR_METADATA,
   searchWorldBankIndicators,
-  getDynamicWorldData,
 } from "@/lib/api/worldbank";
-import { YEAR_RANGE, isIndicatorId } from "@/lib/types/worldbank";
+import { getFormatFunction } from "@/lib/api/worldbank-search";
+import { isIndicatorId } from "@/lib/types/worldbank";
 import type {
-  IndicatorId,
+  CountryDataPoint,
   IndicatorData,
   IndicatorMetadata,
   IndicatorCategory,
+  IndicatorSeriesData,
+  SeriesIndicator,
 } from "@/lib/types/worldbank";
-import type {
-  SearchedIndicator,
-  DynamicIndicatorData,
-} from "@/lib/types/worldbank-search";
-
-// Progress type for prefetch tracking
-interface PrefetchProgress {
-  loaded: number;
-  total: number;
-  isComplete: boolean;
-}
+import type { SearchedIndicator } from "@/lib/types/worldbank-search";
 
 // ═══════════════════════════════════════════════════════════════
 // Query Keys
@@ -45,18 +41,15 @@ export const worldDataKeys = {
   indicators: () => [...worldDataKeys.all, "indicators"] as const,
   indicatorsGrouped: () =>
     [...worldDataKeys.all, "indicators", "grouped"] as const,
-  data: (indicator: IndicatorId) =>
-    [...worldDataKeys.all, "data", indicator] as const,
-  dataYear: (indicator: IndicatorId, year: number) =>
-    [...worldDataKeys.data(indicator), year] as const,
-  comparison: (indicator: IndicatorId, years: number[]) =>
-    [...worldDataKeys.all, "comparison", indicator, years.join("-")] as const,
-  // Dynamic indicator keys (for any World Bank indicator)
   search: (query: string) => [...worldDataKeys.all, "search", query] as const,
-  dynamicData: (code: string) =>
-    [...worldDataKeys.all, "dynamic", code] as const,
-  dynamicDataYear: (code: string, year: number) =>
-    [...worldDataKeys.dynamicData(code), year] as const,
+  /** An indicator's full history; featured ids and searched codes apart */
+  series: (indicator: string, isDynamic: boolean) =>
+    [
+      ...worldDataKeys.all,
+      "series",
+      isDynamic ? "dynamic" : "featured",
+      indicator,
+    ] as const,
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -64,18 +57,84 @@ export const worldDataKeys = {
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Fetch world data for a specific indicator and year
- * Uses server-side caching (24h) + client-side caching (1h)
+ * An indicator's whole history in one request: every year, the latest
+ * well-covered year and the year range. Switching years, playback,
+ * "compare years" and a country's history all read this one query, so
+ * there is nothing to prefetch. Featured ids and searched World Bank codes
+ * both work; `isDynamic` marks a searched code.
  */
-export function useWorldData(indicator: IndicatorId, year: number) {
-  return useQuery<IndicatorData>({
-    queryKey: worldDataKeys.dataYear(indicator, year),
-    queryFn: () => getWorldData(indicator, year),
-    staleTime: 60 * 60 * 1000, // 1 hour (data rarely changes)
-    gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24h
-    refetchOnWindowFocus: false, // Historical data doesn't need frequent refetch
-    retry: 2,
+export function useIndicatorSeries(indicator: string, isDynamic: boolean) {
+  const dynamic = isDynamic || !isIndicatorId(indicator);
+  return useQuery<IndicatorSeriesData>({
+    queryKey: worldDataKeys.series(indicator, dynamic),
+    queryFn: () => getIndicatorSeries(indicator, dynamic),
+    enabled: indicator.length > 0,
+    staleTime: 24 * 60 * 60 * 1000, // the server and CDN refresh daily
+    gcTime: 24 * 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    // The server already retries the World Bank; one more try covers a
+    // dropped connection without stacking minute-long waits
+    retry: 1,
   });
+}
+
+/** English display formatting of an indicator's values (map tooltip, CSV). */
+function valueFormatter(indicator: SeriesIndicator): (value: number) => string {
+  return isIndicatorId(indicator.id)
+    ? INDICATOR_METADATA[indicator.id].formatFn
+    : getFormatFunction(indicator.unit);
+}
+
+/** One year of a loaded series, shaped as the map's per-year data. */
+export function toYearData(
+  data: IndicatorSeriesData,
+  year: number,
+): IndicatorData {
+  const format = valueFormatter(data.indicator);
+  return {
+    indicator: data.indicator,
+    year,
+    lastUpdated: data.lastUpdated,
+    source: data.source,
+    countries: yearSnapshot(data.series, year).map(
+      (c): CountryDataPoint => ({ ...c, formattedValue: format(c.value) }),
+    ),
+  };
+}
+
+/** Memoised `toYearData`; undefined while the series loads. */
+export function useYearData(
+  data: IndicatorSeriesData | undefined,
+  year: number,
+): IndicatorData | undefined {
+  return useMemo(() => (data ? toYearData(data, year) : undefined), [data, year]);
+}
+
+/**
+ * Change per country between two years of a loaded series. A country
+ * missing a value in either year has a null change ("no data"), never 0.
+ */
+export function useWorldDataDelta(
+  data: IndicatorSeriesData | undefined,
+  startYear: number,
+  endYear: number,
+  enabled: boolean = true,
+) {
+  return useMemo(() => {
+    if (!data || !enabled) {
+      return { data: null, startCountries: [], endCountries: [] };
+    }
+    const startCountries: SnapshotCountry[] = yearSnapshot(
+      data.series,
+      startYear,
+    );
+    const endCountries: SnapshotCountry[] = yearSnapshot(data.series, endYear);
+    return {
+      data: computeCountryDeltas(startCountries, endCountries),
+      startCountries,
+      endCountries,
+    };
+  }, [data, startYear, endYear, enabled]);
 }
 
 /**
@@ -122,481 +181,52 @@ export function useIndicatorSearch(query: string, enabled: boolean = true) {
   });
 }
 
-/**
- * Fetch data for any World Bank indicator by code
- */
-export function useDynamicWorldData(
-  indicatorCode: string,
-  year: number,
-  enabled: boolean = true,
-) {
-  return useQuery<DynamicIndicatorData>({
-    queryKey: worldDataKeys.dynamicDataYear(indicatorCode, year),
-    queryFn: () => getDynamicWorldData(indicatorCode, year),
-    enabled: enabled && indicatorCode.length > 0,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
-    refetchOnWindowFocus: false,
-    retry: 2,
-  });
-}
-
-/**
- * Unified hook for both featured and dynamic indicators
- * Automatically uses the right query based on indicator type
- */
-export function useUnifiedWorldData(
-  indicator: string, // Either IndicatorId or World Bank code
-  year: number,
-  isDynamic: boolean = false,
-) {
-  const featuredQuery = useWorldData(indicator as IndicatorId, year);
-  const dynamicQuery = useDynamicWorldData(indicator, year, isDynamic);
-
-  if (isDynamic) {
-    return {
-      data: dynamicQuery.data,
-      isLoading: dynamicQuery.isLoading,
-      error: dynamicQuery.error,
-      refetch: dynamicQuery.refetch,
-      isDynamic: true,
-    };
-  }
-
-  return {
-    data: featuredQuery.data,
-    isLoading: featuredQuery.isLoading,
-    error: featuredQuery.error,
-    refetch: featuredQuery.refetch,
-    isDynamic: false,
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Prefetching Hooks
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Prefetch adjacent years for smooth slider experience
- * Call this when the slider is being interacted with
- */
-export function usePrefetchAdjacentYears(
-  indicator: IndicatorId,
-  year: number,
-  range: number = 5,
-) {
-  const queryClient = useQueryClient();
-
-  const prefetchYear = (targetYear: number) => {
-    queryClient.prefetchQuery({
-      queryKey: worldDataKeys.dataYear(indicator, targetYear),
-      queryFn: () => getWorldData(indicator, targetYear),
-      staleTime: 60 * 60 * 1000,
-    });
-  };
-
-  const prefetchRange = () => {
-    // Prefetch years in both directions
-    for (let i = 1; i <= range; i++) {
-      prefetchYear(year - i);
-      prefetchYear(year + i);
-    }
-  };
-
-  const prefetchDecades = () => {
-    // Prefetch common decade years for quick jumps
-    const decades = [1970, 1980, 1990, 2000, 2010, 2020];
-    decades.forEach((decade) => {
-      if (decade !== year) {
-        prefetchYear(decade);
-      }
-    });
-  };
-
-  return {
-    prefetchYear,
-    prefetchRange,
-    prefetchDecades,
-  };
-}
-
-/**
- * Prefetch all years for an indicator in the background
- * Returns progress information for UI feedback
- */
-export function usePrefetchAllYears(
-  indicator: IndicatorId,
-  minYear: number,
-  maxYear: number,
-) {
-  const queryClient = useQueryClient();
-  const [progress, setProgress] = useState({
-    loaded: 0,
-    total: 0,
-    isComplete: false,
-  });
-  const [isPrefetching, setIsPrefetching] = useState(false);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  // Check how many years are already cached
-  const getCachedYearsCount = useCallback(() => {
-    let count = 0;
-    for (let year = minYear; year <= maxYear; year++) {
-      const cached = queryClient.getQueryData(
-        worldDataKeys.dataYear(indicator, year),
-      );
-      if (cached) count++;
-    }
-    return count;
-  }, [queryClient, indicator, minYear, maxYear]);
-
-  // Prefetch all years with staggered loading to avoid overwhelming the server
-  const prefetchAll = useCallback(async () => {
-    if (isPrefetching) return;
-
-    // Cancel any previous prefetch operation
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-
-    const years: number[] = [];
-    for (let year = minYear; year <= maxYear; year++) {
-      // Skip already cached years
-      const cached = queryClient.getQueryData(
-        worldDataKeys.dataYear(indicator, year),
-      );
-      if (!cached) {
-        years.push(year);
-      }
-    }
-
-    if (years.length === 0) {
-      setProgress({
-        loaded: maxYear - minYear + 1,
-        total: maxYear - minYear + 1,
-        isComplete: true,
-      });
-      return;
-    }
-
-    const totalYears = maxYear - minYear + 1;
-    const alreadyCached = totalYears - years.length;
-
-    setIsPrefetching(true);
-    setProgress({
-      loaded: alreadyCached,
-      total: totalYears,
-      isComplete: false,
-    });
-
-    // Batch prefetch - load multiple years in parallel but in batches
-    const BATCH_SIZE = 5;
-    let loadedCount = alreadyCached;
-
-    for (let i = 0; i < years.length; i += BATCH_SIZE) {
-      if (abortControllerRef.current?.signal.aborted) break;
-
-      const batch = years.slice(i, i + BATCH_SIZE);
-
-      await Promise.all(
-        batch.map(async (year) => {
-          try {
-            await queryClient.prefetchQuery({
-              queryKey: worldDataKeys.dataYear(indicator, year),
-              queryFn: () => getWorldData(indicator, year),
-              staleTime: 60 * 60 * 1000,
-            });
-            loadedCount++;
-            setProgress({
-              loaded: loadedCount,
-              total: totalYears,
-              isComplete: false,
-            });
-          } catch (e) {
-            // Silently fail individual year prefetches
-            console.warn(`Failed to prefetch year ${year}:`, e);
-          }
-        }),
-      );
-
-      // Small delay between batches to avoid rate limiting
-      if (i + BATCH_SIZE < years.length) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-    }
-
-    setProgress((prev: PrefetchProgress) => ({ ...prev, isComplete: true }));
-    setIsPrefetching(false);
-  }, [queryClient, indicator, minYear, maxYear, isPrefetching]);
-
-  // Cancel prefetching
-  const cancelPrefetch = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    setIsPrefetching(false);
-  }, []);
-
-  // Check if a specific year is cached
-  const isYearCached = useCallback(
-    (year: number) => {
-      return !!queryClient.getQueryData(
-        worldDataKeys.dataYear(indicator, year),
-      );
-    },
-    [queryClient, indicator],
-  );
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  // Reset progress and cancel ongoing prefetch when indicator changes
-  useEffect(() => {
-    // Cancel any ongoing prefetch for the previous indicator
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    setIsPrefetching(false);
-    // Use a small delay to ensure cache is checked after state reset
-    const timeoutId = setTimeout(() => {
-      setProgress({
-        loaded: getCachedYearsCount(),
-        total: maxYear - minYear + 1,
-        isComplete: false,
-      });
-    }, 50);
-    return () => clearTimeout(timeoutId);
-  }, [indicator, getCachedYearsCount, maxYear, minYear]);
-
-  return {
-    prefetchAll,
-    cancelPrefetch,
-    progress,
-    isPrefetching,
-    isYearCached,
-    getCachedYearsCount,
-  };
-}
-
-/**
- * Simple hook to check if a year's data is cached
- * Use this when you need cache checking before other hooks
- */
-export function useIsYearCached(indicator: IndicatorId) {
-  const queryClient = useQueryClient();
-
-  return useCallback(
-    (year: number) => {
-      return !!queryClient.getQueryData(
-        worldDataKeys.dataYear(indicator, year),
-      );
-    },
-    [queryClient, indicator],
-  );
-}
-
-/**
- * Hook for prefetching on indicator change
- * Prefetches the current year when indicator changes
- */
-export function usePrefetchOnIndicatorChange(year: number) {
-  const queryClient = useQueryClient();
-
-  const prefetchIndicator = (indicator: IndicatorId) => {
-    queryClient.prefetchQuery({
-      queryKey: worldDataKeys.dataYear(indicator, year),
-      queryFn: () => getWorldData(indicator, year),
-      staleTime: 60 * 60 * 1000,
-    });
-  };
-
-  return { prefetchIndicator };
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Comparison Hooks
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Fetch data for multiple years (for comparison view)
- * Useful for showing change over time or side-by-side comparison
- */
-export function useWorldDataComparison(
-  indicator: IndicatorId,
-  years: number[],
-) {
-  return useQuery<IndicatorData[]>({
-    queryKey: worldDataKeys.comparison(indicator, years),
-    queryFn: async () => {
-      const results = await Promise.all(
-        years.map((year) => getWorldData(indicator, year)),
-      );
-      return results;
-    },
-    staleTime: 60 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-    enabled: years.length > 0,
-  });
-}
-
-/**
- * Change per country between two years for a given indicator. A country
- * missing a value in either year has a null change ("no data"), never 0.
- */
-export function useWorldDataDelta(
-  indicator: IndicatorId,
-  startYear: number,
-  endYear: number,
-  enabled: boolean = true,
-) {
-  const { data, isLoading, error } = useWorldDataComparison(
-    indicator,
-    enabled ? [startYear, endYear] : [],
-  );
-
-  const deltaData = useMemo(
-    () =>
-      data ? computeCountryDeltas(data[0].countries, data[1].countries) : null,
-    [data],
-  );
-
-  return {
-    data: deltaData,
-    isLoading: enabled && isLoading,
-    error,
-    startYearData: data?.[0],
-    endYearData: data?.[1],
-  };
-}
-
 // ═══════════════════════════════════════════════════════════════
 // Utility Hooks
 // ═══════════════════════════════════════════════════════════════
 
-const ALL_YEARS = Array.from(
-  { length: YEAR_RANGE.max - YEAR_RANGE.min + 1 },
-  (_, i) => YEAR_RANGE.min + i,
-);
-
 /**
- * One country's history for an indicator across every available year. It
- * reads the same per-year queries as the map, so years already loaded or
- * prefetched cost nothing; a year that failed to load is a gap. Works for
- * featured and searched (dynamic) indicators; idle while countryCode is null.
+ * One country's history for an indicator across every year with data,
+ * read from the same series query as the map (no extra request once the
+ * map has loaded). Years without data are gaps; idle while countryCode is
+ * null.
  */
 export function useCountryData(
   indicator: string,
   countryCode: string | null,
   isDynamic: boolean = false,
 ) {
-  const enabled =
-    countryCode !== null && (isDynamic || isIndicatorId(indicator));
-  const cache = {
-    enabled,
-    staleTime: 60 * 60 * 1000,
-    gcTime: 24 * 60 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  };
-
-  return useQueries({
-    queries: ALL_YEARS.map((year) =>
-      isDynamic
-        ? {
-            ...cache,
-            queryKey: worldDataKeys.dynamicDataYear(indicator, year),
-            queryFn: (): Promise<{ countries: CountryValue[] }> =>
-              getDynamicWorldData(indicator, year),
-          }
-        : {
-            ...cache,
-            queryKey: worldDataKeys.dataYear(indicator as IndicatorId, year),
-            queryFn: (): Promise<{ countries: CountryValue[] }> =>
-              getWorldData(indicator as IndicatorId, year),
-          },
-    ),
-    combine: (results) => {
-      // A failed year stays in as an empty snapshot so the chart shows a gap
-      // instead of drawing a line across it
-      const snapshots = results.flatMap((r, i) =>
-        r.data
-          ? [{ year: ALL_YEARS[i], countries: r.data.countries }]
-          : r.isError
-            ? [{ year: ALL_YEARS[i], countries: [] }]
-            : [],
-      );
-      return {
-        data: countryCode ? countryHistory(snapshots, countryCode) : [],
-        loaded: results.filter((r) => r.isSuccess || r.isError).length,
-        total: results.length,
-        isLoading: results.some((r) => r.fetchStatus === "fetching"),
-      };
-    },
-  });
+  const series = useIndicatorSeries(indicator, isDynamic);
+  const data = useMemo(
+    () =>
+      series.data && countryCode
+        ? seriesCountryHistory(series.data.series, countryCode)
+        : [],
+    [series.data, countryCode],
+  );
+  return { data, isLoading: series.isLoading, isError: series.isError };
 }
 
 /**
- * Get top N countries by value for the current indicator/year
- * Filters out aggregate regions (World, OECD, etc.) - only actual countries with 2-letter ISO codes
+ * Top N countries by value in one year's data. Aggregate regions (World,
+ * OECD, …) are left out: only real countries with 2-letter ISO codes.
  */
 export function useTopCountries(
-  indicator: IndicatorId,
-  year: number,
+  countries: CountryDataPoint[] | undefined,
   count: number = 10,
   order: "asc" | "desc" = "desc",
 ) {
-  const { data, isLoading, error } = useWorldData(indicator, year);
-
-  const topCountries = data?.countries
-    // Only actual countries (ISO alpha-2), not aggregate regions
-    .filter((c) => c.value !== null && isCountryCode(c.code))
-    .sort((a, b) => {
-      const comparison = (b.value ?? 0) - (a.value ?? 0);
-      return order === "desc" ? comparison : -comparison;
-    })
-    .slice(0, count);
-
-  return {
-    data: topCountries,
-    indicator: data?.indicator,
-    isLoading,
-    error,
-  };
-}
-
-/**
- * Invalidate world data cache (useful after settings change)
- */
-export function useInvalidateWorldData() {
-  const queryClient = useQueryClient();
-
-  const invalidateAll = () => {
-    queryClient.invalidateQueries({ queryKey: worldDataKeys.all });
-  };
-
-  const invalidateIndicator = (indicator: IndicatorId) => {
-    queryClient.invalidateQueries({ queryKey: worldDataKeys.data(indicator) });
-  };
-
-  const invalidateYear = (indicator: IndicatorId, year: number) => {
-    queryClient.invalidateQueries({
-      queryKey: worldDataKeys.dataYear(indicator, year),
-    });
-  };
-
-  return {
-    invalidateAll,
-    invalidateIndicator,
-    invalidateYear,
-  };
+  return useMemo(
+    () =>
+      (countries ?? [])
+        .filter((c) => c.value !== null && isCountryCode(c.code))
+        .sort((a, b) => {
+          const comparison = (b.value ?? 0) - (a.value ?? 0);
+          return order === "desc" ? comparison : -comparison;
+        })
+        .slice(0, count),
+    [countries, count, order],
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════

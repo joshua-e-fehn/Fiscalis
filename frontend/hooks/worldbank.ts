@@ -69,7 +69,12 @@ export function useIndicatorSeries(indicator: string, isDynamic: boolean) {
     queryKey: worldDataKeys.series(indicator, dynamic),
     queryFn: () => getIndicatorSeries(indicator, dynamic),
     enabled: indicator.length > 0,
-    staleTime: 24 * 60 * 60 * 1000, // the server and CDN refresh daily
+    // The server and CDN refresh daily. An empty series may be an upstream
+    // hiccup, so like the server it is only kept fresh for a minute.
+    staleTime: (query) =>
+      query.state.data?.series.firstYear === null
+        ? 60 * 1000
+        : 24 * 60 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     // The server already retries the World Bank; one more try covers a

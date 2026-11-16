@@ -64,7 +64,7 @@
       },
       "hosting": {
         "title": "3. Hosting (Vercel)",
-        "body": "The website and app are served by Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA. When you open a page, Vercel processes your IP address, the requested URL, the time and your browser’s user agent to deliver the page, protect it against attacks and keep short-lived logs. Legal basis: Art. 6(1)(f) GDPR (our legitimate interest in a secure, working website) and, once you have an account, Art. 6(1)(b) GDPR. Region of the serverless functions: [PLACEHOLDER: confirm the Vercel function region]. Privacy policy: https://vercel.com/legal/privacy-policy"
+        "body": "The website and app are served by Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA. When you open a page, Vercel processes your IP address, the requested URL, the time and your browser’s user agent to deliver the page, protect it against attacks and keep short-lived logs. Legal basis: Art. 6(1)(f) GDPR (our legitimate interest in a secure, working website) and, once you have an account, Art. 6(1)(b) GDPR. Region of the serverless functions: iad1 (Washington, D.C., USA). Privacy policy: https://vercel.com/legal/privacy-policy"
       },
       "auth": {
         "title": "4. Sign-in and accounts (Clerk)",
@@ -72,7 +72,7 @@
       },
       "database": {
         "title": "5. Database and background jobs (Convex)",
-        "body": "Everything you own in Fiscalis (connected accounts, holdings, transactions, loans, metals, settings and portfolio snapshots) is stored in a database run by Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, USA. Convex also runs the scheduled jobs that refresh your connected accounts (once a day, and every six hours for Bitpanda) and record a daily portfolio snapshot. Access tokens and API keys for your connections are stored encrypted (AES-256-GCM). Deployment region: [PLACEHOLDER: confirm the Convex deployment region]. Legal basis: Art. 6(1)(b) GDPR. Privacy policy: https://www.convex.dev/legal/privacy"
+        "body": "Everything you own in Fiscalis (connected accounts, holdings, transactions, loans, metals, settings and portfolio snapshots) is stored in a database run by Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, USA. Convex also runs the scheduled jobs that refresh your connected accounts (once a day, and every six hours for Bitpanda) and record a daily portfolio snapshot. Access tokens and API keys for your connections are stored encrypted (AES-256-GCM). Deployment region: AWS us-east-1 (Northern Virginia, USA). Legal basis: Art. 6(1)(b) GDPR. Privacy policy: https://www.convex.dev/legal/privacy"
       },
       "plaid": {
         "title": "6. Bank connections (Plaid)",

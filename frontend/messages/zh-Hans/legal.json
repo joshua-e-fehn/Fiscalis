@@ -64,7 +64,7 @@
       },
       "hosting": {
         "title": "3. 托管（Vercel）",
-        "body": "网站和应用由 Vercel Inc.（440 N Barranca Ave #4133, Covina, CA 91723, USA）提供服务。当你打开页面时，Vercel 会处理你的 IP 地址、请求的 URL、时间以及浏览器的用户代理，以交付页面、防御攻击并保留短期日志。法律依据：GDPR 第 6(1)(f) 条（我们对网站安全、正常运行的合法利益），在你拥有账户后还包括 GDPR 第 6(1)(b) 条。无服务器函数的区域：[占位符：确认 Vercel 函数区域]。隐私政策：https://vercel.com/legal/privacy-policy"
+        "body": "网站和应用由 Vercel Inc.（440 N Barranca Ave #4133, Covina, CA 91723, USA）提供服务。当你打开页面时，Vercel 会处理你的 IP 地址、请求的 URL、时间以及浏览器的用户代理，以交付页面、防御攻击并保留短期日志。法律依据：GDPR 第 6(1)(f) 条（我们对网站安全、正常运行的合法利益），在你拥有账户后还包括 GDPR 第 6(1)(b) 条。无服务器函数的区域：iad1（美国华盛顿特区）。隐私政策：https://vercel.com/legal/privacy-policy"
       },
       "auth": {
         "title": "4. 登录和账户（Clerk）",
@@ -72,7 +72,7 @@
       },
       "database": {
         "title": "5. 数据库和后台任务（Convex）",
-        "body": "你在 Fiscalis 中拥有的一切（已连接的账户、持仓、交易、贷款、贵金属、设置和投资组合快照）都存储在由 Convex, Inc.（444 De Haro St, Suite 218, San Francisco, CA 94107, USA）运营的数据库中。Convex 还运行定时任务，用于刷新你已连接的账户（每天一次，Bitpanda 每六小时一次）并记录每日投资组合快照。你的连接所用的访问令牌和 API 密钥均加密存储（AES-256-GCM）。部署区域：[占位符：确认 Convex 部署区域]。法律依据：GDPR 第 6(1)(b) 条。隐私政策：https://www.convex.dev/legal/privacy"
+        "body": "你在 Fiscalis 中拥有的一切（已连接的账户、持仓、交易、贷款、贵金属、设置和投资组合快照）都存储在由 Convex, Inc.（444 De Haro St, Suite 218, San Francisco, CA 94107, USA）运营的数据库中。Convex 还运行定时任务，用于刷新你已连接的账户（每天一次，Bitpanda 每六小时一次）并记录每日投资组合快照。你的连接所用的访问令牌和 API 密钥均加密存储（AES-256-GCM）。部署区域：AWS us-east-1（美国北弗吉尼亚）。法律依据：GDPR 第 6(1)(b) 条。隐私政策：https://www.convex.dev/legal/privacy"
       },
       "plaid": {
         "title": "6. 银行连接（Plaid）",

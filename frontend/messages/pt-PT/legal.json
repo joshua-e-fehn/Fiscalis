@@ -64,7 +64,7 @@
       },
       "hosting": {
         "title": "3. Alojamento (Vercel)",
-        "body": "O site e a aplicação são servidos pela Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, EUA. Quando abres uma página, a Vercel trata o teu endereço IP, o URL pedido, a hora e o user agent do teu navegador para entregar a página, protegê-la contra ataques e manter registos de curta duração. Fundamento jurídico: art. 6.º, n.º 1, alínea f) do RGPD (o nosso interesse legítimo num site seguro e funcional) e, depois de teres uma conta, art. 6.º, n.º 1, alínea b) do RGPD. Região das funções serverless: [MARCADOR: confirmar a região das funções da Vercel]. Política de privacidade: https://vercel.com/legal/privacy-policy"
+        "body": "O site e a aplicação são servidos pela Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, EUA. Quando abres uma página, a Vercel trata o teu endereço IP, o URL pedido, a hora e o user agent do teu navegador para entregar a página, protegê-la contra ataques e manter registos de curta duração. Fundamento jurídico: art. 6.º, n.º 1, alínea f) do RGPD (o nosso interesse legítimo num site seguro e funcional) e, depois de teres uma conta, art. 6.º, n.º 1, alínea b) do RGPD. Região das funções serverless: iad1 (Washington, D.C., EUA). Política de privacidade: https://vercel.com/legal/privacy-policy"
       },
       "auth": {
         "title": "4. Início de sessão e contas (Clerk)",
@@ -72,7 +72,7 @@
       },
       "database": {
         "title": "5. Base de dados e tarefas em segundo plano (Convex)",
-        "body": "Tudo o que tens no Fiscalis (contas ligadas, posições, transações, empréstimos, metais, definições e snapshots da carteira) é guardado numa base de dados gerida pela Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, EUA. A Convex executa também as tarefas agendadas que atualizam as tuas contas ligadas (uma vez por dia e, para a Bitpanda, a cada seis horas) e registam um snapshot diário da carteira. Os tokens de acesso e as chaves de API das tuas ligações são guardados encriptados (AES-256-GCM). Região de implementação: [MARCADOR: confirmar a região de implementação da Convex]. Fundamento jurídico: art. 6.º, n.º 1, alínea b) do RGPD. Política de privacidade: https://www.convex.dev/legal/privacy"
+        "body": "Tudo o que tens no Fiscalis (contas ligadas, posições, transações, empréstimos, metais, definições e snapshots da carteira) é guardado numa base de dados gerida pela Convex, Inc., 444 De Haro St, Suite 218, San Francisco, CA 94107, EUA. A Convex executa também as tarefas agendadas que atualizam as tuas contas ligadas (uma vez por dia e, para a Bitpanda, a cada seis horas) e registam um snapshot diário da carteira. Os tokens de acesso e as chaves de API das tuas ligações são guardados encriptados (AES-256-GCM). Região de implementação: AWS us-east-1 (Norte da Virgínia, EUA). Fundamento jurídico: art. 6.º, n.º 1, alínea b) do RGPD. Política de privacidade: https://www.convex.dev/legal/privacy"
       },
       "plaid": {
         "title": "6. Ligações bancárias (Plaid)",

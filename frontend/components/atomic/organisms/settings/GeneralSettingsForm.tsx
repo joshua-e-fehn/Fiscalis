@@ -216,8 +216,10 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
           <CardTitle>{t("region.title")}</CardTitle>
           <CardDescription>{t("region.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4 sm:flex-row">
-          <div className="flex flex-1 flex-col gap-2">
+        {/* Two equal columns in reading order: currency at the start
+            (left in LTR, right in RTL), each label over its own field */}
+        <CardContent className="grid items-start gap-4 sm:grid-cols-2 sm:gap-x-6">
+          <div className="flex min-w-0 flex-col gap-2 text-start">
             <Label htmlFor="settings-currency">{t("region.currency")}</Label>
             <Select
               value={formData.defaultCurrency}
@@ -243,7 +245,7 @@ function GeneralSettingsFields({ initial }: { initial: ProfileFormData }) {
               {t("region.currencyHint")}
             </p>
           </div>
-          <div className="flex flex-1 flex-col gap-2">
+          <div className="flex min-w-0 flex-col gap-2 text-start">
             <Label htmlFor="settings-language">{tLanguage("label")}</Label>
             <Select
               value={formData.language}

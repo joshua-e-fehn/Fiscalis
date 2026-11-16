@@ -144,7 +144,11 @@ export function parseTypedPercent(
   locale: string,
 ): number | undefined {
   const percent = parseTypedAmount(text, locale);
-  return percent === undefined ? undefined : percent / 100;
+  if (percent === undefined || !Number.isFinite(percent)) return percent;
+  // percent / 100 alone adds float noise ("2,9" → 0.028999999999999998), so
+  // a stored rate would never equal the one typed again; rounded to the 15
+  // significant digits typedAmountText shows, it reads back exactly
+  return Number((percent / 100).toPrecision(15));
 }
 
 /**

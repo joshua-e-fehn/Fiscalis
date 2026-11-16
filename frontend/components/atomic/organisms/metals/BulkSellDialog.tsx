@@ -78,6 +78,10 @@ export function BulkSellDialog({
   const [error, setError] = useState<string | null>(null);
   // Prices are shown and typed in the user's number format
   const locale = useLocale();
+  // "0.00" in English, "0,00" in German: a hint at the decimal mark
+  const pricePlaceholder = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+  }).format(0);
   const [saleCurrency, setSaleCurrency] = useState<string>(
     currency.toUpperCase(),
   );
@@ -311,7 +315,7 @@ export function BulkSellDialog({
                         <Input
                           type="text"
                           inputMode="decimal"
-                          placeholder="0.00"
+                          placeholder={pricePlaceholder}
                           value={entry.pricePerUnit}
                           onChange={(e) =>
                             updateEntry(index, { pricePerUnit: e.target.value })

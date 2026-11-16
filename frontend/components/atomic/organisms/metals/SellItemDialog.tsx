@@ -67,6 +67,10 @@ export function SellItemDialog({
   const [error, setError] = useState<string | null>(null);
   // The price is shown and typed in the user's number format
   const locale = useLocale();
+  // "0.00" in English, "0,00" in German: a hint at the decimal mark
+  const pricePlaceholder = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+  }).format(0);
 
   // Form state
   const [quantity, setQuantity] = useState(1);
@@ -252,7 +256,7 @@ export function SellItemDialog({
                   id="price"
                   type="text"
                   inputMode="decimal"
-                  placeholder="0.00"
+                  placeholder={pricePlaceholder}
                   value={pricePerUnit}
                   onChange={(e) => setPricePerUnit(e.target.value)}
                 />

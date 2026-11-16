@@ -219,6 +219,15 @@ describe("loan and metal dialog amounts", () => {
     expect(parseTypedPercent("2,5", "fr-FR")).toBe(0.025);
     expect(parseTypedPercent("3.75", "en")).toBe(0.0375);
   });
+
+  // The edit-loan dialog compares the typed rate with the stored one: noise
+  // from percent / 100 made an untouched 2.9 % rate count as an edit
+  it("reads a typed percent as the exact fraction, without float noise", () => {
+    expect(2.9 / 100).not.toBe(0.029);
+    expect(parseTypedPercent("2,9", "de-DE")).toBe(0.029);
+    expect(parseTypedPercent("4.1", "en-GB")).toBe(0.041);
+    expect(parseTypedPercent("-0,5", "de-DE")).toBe(-0.005);
+  });
 });
 
 describe("parseTypedPercent", () => {
@@ -247,10 +256,10 @@ describe("typedPercentText", () => {
 
   it("round-trips through parseTypedPercent in every UI language", () => {
     for (const tag of INTL_TAGS) {
-      for (const fraction of [0.0375, 0.029, 0.1, 0.00125]) {
-        expect(
-          parseTypedPercent(typedPercentText(fraction, tag), tag),
-        ).toBeCloseTo(fraction, 12);
+      for (const fraction of [0.0375, 0.029, 0.041, 0.1, 0.00125]) {
+        expect(parseTypedPercent(typedPercentText(fraction, tag), tag)).toBe(
+          fraction,
+        );
       }
     }
   });

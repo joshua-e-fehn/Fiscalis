@@ -185,7 +185,9 @@ export default function CryptoAssetsTransactionsPage() {
                   </div>
                   <div className="text-end">
                     <div className="font-medium">
-                      {tx.quantity?.toFixed(6)} {tx.symbol}
+                      {isolateLtr(
+                        `${tx.quantity?.toFixed(6) ?? ""} ${tx.symbol ?? ""}`.trim(),
+                      )}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {formatValue(tx.value, tx.currency)}

@@ -27,10 +27,26 @@ export const PDI = "⁩";
  */
 export const BIDI_MARKS = /[؜‎‏‪-‮⁦-⁩]/g;
 
-/** Text laid out left to right as one unit, in any page direction. */
+/** Isolate initiators: LRI, RLI, FSI (U+2066-8). */
+const ISOLATE_INITIATORS = /[\u2066-\u2068]/g;
+
+/**
+ * Text laid out left to right as one unit, in any page direction. Text that
+ * already is one isolate is returned as is; two isolates joined
+ * ("⁦1€⁩ + ⁦2$⁩") still get wrapped.
+ */
 export function isolateLtr(text: string): string {
-  if (!text || (text.startsWith(LRI) && text.endsWith(PDI))) return text;
+  if (!text || isSingleLtrIsolate(text)) return text;
   return `${LRI}${text}${PDI}`;
+}
+
+function isSingleLtrIsolate(text: string): boolean {
+  return (
+    text.startsWith(LRI) &&
+    text.endsWith(PDI) &&
+    (text.match(ISOLATE_INITIATORS) ?? []).length === 1 &&
+    text.indexOf(PDI) === text.length - 1
+  );
 }
 
 /** Text without direction marks, e.g. a displayed amount read back. */

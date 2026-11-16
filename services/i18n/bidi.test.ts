@@ -25,6 +25,11 @@ describe("isolateLtr", () => {
     expect(isolateLtr("")).toBe("");
   });
 
+  it("wraps two isolates joined together", () => {
+    const joined = `${isolateLtr("1'000€")} + ${isolateLtr("2'000$")}`;
+    expect(isolateLtr(joined)).toBe(`${LRI}${joined}${PDI}`);
+  });
+
   it("strips every mark Intl or the isolate adds", () => {
     expect(stripBidiMarks("؜‎‏‪‮⁦⁧⁨⁩-1")).toBe("-1");
     expect("⁦".replace(BIDI_MARKS, "")).toBe("");

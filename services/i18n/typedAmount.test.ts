@@ -3,7 +3,9 @@ import { describe, it, expect } from "vitest";
 import {
   localeNumberSymbols,
   parseTypedAmount,
+  parseTypedPercent,
   typedAmountText,
+  typedPercentText,
 } from "./typedAmount";
 
 /** The Intl tag the app formats each UI language with (i18n/locales.ts). */
@@ -204,5 +206,52 @@ describe("parseTypedAmount", () => {
 
   it("reads a typographic minus sign", () => {
     expect(parseTypedAmount("−1,5", "de-DE")).toBe(-1.5);
+  });
+});
+
+describe("loan and metal dialog amounts", () => {
+  // parseFloat read "1.234,56" as 1.234 and "2,5" as 2
+  it("reads a German principal and rate that parseFloat misread", () => {
+    expect(parseFloat("1.234,56")).toBe(1.234);
+    expect(parseTypedAmount("1.234,56", "de")).toBe(1234.56);
+    expect(parseFloat("2,5")).toBe(2);
+    expect(parseTypedPercent("2,5", "de")).toBe(0.025);
+    expect(parseTypedPercent("2,5", "fr-FR")).toBe(0.025);
+    expect(parseTypedPercent("3.75", "en")).toBe(0.0375);
+  });
+});
+
+describe("parseTypedPercent", () => {
+  it("is undefined when blank and NaN when not a number", () => {
+    expect(parseTypedPercent("", "de")).toBeUndefined();
+    expect(parseTypedPercent("  ", "en")).toBeUndefined();
+    expect(parseTypedPercent("2,5%", "de")).toBeNaN();
+    expect(parseTypedPercent("abc", "en")).toBeNaN();
+  });
+
+  it("reads a percent as a decimal fraction in every UI language", () => {
+    for (const tag of INTL_TAGS) {
+      expect(parseTypedPercent(typedAmountText(2.5, tag), tag)).toBe(0.025);
+      expect(parseTypedPercent("0", tag)).toBe(0);
+    }
+  });
+});
+
+describe("typedPercentText", () => {
+  it("shows a stored fraction as a percent without float noise", () => {
+    expect(typedPercentText(0.0375, "en")).toBe("3.75");
+    expect(typedPercentText(0.0375, "de-DE")).toBe("3,75");
+    expect(typedPercentText(0.029, "fr-FR")).toBe("2,9");
+    expect(typedPercentText(0, "de-DE")).toBe("0");
+  });
+
+  it("round-trips through parseTypedPercent in every UI language", () => {
+    for (const tag of INTL_TAGS) {
+      for (const fraction of [0.0375, 0.029, 0.1, 0.00125]) {
+        expect(
+          parseTypedPercent(typedPercentText(fraction, tag), tag),
+        ).toBeCloseTo(fraction, 12);
+      }
+    }
   });
 });

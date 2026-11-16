@@ -18,6 +18,7 @@ import {
   bankAccountValue,
   type AverageCost,
   bitpandaCostBasis,
+  bitpandaValuation,
   brokerAccountCash,
   brokerAccountMarginDebt,
   loanBalanceInBase,
@@ -309,11 +310,16 @@ export async function loadHoldings(
   }
   for (const raw of bitpandaHoldings) {
     const category = toHoldingCategory(raw.investmentCategory);
-    const value = positionValue(raw);
     const cost =
       category === "liabilities" ? undefined : bitpandaCostBasis(raw, averageCost);
+    const { value, valuedAtCost } = bitpandaValuation(raw, cost);
+    // Valued at cost: the row shows that value and no cost, so no P/L
     const doc: BitpandaHoldingDoc =
-      cost === undefined ? raw : { ...raw, costBasisInBaseCurrency: cost.base };
+      cost === undefined
+        ? raw
+        : valuedAtCost
+          ? { ...raw, valueInBaseCurrency: value }
+          : { ...raw, costBasisInBaseCurrency: cost.base };
     const key = bitpandaHoldingKey(doc.connectionId, doc.assetType, doc.symbol);
     const override =
       doc.assetType === "fiat"
@@ -336,6 +342,8 @@ export async function loadHoldings(
       // A foreign-currency cost stays put when the rate moves, so the
       // snapshot flow is read from it (holdingNetFlow)
       ...(cost?.native ? { costNative: cost.native } : {}),
+      // Never priced, counted at cost: its P/L is unknown (profitLossCostBase)
+      ...(valuedAtCost && !override ? { valuedAtCost: true } : {}),
       // When the price was taken, so a stale price (kept from an earlier
       // sync, holdingPrice.ts) pulls asOf back; null when never priced.
       // Rows synced before priceStatus fall back to their sync time.

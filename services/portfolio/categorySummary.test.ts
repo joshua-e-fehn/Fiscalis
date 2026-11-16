@@ -11,6 +11,7 @@ import {
   bankAccountTotals,
   bankAccountValue,
   bitpandaCostBasis,
+  bitpandaValuation,
   brokerAccountCash,
   brokerAccountMarginDebt,
   brokerAccountTotals,
@@ -617,5 +618,25 @@ describe("bankAccountTotals", () => {
     expect(t.net).toBe(0);
     expect(t.checking).toBe(0);
     expect(t.unconverted).toBe(1);
+  });
+});
+
+describe("bitpandaValuation", () => {
+  it("counts a never-priced holding with a cost at that cost", () => {
+    expect(bitpandaValuation({}, { base: 1507.4 })).toEqual({
+      value: 1507.4,
+      valuedAtCost: true,
+    });
+  });
+
+  it("keeps a priced holding's market value", () => {
+    expect(bitpandaValuation({ valueInBaseCurrency: 1625 }, { base: 1507.4 })).toEqual({
+      value: 1625,
+      valuedAtCost: false,
+    });
+  });
+
+  it("leaves a never-priced holding without a cost at nothing", () => {
+    expect(bitpandaValuation({}, undefined)).toEqual({ value: 0, valuedAtCost: false });
   });
 });

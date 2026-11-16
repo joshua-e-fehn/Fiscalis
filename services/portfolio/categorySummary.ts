@@ -314,6 +314,23 @@ export function bitpandaCostBasis(
   };
 }
 
+/**
+ * A Bitpanda holding's value and P/L cost. A holding that was never priced
+ * (no ticker price, holdingPrice.ts "missing") but has a cost from its
+ * trades counts at that cost, like a vault item without a spot price
+ * (aggregate.ts valuedAtCost): its P/L is unknown, not a loss of the whole
+ * cost, and net worth keeps the money it holds.
+ */
+export function bitpandaValuation(
+  holding: { valueInBaseCurrency?: number },
+  cost: BitpandaCost | undefined,
+): { value: number; valuedAtCost: boolean } {
+  if (holding.valueInBaseCurrency == null && cost !== undefined) {
+    return { value: cost.base, valuedAtCost: true };
+  }
+  return { value: holding.valueInBaseCurrency ?? 0, valuedAtCost: false };
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Accounts and loans
 // ═══════════════════════════════════════════════════════════════

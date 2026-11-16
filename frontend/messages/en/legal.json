@@ -127,7 +127,7 @@
     "sections": {
       "scope": {
         "title": "1. Scope",
-        "body": "These terms apply to your use of Fiscalis at fiscalis.joshua-fehn.de, provided by {name}, {street}, {postalCode} {city}, {country} (“we”). By creating an account you agree to them. Our privacy policy explains how we handle your data."
+        "body": "These terms apply to your use of Fiscalis at fiscalis.dev, provided by {name}, {street}, {postalCode} {city}, {country} (“we”). By creating an account you agree to them. Our privacy policy explains how we handle your data."
       },
       "service": {
         "title": "2. What Fiscalis is",

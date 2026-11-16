@@ -150,8 +150,12 @@ interface ScenarioResult {
 }
 
 // Helper functions
-function formatCurrency(value: number, currency: string = "USD"): string {
-  return formatMoney(value, currency, { fractionDigits: 0 });
+function formatCurrency(
+  value: number,
+  currency: string = "USD",
+  options?: { showSign?: boolean },
+): string {
+  return formatMoney(value, currency, { fractionDigits: 0, ...options });
 }
 
 // Which bounds a recurring extra has (the loans.scenarios.recurringExtra range)
@@ -288,7 +292,8 @@ export function LoanScenariosTab({
     tLoans("duration", { years: Math.floor(months / 12), months: months % 12 });
   const recurringExtraLabel = (extra: RecurringExtra) =>
     t("recurringExtra", {
-      amount: formatCurrency(extra.amount, loan.currency),
+      // The "+" is part of the isolated amount, so it stays put in RTL
+      amount: formatCurrency(extra.amount, loan.currency, { showSign: true }),
       frequency: loan.paymentFrequency,
       range: rangeKind(extra),
       from: extra.from ? formatDate(extra.from) : "",
@@ -1230,6 +1235,7 @@ export function LoanScenariosTab({
                   amount: formatCurrency(
                     activeRecurringExtras[0]?.amount ?? 0,
                     loan.currency,
+                    { showSign: true },
                   ),
                   frequency: frequencyLabel.toLowerCase(),
                 })}

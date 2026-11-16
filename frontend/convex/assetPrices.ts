@@ -73,8 +73,16 @@ async function storePrice(
 /** Store a ticker read, then start re-pricing the Bitpanda holdings. */
 export const storeBitpandaTicker = internalMutation({
   args: { prices: v.array(livePriceValidator) },
-  handler: async (ctx, { prices }) => {
+  handler: async (ctx, { prices: tickerPrices }) => {
     const now = Date.now();
+    // Only the symbols someone holds: the v2 ticker lists every asset
+    // Bitpanda trades (3,195 in 2026-11), and only reprice reads them.
+    // The scan reads what one reprice pass reads anyway.
+    const held = new Set<string>();
+    for await (const holding of ctx.db.query("bitpandaHoldings")) {
+      if (holding.assetType !== "fiat") held.add(holding.symbol.toUpperCase());
+    }
+    const prices = tickerPrices.filter((p) => held.has(p.symbol));
     for (const price of prices) {
       await storePrice(ctx, "bitpanda", price, now);
     }

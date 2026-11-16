@@ -19,7 +19,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/shadcn/chart";
 import type { InvestmentCurrency } from "@/lib/types/investments";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatNumber } from "@/lib/utils/currency";
 
 /** One slice row: the value under `dataKey`, the name under `nameKey`, plus any extra fields (e.g. `fill`). */
 export type PieChartDatum = Record<string, string | number | undefined>;
@@ -189,7 +189,7 @@ export function PieChartDonutWithText({
                             ? formatCurrency(totalQuantity, currency, {
                                 fractionDigits: 0,
                               })
-                            : totalQuantity.toLocaleString("de-CH")}
+                            : formatNumber(totalQuantity, { maximumFractionDigits: 3 })}
                         </tspan>
                         <tspan
                           x={viewBox.cx}

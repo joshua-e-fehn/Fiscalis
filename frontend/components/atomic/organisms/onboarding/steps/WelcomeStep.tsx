@@ -257,8 +257,7 @@ function MockupBar({ label, value, color, delay }: MockupBarProps) {
           isNegative ? "text-red-400" : "text-white/60"
         }`}
       >
-        {isNegative ? "-" : ""}
-        {absValue}%
+        {formatPercent(value, false, 0)}
       </span>
     </div>
   );

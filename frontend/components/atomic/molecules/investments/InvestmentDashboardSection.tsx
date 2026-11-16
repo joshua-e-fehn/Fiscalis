@@ -27,7 +27,7 @@ import {
   InvestmentCurrency,
   InvestmentCategory,
 } from "@/lib/types/investments";
-import { currencySuffixes } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import {
   useCategoryChartData,
@@ -217,11 +217,6 @@ function TotalValueCard({
     return <KPICardSkeleton title={title} />;
   }
 
-  const formattedValue = new Intl.NumberFormat("de-CH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(totalValue);
-
   return (
     <Card className="h-full">
       <CardHeader className="pb-2">
@@ -232,8 +227,7 @@ function TotalValueCard({
       </CardHeader>
       <CardContent>
         <span className="text-3xl font-bold">
-          {formattedValue}
-          {currencySuffixes[currency]}
+          {formatCurrency(totalValue, currency)}
         </span>
       </CardContent>
     </Card>
@@ -265,12 +259,8 @@ function SignedPercent({
   percent: number;
   invertColors?: boolean;
 }) {
-  const formatted = new Intl.NumberFormat("de-CH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Math.abs(percent));
   // A loss that rounds to 0.00 shows as +0.00, not -0.00
-  const isGain = percent >= 0 || formatted === "0.00";
+  const isGain = percent >= 0 || Math.abs(percent) < 0.005;
   return (
     <span
       className={cn(
@@ -278,8 +268,7 @@ function SignedPercent({
         isGain !== invertColors ? "text-profit" : "text-loss",
       )}
     >
-      ({isGain ? "+" : "-"}
-      {formatted}%)
+      ({formatPercent(isGain ? Math.abs(percent) : percent, true)})
     </span>
   );
 }
@@ -304,10 +293,7 @@ function ProfitLossCard({
   const isProfit = (profitLoss ?? 0) >= 0;
 
   const formattedValue = hasData
-    ? new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Math.abs(profitLoss!))
+    ? formatCurrency(profitLoss!, currency, { showSign: true })
     : null;
 
 
@@ -337,9 +323,7 @@ function ProfitLossCard({
                   isProfit !== invertColors ? "text-profit" : "text-loss",
                 )}
               >
-                {isProfit ? "+" : "-"}
                 {formattedValue}
-                {currencySuffixes[currency]}
               </span>
               {profitLossPercent !== null && (
                 <SignedPercent
@@ -398,10 +382,7 @@ function YTDPerformanceCard({
   const isProfit = (ytdProfitLoss ?? 0) >= 0;
 
   const formattedValue = hasData
-    ? new Intl.NumberFormat("de-CH", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(Math.abs(ytdProfitLoss!))
+    ? formatCurrency(ytdProfitLoss!, currency, { showSign: true })
     : null;
 
 
@@ -439,9 +420,7 @@ function YTDPerformanceCard({
                   isProfit !== invertColors ? "text-profit" : "text-loss",
                 )}
               >
-                {isProfit ? "+" : "-"}
                 {formattedValue}
-                {currencySuffixes[currency]}
               </span>
               {ytdProfitLossPercent !== null && (
                 <SignedPercent
@@ -491,10 +470,7 @@ function PortfolioAllocationCard({
   const hasData = totalPortfolioAssets > 0;
   const percentage = hasData ? (cashValue / totalPortfolioAssets) * 100 : 0;
 
-  const formattedPercent = new Intl.NumberFormat("de-CH", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(percentage);
+  const formattedPercent = formatPercent(percentage, false, 1, 1);
 
   const isHighAllocation = percentage > 25;
   const isLowAllocation = percentage < 5;
@@ -510,7 +486,7 @@ function PortfolioAllocationCard({
       <CardContent>
         {hasData ? (
           <>
-            <span className="text-3xl font-bold">{formattedPercent}%</span>
+            <span className="text-3xl font-bold">{formattedPercent}</span>
             <p className="text-xs text-muted-foreground mt-1">
               {isHighAllocation
                 ? t("highCash")

@@ -24,7 +24,7 @@ import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import { todayLocalISO } from "@/lib/utils/date";
 import { useErrorMessage } from "@/i18n/errors";
 import {
@@ -360,8 +360,7 @@ export function BulkSellDialog({
                   {formatCurrency(totals.profit, saleCurrency, { showSign: true })}
                   {totals.profitPercent !== null && (
                     <span className="text-xs">
-                      ({totals.profitPercent >= 0 ? "+" : ""}
-                      {totals.profitPercent.toFixed(1)}%)
+                      ({formatPercent(totals.profitPercent, true, 1, 1)})
                     </span>
                   )}
                 </span>

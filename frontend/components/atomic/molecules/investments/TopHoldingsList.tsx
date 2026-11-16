@@ -10,7 +10,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useCategoryLabels } from "@/lib/config/categoryUI";
 import { SubcategoryData, InvestmentCurrency } from "@/lib/types/investments";
-import { currencySuffixes } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface TopHoldingsListProps {
@@ -77,12 +77,6 @@ export function TopHoldingsList({
     );
   }
 
-  const formatValue = (value: number) =>
-    new Intl.NumberFormat("de-CH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-
   return (
     <Card className={cn("h-full", className)}>
       <CardHeader className="pb-2">
@@ -136,8 +130,7 @@ export function TopHoldingsList({
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-medium">
-                        {formatValue(holding.value)}
-                        {currencySuffixes[currency]}
+                        {formatCurrency(holding.value, currency)}
                       </span>
                       {holding.profitLossPercent !== null && (
                         <span
@@ -153,8 +146,7 @@ export function TopHoldingsList({
                           ) : (
                             <TrendingDown className="h-3 w-3" />
                           )}
-                          {holding.profitLossPercent >= 0 ? "+" : ""}
-                          {holding.profitLossPercent.toFixed(1)}%
+                          {formatPercent(holding.profitLossPercent, true, 1, 1)}
                         </span>
                       )}
                     </div>

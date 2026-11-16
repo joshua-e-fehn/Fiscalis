@@ -17,7 +17,7 @@ import {
 import { MetalChartData, type MetalType } from "@/lib/types/metals";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import { TimeRange } from "@/../services/finance/financeService";
 import {
   isRecordedClose,
@@ -285,9 +285,7 @@ export const CompareChart = memo(function CompareChart({
             axisLine={false}
             tickLine={false}
             tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-            tickFormatter={(value) =>
-              `${value > 0 ? "+" : ""}${value.toFixed(1)}%`
-            }
+            tickFormatter={(value: number) => formatPercent(value, true, 1, 1)}
             domain={["auto", "auto"]}
           />
           <ChartTooltip<number, string>
@@ -329,10 +327,8 @@ export const CompareChart = memo(function CompareChart({
                             : "text-loss"
                         }
                       >
-                        {entry.value !== undefined && entry.value >= 0
-                          ? "+"
-                          : ""}
-                        {entry.value?.toFixed(2)}%
+                        {entry.value !== undefined &&
+                          formatPercent(entry.value, true)}
                       </span>
                     </div>
                   ))}

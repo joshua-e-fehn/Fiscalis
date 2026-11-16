@@ -151,8 +151,9 @@ export function TransactionSummary({
                 isNetOutflow ? "text-loss" : "text-profit",
               )}
             >
-              {isNetOutflow ? "-" : "+"}
-              {formatCurrency(Math.abs(summary.cashFlow), currency)}
+              {formatCurrency(isNetOutflow ? -Math.abs(summary.cashFlow) : Math.abs(summary.cashFlow), currency, {
+                showSign: true,
+              })}
             </div>
             <div className="text-xs text-muted-foreground">
               {leftOutNote === null
@@ -179,8 +180,7 @@ export function TransactionSummary({
                     summary.realizedPL >= 0 ? "text-profit" : "text-loss",
                   )}
                 >
-                  {summary.realizedPL >= 0 ? "+" : ""}
-                  {formatCurrency(summary.realizedPL, currency)}
+                  {formatCurrency(summary.realizedPL, currency, { showSign: true })}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {t("realizedNote")}
@@ -216,8 +216,7 @@ export function TransactionSummary({
                     unrealizedPL >= 0 ? "text-profit" : "text-loss",
                   )}
                 >
-                  {unrealizedPL >= 0 ? "+" : ""}
-                  {formatCurrency(unrealizedPL, currency)}
+                  {formatCurrency(unrealizedPL, currency, { showSign: true })}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {t("unrealizedNote")}
@@ -253,8 +252,7 @@ export function TransactionSummary({
                     totalPL >= 0 ? "text-profit" : "text-loss",
                   )}
                 >
-                  {totalPL >= 0 ? "+" : ""}
-                  {formatCurrency(totalPL, currency)}
+                  {formatCurrency(totalPL, currency, { showSign: true })}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {t("totalNote")}

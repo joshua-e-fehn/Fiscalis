@@ -52,7 +52,8 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { InvestmentCurrency } from "@/lib/types/investments";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
+import { isolateLtr } from "@/../services/i18n/bidi";
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -180,10 +181,14 @@ const providerRoutes: Record<FinancialProvider, string> = {
   manual: "/assets/commodities/metals",
 };
 
-// Format quantity with appropriate precision
+// Format quantity with appropriate precision, left to right in RTL too
 function formatQuantity(value: number | undefined | null): string {
   // If quantity is undefined, null, or 0, show dash
   if (value === undefined || value === null || value === 0) return "—";
+  return isolateLtr(quantityText(value));
+}
+
+function quantityText(value: number): string {
 
   if (value >= 1000000) {
     return (value / 1000000).toFixed(2) + "M";
@@ -664,13 +669,13 @@ export function UnifiedPositionsTable({
                               <TrendingDown className="h-3 w-3" />
                             )}
                             <span className="font-medium">
-                              {isPositive ? "+" : ""}
-                              {formatCurrency(position.unrealizedPL!, currency)}
+                              {formatCurrency(position.unrealizedPL!, currency, {
+                                showSign: true,
+                              })}
                             </span>
                             {position.unrealizedPLPercent !== undefined && (
                               <span className="text-xs">
-                                ({isPositive ? "+" : ""}
-                                {position.unrealizedPLPercent.toFixed(2)}%)
+                                ({formatPercent(position.unrealizedPLPercent, true)})
                               </span>
                             )}
                             {position.costFxEstimated && (

@@ -38,6 +38,7 @@ import {
   MetalItemWithValuation,
 } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
+import { formatPercent } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 import {
   Edit2,
@@ -180,8 +181,7 @@ export function MetalDetailSlideOver({
                 </DetailRow>
                 <DetailRow label={t("buyPremium")}>
                   <span className="font-medium">
-                    {item.buyPremium >= 0 ? "+" : ""}
-                    {(item.buyPremium * 100).toFixed(1)}%
+                    {formatPercent(item.buyPremium * 100, true, 1, 1)}
                   </span>
                 </DetailRow>
                 <DetailRow label={t("sellPremium")}>
@@ -191,8 +191,7 @@ export function MetalDetailSlideOver({
                       item.sellPremium < 0 ? "text-loss" : "text-profit",
                     )}
                   >
-                    {item.sellPremium >= 0 ? "+" : ""}
-                    {(item.sellPremium * 100).toFixed(1)}%
+                    {formatPercent(item.sellPremium * 100, true, 1, 1)}
                   </span>
                 </DetailRow>
               </div>

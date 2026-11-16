@@ -28,6 +28,7 @@ import {
 import Link from "next/link";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/utils/currency";
+import { isolateLtr } from "@/../services/i18n/bidi";
 
 /** Provider transaction types with a translated name; others show as stored */
 const KNOWN_TYPES = [
@@ -100,8 +101,9 @@ export default function CryptoAssetsTransactionsPage() {
     if (currency && /^[a-z]{3}$/i.test(currency)) {
       return formatCurrency(value, currency);
     }
-    // No code given, or not a currency code: show the bare amount
-    return `${value.toLocaleString("de-CH")} ${currency ?? ""}`.trim();
+    // No code given, or not a currency code: show the bare amount, left to
+    // right in RTL too
+    return isolateLtr(`${value.toLocaleString("de-CH")} ${currency ?? ""}`.trim());
   };
 
   // Get transaction icon

@@ -82,7 +82,7 @@ import {
   CompareChart,
 } from "@/components/atomic/organisms/PriceChart";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import {
   Banknote,
   Euro,
@@ -269,7 +269,7 @@ const MetalPriceCard = ({
             )}
             <span>
               {t("prices.ytd", {
-                percent: `${performancePercent?.toFixed(2)}%`,
+                percent: formatPercent(performancePercent ?? 0),
               })}
             </span>
           </div>
@@ -1004,7 +1004,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
                             )}
                             <span>
                               {t("prices.change", {
-                                percent: `${isPositive ? "+" : ""}${performancePercent.toFixed(2)}%`,
+                                percent: formatPercent(performancePercent, true),
                                 range: t(`prices.range.${timeRange}`),
                               })}
                             </span>
@@ -1042,8 +1042,7 @@ export function MetalsPage({ className }: MetalsPageProps) {
                                   : "text-loss",
                               )}
                             >
-                              ({performancePercent >= 0 ? "+" : ""}
-                              {performancePercent.toFixed(1)}%)
+                              ({formatPercent(performancePercent, true, 1, 1)})
                             </span>
                           )}
                         </div>

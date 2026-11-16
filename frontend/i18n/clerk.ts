@@ -21,13 +21,16 @@ const CLERK_LOCALIZATIONS = {
 /**
  * Fixes for the "join waitlist" line under <SignIn>, as of
  * @clerk/localizations 3.35.2: de and it repeat the link text as the question
- * ("Warteliste beitreten Warteliste beitreten"), fr says it twice in other
- * words, and ar/zh-CN leave both strings out, so they fall back to English.
+ * ("Warteliste beitreten Warteliste beitreten"), fr, es and pt-PT say it twice
+ * in other words, and ar-SA and zh-CN (our zh-Hans) leave both strings out, so
+ * they fall back to English.
  */
 const WAITLIST_PROMPT: Partial<Record<Language, { actionText: string; actionLink: string }>> = {
   de: { actionText: "Noch kein Zugang?", actionLink: "Warteliste beitreten" },
   it: { actionText: "Vuoi accedere in anteprima?", actionLink: "Unisciti alla lista d'attesa" },
   fr: { actionText: "Envie d'un accès anticipé ?", actionLink: "Rejoindre la liste d'attente" },
+  es: { actionText: "¿Quieres acceso anticipado?", actionLink: "Únete a la lista de espera" },
+  "pt-PT": { actionText: "Quer acesso antecipado?", actionLink: "Entrar na lista de espera" },
   ar: { actionText: "هل تريد الوصول المبكر؟", actionLink: "انضم إلى قائمة الانتظار" },
   "zh-Hans": { actionText: "想抢先体验？", actionLink: "加入候补名单" },
 };

@@ -9,7 +9,7 @@ export const LEGAL_OPERATOR = {
   street: "Eichenplatz 1",
   postalCode: "91088",
   city: "Bubenreuth",
-  email: "kontakt@joshua-fehn.de",
+  email: "hello@fiscalis.dev",
   phone: "+49 157 36211331",
   vatId: "DE337805472",
 } as const;

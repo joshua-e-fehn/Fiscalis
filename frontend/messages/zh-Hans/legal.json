@@ -127,7 +127,7 @@
     "sections": {
       "scope": {
         "title": "1. 适用范围",
-        "body": "本条款适用于你对 fiscalis.joshua-fehn.de 上 Fiscalis 的使用，该服务由 {name}（{street}, {postalCode} {city}, {country}，以下称“我们”）提供。创建账户即表示你同意本条款。我们的隐私政策说明了我们如何处理你的数据。"
+        "body": "本条款适用于你对 fiscalis.dev 上 Fiscalis 的使用，该服务由 {name}（{street}, {postalCode} {city}, {country}，以下称“我们”）提供。创建账户即表示你同意本条款。我们的隐私政策说明了我们如何处理你的数据。"
       },
       "service": {
         "title": "2. Fiscalis 是什么",

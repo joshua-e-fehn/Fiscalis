@@ -34,15 +34,27 @@ describe("parseSecurityTrade", () => {
     });
   });
 
-  it("reads a sale and German thousands", () => {
-    const text = STOCK_BUY.replace("Gesch.Art KV", "Gesch.Art VK").replace(
-      "10,0000",
-      "1.234,5000",
-    );
-    expect(parseSecurityTrade(text)).toMatchObject({
+  it("reads a DKB sale, with the bank's padding before the units", () => {
+    expect(
+      parseSecurityTrade(
+        "Depot 0511391062 Wertp.Abrechn. 18.09.2026 000001855305700 WKN A111X9 Gesch.Art VV Stück          15,0000 IS C.MSCI EMIMI U.ETF DLA ISIN IE00BKM4GZ66",
+      ),
+    ).toEqual({
+      depot: "0511391062",
+      tradeDate: "2026-09-18",
+      reference: "000001855305700",
+      wkn: "A111X9",
+      isin: "IE00BKM4GZ66",
+      name: "IS C.MSCI EMIMI U.ETF DLA",
       side: "sell",
-      quantity: 1234.5,
+      quantity: 15,
     });
+  });
+
+  it("reads German thousands", () => {
+    expect(
+      parseSecurityTrade(STOCK_BUY.replace("10,0000", "1.234,5000")),
+    ).toMatchObject({ quantity: 1234.5 });
   });
 
   it("accepts the umlaut spelled out or dropped", () => {

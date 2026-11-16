@@ -8,6 +8,10 @@
  *   WKN A2N812 Gesch.Art KV Stück 2,0000 BIT GL.TECH.LEAD. R-I ISIN
  *   DE000A2N8127
  *
+ * A sale reads the same with Gesch.Art VV; DKB may book it to another of
+ * the user's accounts (the Tagesgeldkonto), so a depot is keyed by its
+ * number, never by the account.
+ *
  * parseSecurityTrade reads that text; depotPositions folds the trades of
  * one depot into holdings (units and an average cost). Which price values
  * a holding is chosen from Yahoo listings by conservativeListing.
@@ -38,8 +42,11 @@ export interface SecurityTrade {
   quantity: number;
 }
 
-/** Gesch.Art codes of a DKB settlement; any other code is not a trade we read */
-const SIDE_BY_CODE: Record<string, SecuritySide> = { KV: "buy", VK: "sell" };
+/**
+ * Gesch.Art codes of a DKB settlement, as seen in real bookings: KV a
+ * purchase, VV a sale. Any other code is not a trade we read.
+ */
+const SIDE_BY_CODE: Record<string, SecuritySide> = { KV: "buy", VV: "sell" };
 
 const TRADE_TEXT =
   /Depot\s+(\d+)\s+Wertp\.?\s*Abrechn\.?\s+(\d{2})\.(\d{2})\.(\d{4})\s+(\d+)\s+WKN\s+([A-Z0-9]{6})\s+Gesch\.?\s*Art\s+([A-Z]{2})\s+St(?:ü|ue|u)ck\s+([\d.]*\d(?:,\d+)?)\s+(.+?)\s+ISIN\s+([A-Z]{2}[A-Z0-9]{9}\d)/i;

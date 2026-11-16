@@ -94,6 +94,40 @@ describe("normalizeHoldings", () => {
       }),
     ).toHaveLength(1);
   });
+
+  it("files an equity_stock wallet as a stock, priced by the v2 ticker", () => {
+    const assetWallets = {
+      data: {
+        attributes: {
+          equity_stock: {
+            attributes: {
+              wallets: [
+                {
+                  attributes: {
+                    cryptocoin_symbol: "OKTA",
+                    balance: "9.99336606",
+                    name: "OKTA Wallet",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    };
+    const [okta] = normalizeHoldings(assetWallets, [], {
+      OKTA: { EUR: "162.63" },
+    });
+    expect(okta.assetType).toBe("stock");
+    expect(okta.currentPrice).toBe(162.63);
+    expect(
+      classifyBitpandaPosition({
+        assetType: okta.assetType,
+        symbol: okta.symbol,
+        name: okta.name,
+      }),
+    ).toMatchObject({ category: "equities", subcategory: "stocks" });
+  });
 });
 
 describe("Bitpanda fiat earn metadata", () => {

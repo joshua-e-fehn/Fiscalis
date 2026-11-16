@@ -72,11 +72,12 @@ function normalizeAssetClass(pathKeys: string[]): string {
   if (keys.includes("cryptocoin") || keys.includes("crypto")) return "crypto";
   if (keys.includes("index") || keys.includes("indices")) return "index";
   if (keys.includes("etf")) return "etf";
+  // Stocks arrive as `security`, `stock(s)` or `equity_stock` (seen in
+  // 2026-11: an Okta position was filed as an unknown asset, so crypto)
   if (
     keys.includes("security") ||
     keys.includes("securities") ||
-    keys.includes("stock") ||
-    keys.includes("stocks")
+    keys.some((k) => k.includes("stock") || k.includes("equit"))
   )
     return "stock";
   if (keys.includes("fiat")) return "fiat";

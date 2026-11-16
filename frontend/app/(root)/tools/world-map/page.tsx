@@ -542,9 +542,7 @@ export default function WorldMapPage() {
     : worldData?.indicator?.name;
   const mapDescription = isComparing
     ? t("compare.mapDescription", { start: compareStart, end: compareEnd })
-    : isFeaturedIndicator
-      ? selectedText.description
-      : worldData?.indicator?.description;
+    : selectedText.description || worldData?.indicator?.description;
   const mapLoading = isLoading;
   const unitLabel =
     indicatorUnit === "years" ? t("units.years") : indicatorUnit;
@@ -932,6 +930,14 @@ export default function WorldMapPage() {
               </div>
             )}
           </div>
+
+          {/* Loaded, but the indicator has no country values at all */}
+          {series && series.firstYear === null && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{t("top.empty")}</AlertTitle>
+            </Alert>
+          )}
 
           {/* Error State */}
           {error && (

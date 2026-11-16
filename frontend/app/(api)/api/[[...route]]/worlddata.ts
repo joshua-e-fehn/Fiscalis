@@ -54,6 +54,9 @@ async function cachedSeries(
   if (!pending) {
     pending = load()
       .then((data) => {
+        // An empty answer may be an upstream hiccup or a parsing gap: retry
+        // it on the next request instead of keeping it for a day
+        if (isEmpty(data)) return data;
         if (cache.size >= CACHE_MAX_ENTRIES) {
           // Map keeps insertion order: drop the oldest entry
           const oldest = cache.keys().next().value;
@@ -76,6 +79,16 @@ async function cachedSeries(
  */
 const SERIES_CACHE_CONTROL =
   "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
+/** An empty series is cached only briefly anywhere */
+const EMPTY_SERIES_CACHE_CONTROL = "public, max-age=60, s-maxage=300";
+
+function isEmpty(data: IndicatorSeriesData): boolean {
+  return data.series.firstYear === null;
+}
+
+function seriesCacheControl(data: IndicatorSeriesData): string {
+  return isEmpty(data) ? EMPTY_SERIES_CACHE_CONTROL : SERIES_CACHE_CONTROL;
+}
 
 function seriesError(c: Context, error: unknown, label: string) {
   console.error(`World Bank series error for ${label}:`, describeError(error));
@@ -224,7 +237,7 @@ const app = new Hono()
           };
         });
         c.header("X-Cache", hit ? "HIT" : "MISS");
-        c.header("Cache-Control", SERIES_CACHE_CONTROL);
+        c.header("Cache-Control", seriesCacheControl(data));
         return c.json<IndicatorSeriesData>(data);
       } catch (error) {
         return seriesError(c, error, code);
@@ -283,7 +296,7 @@ const app = new Hono()
           };
         });
         c.header("X-Cache", hit ? "HIT" : "MISS");
-        c.header("Cache-Control", SERIES_CACHE_CONTROL);
+        c.header("Cache-Control", seriesCacheControl(data));
         return c.json<IndicatorSeriesData>(data);
       } catch (error) {
         return seriesError(c, error, indicator);

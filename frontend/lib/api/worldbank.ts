@@ -614,7 +614,7 @@ async function fetchWithRetry(
  * can take close to a minute cold, so it gets a longer timeout and a single
  * retry instead of the per-request defaults.
  */
-const SERIES_TIMEOUT_MS = 60000;
+const SERIES_TIMEOUT_MS = 90000;
 const SERIES_RETRIES = 1;
 /** One page holds 266 entities × ~66 years; more pages are still followed */
 const SERIES_PAGE_SIZE = 20000;
@@ -665,10 +665,16 @@ export async function fetchWorldBankSeries(indicatorCode: string): Promise<{
 
     for (const d of points ?? []) {
       name ??= d.indicator?.value ?? null;
-      if (d.value === null || !d.countryiso3code) continue;
+      // WDI fills countryiso3code; other World Bank sources (e.g. the
+      // Sustainable Energy for All database) leave it empty and put the
+      // ISO3 code in country.id instead
+      const code3 =
+        d.countryiso3code ||
+        (d.country.id?.length === 3 ? d.country.id : "");
+      if (d.value === null || !code3) continue;
       rows.push({
-        code: ISO3_TO_ISO2[d.countryiso3code] || d.countryiso3code,
-        code3: d.countryiso3code,
+        code: ISO3_TO_ISO2[code3] || code3,
+        code3,
         name: d.country.value,
         year: Number(d.date),
         value: d.value,

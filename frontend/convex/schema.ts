@@ -149,8 +149,14 @@ export default defineSchema({
 		category: v.optional(v.string()),
 		pending: v.boolean(),
 		syncedAt: v.number(),
+		// The ISIN of a securities trade settled on the account (a DKB
+		// "Wertp.Abrechn." booking, services/banking/securityTrades.ts),
+		// set when stored; depot holdings are derived from these rows
+		securityIsin: v.optional(v.string()),
 	})
 		.index("by_user", ["userId"])
+		.index("by_user_security", ["userId", "securityIsin"])
+		.index("by_security", ["securityIsin"])
 		.index("by_account", ["accountId"])
 		.index("by_account_date", ["accountId", "date"])
 		.index("by_account_synced", ["accountId", "syncedAt"])
@@ -1124,9 +1130,16 @@ export default defineSchema({
 	// refresh crons (convex/assetPrices.ts), which re-price the holdings the
 	// PRICE_FEEDS seam assigns to them (services/performance/config.ts).
 	assetPrices: defineTable({
-		provider: v.union(v.literal("bitpanda"), v.literal("snaptrade")),
+		// yahoo: the price of an ISIN a bank depot holds (symbol = ISIN,
+		// ticker = the Yahoo listing chosen, actions/securityPrices.ts)
+		provider: v.union(
+			v.literal("bitpanda"),
+			v.literal("snaptrade"),
+			v.literal("yahoo"),
+		),
 		symbol: v.string(),
 		ticker: v.optional(v.string()), // SnapTrade: the ticker of the id
+		quoteType: v.optional(v.string()), // yahoo: MUTUALFUND, ETF or EQUITY
 		price: v.number(),
 		currency: v.string(),
 		fetchedAt: v.number(),

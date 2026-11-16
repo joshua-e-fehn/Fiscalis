@@ -23,6 +23,7 @@ import {
   bankAccountBaseFields,
   bankAccountWithBaseFields,
 } from "../../services/finance/currency";
+import { parseSecurityTrade } from "../../services/banking/securityTrades";
 
 // ═══════════════════════════════════════════════════════════════
 // QUERIES (Public - called from frontend)
@@ -536,14 +537,18 @@ export const applyTransactionChanges = internalMutation({
           q.eq("plaidTransactionId", txn.plaidTransactionId),
         )
         .first();
+      // A depot trade settled on the account (lib/netWorth.ts depot
+      // holdings); cleared when a modified text no longer reads as one
+      const securityIsin = parseSecurityTrade(txn.name)?.isin;
 
       if (existing) {
         if (existing.userId !== args.userId) continue;
-        await ctx.db.patch(existing._id, { ...txn, syncedAt: now });
+        await ctx.db.patch(existing._id, { ...txn, securityIsin, syncedAt: now });
       } else {
         await ctx.db.insert("plaidTransactions", {
           userId: args.userId,
           ...txn,
+          ...(securityIsin ? { securityIsin } : {}),
           syncedAt: now,
         });
       }

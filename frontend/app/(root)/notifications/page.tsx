@@ -6,7 +6,7 @@ import { NotificationCenter } from "@/components/atomic/organisms/notifications/
 export default async function NotificationsPage() {
   const t = await getTranslations("notifications.center");
   return (
-    <div className="flex flex-col gap-6 pb-10">
+    <div className="container mx-auto flex flex-col gap-6 pt-6 pb-10">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <NotificationCenter />
     </div>

@@ -30,6 +30,11 @@ describe("isolateLtr", () => {
     expect(isolateLtr(joined)).toBe(`${LRI}${joined}${PDI}`);
   });
 
+  it("wraps two isolated amounts joined by text as one unit", () => {
+    const range = `${formatCurrency(1, "eur")} – ${formatCurrency(2, "eur")}`;
+    expect(isolateLtr(range)).toBe(`${LRI}${range}${PDI}`);
+  });
+
   it("strips every mark Intl or the isolate adds", () => {
     expect(stripBidiMarks("؜‎‏‪‮⁦⁧⁨⁩-1")).toBe("-1");
     expect("⁦".replace(BIDI_MARKS, "")).toBe("");

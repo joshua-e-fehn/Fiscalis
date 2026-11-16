@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { gramsToTroyOunces } from "@/../services/finance/metals";
+import { isolateLtr } from "@/../services/i18n/bidi";
 
 type WeightUnit = "g" | "oz" | "kg";
 
@@ -16,7 +17,8 @@ interface WeightDisplayProps {
 
 /**
  * Weights follow the house number style of lib/utils/currency.ts (de-CH:
- * 1'234.56) in every UI language, like amounts.
+ * 1'234.56) in every UI language, like amounts, and read left to right in
+ * the RTL UI too (isolateLtr).
  */
 const HOUSE_NUMBER_LOCALE = "de-CH";
 
@@ -41,10 +43,12 @@ export function WeightDisplay({
         ? grams / 1000
         : grams;
 
-  const formattedValue = new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
-    minimumFractionDigits: unit === "oz" ? 2 : value < 10 ? 2 : 0,
-    maximumFractionDigits: unit === "oz" ? 4 : 2,
-  }).format(value);
+  const formattedValue = isolateLtr(
+    new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
+      minimumFractionDigits: unit === "oz" ? 2 : value < 10 ? 2 : 0,
+      maximumFractionDigits: unit === "oz" ? 4 : 2,
+    }).format(value),
+  );
 
   return (
     <span className={cn(sizeClasses[size], className)}>
@@ -69,15 +73,19 @@ export function DualWeightDisplay({
   const t = useTranslations("metals.badges.weightUnit");
   const oz = gramsToTroyOunces(grams);
 
-  const formattedGrams = new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
-    minimumFractionDigits: grams < 10 ? 2 : 0,
-    maximumFractionDigits: 2,
-  }).format(grams);
+  const formattedGrams = isolateLtr(
+    new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
+      minimumFractionDigits: grams < 10 ? 2 : 0,
+      maximumFractionDigits: 2,
+    }).format(grams),
+  );
 
-  const formattedOz = new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 4,
-  }).format(oz);
+  const formattedOz = isolateLtr(
+    new Intl.NumberFormat(HOUSE_NUMBER_LOCALE, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }).format(oz),
+  );
 
   return (
     <span className={cn(sizeClasses[size], className)}>

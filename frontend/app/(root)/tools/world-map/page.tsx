@@ -119,6 +119,7 @@ import {
   NO_DATA_COLOR,
 } from "@/lib/utils/mapColors";
 import type { MapColorExpression } from "@/lib/utils/mapColors";
+import { isolateLtr } from "@/../services/i18n/bidi";
 
 // ═══════════════════════════════════════════════════════════════
 // Constants
@@ -488,7 +489,8 @@ export default function WorldMapPage() {
   }, []);
 
   // Value as shown in the UI: the API formats values in English, so a
-  // missing value and the "years" unit are rendered here.
+  // missing value and the "years" unit are rendered here, and its "-1.2%"
+  // is isolated so it reads left to right in the RTL UI too.
   const indicatorUnit = worldData?.indicator?.unit;
   const displayValue = useCallback(
     (value: number | null | undefined, formattedValue: string | undefined) => {
@@ -503,7 +505,7 @@ export default function WorldMapPage() {
       if (indicatorUnit === "years") {
         return t("units.yearsValue", { value: value.toFixed(1) });
       }
-      return formattedValue;
+      return isolateLtr(formattedValue);
     },
     [t, indicatorUnit],
   );

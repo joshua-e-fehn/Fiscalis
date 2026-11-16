@@ -44,6 +44,7 @@ import { useDisplayCurrency } from "@/hooks/convex/displayCurrency";
 import { MetalsType } from "@/lib/types/metals-extended";
 import { cn } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/utils/date";
+import { formatPercent } from "@/lib/utils/currency";
 import { Search, Loader2, Package, Plus } from "lucide-react";
 
 const METALS: MetalsType[] = ["gold", "silver", "platinum", "palladium"];
@@ -57,7 +58,7 @@ const ITEM_CATEGORIES = ["coin", "bar", "jewelry", "scrap"] as const;
 
 /** A premium as a signed percentage with one decimal: "+2.5%", "-1.0%" */
 const signedPremium = (decimal: number) =>
-  `${decimal >= 0 ? "+" : ""}${(decimal * 100).toFixed(1)}%`;
+  formatPercent(decimal * 100, true, 1, 1);
 
 interface AddMetalSlideOverProps {
   isOpen: boolean;

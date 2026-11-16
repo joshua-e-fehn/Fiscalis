@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/shadcn/card";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import { MetalItemWithValuation } from "@/lib/types/metals-extended";
 import type { MetalsDisplayCurrency } from "@/lib/types/metals";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -186,8 +186,7 @@ export function MetalsLargestHoldingsCard({
                           ) : (
                             <TrendingDown className="h-3 w-3" />
                           )}
-                          {item.profitLossPercent >= 0 ? "+" : ""}
-                          {item.profitLossPercent.toFixed(1)}%
+                          {formatPercent(item.profitLossPercent, true, 1, 1)}
                         </span>
                       )}
                     </div>

@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/shadcn/button";
 import { positionPriceIssue, useCryptoPositions } from "@/hooks/convex/crypto";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/currency";
+import { isolateLtr } from "@/../services/i18n/bidi";
 import {
   subcategoryLabel,
   useCategoryLabels,
@@ -46,7 +47,12 @@ function subcategoryName(
   return label ? labels.name(label) : slug;
 }
 
+/** A quantity, left to right in RTL too: "1.25K", "0.004500" */
 function formatNumber(value: number): string {
+  return isolateLtr(quantityText(value));
+}
+
+function quantityText(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(2)}K`;
   if (value > 0 && value < 0.01) return value.toExponential(2);

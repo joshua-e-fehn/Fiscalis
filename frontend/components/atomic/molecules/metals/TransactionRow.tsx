@@ -141,10 +141,7 @@ export function TransactionRow({
         {totalValue === null ? (
           <span className="text-muted-foreground">--</span>
         ) : (
-          <>
-            {isIncoming ? "" : "-"}
-            {formatCurrency(totalValue, currency)}
-          </>
+          formatCurrency(isIncoming ? totalValue : -totalValue, currency)
         )}
       </div>
 

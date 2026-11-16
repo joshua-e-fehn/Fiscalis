@@ -28,7 +28,7 @@ import {
 import type { ChartTimeRange } from "@/components/atomic/molecules/metals";
 import { RetirementTeaserCard } from "@/components/atomic/molecules/retirement";
 import { InvestmentCurrency } from "@/lib/types/investments";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatPercent } from "@/lib/utils/currency";
 import { useCategoryLabels } from "@/lib/config/categoryUI";
 import {
   TrendingUp,
@@ -60,10 +60,10 @@ import { partialCoveragePercent } from "@/../services/portfolio/unrealizedProfit
 // Helper Functions
 // ═══════════════════════════════════════════════════════════════
 
-function formatPercent(value: number | null): string {
+/** A change in percent, always signed: "+2.50%", "-1.25%"; "—" when unknown. */
+function formatChange(value: number | null): string {
   if (value === null) return "—";
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
+  return formatPercent(value, true);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -189,8 +189,7 @@ function YTDNetWorthCard({
               ) : (
                 <TrendingDown className="h-5 w-5" />
               )}
-              {isPositive ? "+" : ""}
-              {formatCurrency(ytdChange, currency)}
+              {formatCurrency(ytdChange, currency, { showSign: true })}
             </div>
             {ytdChangePercent !== null && (
               // Converted per day, so for a non-EUR currency the change
@@ -198,7 +197,7 @@ function YTDNetWorthCard({
               currency === "eur" ? (
                 <p className="text-xs text-muted-foreground mt-1">
                   {t("changeSinceJan1", {
-                    percent: formatPercent(ytdChangePercent),
+                    percent: formatChange(ytdChangePercent),
                   })}
                 </p>
               ) : (
@@ -210,7 +209,7 @@ function YTDNetWorthCard({
                         tabIndex={0}
                       >
                         {t("changeSinceJan1", {
-                          percent: formatPercent(ytdChangePercent),
+                          percent: formatChange(ytdChangePercent),
                         })}
                       </p>
                     </UiTooltipTrigger>
@@ -272,7 +271,7 @@ function NetWorthCard({
   const isProfit = (profitLoss ?? 0) >= 0;
   // Only call out coverage when part of the assets has no cost basis.
   const coveredPercent = partialCoveragePercent(profitLossCoverage);
-  const percent = formatPercent(profitLossPercent);
+  const percent = formatChange(profitLossPercent);
 
   return (
     <Card>
@@ -514,7 +513,7 @@ function CategoryCard({ category, currency }: CategoryCardProps) {
                   ) : (
                     <TrendingDown className="h-3 w-3" />
                   )}
-                  <span>{formatPercent(category.profitLossPercent)}</span>
+                  <span>{formatChange(category.profitLossPercent)}</span>
                 </div>
               )}
               {category.holdingsCount > 0 && (

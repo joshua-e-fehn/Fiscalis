@@ -3,14 +3,14 @@
 import { useState, useMemo } from "react";
 import { customItemPremiums } from "@/convex/lib/metalPremiums";
 import { resolvePremiums } from "@/../services/finance/metals";
-
-/** Parse a percent field ("2.5" → 0.025); empty/invalid → fallback (decimal). */
-function percentOrDefault(value: string, fallback: number): number {
-  const n = parseFloat(value);
-  return Number.isFinite(n) ? n / 100 : fallback;
-}
+import {
+  parseTypedAmount,
+  parseTypedPercent,
+  typedAmountText,
+  typedPercentText,
+} from "@/../services/i18n/typedAmount";
 import { useQuery, useMutation } from "convex/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -77,6 +77,16 @@ export function AddMetalSlideOver({
 }: AddMetalSlideOverProps) {
   const t = useTranslations("metals");
   const tActions = useTranslations("common.actions");
+  // Weights, purity, premiums and prices are typed in the user's number
+  // format ("31,1" in German)
+  const locale = useLocale();
+  /** A premium field as a fraction; blank or invalid → the default. */
+  const premiumOrDefault = (text: string, fallback: number) => {
+    const premium = parseTypedPercent(text, locale);
+    return premium !== undefined && Number.isFinite(premium)
+      ? premium
+      : fallback;
+  };
   // Catalog state
   const [searchQuery, setSearchQuery] = useState("");
   const [metalFilter, setMetalFilter] = useState<MetalsType | "all">("all");
@@ -194,9 +204,7 @@ export function AddMetalSlideOver({
         await addFromCatalog({
           catalogItemId: selectedCatalogItem,
           quantity: parseInt(quantity) || 1,
-          purchasePricePerUnit: purchasePrice
-            ? parseFloat(purchasePrice)
-            : undefined,
+          purchasePricePerUnit: parseTypedAmount(purchasePrice, locale),
           purchaseDate,
           purchaseCurrency,
           storageLocation: storageLocation || undefined,
@@ -207,14 +215,12 @@ export function AddMetalSlideOver({
           customName,
           metalType: customMetal,
           category: customCategory,
-          purity: parseFloat(customPurity) || 999,
-          weightGrams: parseFloat(customWeight) || 0,
+          purity: parseTypedAmount(customPurity, locale) || 999,
+          weightGrams: parseTypedAmount(customWeight, locale) || 0,
           quantity: parseInt(quantity) || 1,
-          buyPremium: percentOrDefault(customBuyPremium, customDefaults.buy),
-          sellPremium: percentOrDefault(customSellPremium, customDefaults.sell),
-          purchasePricePerUnit: purchasePrice
-            ? parseFloat(purchasePrice)
-            : undefined,
+          buyPremium: premiumOrDefault(customBuyPremium, customDefaults.buy),
+          sellPremium: premiumOrDefault(customSellPremium, customDefaults.sell),
+          purchasePricePerUnit: parseTypedAmount(purchasePrice, locale),
           purchaseDate,
           purchaseCurrency,
           storageLocation: storageLocation || undefined,
@@ -235,13 +241,15 @@ export function AddMetalSlideOver({
   // The purchase date dates the item's opening transaction: without it the
   // item would count as held since before every range (D3), so a new entry
   // must give it. A negative price is never valid.
-  const priceValid = purchasePrice === "" || parseFloat(purchasePrice) >= 0;
+  const priceValue = parseTypedAmount(purchasePrice, locale);
+  const priceValid = priceValue === undefined || priceValue >= 0;
+  const weightValue = parseTypedAmount(customWeight, locale) ?? 0;
   const canSubmit =
     !!purchaseDate &&
     priceValid &&
     (mode === "catalog"
       ? !!selectedCatalogItem && parseInt(quantity) > 0
-      : !!customName && parseFloat(customWeight) > 0 && parseInt(quantity) > 0);
+      : !!customName && weightValue > 0 && parseInt(quantity) > 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -424,9 +432,9 @@ export function AddMetalSlideOver({
                   <Label htmlFor="customWeight">{t("add.weight")}</Label>
                   <Input
                     id="customWeight"
-                    type="number"
-                    step="0.01"
-                    placeholder="31.1"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={typedAmountText(31.1, locale)}
                     value={customWeight}
                     onChange={(e) => setCustomWeight(e.target.value)}
                   />
@@ -435,8 +443,9 @@ export function AddMetalSlideOver({
                   <Label htmlFor="customPurity">{t("add.purity")}</Label>
                   <Input
                     id="customPurity"
-                    type="number"
-                    placeholder="999"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={typedAmountText(999, locale)}
                     value={customPurity}
                     onChange={(e) => setCustomPurity(e.target.value)}
                   />
@@ -451,9 +460,9 @@ export function AddMetalSlideOver({
                   <Label htmlFor="customBuyPremium">{t("add.buyPremium")}</Label>
                   <Input
                     id="customBuyPremium"
-                    type="number"
-                    step="0.1"
-                    placeholder={(customDefaults.buy * 100).toFixed(1)}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={typedPercentText(customDefaults.buy, locale)}
                     value={customBuyPremium}
                     onChange={(e) => setCustomBuyPremium(e.target.value)}
                   />
@@ -465,9 +474,9 @@ export function AddMetalSlideOver({
                   <Label htmlFor="customSellPremium">{t("add.sellPremium")}</Label>
                   <Input
                     id="customSellPremium"
-                    type="number"
-                    step="0.1"
-                    placeholder={(customDefaults.sell * 100).toFixed(1)}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={typedPercentText(customDefaults.sell, locale)}
                     value={customSellPremium}
                     onChange={(e) => setCustomSellPremium(e.target.value)}
                   />
@@ -499,8 +508,8 @@ export function AddMetalSlideOver({
               <Label htmlFor="purchasePrice">{t("add.pricePerUnit")}</Label>
               <Input
                 id="purchasePrice"
-                type="number"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 placeholder={t("add.optional")}
                 value={purchasePrice}
                 onChange={(e) => setPurchasePrice(e.target.value)}

@@ -3,7 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { roundMoney } from "@/../services/finance/financeService";
+import {
+  parseTypedAmount,
+  typedAmountText,
+} from "@/../services/i18n/typedAmount";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -71,6 +76,12 @@ export function BulkSellDialog({
   const displayUnitsPerEur = display.unitsPerEur;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Prices are shown and typed in the user's number format
+  const locale = useLocale();
+  // "0.00" in English, "0,00" in German: a hint at the decimal mark
+  const pricePlaceholder = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+  }).format(0);
   const [saleCurrency, setSaleCurrency] = useState<string>(
     currency.toUpperCase(),
   );
@@ -90,14 +101,17 @@ export function BulkSellDialog({
         items.map((item) => ({
           item,
           quantity: item.quantity, // Default to selling all
-          pricePerUnit: item.currentSellPrice?.toFixed(2) || "",
+          pricePerUnit:
+            item.currentSellPrice != null
+              ? typedAmountText(roundMoney(item.currentSellPrice), locale)
+              : "",
         })),
       );
       setSaleCurrency(currency.toUpperCase());
       setSaleDate(todayLocalISO());
       setError(null);
     }
-  }, [isOpen, items, currency]);
+  }, [isOpen, items, currency, locale]);
 
   // P/L of each sale against its item's average cost, as the ledger will
   // realize it: the EUR cost in the sale currency (EUR or the display
@@ -111,12 +125,12 @@ export function BulkSellDialog({
       saleProfitLossIn(
         entry.item.averageCost,
         entry.quantity,
-        parseFloat(entry.pricePerUnit) || 0,
+        parseTypedAmount(entry.pricePerUnit, locale) || 0,
         saleCurrency,
         unitsPerEur,
       ),
     );
-  }, [sellEntries, saleCurrency, displayCode, displayUnitsPerEur]);
+  }, [sellEntries, saleCurrency, displayCode, displayUnitsPerEur, locale]);
 
   const totals = useMemo(() => {
     const sum = sumSaleProfitLoss(previews);
@@ -138,12 +152,12 @@ export function BulkSellDialog({
   // Validate all entries
   const isValid = useMemo(() => {
     return sellEntries.every((entry) => {
-      const price = parseFloat(entry.pricePerUnit);
+      const price = parseTypedAmount(entry.pricePerUnit, locale) ?? 0;
       return (
         entry.quantity > 0 && entry.quantity <= entry.item.quantity && price > 0
       );
     });
-  }, [sellEntries]);
+  }, [sellEntries, locale]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +175,7 @@ export function BulkSellDialog({
         sales: sellEntries.map((entry) => ({
           vaultItemId: entry.item._id as Id<"vaultItems">,
           quantity: entry.quantity,
-          pricePerUnit: parseFloat(entry.pricePerUnit),
+          pricePerUnit: parseTypedAmount(entry.pricePerUnit, locale) ?? 0,
           // Stored with the sale, written in the user's language
           notes: t("saleNote", {
             quantity: entry.quantity,
@@ -299,10 +313,9 @@ export function BulkSellDialog({
                       <div className="space-y-1">
                         <Label className="text-xs">{t("pricePerUnit")}</Label>
                         <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder={pricePlaceholder}
                           value={entry.pricePerUnit}
                           onChange={(e) =>
                             updateEntry(index, { pricePerUnit: e.target.value })

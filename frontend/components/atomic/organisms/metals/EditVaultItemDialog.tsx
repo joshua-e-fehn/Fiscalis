@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  parseTypedAmount,
+  parseTypedPercent,
+  typedAmountText,
+  typedPercentText,
+} from "@/../services/i18n/typedAmount";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   Dialog,
@@ -32,14 +38,6 @@ interface EditVaultItemDialogProps {
 
 type UpdateArgs = Parameters<ReturnType<typeof useUpdateMetalItem>>[0];
 
-/** A percent field as a decimal ("2.5" → 0.025); null when not a number. */
-function parsePercent(value: string): number | null {
-  const n = parseFloat(value);
-  return Number.isFinite(n) ? n / 100 : null;
-}
-
-const toPercent = (decimal: number) => String(Math.round(decimal * 10000) / 100);
-
 /**
  * Edit a vault item: its name, premiums, storage and notes, and its opening
  * balance (quantity, price, currency, date) through vault.updateVaultItem,
@@ -54,6 +52,10 @@ export function EditVaultItemDialog({
 }: EditVaultItemDialogProps) {
   const t = useTranslations("metals.edit");
   const tActions = useTranslations("common.actions");
+  // Premiums, quantity and price are shown and typed in the user's number
+  // format; blank or invalid reads as NaN
+  const locale = useLocale();
+  const typed = (text: string) => parseTypedAmount(text, locale) ?? Number.NaN;
   const toErrorMessage = useErrorMessage();
   const updateItem = useUpdateMetalItem();
   const { item: liveItem, transactions } = useMetalItem(
@@ -84,12 +86,16 @@ export function EditVaultItemDialog({
   useEffect(() => {
     if (!isOpen) return;
     setName(current.customName ?? "");
-    setBuyPremium(toPercent(current.buyPremium));
-    setSellPremium(toPercent(current.sellPremium));
+    setBuyPremium(typedPercentText(current.buyPremium, locale));
+    setSellPremium(typedPercentText(current.sellPremium, locale));
     setStorageLocation(current.storageLocation ?? "");
     setNotes(current.notes ?? "");
-    setOpeningQuantity(opening ? String(opening.quantity) : "");
-    setOpeningPrice(opening?.pricePerUnit != null ? String(opening.pricePerUnit) : "");
+    setOpeningQuantity(opening ? typedAmountText(opening.quantity, locale) : "");
+    setOpeningPrice(
+      opening?.pricePerUnit != null
+        ? typedAmountText(opening.pricePerUnit, locale)
+        : "",
+    );
     setOpeningCurrency(opening?.currency ?? "EUR");
     setOpeningDate(opening?.transactionDate?.slice(0, 10) ?? "");
     setError(null);
@@ -104,9 +110,11 @@ export function EditVaultItemDialog({
     if (trimmedName !== (current.customName ?? "") && trimmedName !== "") {
       update.customName = trimmedName;
     }
-    const buy = parsePercent(buyPremium);
-    const sell = parsePercent(sellPremium);
-    if (buy === null || sell === null) return t("errors.premiumsNotNumbers");
+    const buy = parseTypedPercent(buyPremium, locale) ?? Number.NaN;
+    const sell = parseTypedPercent(sellPremium, locale) ?? Number.NaN;
+    if (!Number.isFinite(buy) || !Number.isFinite(sell)) {
+      return t("errors.premiumsNotNumbers");
+    }
     if (Math.abs(buy - current.buyPremium) > 1e-9) update.buyPremium = buy;
     if (Math.abs(sell - current.sellPremium) > 1e-9) update.sellPremium = sell;
     if (storageLocation !== (current.storageLocation ?? "")) {
@@ -115,14 +123,14 @@ export function EditVaultItemDialog({
     if (notes !== (current.notes ?? "")) update.notes = notes;
 
     if (opening) {
-      const quantity = parseFloat(openingQuantity);
+      const quantity = typed(openingQuantity);
       if (!Number.isFinite(quantity)) return t("errors.quantityNotNumber");
       // Sent as the opening's own quantity: the mutation resolves it against
       // the ledger it reads, so no client-side total (which can be stale
       // after an earlier edit) feeds into it
       if (quantity !== opening.quantity) update.openingQuantity = quantity;
       if (openingPrice.trim() !== "") {
-        const price = parseFloat(openingPrice);
+        const price = typed(openingPrice);
         if (!Number.isFinite(price)) return t("errors.priceNotNumber");
         if (price !== opening.pricePerUnit) update.purchasePricePerUnit = price;
       }
@@ -190,8 +198,8 @@ export function EditVaultItemDialog({
                 <Label htmlFor="edit-buy-premium">{t("buyPremium")}</Label>
                 <Input
                   id="edit-buy-premium"
-                  type="number"
-                  step="0.1"
+                  type="text"
+                  inputMode="decimal"
                   value={buyPremium}
                   onChange={(e) => setBuyPremium(e.target.value)}
                 />
@@ -200,8 +208,8 @@ export function EditVaultItemDialog({
                 <Label htmlFor="edit-sell-premium">{t("sellPremium")}</Label>
                 <Input
                   id="edit-sell-premium"
-                  type="number"
-                  step="0.1"
+                  type="text"
+                  inputMode="decimal"
                   value={sellPremium}
                   onChange={(e) => setSellPremium(e.target.value)}
                 />
@@ -246,8 +254,8 @@ export function EditVaultItemDialog({
                     <Label htmlFor="edit-opening-quantity">{t("quantity")}</Label>
                     <Input
                       id="edit-opening-quantity"
-                      type="number"
-                      step="any"
+                      type="text"
+                      inputMode="decimal"
                       value={openingQuantity}
                       onChange={(e) => setOpeningQuantity(e.target.value)}
                       className="w-32"
@@ -258,8 +266,8 @@ export function EditVaultItemDialog({
                       <Label htmlFor="edit-opening-price">{t("pricePerUnit")}</Label>
                       <Input
                         id="edit-opening-price"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder={t("unknown")}
                         value={openingPrice}
                         onChange={(e) => setOpeningPrice(e.target.value)}

@@ -133,3 +133,28 @@ export function parseTypedAmount(
   if (decimalMark && normalized.split(".").length > 2) return Number.NaN;
   return Number(normalized);
 }
+
+/**
+ * A percent typed in the form as a decimal fraction ("2,5" in German or
+ * "2.5" in English → 0.025): undefined when blank, NaN when it is not a
+ * number. Rates and premiums are stored as fractions.
+ */
+export function parseTypedPercent(
+  text: string,
+  locale: string,
+): number | undefined {
+  const percent = parseTypedAmount(text, locale);
+  if (percent === undefined || !Number.isFinite(percent)) return percent;
+  // percent / 100 alone adds float noise ("2,9" → 0.028999999999999998), so
+  // a stored rate would never equal the one typed again; rounded to the 15
+  // significant digits typedAmountText shows, it reads back exactly
+  return Number((percent / 100).toPrecision(15));
+}
+
+/**
+ * A stored fraction as a percent field shows it (0.0375 → "3,75" in
+ * German); parseTypedPercent reads it back.
+ */
+export function typedPercentText(fraction: number, locale: string): string {
+  return typedAmountText(fraction * 100, locale);
+}

@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { ConvexError } from "convex/values";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { roundMoney } from "@/../services/finance/financeService";
+import {
+  parseTypedAmount,
+  typedAmountText,
+} from "@/../services/i18n/typedAmount";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
@@ -60,6 +65,12 @@ export function SellItemDialog({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The price is shown and typed in the user's number format
+  const locale = useLocale();
+  // "0.00" in English, "0,00" in German: a hint at the decimal mark
+  const pricePlaceholder = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+  }).format(0);
 
   // Form state
   const [quantity, setQuantity] = useState(1);
@@ -79,18 +90,22 @@ export function SellItemDialog({
     if (item && isOpen) {
       setQuantity(1);
       // Pre-fill with current sell price (what you'd receive selling today)
-      setPricePerUnit(item.currentSellPrice?.toFixed(2) || "");
+      setPricePerUnit(
+        item.currentSellPrice != null
+          ? typedAmountText(roundMoney(item.currentSellPrice), locale)
+          : "",
+      );
       setSaleCurrency(currency.toUpperCase());
       setSaleDate(todayLocalISO());
       setNotes("");
       setError(null);
     }
-  }, [item, isOpen, currency]);
+  }, [item, isOpen, currency, locale]);
 
   if (!item) return null;
 
   const maxQuantity = item.quantity;
-  const parsedPrice = parseFloat(pricePerUnit) || 0;
+  const parsedPrice = parseTypedAmount(pricePerUnit, locale) || 0;
   const totalSaleValue = parsedPrice * quantity;
 
   // P/L of this sale against the item's average cost, as the ledger will
@@ -239,10 +254,9 @@ export function SellItemDialog({
                 <Label htmlFor="price">{t("salePrice")}</Label>
                 <Input
                   id="price"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={pricePlaceholder}
                   value={pricePerUnit}
                   onChange={(e) => setPricePerUnit(e.target.value)}
                 />

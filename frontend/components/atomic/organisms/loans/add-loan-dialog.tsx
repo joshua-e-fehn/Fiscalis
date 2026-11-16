@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useEffectEvent } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import {
   useCreateLoan,
   LoanType,
@@ -69,6 +69,11 @@ import {
   type DayCountConvention,
 } from "@/../services/finance/loanScheduleService";
 import { roundMoney } from "@/../services/finance/financeService";
+import {
+  parseTypedAmount,
+  parseTypedPercent,
+  typedAmountText,
+} from "@/../services/i18n/typedAmount";
 import { DayCountSelect } from "@/components/atomic/molecules/loans/day-count-select";
 
 interface AddLoanDialogProps {
@@ -205,9 +210,8 @@ function CurrencyInput({
       </span>
       <Input
         id={id}
-        type="number"
-        step="0.01"
-        min="0"
+        type="text"
+        inputMode="decimal"
         placeholder={placeholder}
         className="ps-9"
         value={value}
@@ -249,6 +253,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   const tLoans = useTranslations("loans");
   const tActions = useTranslations("common.actions");
   const format = useFormatter();
+  // Amounts and rates are typed in the user's own number format
+  // ("1.234,56" and "2,5" in German); blank or invalid reads as NaN
+  const locale = useLocale();
+  const amount = (text: string) => parseTypedAmount(text, locale) ?? Number.NaN;
+  const percent = (text: string) =>
+    parseTypedPercent(text, locale) ?? Number.NaN;
   // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight
   const formatDate = (date: string) =>
     format.dateTime(new Date(date), "dateOnly");
@@ -323,8 +333,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
       loanType,
       // The payment is set at origination from the original principal;
       // the current balance only tracks progress
-      originalPrincipal: parseFloat(originalPrincipal) || 0,
-      annualInterestRate: parseFloat(annualInterestRate) / 100 || 0,
+      originalPrincipal: parseTypedAmount(originalPrincipal, locale) || 0,
+      annualInterestRate: parseTypedPercent(annualInterestRate, locale) || 0,
       termMonths,
       paymentFrequency,
       gracePeriods: gracePeriods ? parseInt(gracePeriods) : undefined,
@@ -333,6 +343,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
       loanType,
       originalPrincipal,
       annualInterestRate,
+      locale,
       termMonths,
       paymentFrequency,
       gracePeriods,
@@ -357,8 +368,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
   const effectivePayment = useMemo(() => {
     if (useCalculatedPayment) return calculatedPayment;
-    return parseFloat(scheduledPayment) || 0;
-  }, [useCalculatedPayment, calculatedPayment, scheduledPayment]);
+    return parseTypedAmount(scheduledPayment, locale) || 0;
+  }, [useCalculatedPayment, calculatedPayment, scheduledPayment, locale]);
 
   const nextPaymentDate = useMemo(() => {
     if (!startDate) return "";
@@ -389,7 +400,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
       payments.push({
         id: `past-${i}`,
         dueDate: getDueDate({ startDate, paymentFrequency }, i + 1),
-        amount: (schedule[i]?.scheduledPayment ?? 0).toFixed(2),
+        amount: typedAmountText(
+          roundMoney(schedule[i]?.scheduledPayment ?? 0),
+          locale,
+        ),
         paid: true, // Default to paid
       });
     }
@@ -404,6 +418,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     loanTerms,
     termMonths,
     frequencyInfo,
+    locale,
   ]);
 
   // Check if all past payments are confirmed
@@ -411,9 +426,11 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
     if (missedPaymentsInfo.count === 0) return true;
     return (
       pastPayments.length > 0 &&
-      pastPayments.every((p) => p.paid && parseFloat(p.amount) > 0)
+      pastPayments.every(
+        (p) => p.paid && (parseTypedAmount(p.amount, locale) ?? 0) > 0,
+      )
     );
-  }, [pastPayments, missedPaymentsInfo.count]);
+  }, [pastPayments, missedPaymentsInfo.count, locale]);
 
   // ═══════════════════════════════════════════════════════════════
   // Form Management
@@ -461,18 +478,18 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
   // scenario: every recurring extra, each with its own from/until due dates
   const plannedPrepayments = () => {
     if (!allowPrepayment) return undefined;
-    const valid = extraPayments.filter((ep) => parseFloat(ep.amount) > 0);
+    const valid = extraPayments.filter((ep) => amount(ep.amount) > 0);
     return {
       recurringExtras: valid
         .filter((ep) => ep.type === "recurring")
         .map((ep) => ({
-          amount: parseFloat(ep.amount),
+          amount: amount(ep.amount),
           from: ep.startDate || undefined,
           until: ep.endDate || undefined,
         })),
       oneTimePrepayments: valid
         .filter((ep) => ep.type === "one_time" && ep.date)
-        .map((ep) => ({ date: ep.date!, amount: parseFloat(ep.amount) })),
+        .map((ep) => ({ date: ep.date!, amount: amount(ep.amount) })),
     };
   };
 
@@ -487,9 +504,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
       await createLoan({
         name,
         loanType,
-        originalPrincipal: parseFloat(originalPrincipal),
-        currentBalance: currentBalance ? parseFloat(currentBalance) : undefined,
-        annualInterestRate: parseFloat(annualInterestRate) / 100,
+        originalPrincipal: amount(originalPrincipal),
+        currentBalance: parseTypedAmount(currentBalance, locale),
+        annualInterestRate: percent(annualInterestRate),
         currency,
         termMonths,
         paymentFrequency,
@@ -502,18 +519,18 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
         dayCount,
         maxAnnualPrepaymentRate:
           allowPrepayment && maxPrepayment
-            ? parseFloat(maxPrepayment) / 100
+            ? percent(maxPrepayment)
             : undefined,
         prepaymentPenaltyRate:
           allowPrepayment && prepaymentPenalty
-            ? parseFloat(prepaymentPenalty) / 100
+            ? percent(prepaymentPenalty)
             : undefined,
         notes: notes || undefined,
         historicalPayments: pastPayments
-          .filter((p) => p.paid && parseFloat(p.amount) > 0)
+          .filter((p) => p.paid && amount(p.amount) > 0)
           .map((p) => ({
             paymentDate: p.dueDate,
-            amount: parseFloat(p.amount),
+            amount: amount(p.amount),
           })),
         plannedPrepayments: plannedPrepayments(),
       });
@@ -532,8 +549,10 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
 
   const isStep1Valid = name.trim().length > 0;
   const isStep2Valid =
-    parseFloat(originalPrincipal) > 0 &&
-    parseFloat(annualInterestRate) >= 0 &&
+    amount(originalPrincipal) > 0 &&
+    // A blank current balance is derived from the past payments
+    (currentBalance.trim() === "" || amount(currentBalance) >= 0) &&
+    percent(annualInterestRate) >= 0 &&
     parseInt(termPeriods) > 0 &&
     // INTEREST_ONLY_THEN needs its interest-only periods, within the term
     (loanType !== "INTEREST_ONLY_THEN" ||
@@ -541,7 +560,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
         parseInt(gracePeriods) < parseInt(termPeriods)));
   const isStep3Valid =
     startDate && (missedPaymentsInfo.count === 0 || pastPaymentsConfirmed);
-  const isStep4Valid = true;
+  // A blank limit or penalty means none
+  const isStep4Valid =
+    !allowPrepayment ||
+    [maxPrepayment, prepaymentPenalty].every(
+      (rate) => rate.trim() === "" || percent(rate) >= 0,
+    );
   const isStep5Valid = true;
 
   const canProceed = () => {
@@ -775,11 +799,9 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                     <Percent className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="annualInterestRate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      placeholder="3.75"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder={typedAmountText(3.75, locale)}
                       className="ps-9"
                       value={annualInterestRate}
                       onChange={(e) => setAnnualInterestRate(e.target.value)}
@@ -961,15 +983,13 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                         </div>
 
                         {scheduledPayment &&
-                          parseFloat(scheduledPayment) !==
-                            calculatedPayment && (
+                          amount(scheduledPayment) !== calculatedPayment && (
                             <div className="p-3 rounded-lg bg-muted/50 text-sm">
-                              {parseFloat(scheduledPayment) >
-                              calculatedPayment ? (
+                              {amount(scheduledPayment) > calculatedPayment ? (
                                 <p className="text-green-600">
                                   {t.rich("higherPayment", { strong })}
                                 </p>
-                              ) : parseFloat(scheduledPayment) <
+                              ) : amount(scheduledPayment) <
                                 calculatedPayment * 0.5 ? (
                                 <p className="text-red-600">
                                   {t.rich("paymentTooLow", { strong })}
@@ -1034,8 +1054,12 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                           </div>
                           <div className="w-32">
                             <Input
-                              type="number"
-                              step="0.01"
+                              type="text"
+                              inputMode="decimal"
+                              aria-label={t("pastPayment", {
+                                number: index + 1,
+                                date: formatDate(payment.dueDate),
+                              })}
                               value={payment.amount}
                               onChange={(e) => {
                                 setPastPayments((prev) =>
@@ -1103,10 +1127,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       <div className="relative mt-1.5">
                         <Input
                           id="maxPrepayment"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
+                          type="text"
+                          inputMode="decimal"
                           placeholder={t("noLimit")}
                           className="pe-7"
                           value={maxPrepayment}
@@ -1126,10 +1148,8 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       <div className="relative mt-1.5">
                         <Input
                           id="prepaymentPenalty"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="100"
+                          type="text"
+                          inputMode="decimal"
                           placeholder={t("none")}
                           className="pe-7"
                           value={prepaymentPenalty}
@@ -1309,10 +1329,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                       {t("originalAmountReview")}
                     </span>
                     <span className="font-medium">
-                      {formatCurrency(
-                        parseFloat(originalPrincipal) || 0,
-                        currency,
-                      )}
+                      {formatCurrency(amount(originalPrincipal) || 0, currency)}
                     </span>
                   </div>
                   {currentBalance && currentBalance !== originalPrincipal && (
@@ -1321,7 +1338,7 @@ export function AddLoanDialog({ open, onOpenChange }: AddLoanDialogProps) {
                         {t("currentBalance")}
                       </span>
                       <span className="font-medium">
-                        {formatCurrency(parseFloat(currentBalance), currency)}
+                        {formatCurrency(amount(currentBalance), currency)}
                       </span>
                     </div>
                   )}

@@ -3,8 +3,15 @@
  *
  * Locale-specific presentation helpers for monetary values and percentages.
  * Uses Intl.NumberFormat with the "de-CH" locale throughout.
+ *
+ * Every string these return is UI text: it is wrapped in a left-to-right
+ * isolate (isolateLtr, services/i18n/bidi.ts) so an amount, a percentage or
+ * a signed number reads "-15'881.29€" in the right-to-left Arabic UI too,
+ * not "881.29€'15-". Exports and APIs write plain numbers (toFixed), never
+ * these; stripBidiMarks reads a displayed value back.
  */
 
+import { isolateLtr } from "@/../services/i18n/bidi";
 import type { InvestmentCurrency } from "@/lib/types/investments";
 
 /**
@@ -34,7 +41,7 @@ export function withCurrency(
   formattedAmount: string,
   currency: InvestmentCurrency,
 ): string {
-  return `${formattedAmount}${currencySuffixes[currency]}`;
+  return isolateLtr(`${formattedAmount}${currencySuffixes[currency]}`);
 }
 
 /**
@@ -125,31 +132,57 @@ export function formatCurrency(
         maximumFractionDigits: fractionDigits,
       }).format(Math.abs(value))}${suffix}`;
 
-  if (showSign && value !== 0) {
-    return value >= 0 ? `+${formatted}` : `-${formatted}`;
-  }
-
-  return value < 0 ? `-${formatted}` : formatted;
+  return isolateLtr(`${signOf(value, showSign)}${formatted}`);
 }
 
 /**
- * Format a percentage value
+ * The sign written before an amount: "-" for a negative value, "+" for a
+ * positive one when `showSign`, nothing for zero.
+ */
+function signOf(value: number, showSign: boolean): string {
+  if (value < 0) return "-";
+  return showSign && value > 0 ? "+" : "";
+}
+
+/**
+ * A plain number in the house style, e.g. a quantity or a weight:
+ * "1'234.5", "+12". `fractionDigits` fixes the decimals (default: up to 2,
+ * as needed); `maximumFractionDigits` allows more when they are there.
+ */
+export function formatNumber(
+  value: number,
+  options?: {
+    showSign?: boolean;
+    fractionDigits?: number;
+    maximumFractionDigits?: number;
+  },
+): string {
+  const { showSign = false, fractionDigits, maximumFractionDigits } =
+    options ?? {};
+  const formatted = new Intl.NumberFormat("de-CH", {
+    minimumFractionDigits: fractionDigits ?? 0,
+    maximumFractionDigits: maximumFractionDigits ?? fractionDigits ?? 2,
+  }).format(Math.abs(value));
+  return isolateLtr(`${signOf(value, showSign)}${formatted}`);
+}
+
+/**
+ * Format a percentage value: "12.50%", "+3.1%", "-0.25%". Decimals run from
+ * `minimumFractionDigits` (default 2) to `maximumFractionDigits` (default 2,
+ * or the minimum when that is higher).
  */
 export function formatPercent(
   value: number,
   showSign = false,
   minimumFractionDigits = 2,
+  maximumFractionDigits = Math.max(2, minimumFractionDigits),
 ): string {
   const formatted = new Intl.NumberFormat("de-CH", {
     minimumFractionDigits,
-    maximumFractionDigits: 2,
+    maximumFractionDigits,
   }).format(Math.abs(value));
 
-  if (showSign && value !== 0) {
-    return value >= 0 ? `+${formatted}%` : `-${formatted}%`;
-  }
-
-  return `${value < 0 ? "-" : ""}${formatted}%`;
+  return isolateLtr(`${signOf(value, showSign)}${formatted}%`);
 }
 
 /** Format a fractional rate (0.0718) as a percentage without trailing zeros: "7.18%", "4%". */

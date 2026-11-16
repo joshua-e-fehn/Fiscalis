@@ -10,6 +10,8 @@
  * (Persian) Arabic-Indic and Devanagari digits are accepted the same way.
  */
 
+import { stripBidiMarks } from "./bidi";
+
 export interface LocaleNumberSymbols {
   /** The decimal mark: "." (en), "," (de, fr), "٫" (ar with Arabic digits) */
   decimal: string;
@@ -35,8 +37,6 @@ export function localeNumberSymbols(locale: string): LocaleNumberSymbols {
   }
 }
 
-/** Direction marks Intl puts around Arabic and Hebrew numbers. */
-const BIDI_MARKS = /[؜‎‏‪-‮⁦-⁩]/g;
 const ARABIC_DECIMAL = "٫";
 const ARABIC_GROUP = "٬";
 
@@ -66,7 +66,7 @@ export function typedAmountText(value: number, locale: string): string {
   } catch {
     text = new Intl.NumberFormat("en-US", options).format(value);
   }
-  return text.replace(BIDI_MARKS, "");
+  return stripBidiMarks(text);
 }
 
 /**
@@ -89,7 +89,7 @@ export function parseTypedAmount(
   locale: string,
 ): number | undefined {
   const symbols = localeNumberSymbols(locale);
-  let compact = latinDigits(text.replace(BIDI_MARKS, ""))
+  let compact = latinDigits(stripBidiMarks(text))
     .replace(/−/g, "-")
     .replace(/[\s'’]/g, "")
     .split(ARABIC_GROUP)

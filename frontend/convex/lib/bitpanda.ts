@@ -22,6 +22,13 @@ import { PROVIDER_TIMEOUT_MS, parseRetryAfter, withRetry } from "./retry";
 const BITPANDA_API_BASE = "https://api.bitpanda.com/v1";
 
 /**
+ * Public ticker, v2: the v1 ticker's crypto and metals plus stocks and
+ * other securities (3,195 vs 883 symbols in 2026-11, same prices), so
+ * Bitpanda stocks get a live price too. Undocumented but public, no key.
+ */
+const BITPANDA_TICKER_URL = "https://api.bitpanda.com/v2/ticker";
+
+/**
  * Error thrown when the API key is invalid/revoked (401/403). Carries the
  * status so classifyProviderFailure (services/security/providerFailure.ts)
  * reads it as needs_reauth.
@@ -62,6 +69,8 @@ interface FetchOptions {
   params?: Record<string, string | number | undefined>;
   /** Whether to send the API key header (false for the public ticker) */
   authenticated?: boolean;
+  /** Full URL to call instead of BITPANDA_API_BASE + path */
+  url?: string;
 }
 
 async function bitpandaFetchRaw(
@@ -71,7 +80,7 @@ async function bitpandaFetchRaw(
 ): Promise<any> {
   const { params, authenticated = true } = options;
 
-  const url = new URL(`${BITPANDA_API_BASE}${path}`);
+  const url = new URL(options.url ?? `${BITPANDA_API_BASE}${path}`);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) url.searchParams.set(key, String(value));
@@ -171,6 +180,7 @@ export async function validateApiKey(apiKey: string): Promise<boolean> {
 export async function fetchTicker(): Promise<Record<string, Record<string, string>>> {
   const json = await bitpandaFetchRaw(null, "/ticker", {
     authenticated: false,
+    url: BITPANDA_TICKER_URL,
   });
   return (json ?? {}) as Record<string, Record<string, string>>;
 }

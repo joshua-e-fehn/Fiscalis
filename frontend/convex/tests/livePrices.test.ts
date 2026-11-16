@@ -44,6 +44,42 @@ describe("Bitpanda ticker refresh", () => {
     expect((await holding(t, "ETH")).currentPrice).toBe(2900);
   });
 
+  it("stores only held symbols and prices a never-priced stock", async () => {
+    const t = newTest();
+    await seedUser(t, OWNER);
+    const { _id, _creationTime, ...btc } = await holding(t, "BTC");
+    // A Bitpanda stock the v1 ticker never priced (holdingPrice.ts missing)
+    await t.run((ctx) =>
+      ctx.db.insert("bitpandaHoldings", {
+        ...btc,
+        symbol: "OKTA",
+        name: "OKTA Wallet",
+        assetType: "stock",
+        investmentCategory: "equities",
+        investmentSubcategory: "stocks",
+        quantity: 10,
+        currentPrice: undefined,
+        marketValue: undefined,
+        valueInBaseCurrency: undefined,
+        priceStatus: "missing",
+        priceAsOf: undefined,
+      }),
+    );
+    const result = await t.mutation(internal.assetPrices.storeBitpandaTicker, {
+      prices: [
+        { symbol: "OKTA", price: 162.63, currency: "EUR" },
+        { symbol: "AAPL", price: 324.95, currency: "EUR" },
+      ],
+    });
+    expect(result.stored).toBe(1);
+    await t.mutation(internal.assetPrices.repriceBitpandaHoldings, { cursor: null });
+
+    const okta = await holding(t, "OKTA");
+    expect(okta.currentPrice).toBe(162.63);
+    expect(okta.valueInBaseCurrency).toBe(1626.3);
+    expect(okta.priceStatus).toBe("live");
+  });
+
   it("ignores a stored price older than the refresh window", async () => {
     const t = newTest();
     await seedUser(t, OWNER);

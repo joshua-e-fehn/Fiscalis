@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Doc } from "@/convex/_generated/dataModel";
 import { useUpdateLoan, LoanStatus } from "@/hooks/convex/loans";
 import {
   scheduledPaymentAfterEdit,
   type DayCountConvention,
 } from "@/../services/finance/loanScheduleService";
+import {
+  parseTypedAmount,
+  parseTypedPercent,
+  typedAmountText,
+  typedPercentText,
+} from "@/../services/i18n/typedAmount";
 import {
   Dialog,
   DialogContent,
@@ -50,19 +56,21 @@ export function EditLoanDialog({
   const t = useTranslations("loans.edit");
   const tLoans = useTranslations("loans");
   const tActions = useTranslations("common.actions");
+  // Amounts and the rate are shown and typed in the user's number format
+  const locale = useLocale();
   const { updateLoan } = useUpdateLoan();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
   const [name, setName] = useState(loan.name);
-  const [currentBalance, setCurrentBalance] = useState(
-    loan.currentBalance.toString(),
+  const [currentBalance, setCurrentBalance] = useState(() =>
+    typedAmountText(loan.currentBalance, locale),
   );
-  const [annualInterestRate, setAnnualInterestRate] = useState(
-    (loan.annualInterestRate * 100).toString(),
+  const [annualInterestRate, setAnnualInterestRate] = useState(() =>
+    typedPercentText(loan.annualInterestRate, locale),
   );
-  const [scheduledPayment, setScheduledPayment] = useState(
-    loan.scheduledPayment.toString(),
+  const [scheduledPayment, setScheduledPayment] = useState(() =>
+    typedAmountText(loan.scheduledPayment, locale),
   );
   // Until the user types a payment, a rate or balance edit re-derives it over
   // the remaining periods (the same rule updateLoan applies)
@@ -81,9 +89,9 @@ export function EditLoanDialog({
   // Reset form when loan changes
   useEffect(() => {
     setName(loan.name);
-    setCurrentBalance(loan.currentBalance.toString());
-    setAnnualInterestRate((loan.annualInterestRate * 100).toString());
-    setScheduledPayment(loan.scheduledPayment.toString());
+    setCurrentBalance(typedAmountText(loan.currentBalance, locale));
+    setAnnualInterestRate(typedPercentText(loan.annualInterestRate, locale));
+    setScheduledPayment(typedAmountText(loan.scheduledPayment, locale));
     setPaymentEdited(false);
     setStatus(loan.status);
     setDayCount(loan.dayCount);
@@ -91,33 +99,44 @@ export function EditLoanDialog({
     setContractNumber(loan.contractNumber ?? "");
     setCollateral(loan.collateral ?? "");
     setNotes(loan.notes ?? "");
-  }, [loan]);
+  }, [loan, locale]);
 
-  const balanceValue = parseFloat(currentBalance);
-  const rateValue = parseFloat(annualInterestRate) / 100;
+  // Blank or invalid reads as NaN
+  const balanceValue = parseTypedAmount(currentBalance, locale) ?? Number.NaN;
+  const rateValue = parseTypedPercent(annualInterestRate, locale) ?? Number.NaN;
+  const paymentValue = parseTypedAmount(scheduledPayment, locale) ?? Number.NaN;
   useEffect(() => {
     if (paymentEdited) return;
     setScheduledPayment(
-      scheduledPaymentAfterEdit(loan, payments, {
-        currentBalance: Number.isFinite(balanceValue) ? balanceValue : undefined,
-        annualInterestRate: Number.isFinite(rateValue) ? rateValue : undefined,
-      }).toString(),
+      typedAmountText(
+        scheduledPaymentAfterEdit(loan, payments, {
+          currentBalance: Number.isFinite(balanceValue)
+            ? balanceValue
+            : undefined,
+          annualInterestRate: Number.isFinite(rateValue)
+            ? rateValue
+            : undefined,
+        }),
+        locale,
+      ),
     );
-  }, [loan, payments, balanceValue, rateValue, paymentEdited]);
+  }, [loan, payments, balanceValue, rateValue, paymentEdited, locale]);
   const paymentRederived =
-    !paymentEdited && parseFloat(scheduledPayment) !== loan.scheduledPayment;
+    !paymentEdited && paymentValue !== loan.scheduledPayment;
+  const isValid = balanceValue >= 0 && rateValue >= 0 && paymentValue >= 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValid) return;
     setIsSubmitting(true);
 
     try {
       await updateLoan({
         loanId: loan._id,
         name,
-        currentBalance: parseFloat(currentBalance),
-        annualInterestRate: parseFloat(annualInterestRate) / 100,
-        scheduledPayment: parseFloat(scheduledPayment),
+        currentBalance: balanceValue,
+        annualInterestRate: rateValue,
+        scheduledPayment: paymentValue,
         status,
         // null clears a convention back to equal periods
         dayCount: dayCount ?? null,
@@ -161,9 +180,8 @@ export function EditLoanDialog({
                 </span>
                 <Input
                   id="edit-balance"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   className="ps-12"
                   value={currentBalance}
                   onChange={(e) => setCurrentBalance(e.target.value)}
@@ -176,10 +194,8 @@ export function EditLoanDialog({
               <div className="relative">
                 <Input
                   id="edit-rate"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
+                  type="text"
+                  inputMode="decimal"
                   className="pe-7"
                   value={annualInterestRate}
                   onChange={(e) => setAnnualInterestRate(e.target.value)}
@@ -198,9 +214,8 @@ export function EditLoanDialog({
                 </span>
                 <Input
                   id="edit-payment"
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   className="ps-12"
                   value={scheduledPayment}
                   onChange={(e) => {
@@ -289,7 +304,7 @@ export function EditLoanDialog({
             >
               {tActions("cancel")}
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={!isValid || isSubmitting}>
               {isSubmitting && (
                 <Loader2 className="h-4 w-4 me-2 animate-spin" />
               )}

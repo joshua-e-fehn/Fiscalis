@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useUser } from "@clerk/nextjs";
 import { Doc, Id } from "@/convex/_generated/dataModel";
 import { useSaveScenario, useDeleteScenario } from "@/hooks/convex/loans";
@@ -15,6 +15,12 @@ import {
   type ProjectLoanOptions,
 } from "@/../services/finance/loanScheduleService";
 import { todayLocalISO } from "@/lib/utils/date";
+import {
+  parseTypedAmount,
+  parseTypedPercent,
+  typedAmountText,
+  typedPercentText,
+} from "@/../services/i18n/typedAmount";
 import { formatCurrency as formatMoney } from "@/lib/utils/currency";
 import {
   Card,
@@ -92,22 +98,27 @@ interface OneTimePrepayment {
   amount: number;
 }
 
-/** A recurring extra being edited; blank dates are unbounded. */
+/**
+ * A recurring extra being edited: the amount as typed in the user's number
+ * format; blank dates are unbounded.
+ */
 interface RecurringExtraRow {
   id: string;
-  amount: number;
+  amount: string;
   from: string;
   until: string;
 }
 
-function toRecurringExtras(rows: RecurringExtraRow[]): RecurringExtra[] {
-  return rows
-    .filter((row) => row.amount > 0)
-    .map(({ amount, from, until }) => ({
-      amount,
-      ...(from && { from }),
-      ...(until && { until }),
-    }));
+function toRecurringExtras(
+  rows: RecurringExtraRow[],
+  locale: string,
+): RecurringExtra[] {
+  return rows.flatMap(({ amount: text, from, until }) => {
+    const amount = parseTypedAmount(text, locale) ?? 0;
+    return amount > 0
+      ? [{ amount, ...(from && { from }), ...(until && { until }) }]
+      : [];
+  });
 }
 
 interface ScenarioResult {
@@ -264,6 +275,8 @@ export function LoanScenariosTab({
   const tLoans = useTranslations("loans");
   const tActions = useTranslations("common.actions");
   const format = useFormatter();
+  // Amounts and the rate are shown and typed in the user's number format
+  const locale = useLocale();
   // Dates are calendar-only YYYY-MM-DD strings, which parse as UTC midnight:
   // shown as month and year ("Nov 2026")
   const formatDate = (date: string) =>
@@ -337,8 +350,12 @@ export function LoanScenariosTab({
   // Payment frequency label
   const frequencyLabel = tLoans(`frequency.${loan.paymentFrequency}`);
 
+  // Blank or not a number: the loan's own rate
+  const typedRate = parseTypedPercent(newRatePercent, locale);
   const newRate =
-    newRatePercent === "" ? undefined : parseFloat(newRatePercent) / 100;
+    typedRate !== undefined && Number.isFinite(typedRate)
+      ? typedRate
+      : undefined;
 
   // Calculate live scenario
   const liveScenario = useMemo(
@@ -347,7 +364,7 @@ export function LoanScenariosTab({
         loan,
         payments,
         {
-          recurringExtras: toRecurringExtras(recurringExtras),
+          recurringExtras: toRecurringExtras(recurringExtras, locale),
           oneTimePrepayments,
           newRate,
           prepaymentEffect,
@@ -362,6 +379,7 @@ export function LoanScenariosTab({
       loan,
       payments,
       recurringExtras,
+      locale,
       oneTimePrepayments,
       newRate,
       prepaymentEffect,
@@ -370,7 +388,7 @@ export function LoanScenariosTab({
   );
 
   const handleAddPrepayment = () => {
-    const amount = parseFloat(newPrepaymentAmount);
+    const amount = parseTypedAmount(newPrepaymentAmount, locale);
     if (!amount || amount <= 0) return;
 
     setOneTimePrepayments((prev) => [
@@ -391,7 +409,7 @@ export function LoanScenariosTab({
   const handleAddRecurringExtra = () => {
     setRecurringExtras((prev) => [
       ...prev,
-      { id: `extra-${Date.now()}`, amount: 0, from: "", until: "" },
+      { id: `extra-${Date.now()}`, amount: "", from: "", until: "" },
     ]);
   };
 
@@ -416,7 +434,7 @@ export function LoanScenariosTab({
       await saveScenario({
         loanId: loan._id,
         name: scenarioName,
-        recurringExtras: toRecurringExtras(recurringExtras),
+        recurringExtras: toRecurringExtras(recurringExtras, locale),
         oneTimePrepayments: oneTimePrepayments.map(({ date, amount }) => ({
           date,
           amount,
@@ -451,7 +469,7 @@ export function LoanScenariosTab({
     setRecurringExtras(
       resolveRecurringExtras(scenario).map((extra, i) => ({
         id: `saved-extra-${i}`,
-        amount: extra.amount,
+        amount: typedAmountText(extra.amount, locale),
         from: extra.from ?? "",
         until: extra.until ?? "",
       })),
@@ -464,13 +482,13 @@ export function LoanScenariosTab({
     );
     setNewRatePercent(
       scenario.newInterestRate !== undefined
-        ? String(scenario.newInterestRate * 100)
+        ? typedPercentText(scenario.newInterestRate, locale)
         : "",
     );
     setPrepaymentEffect(scenario.prepaymentEffect ?? "reduce_term");
   };
 
-  const activeRecurringExtras = toRecurringExtras(recurringExtras);
+  const activeRecurringExtras = toRecurringExtras(recurringExtras, locale);
   const hasChanges =
     activeRecurringExtras.length > 0 ||
     oneTimePrepayments.length > 0 ||
@@ -524,15 +542,14 @@ export function LoanScenariosTab({
                         {loan.currency}
                       </span>
                       <Input
-                        type="number"
-                        min="0"
-                        step="25"
+                        type="text"
+                        inputMode="decimal"
                         aria-label={t("amountPerPayment")}
-                        value={row.amount || ""}
+                        value={row.amount}
                         placeholder={t("amount")}
                         onChange={(e) =>
                           handleUpdateRecurringExtra(row.id, {
-                            amount: Math.max(0, parseFloat(e.target.value) || 0),
+                            amount: e.target.value,
                           })
                         }
                         className="ps-12"
@@ -623,9 +640,9 @@ export function LoanScenariosTab({
               </Label>
               <Input
                 id="whatif-rate"
-                type="number"
-                step="0.01"
-                placeholder={(loan.annualInterestRate * 100).toFixed(2)}
+                type="text"
+                inputMode="decimal"
+                placeholder={typedPercentText(loan.annualInterestRate, locale)}
                 value={newRatePercent}
                 onChange={(e) => setNewRatePercent(e.target.value)}
                 className="w-40"
@@ -654,7 +671,8 @@ export function LoanScenariosTab({
                   {loan.currency}
                 </span>
                 <Input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   placeholder={t("amount")}
                   aria-label={t("amount")}
                   value={newPrepaymentAmount}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { Doc } from "@/convex/_generated/dataModel";
 import {
   useRecordPayment,
@@ -14,6 +14,11 @@ import {
   paymentSplitBasis,
   splitLoanPayment,
 } from "@/../services/finance/loanScheduleService";
+import { roundMoney } from "@/../services/finance/financeService";
+import {
+  parseTypedAmount,
+  typedAmountText,
+} from "@/../services/i18n/typedAmount";
 import { useErrorMessage } from "@/i18n/errors";
 import { todayLocalISO } from "@/lib/utils/date";
 import { currencySymbols, toInvestmentCurrency } from "@/lib/utils/currency";
@@ -97,6 +102,9 @@ function LoanPaymentForm({
   const t = useTranslations("loans.schedule");
   const tActions = useTranslations("common.actions");
   const format = useFormatter();
+  // Amounts are shown and typed in the user's number format
+  const locale = useLocale();
+  const moneyText = (value: number) => typedAmountText(roundMoney(value), locale);
   const errorMessage = useErrorMessage();
   const { recordPayment } = useRecordPayment();
   const { updatePayment } = useUpdatePayment();
@@ -105,14 +113,15 @@ function LoanPaymentForm({
   const [paymentDate, setPaymentDate] = useState(
     () => payment?.paymentDate ?? todayLocalISO(),
   );
-  const [amount, setAmount] = useState(() =>
-    payment ? payment.amount.toString() : (defaultAmount?.toString() ?? ""),
+  const [amount, setAmount] = useState(() => {
+    const initial = payment?.amount ?? defaultAmount;
+    return initial === undefined ? "" : typedAmountText(initial, locale);
+  });
+  const [principalPortion, setPrincipalPortion] = useState(() =>
+    payment ? moneyText(payment.principalPortion) : "",
   );
-  const [principalPortion, setPrincipalPortion] = useState(
-    () => payment?.principalPortion.toFixed(2) ?? "",
-  );
-  const [interestPortion, setInterestPortion] = useState(
-    () => payment?.interestPortion.toFixed(2) ?? "",
+  const [interestPortion, setInterestPortion] = useState(() =>
+    payment ? moneyText(payment.interestPortion) : "",
   );
   const [paymentType, setPaymentType] = useState<PaymentType>(
     () => payment?.paymentType ?? "scheduled",
@@ -140,16 +149,18 @@ function LoanPaymentForm({
       : paymentSplitBasis(loan, payments, paymentDate);
   // Fees can't be entered here; an edit keeps the recorded ones
   const fees = payment?.feesPortion;
+  // Blank or invalid reads as NaN; a blank portion is left to the split
+  const amountValue = parseTypedAmount(amount, locale) ?? Number.NaN;
 
   const calculateSplit = () => {
     const split = splitLoanPayment(
       splitBasis(),
-      parseFloat(amount) || 0,
+      amountValue || 0,
       paymentType,
       { fees },
     );
-    setPrincipalPortion(split.principalPortion.toFixed(2));
-    setInterestPortion(split.interestPortion.toFixed(2));
+    setPrincipalPortion(moneyText(split.principalPortion));
+    setInterestPortion(moneyText(split.interestPortion));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,11 +168,11 @@ function LoanPaymentForm({
     // Keeps whichever portion was entered; principal is capped at the balance
     const split = splitLoanPayment(
       splitBasis(),
-      parseFloat(amount),
+      amountValue,
       paymentType,
       {
-        principal: parseFloat(principalPortion),
-        interest: parseFloat(interestPortion),
+        principal: parseTypedAmount(principalPortion, locale),
+        interest: parseTypedAmount(interestPortion, locale),
         fees,
       },
     );
@@ -262,9 +273,8 @@ function LoanPaymentForm({
               </span>
               <Input
                 id="payment-amount"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 className={inputPadding}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -285,9 +295,8 @@ function LoanPaymentForm({
               </span>
               <Input
                 id="principal-portion"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 className={inputPadding}
                 placeholder={t("auto")}
                 value={principalPortion}
@@ -304,9 +313,8 @@ function LoanPaymentForm({
               </span>
               <Input
                 id="interest-portion"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputMode="decimal"
                 className={inputPadding}
                 placeholder={t("auto")}
                 value={interestPortion}
@@ -342,7 +350,7 @@ function LoanPaymentForm({
           </Button>
           <Button
             type="submit"
-            disabled={!(parseFloat(amount) > 0) || isSubmitting}
+            disabled={!(amountValue > 0) || isSubmitting}
           >
             {isSubmitting && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
             {isEdit ? t("editSubmit") : t("recordPayment")}

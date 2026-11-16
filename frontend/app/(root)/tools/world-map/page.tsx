@@ -268,9 +268,17 @@ export default function WorldMapPage() {
   // comparison), once its series has loaded
   const openedIndicatorRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!series || openedIndicatorRef.current === selectedIndicator.id) return;
+    // An empty series (e.g. an upstream hiccup) does not count as opened, so
+    // a later successful load still jumps to the latest year
+    if (
+      !series ||
+      series.latestYear === null ||
+      openedIndicatorRef.current === selectedIndicator.id
+    ) {
+      return;
+    }
     openedIndicatorRef.current = selectedIndicator.id;
-    if (series.latestYear !== null) setYear(series.latestYear);
+    setYear(series.latestYear);
     setCompareStart(null);
     setCompareEnd(null);
   }, [series, selectedIndicator.id, setYear]);

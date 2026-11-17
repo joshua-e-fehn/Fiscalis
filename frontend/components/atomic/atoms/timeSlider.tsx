@@ -70,8 +70,11 @@ export function TimeSlider({
   className,
 }: TimeSliderProps) {
   const t = useTranslations("worldMap.timeSlider");
-  // Filter decade markers to only show those within range
-  const visibleMarkers = decadeMarkers.filter((y) => y > min && y < max);
+  // Decade markers inside the range, leaving room for the min/max labels
+  const visibleMarkers = decadeMarkers.filter((y) => {
+    const position = (y - min) / (max - min);
+    return position >= 0.1 && position <= 0.9;
+  });
 
   // Handle step controls with fallbacks
   const handleStepBackward = () => {

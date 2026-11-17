@@ -1,13 +1,16 @@
 import {
-  WORLDBANK_INDICATORS,
   type IndicatorId,
   type IndicatorMetadata,
   type IndicatorCategory,
-  type WorldBankDataPoint,
   type WorldBankApiResponse,
-  type CountryDataPoint,
-  type IndicatorData,
+  type IndicatorSeriesData,
+  YEAR_RANGE,
 } from "@/lib/types/worldbank";
+import {
+  buildSeries,
+  type IndicatorSeries,
+  type SeriesRow,
+} from "@/../services/worldbank/series";
 
 // ═══════════════════════════════════════════════════════════════
 // World Bank API Configuration
@@ -584,11 +587,12 @@ async function fetchWithRetry(
   url: string,
   options: RequestInit = {},
   retries: number = MAX_RETRIES,
+  timeoutMs: number = FETCH_TIMEOUT_MS,
 ): Promise<Response> {
   let lastError: Error | undefined;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const response = await fetchWithTimeout(url, options);
+      const response = await fetchWithTimeout(url, options, timeoutMs);
       // Retry on 5xx server errors from World Bank
       if (response.status >= 500 && attempt < retries) {
         await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
@@ -606,48 +610,79 @@ async function fetchWithRetry(
 }
 
 /**
- * Fetch indicator data from World Bank API (server-side)
- * @param indicator - The indicator key (e.g., "gdp", "population")
- * @param year - The year to fetch data for
- * @returns Array of country data points
+ * A full-history request is fast when the World Bank has it warm (<1s) but
+ * can take close to a minute cold, so it gets a longer timeout and a single
+ * retry instead of the per-request defaults.
  */
-export async function fetchWorldBankIndicator(
-  indicator: IndicatorId,
-  year: number,
-): Promise<CountryDataPoint[]> {
-  const indicatorCode = WORLDBANK_INDICATORS[indicator];
-  const url = `${WORLDBANK_BASE_URL}/country/all/indicator/${indicatorCode}?format=json&date=${year}&per_page=300`;
+const SERIES_TIMEOUT_MS = 90000;
+const SERIES_RETRIES = 1;
+/** One page holds 266 entities × ~66 years; more pages are still followed */
+const SERIES_PAGE_SIZE = 20000;
 
-  const response = await fetchWithRetry(url, {
-    headers: {
-      Accept: "application/json",
-    },
-  });
+/** The World Bank does not know the requested indicator code. */
+export class WorldBankIndicatorNotFoundError extends Error {}
 
-  if (!response.ok) {
-    throw new Error(
-      `World Bank API error: ${response.status} ${response.statusText}`,
+/**
+ * Every year of one indicator for every country and aggregate, in one
+ * request (server-side). Works for featured and searched indicator codes.
+ */
+export async function fetchWorldBankSeries(indicatorCode: string): Promise<{
+  /** The indicator's English name as the World Bank labels it */
+  name: string | null;
+  /** The World Bank's own last update date of the source */
+  lastUpdated: string | null;
+  series: IndicatorSeries;
+}> {
+  const lastYear = new Date().getUTCFullYear();
+  const rows: SeriesRow[] = [];
+  let name: string | null = null;
+  let lastUpdated: string | null = null;
+
+  for (let page = 1, pages = 1; page <= pages; page++) {
+    const url = `${WORLDBANK_BASE_URL}/country/all/indicator/${encodeURIComponent(indicatorCode)}?format=json&date=${YEAR_RANGE.min}:${lastYear}&per_page=${SERIES_PAGE_SIZE}&page=${page}`;
+    const response = await fetchWithRetry(
+      url,
+      { headers: { Accept: "application/json" } },
+      SERIES_RETRIES,
+      SERIES_TIMEOUT_MS,
     );
+    if (!response.ok) {
+      throw new Error(
+        `World Bank API error: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = await response.json();
+    // An unknown or archived code answers 200 with [{ message: [...] }]
+    if (data?.[0]?.message) {
+      throw new WorldBankIndicatorNotFoundError(
+        data[0].message[0]?.value || "Indicator not found",
+      );
+    }
+    const [meta, points] = data as WorldBankApiResponse;
+    pages = meta?.pages ?? 1;
+    lastUpdated ??= meta?.lastupdated ?? null;
+
+    for (const d of points ?? []) {
+      name ??= d.indicator?.value ?? null;
+      // WDI fills countryiso3code; other World Bank sources (e.g. the
+      // Sustainable Energy for All database) leave it empty and put the
+      // ISO3 code in country.id instead
+      const code3 =
+        d.countryiso3code ||
+        (d.country.id?.length === 3 ? d.country.id : "");
+      if (d.value === null || !code3) continue;
+      rows.push({
+        code: ISO3_TO_ISO2[code3] || code3,
+        code3,
+        name: d.country.value,
+        year: Number(d.date),
+        value: d.value,
+      });
+    }
   }
 
-  const data: WorldBankApiResponse = await response.json();
-
-  // World Bank returns [metadata, data[]] or [metadata, null] if no data
-  if (!data[1] || !Array.isArray(data[1])) {
-    return [];
-  }
-
-  const config = INDICATOR_METADATA[indicator];
-
-  return data[1]
-    .filter((d: WorldBankDataPoint) => d.value !== null && d.countryiso3code)
-    .map((d: WorldBankDataPoint) => ({
-      code: ISO3_TO_ISO2[d.countryiso3code] || d.countryiso3code,
-      code3: d.countryiso3code,
-      name: d.country.value,
-      value: d.value,
-      formattedValue: d.value !== null ? config.formatFn(d.value) : "N/A",
-    }));
+  return { name, lastUpdated, series: buildSeries(rows) };
 }
 
 /** An indicator's metadata without its formatFn (functions don't serialize) */
@@ -707,16 +742,17 @@ export function getIndicatorsByCategory(): Record<
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Fetch world data from our API route (client-side)
- * @param indicator - The indicator key
- * @param year - The year to fetch data for
- * @returns Indicator data with all countries
+ * Fetch an indicator's full history from our API route (client-side).
+ * `isDynamic` selects a searched World Bank code over a featured id.
  */
-export async function getWorldData(
-  indicator: IndicatorId,
-  year: number,
-): Promise<IndicatorData> {
-  const response = await fetch(`/api/world-data/${indicator}?year=${year}`);
+export async function getIndicatorSeries(
+  indicator: string,
+  isDynamic: boolean,
+): Promise<IndicatorSeriesData> {
+  const path = isDynamic
+    ? `/api/world-data/dynamic/${encodeURIComponent(indicator)}/series`
+    : `/api/world-data/series/${encodeURIComponent(indicator)}`;
+  const response = await fetch(path);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -762,10 +798,7 @@ export async function getIndicatorsGrouped(): Promise<{
 // Dynamic Indicator Functions (Client-side)
 // ═══════════════════════════════════════════════════════════════
 
-import type {
-  SearchedIndicator,
-  DynamicIndicatorData,
-} from "@/lib/types/worldbank-search";
+import type { SearchedIndicator } from "@/lib/types/worldbank-search";
 
 /**
  * Search World Bank indicators by keyword
@@ -784,27 +817,6 @@ export async function searchWorldBankIndicators(
 
   if (!response.ok) {
     throw new Error(`Failed to search indicators: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Fetch data for any World Bank indicator by code
- */
-export async function getDynamicWorldData(
-  indicatorCode: string,
-  year: number,
-): Promise<DynamicIndicatorData> {
-  const response = await fetch(
-    `/api/world-data/dynamic/${encodeURIComponent(indicatorCode)}?year=${year}`,
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error || `Failed to fetch indicator data: ${response.status}`,
-    );
   }
 
   return response.json();

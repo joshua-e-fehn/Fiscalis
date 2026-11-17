@@ -331,16 +331,30 @@ export function getRecommendedColorScale(indicatorId: string): ColorScaleType {
   return "quantile";
 }
 
-// MapLibre test for a feature without data. We use a special marker value
-// (-999999999) for "no data" since null doesn't serialize well in GeoJSON;
-// the GeoJSON processing sets dataValue to this marker when there's no data.
-const NO_DATA_TEST: ExpressionSpecification = [
-  "any",
-  ["!", ["has", "dataValue"]],
-  ["==", ["get", "dataValue"], -999999999],
-  ["==", ["get", "dataValue"], null],
-  ["==", ["typeof", ["get", "dataValue"]], "string"],
-];
+/** Value of a country without data in a map value expression. */
+export const NO_DATA_VALUE = -999999999;
+
+/**
+ * A MapLibre expression giving a feature's numeric value, NO_DATA_VALUE
+ * where it has none. The default reads the feature's `dataValue`
+ * property; the world map passes a lookup by country code instead, so
+ * the data never has to be written into the GeoJSON.
+ */
+export type MapValueExpression = ExpressionSpecification;
+
+const DATA_VALUE_PROPERTY: MapValueExpression = ["get", "dataValue"];
+
+/** MapLibre test for a feature without data. */
+function noDataTest(value: MapValueExpression): ExpressionSpecification {
+  if (value !== DATA_VALUE_PROPERTY) return ["==", value, NO_DATA_VALUE];
+  return [
+    "any",
+    ["!", ["has", "dataValue"]],
+    ["==", ["get", "dataValue"], NO_DATA_VALUE],
+    ["==", ["get", "dataValue"], null],
+    ["==", ["typeof", ["get", "dataValue"]], "string"],
+  ];
+}
 
 /**
  * Diverging fill for a change between two years: red for a decrease, yellow
@@ -352,24 +366,25 @@ const NO_DATA_TEST: ExpressionSpecification = [
 export function createDivergingMapColorExpression(
   stops: number[] | null,
   inverted: boolean = false,
+  value: MapValueExpression = DATA_VALUE_PROPERTY,
 ): MapColorExpression {
   const palette = inverted ? GREEN_TO_RED_PALETTE : RED_TO_GREEN_PALETTE;
   if (stops === null || stops.length !== palette.length) {
     return [
       "case",
-      NO_DATA_TEST,
+      noDataTest(value),
       NO_DATA_COLOR,
       palette[Math.floor(palette.length / 2)],
     ];
   }
   return [
     "case",
-    NO_DATA_TEST,
+    noDataTest(value),
     NO_DATA_COLOR,
     [
       "interpolate",
       ["linear"],
-      ["get", "dataValue"],
+      value,
       ...stops.flatMap((stop, i) => [stop, palette[i]]),
     ],
   ];
@@ -383,6 +398,7 @@ export function createMapColorExpression(
   values: number[],
   type: ColorScaleType = "quantile",
   inverted: boolean = false,
+  value: MapValueExpression = DATA_VALUE_PROPERTY,
 ): MapColorExpression {
   const validValues = values.filter((v): v is number => v != null && !isNaN(v));
 
@@ -410,7 +426,7 @@ export function createMapColorExpression(
     const positiveValues = sortedValues.filter((v) => v > 0);
     if (positiveValues.length === 0) {
       // Fall back to quantile if no positive values
-      return createMapColorExpression(values, "quantile", inverted);
+      return createMapColorExpression(values, "quantile", inverted, value);
     }
 
     const logMin = Math.log10(positiveValues[0]);
@@ -466,7 +482,7 @@ export function createMapColorExpression(
     const singleColor = palette[Math.floor(palette.length / 2)];
     return [
       "case",
-      NO_DATA_TEST,
+      noDataTest(value),
       NO_DATA_COLOR,
       singleColor,
     ];
@@ -476,8 +492,8 @@ export function createMapColorExpression(
   return [
     "case",
     // Check if dataValue is the "no data" marker or missing
-    NO_DATA_TEST,
+    noDataTest(value),
     NO_DATA_COLOR,
-    ["interpolate", ["linear"], ["get", "dataValue"], ...stops],
+    ["interpolate", ["linear"], value, ...stops],
   ];
 }

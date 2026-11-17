@@ -6,10 +6,7 @@
 import type {
   SearchedIndicator,
   WorldBankIndicatorSearchResult,
-  DynamicIndicatorData,
 } from "@/lib/types/worldbank-search";
-import type { WorldBankDataPoint } from "@/lib/types/worldbank";
-import { ISO3_TO_ISO2 } from "./worldbank";
 
 const WORLDBANK_BASE_URL = "https://api.worldbank.org/v2";
 
@@ -209,76 +206,6 @@ export async function fetchAllIndicatorsForSearch(
 }
 
 /**
- * Fetch data for any World Bank indicator code
- * Works with any valid indicator code, not just predefined ones
- */
-export async function fetchDynamicIndicator(
-  indicatorCode: string,
-  year: number,
-): Promise<DynamicIndicatorData> {
-  const url = `${WORLDBANK_BASE_URL}/country/all/indicator/${indicatorCode}?format=json&date=${year}&per_page=300`;
-
-  let response: Response;
-  try {
-    response = await fetchWithTimeout(url, {
-      headers: { Accept: "application/json" },
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(
-        "World Bank API request timed out. The API may be temporarily unavailable. Please try again later.",
-      );
-    }
-    throw error;
-  }
-
-  if (!response.ok) {
-    throw new Error(`World Bank API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  // Check for error message from World Bank
-  if (data[0]?.message) {
-    throw new Error(data[0].message[0]?.value || "Invalid indicator");
-  }
-
-  // Extract indicator info from first data point
-  const indicatorInfo = data[1]?.[0]?.indicator || {
-    id: indicatorCode,
-    value: indicatorCode,
-  };
-
-  // Determine unit and format based on indicator name
-  const name = indicatorInfo.value || indicatorCode;
-  const unit = guessUnitFromName(name);
-  const formatFn = getFormatFunction(unit);
-
-  const countries = (data[1] || [])
-    .filter((d: WorldBankDataPoint) => d.value !== null && d.countryiso3code)
-    .map((d: WorldBankDataPoint) => ({
-      code: ISO3_TO_ISO2[d.countryiso3code] || d.countryiso3code,
-      code3: d.countryiso3code,
-      name: d.country.value,
-      value: d.value,
-      formattedValue: d.value !== null ? formatFn(d.value) : "N/A",
-    }));
-
-  return {
-    indicator: {
-      code: indicatorCode,
-      name,
-      description: "",
-      unit,
-    },
-    year,
-    lastUpdated: new Date().toISOString(),
-    source: "World Bank",
-    countries,
-  };
-}
-
-/**
  * Get indicator metadata by code
  */
 export async function getIndicatorInfo(
@@ -322,7 +249,7 @@ export async function getIndicatorInfo(
 /**
  * Guess the unit from indicator name
  */
-function guessUnitFromName(name: string): string {
+export function guessUnitFromName(name: string): string {
   const nameLower = name.toLowerCase();
 
   if (
@@ -367,14 +294,14 @@ function guessUnitFromName(name: string): string {
 }
 
 /**
- * Get appropriate format function based on unit
+ * Format function for a searched indicator's values by its guessed unit
  */
-function getFormatFunction(unit: string): (value: number) => string {
+export function getFormatFunction(unit: string): (value: number) => string {
   switch (unit) {
     case "%":
       return (v) => `${v.toFixed(1)}%`;
     case "$":
-      return formatLargeNumber;
+      return (v) => formatLargeNumber(v, "$");
     case "years":
       return (v) => `${v.toFixed(1)} years`;
     case "t":
@@ -396,13 +323,14 @@ function getFormatFunction(unit: string): (value: number) => string {
 /**
  * Format large numbers with suffix
  */
-function formatLargeNumber(value: number): string {
+function formatLargeNumber(value: number, prefix: string = ""): string {
   const absValue = Math.abs(value);
   const sign = value < 0 ? "-" : "";
 
-  if (absValue >= 1e12) return `${sign}$${(absValue / 1e12).toFixed(2)}T`;
-  if (absValue >= 1e9) return `${sign}$${(absValue / 1e9).toFixed(2)}B`;
-  if (absValue >= 1e6) return `${sign}$${(absValue / 1e6).toFixed(2)}M`;
-  if (absValue >= 1e3) return `${sign}$${(absValue / 1e3).toFixed(2)}K`;
-  return `${sign}$${absValue.toFixed(0)}`;
+  if (absValue >= 1e12)
+    return `${sign}${prefix}${(absValue / 1e12).toFixed(2)}T`;
+  if (absValue >= 1e9) return `${sign}${prefix}${(absValue / 1e9).toFixed(2)}B`;
+  if (absValue >= 1e6) return `${sign}${prefix}${(absValue / 1e6).toFixed(2)}M`;
+  if (absValue >= 1e3) return `${sign}${prefix}${(absValue / 1e3).toFixed(2)}K`;
+  return `${sign}${prefix}${absValue.toFixed(0)}`;
 }

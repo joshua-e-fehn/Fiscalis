@@ -149,8 +149,14 @@ export default defineSchema({
 		category: v.optional(v.string()),
 		pending: v.boolean(),
 		syncedAt: v.number(),
+		// The ISIN of a securities trade settled on the account (a DKB
+		// "Wertp.Abrechn." booking, services/banking/securityTrades.ts),
+		// set when stored; depot holdings are derived from these rows
+		securityIsin: v.optional(v.string()),
 	})
 		.index("by_user", ["userId"])
+		.index("by_user_security", ["userId", "securityIsin"])
+		.index("by_security", ["securityIsin"])
 		.index("by_account", ["accountId"])
 		.index("by_account_date", ["accountId", "date"])
 		.index("by_account_synced", ["accountId", "syncedAt"])
@@ -161,6 +167,27 @@ export default defineSchema({
 			searchField: "name",
 			filterFields: ["userId", "accountId"],
 		}),
+
+	// Securities trades of a bank depot imported from the bank's own export
+	// (a DKB "Umsatzliste" CSV, services/banking/dkbCsv.ts), because Plaid
+	// does not pass DKB's depot bookings on. Merged with any trade read from
+	// plaidTransactions by depot and settlement reference (lib/netWorth.ts).
+	depotTrades: defineTable({
+		userId: v.string(),
+		depot: v.string(),
+		reference: v.string(), // the bank's settlement reference
+		tradeDate: v.string(), // YYYY-MM-DD
+		wkn: v.string(),
+		isin: v.string(),
+		name: v.string(),
+		side: v.union(v.literal("buy"), v.literal("sell")),
+		quantity: v.number(),
+		cash: v.number(), // paid or received, positive, fees included
+		currency: v.string(),
+		importedAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_user_reference", ["userId", "depot", "reference"]),
 
 	// ═══════════════════════════════════════════════════════════════
 	// BROKERS (SnapTrade)
@@ -1133,9 +1160,16 @@ export default defineSchema({
 	// refresh crons (convex/assetPrices.ts), which re-price the holdings the
 	// PRICE_FEEDS seam assigns to them (services/performance/config.ts).
 	assetPrices: defineTable({
-		provider: v.union(v.literal("bitpanda"), v.literal("snaptrade")),
+		// yahoo: the price of an ISIN a bank depot holds (symbol = ISIN,
+		// ticker = the Yahoo listing chosen, actions/securityPrices.ts)
+		provider: v.union(
+			v.literal("bitpanda"),
+			v.literal("snaptrade"),
+			v.literal("yahoo"),
+		),
 		symbol: v.string(),
 		ticker: v.optional(v.string()), // SnapTrade: the ticker of the id
+		quoteType: v.optional(v.string()), // yahoo: MUTUALFUND, ETF or EQUITY
 		price: v.number(),
 		currency: v.string(),
 		fetchedAt: v.number(),

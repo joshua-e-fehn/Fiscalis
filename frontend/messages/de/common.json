@@ -183,7 +183,9 @@
     "billingUnavailable": "Die Abrechnung ist gerade nicht verfügbar. Bitte versuch es später erneut.",
     "billingAlreadySubscribed": "Du hast bereits ein Pro-Abo. Du verwaltest es unter Abrechnung.",
     "billingNoCustomer": "Es gibt noch kein Abo zum Verwalten.",
-    "billingProviderError": "Unser Zahlungsanbieter ist gerade nicht erreichbar. Bitte versuch es in ein paar Minuten erneut."
+    "billingProviderError": "Unser Zahlungsanbieter ist gerade nicht erreichbar. Bitte versuch es in ein paar Minuten erneut.",
+    "depotCsvUnreadable": "Diese Datei lässt sich nicht importieren. Nutze den CSV-Export deines DKB-Kontos.",
+    "depotTradeNotFound": "Diesen Trade gibt es nicht mehr. Lade die Seite neu und versuch es erneut."
   },
   "a11y": {
     "toggleSidebar": "Seitenleiste ein-/ausblenden",

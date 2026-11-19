@@ -183,7 +183,9 @@
     "billingUnavailable": "La facturación no está disponible ahora mismo. Inténtalo de nuevo más tarde.",
     "billingAlreadySubscribed": "Ya tienes una suscripción Pro. Gestiónala en Facturación.",
     "billingNoCustomer": "Todavía no hay ninguna suscripción que gestionar.",
-    "billingProviderError": "No hemos podido contactar con nuestro proveedor de pagos. Inténtalo de nuevo en unos minutos."
+    "billingProviderError": "No hemos podido contactar con nuestro proveedor de pagos. Inténtalo de nuevo en unos minutos.",
+    "depotCsvUnreadable": "No se ha podido importar este archivo. Usa la exportación CSV de tu cuenta DKB.",
+    "depotTradeNotFound": "Esta operación ya no existe. Recarga la página e inténtalo de nuevo."
   },
   "a11y": {
     "toggleSidebar": "Mostrar u ocultar la barra lateral",

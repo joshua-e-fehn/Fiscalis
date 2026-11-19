@@ -53,6 +53,7 @@ export const DEMO_TABLES = [
   "plaidItems",
   "plaidAccounts",
   "plaidTransactions",
+  "depotTrades",
   "snaptradeUsers",
   "brokerConnections",
   "brokerAccounts",
@@ -407,6 +408,22 @@ export async function insertDemoData(
     attributes: { address: "Musterstraße 1, Berlin" },
     createdAt: now,
     updatedAt: now,
+  });
+
+  // ── Bank depot trade (a DKB CSV import, depotTrades.ts) ────────
+  await insert("depotTrades", {
+    userId,
+    depot: "0123456789",
+    reference: "000002823074800",
+    tradeDate: isoDay(now - 30 * DAY_MS),
+    wkn: "A2N812",
+    isin: "DE000A2N8127",
+    name: "BIT GL.TECH.LEAD. R-I",
+    side: "buy",
+    quantity: 2,
+    cash: 1760.32,
+    currency: "EUR",
+    importedAt: now,
   });
 
   // ── Pies ───────────────────────────────────────────────────────

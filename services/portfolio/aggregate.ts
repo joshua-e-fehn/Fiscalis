@@ -75,7 +75,12 @@ export type HoldingSource =
   | "vault"
   | "loan"
   /** A manual asset (manualAssets.ts), valued by its own valuations */
-  | "manualAsset";
+  | "manualAsset"
+  /**
+   * A security in a bank depot, derived from the trades settled on the
+   * bank account (services/banking/securityTrades.ts)
+   */
+  | "bankDepot";
 
 export interface NormalizedHolding {
   /** Id of the stored document (unique per source) */

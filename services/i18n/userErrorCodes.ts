@@ -164,6 +164,10 @@ export const USER_ERROR_CODES = [
   "snaptradeAccountUnavailable",
   "snaptradeAccountsUnplaced",
   "snaptradeSyncFailed",
+
+  // Bank depot import (convex/depotTrades.ts, services/banking/dkbCsv.ts)
+  "depotCsvUnreadable",
+  "depotTradeNotFound",
 ] as const;
 
 export type UserErrorCode = (typeof USER_ERROR_CODES)[number];

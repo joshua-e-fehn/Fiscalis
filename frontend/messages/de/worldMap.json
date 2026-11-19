@@ -42,7 +42,9 @@
     "loadDescription": "Die Daten der Weltbank konnten nicht abgerufen werden. Bitte versuche es erneut.",
     "retry": "Erneut versuchen",
     "mapTitle": "Kartenfehler",
-    "mapDescription": "Die Kartendaten konnten nicht geladen werden."
+    "mapDescription": "Die Kartendaten konnten nicht geladen werden.",
+    "unavailableTitle": "Indikator nicht mehr verfügbar",
+    "unavailableDescription": "Die Weltbank veröffentlicht diesen Indikator nicht mehr, daher kann er nicht auf der Karte angezeigt werden. Bitte wähle einen anderen."
   },
   "map": {
     "fallbackTitle": "Weltkarte",
@@ -105,12 +107,6 @@
     "searching": "Suche läuft…",
     "results": "Suchergebnisse ({count})",
     "fromTotal": "{count, plural, one {aus # Indikator} other {aus # Indikatoren}}",
-    "slow": "Langsam",
-    "slowTooltip": "{count, plural, one {Bei diesem Indikator gab es eine Zeitüberschreitung.} other {Bei diesem Indikator gab es # Zeitüberschreitungen.}}",
-    "slowHint": "Er kann langsam oder unzuverlässig sein.",
-    "unreliable": "Unzuverlässig",
-    "unreliableTooltip": "{count, plural, one {Dieser Indikator lässt sich oft nicht laden (# Zeitüberschreitung).} other {Dieser Indikator lässt sich oft nicht laden (# Zeitüberschreitungen).}}",
-    "unreliableHint": "Möglicherweise sind keine Daten verfügbar.",
     "addFavorite": "Zu Favoriten hinzufügen",
     "removeFavorite": "Aus Favoriten entfernen",
     "emptyDatabase": "Die Indikator-Datenbank ist leer",
@@ -121,7 +117,9 @@
     "featuredIndicators": "Empfohlene Indikatoren",
     "selected": "Ausgewählt",
     "dataSource": "Datenquelle: <link>World Bank Open Data</link>",
-    "synced": "Synchronisiert: {date}"
+    "synced": "Synchronisiert: {date}",
+    "coverage": "Zuletzt {year} · {count, plural, one {# Land} other {# Länder}}",
+    "unavailable": "Nicht mehr verfügbar"
   },
   "categories": {
     "economy": "Wirtschaft",

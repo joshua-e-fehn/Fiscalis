@@ -82,9 +82,16 @@ import {
   useWorldDataDelta,
   useIndicatorFormat,
 } from "@/hooks/worldbank";
-import { INDICATOR_METADATA } from "@/lib/api/worldbank";
+import {
+  INDICATOR_METADATA,
+  WorldBankIndicatorNotFoundError,
+} from "@/lib/api/worldbank";
 import { useTimePlayback } from "@/hooks/useTimePlayback";
-import { useIsIndicatorFavorited, useToggleFavorite } from "@/hooks/convex";
+import {
+  useIsIndicatorFavorited,
+  useRequestIndicatorCheck,
+  useToggleFavorite,
+} from "@/hooks/convex";
 
 // Types
 import { YEAR_RANGE, isIndicatorId } from "@/lib/types/worldbank";
@@ -228,6 +235,25 @@ export default function WorldMapPage() {
   const isLoading = seriesQuery.isLoading;
   const error = seriesQuery.error;
   const refetch = seriesQuery.refetch;
+  // The World Bank no longer serves this code: retrying won't help
+  const isUnavailable = error instanceof WorldBankIndicatorNotFoundError;
+  const isEmptySeries = series?.firstYear === null;
+
+  // A searched indicator that turned out unusable: have the server check it
+  // now so search stops offering it (it decides from its own request)
+  const requestIndicatorCheck = useRequestIndicatorCheck();
+  useEffect(() => {
+    if (isFeaturedIndicator || !(isUnavailable || isEmptySeries)) return;
+    requestIndicatorCheck({ code: selectedIndicator.id }).catch(() => {
+      // Best effort; the scheduled checks catch it later
+    });
+  }, [
+    isFeaturedIndicator,
+    isUnavailable,
+    isEmptySeries,
+    selectedIndicator.id,
+    requestIndicatorCheck,
+  ]);
 
   // The slider spans the years with data; before the series arrives it
   // keeps the requested range
@@ -940,7 +966,7 @@ export default function WorldMapPage() {
           </div>
 
           {/* Loaded, but the indicator has no country values at all */}
-          {series && series.firstYear === null && (
+          {isEmptySeries && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>{t("top.empty")}</AlertTitle>
@@ -948,7 +974,16 @@ export default function WorldMapPage() {
           )}
 
           {/* Error State */}
-          {error && (
+          {isUnavailable && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{t("errors.unavailableTitle")}</AlertTitle>
+              <AlertDescription>
+                {t("errors.unavailableDescription")}
+              </AlertDescription>
+            </Alert>
+          )}
+          {error && !isUnavailable && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>{t("errors.loadTitle")}</AlertTitle>

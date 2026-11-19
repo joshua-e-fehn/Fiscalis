@@ -19,6 +19,7 @@ import {
   getIndicatorSeries,
   INDICATOR_METADATA,
   searchWorldBankIndicators,
+  WorldBankIndicatorNotFoundError,
 } from "@/lib/api/worldbank";
 import { getFormatFunction } from "@/lib/api/worldbank-search";
 import { isIndicatorId } from "@/lib/types/worldbank";
@@ -78,8 +79,10 @@ export function useIndicatorSeries(indicator: string, isDynamic: boolean) {
     gcTime: 24 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     // The server already retries the World Bank; one more try covers a
-    // dropped connection without stacking minute-long waits
-    retry: 1,
+    // dropped connection without stacking minute-long waits. A code the
+    // World Bank no longer serves is final.
+    retry: (failureCount, error) =>
+      !(error instanceof WorldBankIndicatorNotFoundError) && failureCount < 1,
   });
 }
 

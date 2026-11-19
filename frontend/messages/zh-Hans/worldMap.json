@@ -42,7 +42,9 @@
     "loadDescription": "无法获取世界银行数据，请重试。",
     "retry": "重试",
     "mapTitle": "地图错误",
-    "mapDescription": "无法加载地图数据。"
+    "mapDescription": "无法加载地图数据。",
+    "unavailableTitle": "指标已不再提供",
+    "unavailableDescription": "世界银行已不再发布此指标，因此无法在地图上显示。请选择其他指标。"
   },
   "map": {
     "fallbackTitle": "世界地图",
@@ -105,12 +107,6 @@
     "searching": "正在搜索…",
     "results": "搜索结果（{count}）",
     "fromTotal": "{count, plural, other {共 # 个指标}}",
-    "slow": "较慢",
-    "slowTooltip": "{count, plural, other {此指标已超时 # 次。}}",
-    "slowHint": "它可能较慢或不稳定。",
-    "unreliable": "不稳定",
-    "unreliableTooltip": "{count, plural, other {此指标经常加载失败（# 次超时）。}}",
-    "unreliableHint": "数据可能不可用。",
     "addFavorite": "添加到收藏",
     "removeFavorite": "从收藏中移除",
     "emptyDatabase": "指标数据库为空",
@@ -121,7 +117,9 @@
     "featuredIndicators": "精选指标",
     "selected": "已选择",
     "dataSource": "数据来源：<link>世界银行开放数据</link>",
-    "synced": "已同步：{date}"
+    "synced": "已同步：{date}",
+    "coverage": "最新 {year} · {count} 个国家",
+    "unavailable": "已不再提供"
   },
   "categories": {
     "economy": "经济",

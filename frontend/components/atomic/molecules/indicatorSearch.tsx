@@ -296,6 +296,16 @@ export function IndicatorSearch({
                           </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {indicator.code}
+                            {indicator.latestYear !== undefined &&
+                              indicator.countryCount !== undefined && (
+                                <>
+                                  {" · "}
+                                  {t("search.coverage", {
+                                    year: String(indicator.latestYear),
+                                    count: indicator.countryCount,
+                                  })}
+                                </>
+                              )}
                           </div>
                           {indicator.description && (
                             <div className="text-xs text-muted-foreground line-clamp-2 mt-1">
@@ -380,12 +390,21 @@ export function IndicatorSearch({
                     <div
                       key={favorite.code}
                       role="button"
-                      tabIndex={0}
-                      onClick={() => handleSelectFavorite(favorite)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" && handleSelectFavorite(favorite)
+                      tabIndex={favorite.available ? 0 : -1}
+                      aria-disabled={!favorite.available}
+                      onClick={() =>
+                        favorite.available && handleSelectFavorite(favorite)
                       }
-                      className={`w-full text-start px-3 py-2 rounded-md hover:bg-accent transition-colors group cursor-pointer ${
+                      onKeyDown={(e) =>
+                        e.key === "Enter" &&
+                        favorite.available &&
+                        handleSelectFavorite(favorite)
+                      }
+                      className={`w-full text-start px-3 py-2 rounded-md transition-colors group ${
+                        favorite.available
+                          ? "hover:bg-accent cursor-pointer"
+                          : "cursor-not-allowed"
+                      } ${
                         selectedIndicator.id === favorite.code
                           ? "bg-accent"
                           : ""
@@ -393,7 +412,11 @@ export function IndicatorSearch({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">
+                          <div
+                            className={`font-medium truncate ${
+                              favorite.available ? "" : "text-muted-foreground"
+                            }`}
+                          >
                             {
                               indicatorText({
                                 id: favorite.code,
@@ -403,6 +426,12 @@ export function IndicatorSearch({
                           </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {favorite.code}
+                            {!favorite.available && (
+                              <>
+                                {" · "}
+                                {t("search.unavailable")}
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">

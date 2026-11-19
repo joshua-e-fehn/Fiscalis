@@ -135,6 +135,13 @@ describe("DKB CSV import", () => {
     expect(await t.query(internal.assetPrices.heldSecurityIsins, {})).toEqual([
       "DE000A2N8127",
     ]);
+    // The first import scheduled a price lookup for its ISIN
+    const scheduled = await t.run((ctx) =>
+      ctx.db.system.query("_scheduled_functions").collect(),
+    );
+    expect(
+      scheduled.filter((f) => f.name.includes("securityPrices")).map((f) => f.args[0]),
+    ).toContainEqual({ isins: ["DE000A2N8127"] });
   });
 
   it("counts a trade Plaid also delivered once", async () => {

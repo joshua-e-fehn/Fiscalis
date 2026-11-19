@@ -11,6 +11,7 @@
 
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getOwnedDoc, getUserId, requireUserId } from "./lib/auth";
 import { userError } from "./lib/userError";
 import { scheduleSnapshot } from "./portfolioSnapshots";
@@ -20,6 +21,9 @@ import { isValidSettledTrade } from "../../services/banking/securityTrades";
 const MAX_TRADES_PER_IMPORT = 2000;
 
 const SNAPSHOT_SOURCE = "depotImport";
+
+/** An import re-prices an ISIN whose stored price is older than this. */
+const IMPORT_REPRICE_AFTER_MS = 60 * 60_000;
 
 const tradeValidator = v.object({
   depot: v.string(),
@@ -86,6 +90,27 @@ export const importDepotTrades = mutation({
       }
     }
     if (trades.length > 0) await scheduleSnapshot(ctx, userId, SNAPSHOT_SOURCE);
+    // Price what the import names now rather than at the next refresh
+    // (crons.ts), skipping ISINs priced in the last hour
+    const unpriced: string[] = [];
+    for (const isin of new Set(trades.map((t) => t.isin))) {
+      const stored = await ctx.db
+        .query("assetPrices")
+        .withIndex("by_provider_symbol", (q) =>
+          q.eq("provider", "yahoo").eq("symbol", isin),
+        )
+        .unique();
+      if (!stored || now - stored.fetchedAt > IMPORT_REPRICE_AFTER_MS) {
+        unpriced.push(isin);
+      }
+    }
+    if (unpriced.length > 0) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.actions.securityPrices.refreshSecurityPrices,
+        { isins: unpriced },
+      );
+    }
     return { added, updated: trades.length - added };
   },
 });

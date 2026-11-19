@@ -1,5 +1,6 @@
 "use node";
 
+import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { describeError } from "../../../services/security/providerError";
@@ -41,12 +42,12 @@ async function getJson(url: string): Promise<unknown> {
 }
 
 export const refreshSecurityPrices = internalAction({
-  args: {},
-  handler: async (ctx): Promise<{ isins: number; stored: number }> => {
-    const isins: string[] = await ctx.runQuery(
-      internal.assetPrices.heldSecurityIsins,
-      {},
-    );
+  // Only these ISINs (an import's, depotTrades.ts); every held one when absent
+  args: { isins: v.optional(v.array(v.string())) },
+  handler: async (ctx, args): Promise<{ isins: number; stored: number }> => {
+    const isins: string[] =
+      args.isins ??
+      (await ctx.runQuery(internal.assetPrices.heldSecurityIsins, {}));
     const now = Date.now();
     const prices = [];
     for (const isin of isins) {

@@ -70,6 +70,7 @@ crons.interval(
   "refresh-security-prices",
   { hours: SECURITY_PRICE_REFRESH_HOURS },
   internal.actions.securityPrices.refreshSecurityPrices,
+  {},
 );
 
 // ═══════════════════════════════════════════════════════════════

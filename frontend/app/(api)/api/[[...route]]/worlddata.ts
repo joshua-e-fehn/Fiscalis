@@ -6,72 +6,97 @@ import { zValidator } from "@hono/zod-validator";
 import { describeError } from "@/../services/security/providerError";
 
 import {
-  fetchWorldBankIndicator,
+  fetchWorldBankSeries,
   getIndicatorMetadata,
   getAllIndicatorsMetadata,
   getIndicatorsByCategory,
+  WorldBankIndicatorNotFoundError,
 } from "@/lib/api/worldbank";
 import {
   searchIndicators,
-  fetchDynamicIndicator,
   getIndicatorInfo,
+  guessUnitFromName,
 } from "@/lib/api/worldbank-search";
 import {
   INDICATOR_IDS,
-  YEAR_RANGE,
+  WORLDBANK_INDICATORS,
   type IndicatorId,
-  type IndicatorData,
   type IndicatorMetadata,
   type IndicatorCategory,
+  type IndicatorSeriesData,
 } from "@/lib/types/worldbank";
-import type {
-  SearchedIndicator,
-  DynamicIndicatorData,
-} from "@/lib/types/worldbank-search";
+import type { SearchedIndicator } from "@/lib/types/worldbank-search";
 
 // ═══════════════════════════════════════════════════════════════
-// In-Memory Cache with TTL
+// Series cache: in-memory per instance, in-flight requests shared
 // ═══════════════════════════════════════════════════════════════
 
-interface CacheEntry {
-  data: IndicatorData;
-  timestamp: number;
-}
-
-const cache = new Map<string, CacheEntry>();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (historical data rarely changes)
+const CACHE_MAX_ENTRIES = 100; // one entry is a whole indicator (~0.3 MB)
 
-function getCacheKey(indicator: string, year: number): string {
-  return `${indicator}:${year}`;
-}
+const cache = new Map<string, { data: IndicatorSeriesData; timestamp: number }>();
+const inFlight = new Map<string, Promise<IndicatorSeriesData>>();
 
-function getFromCache(key: string): IndicatorData | null {
-  const entry = cache.get(key);
-  if (!entry) return null;
-
-  // Check if cache entry has expired
-  if (Date.now() - entry.timestamp > CACHE_TTL) {
-    cache.delete(key);
-    return null;
-  }
-
-  return entry.data;
-}
-
-function setCache(
+/**
+ * The cached series for `key`, else one shared upstream load: concurrent
+ * requests for the same indicator wait on the same World Bank call.
+ */
+async function cachedSeries(
   key: string,
-  data: IndicatorData | DynamicIndicatorData,
-): void {
-  // Limit cache size to prevent memory issues (keep last 500 entries)
-  if (cache.size >= 500) {
-    // Remove oldest entries
-    const entries = Array.from(cache.entries());
-    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-    const toRemove = entries.slice(0, 100); // Remove 100 oldest
-    toRemove.forEach(([key]) => cache.delete(key));
+  load: () => Promise<IndicatorSeriesData>,
+): Promise<{ data: IndicatorSeriesData; hit: boolean }> {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.timestamp <= CACHE_TTL) {
+    return { data: entry.data, hit: true };
   }
 
-  cache.set(key, { data: data as IndicatorData, timestamp: Date.now() });
+  let pending = inFlight.get(key);
+  if (!pending) {
+    pending = load()
+      .then((data) => {
+        // An empty answer may be an upstream hiccup or a parsing gap: retry
+        // it on the next request instead of keeping it for a day
+        if (isEmpty(data)) return data;
+        if (cache.size >= CACHE_MAX_ENTRIES) {
+          // Map keeps insertion order: drop the oldest entry
+          const oldest = cache.keys().next().value;
+          if (oldest !== undefined) cache.delete(oldest);
+        }
+        cache.delete(key);
+        cache.set(key, { data, timestamp: Date.now() });
+        return data;
+      })
+      .finally(() => inFlight.delete(key));
+    inFlight.set(key, pending);
+  }
+  return { data: await pending, hit: false };
+}
+
+/**
+ * Series answers are public and change at most daily: the CDN keeps them a
+ * day and serves a stale copy for a week while it refreshes, so a cold
+ * function rarely waits on the World Bank.
+ */
+const SERIES_CACHE_CONTROL =
+  "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800";
+/** An empty series is cached only briefly anywhere */
+const EMPTY_SERIES_CACHE_CONTROL = "public, max-age=60, s-maxage=300";
+
+function isEmpty(data: IndicatorSeriesData): boolean {
+  return data.series.firstYear === null;
+}
+
+function seriesCacheControl(data: IndicatorSeriesData): string {
+  return isEmpty(data) ? EMPTY_SERIES_CACHE_CONTROL : SERIES_CACHE_CONTROL;
+}
+
+function seriesError(c: Context, error: unknown, label: string) {
+  console.error(`World Bank series error for ${label}:`, describeError(error));
+  c.header("Cache-Control", "no-store");
+  if (error instanceof WorldBankIndicatorNotFoundError) {
+    return c.json({ error: "Indicator not found" }, 404);
+  }
+  return c.json({ error: "Failed to fetch data from World Bank" }, 502);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -81,14 +106,6 @@ function setCache(
 // Featured indicators (predefined)
 const indicatorParamSchema = z.object({
   indicator: z.enum(INDICATOR_IDS as [IndicatorId, ...IndicatorId[]]),
-});
-
-const yearQuerySchema = z.object({
-  year: z.coerce
-    .number()
-    .int()
-    .min(YEAR_RANGE.min, `Year must be >= ${YEAR_RANGE.min}`)
-    .max(YEAR_RANGE.max, `Year must be <= ${YEAR_RANGE.max}`),
 });
 
 const indicatorsQuerySchema = z.object({
@@ -102,8 +119,14 @@ const searchQuerySchema = z.object({
 });
 
 // Dynamic indicator schema (any World Bank indicator code)
+// World Bank codes are letters, digits, dots, dashes and underscores; the
+// code goes into the upstream URL path, so nothing else is accepted.
 const dynamicIndicatorParamSchema = z.object({
-  code: z.string().min(1, "Indicator code is required"),
+  code: z
+    .string()
+    .min(1, "Indicator code is required")
+    .max(64, "Indicator code is too long")
+    .regex(/^[A-Za-z0-9._-]+$/, "Invalid indicator code"),
 });
 
 /**
@@ -187,55 +210,37 @@ const app = new Hono()
   )
 
   /**
-   * GET /api/world-data/dynamic/:code
-   * Fetch data for ANY World Bank indicator by code
-   * Path params:
-   *   - code: string (World Bank indicator code, e.g., "NY.GDP.MKTP.CD")
-   * Query params:
-   *   - year: number (1960-2024)
+   * GET /api/world-data/dynamic/:code/series
+   * Every year of ANY World Bank indicator by code (e.g. "NY.GDP.MKTP.CD")
    */
   .get(
-    "/dynamic/:code",
+    "/dynamic/:code/series",
     zValidator("param", dynamicIndicatorParamSchema, rejectInvalid),
-    zValidator("query", yearQuerySchema, rejectInvalid),
     async (c) => {
       const { code } = c.req.valid("param");
-      const { year } = c.req.valid("query");
-
-      const cacheKey = getCacheKey(`dynamic:${code}`, year);
-
-      // Check cache first
-      const cached = getFromCache(cacheKey);
-      if (cached) {
-        c.header("X-Cache", "HIT");
-        return c.json(cached);
-      }
 
       try {
-        const result = await fetchDynamicIndicator(code, year);
-
-        // Cache the result
-        setCache(cacheKey, result);
-        c.header("X-Cache", "MISS");
-
-        return c.json(result);
-      } catch (error) {
-        console.error(
-          `Dynamic indicator error for ${code}/${year}:`,
-          describeError(error),
-        );
-
-        if (error instanceof Error) {
-          return c.json(
-            {
-              error: "Failed to fetch indicator data",
-              message: error.message,
+        const { data, hit } = await cachedSeries(`dynamic:${code}`, async () => {
+          const { name, lastUpdated, series } =
+            await fetchWorldBankSeries(code);
+          const label = name ?? code;
+          return {
+            indicator: {
+              id: code,
+              name: label,
+              description: "",
+              unit: guessUnitFromName(label),
             },
-            500,
-          );
-        }
-
-        return c.json({ error: "Failed to fetch indicator data" }, 500);
+            source: "World Bank",
+            lastUpdated,
+            series,
+          };
+        });
+        c.header("X-Cache", hit ? "HIT" : "MISS");
+        c.header("Cache-Control", seriesCacheControl(data));
+        return c.json<IndicatorSeriesData>(data);
+      } catch (error) {
+        return seriesError(c, error, code);
       }
     },
   )
@@ -267,67 +272,34 @@ const app = new Hono()
   )
 
   /**
-   * GET /api/world-data/:indicator
-   * Fetch world data for a FEATURED indicator and year
-   * Path params:
-   *   - indicator: IndicatorId (e.g., "gdp", "population")
-   * Query params:
-   *   - year: number (1960-2024)
+   * GET /api/world-data/series/:indicator
+   * Every year of a FEATURED indicator (e.g. "gdp", "population")
    */
   .get(
-    "/:indicator",
+    "/series/:indicator",
     zValidator("param", indicatorParamSchema, rejectInvalid),
-    zValidator("query", yearQuerySchema, rejectInvalid),
     async (c) => {
       const { indicator } = c.req.valid("param");
-      const { year } = c.req.valid("query");
-
-      const cacheKey = getCacheKey(indicator, year);
-
-      // Check cache first
-      const cached = getFromCache(cacheKey);
-      if (cached) {
-        // Add cache header for debugging
-        c.header("X-Cache", "HIT");
-        return c.json<IndicatorData>(cached);
-      }
 
       try {
-        // Fetch from World Bank API
-        const countries = await fetchWorldBankIndicator(indicator, year);
-        const metadata = getIndicatorMetadata(indicator);
-
-        const result: IndicatorData = {
-          indicator: metadata,
-          year,
-          lastUpdated: new Date().toISOString(),
-          source: "World Bank",
-          countries,
-        };
-
-        // Cache the result
-        setCache(cacheKey, result);
-        c.header("X-Cache", "MISS");
-
-        return c.json<IndicatorData>(result);
-      } catch (error) {
-        console.error(
-          `World Bank API error for ${indicator}/${year}:`,
-          describeError(error),
-        );
-
-        // Return appropriate error response
-        if (error instanceof Error) {
-          return c.json(
-            {
-              error: "Failed to fetch data from World Bank",
-              message: error.message,
-            },
-            500,
+        const { data, hit } = await cachedSeries(indicator, async () => {
+          const { lastUpdated, series } = await fetchWorldBankSeries(
+            WORLDBANK_INDICATORS[indicator],
           );
-        }
-
-        return c.json({ error: "Failed to fetch data from World Bank" }, 500);
+          const { id, name, description, unit } =
+            getIndicatorMetadata(indicator);
+          return {
+            indicator: { id, name, description, unit },
+            source: "World Bank",
+            lastUpdated,
+            series,
+          };
+        });
+        c.header("X-Cache", hit ? "HIT" : "MISS");
+        c.header("Cache-Control", seriesCacheControl(data));
+        return c.json<IndicatorSeriesData>(data);
+      } catch (error) {
+        return seriesError(c, error, indicator);
       }
     },
   );

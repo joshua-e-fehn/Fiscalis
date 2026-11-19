@@ -40,26 +40,3 @@ export interface WorldBankTopic {
   value: string;
   sourceNote: string;
 }
-
-/**
- * Dynamic indicator data response
- * Similar to IndicatorData but with flexible indicator info
- */
-export interface DynamicIndicatorData {
-  indicator: {
-    code: string;
-    name: string;
-    description: string;
-    unit: string;
-  };
-  year: number;
-  lastUpdated: string;
-  source: "World Bank";
-  countries: Array<{
-    code: string;
-    code3: string;
-    name: string;
-    value: number | null;
-    formattedValue: string;
-  }>;
-}

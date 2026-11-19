@@ -36,41 +36,37 @@ switches a type off in the app but leaves email on, the row is still written
 (with `inApp: false`) so the dedupe still applies. It is hidden from the bell
 and the list.
 
-## Turning on email (owner, later)
+## Email setup (status 2026-11-16)
 
-Nothing in this list has been done yet. Sending stays off until **all** of
-these steps are complete.
+Sending is wired up but stays **off** until `NOTIFICATION_EMAIL_ENABLED=true`.
 
-1. **Buy a dedicated Fiscalis domain**, for example `fiscalis.app`.
-   A separate subdomain for mail, such as `mail.fiscalis.app`, keeps the
-   root domain's reputation separate.
-2. **Create a Resend account** and add the mail domain under Domains.
-3. **Add the DNS records Resend shows** at the domain's DNS host:
-   - the DKIM `TXT` record(s) (`resend._domainkey...`)
-   - the SPF `TXT` record and the bounce `MX` record on the `send` subdomain
-   - a DMARC `TXT` record at `_dmarc` (start with
-     `v=DMARC1; p=none; rua=mailto:<your address>`, tighten later)
+Done:
 
-   Wait until Resend marks the domain **Verified**.
-4. **Create an API key** in Resend with "Sending access" restricted to that
-   domain, and store it in the vault.
-5. **Set the Convex environment variables** on the production deployment.
-   Run a dry run first and use `--env-file ~/.config/fiscalis/convex-prod.env`.
-   Set them on dev too if you want to test there.
-   - `RESEND_API_KEY`: the key from step 4
-   - `NOTIFICATION_EMAIL_FROM`: the sender, for example
-     `Fiscalis <alerts@mail.fiscalis.app>`. It must be on the verified domain
-   - `SITE_URL`: the app's origin (already used by billing), for the "Open
-     Fiscalis" link
-   - `CLERK_SECRET_KEY`: the Clerk production secret key, so the action can look
-     up the recipient's primary email address (`GET /v1/users/{id}`). Without
-     it, every email is skipped.
-6. **Flip the flag**: `NOTIFICATION_EMAIL_ENABLED=true`. Any other value,
-   including leaving it unset, keeps email off. Settings > Notifications shows
-   "Email alerts are not switched on yet" until the flag is on.
-7. **Test with your own account**: switch email on for one type, then trigger
-   it (on dev, for example, run `internal.notifications.notifyUser` from the
-   dashboard). Check the email and its headers (DKIM pass, SPF pass).
+1. **Domain**: `fiscalis.dev` (registrar and DNS at IONOS).
+2. **Resend account**: signed in with Google as admin@joshua-fehn.de, team
+   `joshua-fehn`, domain `fiscalis.dev` in region eu-west-1. It is separate
+   from the CAMsocs Resend account, because Resend's free plan allows one
+   domain per account.
+3. **DNS at IONOS**: DKIM `TXT resend._domainkey`, plus `MX send` →
+   `feedback-smtp.eu-west-1.amazonses.com` (priority 10) and
+   `TXT send "v=spf1 include:amazonses.com ~all"`. DMARC is the
+   IONOS-managed `CNAME _dmarc → dmarc.ionos.de`. Check that Resend shows the
+   domain as **Verified** before you turn sending on.
+4. **API key**: `fiscalis-prod-convex`, sending access. It is stored in the Mya
+   vault as "Fiscalis Resend API key (sending, fiscalis.dev)".
+5. **Convex prod env**: `RESEND_API_KEY`, `NOTIFICATION_EMAIL_FROM=Fiscalis
+   <notifications@fiscalis.dev>`, `SITE_URL=https://fiscalis.dev` and
+   `CLERK_SECRET_KEY`. The action uses the Clerk key to look up the
+   recipient's address (`GET /v1/users/{id}`).
+
+Left for the owner:
+
+6. **Flip the flag**: `NOTIFICATION_EMAIL_ENABLED=true` (run with
+   `--env-file ~/.config/fiscalis/convex-prod.env`). Any other value, including
+   leaving it unset, keeps email off. Until then, Settings > Notifications
+   shows "Email alerts are not switched on yet".
+7. **Test with your own account**: turn email on for one type, trigger it,
+   then check the email headers (DKIM pass, SPF pass).
 
 ### How sending works
 

@@ -127,7 +127,7 @@
     "sections": {
       "scope": {
         "title": "1. Champ d’application",
-        "body": "Ces conditions s’appliquent à ton utilisation de Fiscalis sur fiscalis.joshua-fehn.de, proposé par {name}, {street}, {postalCode} {city}, {country} (« nous »). En créant un compte, tu les acceptes. Notre politique de confidentialité explique comment nous traitons tes données."
+        "body": "Ces conditions s’appliquent à ton utilisation de Fiscalis sur fiscalis.dev, proposé par {name}, {street}, {postalCode} {city}, {country} (« nous »). En créant un compte, tu les acceptes. Notre politique de confidentialité explique comment nous traitons tes données."
       },
       "service": {
         "title": "2. Ce qu’est Fiscalis",

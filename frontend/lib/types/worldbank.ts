@@ -1,3 +1,5 @@
+import type { IndicatorSeries } from "@/../services/worldbank/series";
+
 // ═══════════════════════════════════════════════════════════════
 // World Bank API Types & Indicator Definitions
 // ═══════════════════════════════════════════════════════════════
@@ -105,18 +107,42 @@ export interface CountryDataPoint {
   formattedValue: string;
 }
 
+/**
+ * What the map shows about any indicator, featured (id = IndicatorId) or
+ * found through the search (id = World Bank code).
+ */
+export interface SeriesIndicator {
+  id: string;
+  name: string;
+  description: string;
+  unit: string;
+}
+
+/** An indicator's full history as served by /api/world-data. */
+export interface IndicatorSeriesData {
+  indicator: SeriesIndicator;
+  source: "World Bank";
+  /** The World Bank's last update of the source (YYYY-MM-DD) */
+  lastUpdated: string | null;
+  series: IndicatorSeries;
+}
+
+/** One year of an indicator, derived on the client from its series. */
 export interface IndicatorData {
-  indicator: IndicatorMetadata;
+  indicator: SeriesIndicator;
   year: number;
-  lastUpdated: string;
+  lastUpdated: string | null;
   source: "World Bank";
   countries: CountryDataPoint[];
 }
 
-// Available year range
+/**
+ * Years the World Bank API is asked for. The map itself uses each
+ * indicator's own first/last year with data.
+ */
 export const YEAR_RANGE = {
   min: 1960,
-  max: 2024,
+  max: new Date().getUTCFullYear() - 1,
 } as const;
 
 // List of all indicator IDs for validation

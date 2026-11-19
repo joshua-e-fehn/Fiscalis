@@ -1,6 +1,6 @@
 # Rollback and restore runbook
 
-Production is the Vercel project `fiscalis` (https://fiscalis.joshua-fehn.de)
+Production is the Vercel project `fiscalis` (https://fiscalis.dev)
 and the Convex deployment `handsome-gecko-941`. The Vercel production build
 deploys both from the same commit (`frontend/scripts/vercel-build.sh`).
 
@@ -27,7 +27,7 @@ takes seconds.
 vercel ls fiscalis --environment production   # newest first; pick the last good one
 vercel rollback <deployment-url>               # Pro: any deployment that was in production
 vercel rollback status fiscalis
-vercel inspect fiscalis.joshua-fehn.de         # check the domain now serves it
+vercel inspect fiscalis.dev         # check the domain now serves it
 ```
 
 The dashboard does the same: Project → Deployments → the good deployment →

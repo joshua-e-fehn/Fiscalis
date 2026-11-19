@@ -127,7 +127,7 @@
     "sections": {
       "scope": {
         "title": "1. النطاق",
-        "body": "تسري هذه الشروط على استخدامك لـ Fiscalis على fiscalis.joshua-fehn.de، المقدَّم من {name}، {street}، {postalCode} {city}، {country} («نحن»). بإنشاء حساب فإنك توافق عليها. توضح سياسة خصوصيتنا كيف نتعامل مع بياناتك."
+        "body": "تسري هذه الشروط على استخدامك لـ Fiscalis على fiscalis.dev، المقدَّم من {name}، {street}، {postalCode} {city}، {country} («نحن»). بإنشاء حساب فإنك توافق عليها. توضح سياسة خصوصيتنا كيف نتعامل مع بياناتك."
       },
       "service": {
         "title": "2. ما هو Fiscalis",

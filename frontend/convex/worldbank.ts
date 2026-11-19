@@ -12,6 +12,7 @@ import {
   internalQuery,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { getUserId, requireUserId } from "./lib/auth";
 import { describeError } from "../../services/security/providerError";
 import {
@@ -26,6 +27,8 @@ import {
 const WORLDBANK_BASE_URL = "https://api.worldbank.org/v2";
 const INDICATORS_PER_PAGE = 1000; // Max allowed by World Bank API
 const FETCH_TIMEOUT_MS = 30000; // 30 second timeout
+/** Most search hits read per query while skipping unusable indicators */
+const SEARCH_SCAN_LIMIT = 600;
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -75,16 +78,23 @@ export const searchIndicators = query({
 
     // Use Convex's search index for full-text search only
     // This is the most efficient way to search in Convex
-    const results = await ctx.db
+    // Only indicators the map can show: a check found them archived, without
+    // country-year data or too sparse. Unchecked ones stay until checked.
+    // Unusable hits are skipped while reading, so they don't use up the
+    // candidate window (over a quarter of all indicators are unusable).
+    const filtered: Doc<"worldBankIndicators">[] = [];
+    let scanned = 0;
+    for await (const ind of ctx.db
       .query("worldBankIndicators")
       .withSearchIndex("search_indicators", (q) =>
         q.search("nameLower", searchQuery),
-      )
-      .take(limit * 3); // Get more to allow for filtering and scoring
-
-    // Only indicators the map can show: a check found them archived, without
-    // country-year data or too sparse. Unchecked ones stay until checked.
-    const filtered = results.filter((ind) => ind.availability !== "unusable");
+      )) {
+      if (ind.availability !== "unusable") filtered.push(ind);
+      // Enough candidates to score, or a bounded read either way
+      if (filtered.length >= limit * 3 || ++scanned >= SEARCH_SCAN_LIMIT) {
+        break;
+      }
+    }
 
     // Score and sort results
     const scored = filtered.map((ind) => {

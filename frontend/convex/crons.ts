@@ -8,6 +8,7 @@ import {
   BITPANDA_TICKER_REFRESH_MINUTES,
   SNAPTRADE_QUOTES_CRON,
 } from "../../services/pricing/livePrices";
+import { SECURITY_PRICE_REFRESH_HOURS } from "../../services/pricing/yahooQuotes";
 
 const crons = cronJobs();
 
@@ -60,6 +61,15 @@ crons.cron(
   "refresh-snaptrade-quotes",
   SNAPTRADE_QUOTES_CRON,
   internal.actions.livePrices.refreshSnaptradeQuotes,
+  {},
+);
+
+// Every few hours: Yahoo prices of the securities bank depots hold (no
+// key; only ISINs are sent), the lowest recent listing per ISIN.
+crons.interval(
+  "refresh-security-prices",
+  { hours: SECURITY_PRICE_REFRESH_HOURS },
+  internal.actions.securityPrices.refreshSecurityPrices,
   {},
 );
 

@@ -35,6 +35,7 @@ export const USER_DATA_TABLES = [
   { table: "brokerConnections", excludedFields: [] },
   { table: "plaidAccounts", excludedFields: [] },
   { table: "plaidTransactions", excludedFields: [] },
+  { table: "depotTrades", excludedFields: [] },
   { table: "brokerAccounts", excludedFields: [] },
   { table: "brokerPositions", excludedFields: [] },
   { table: "brokerTransactions", excludedFields: [] },

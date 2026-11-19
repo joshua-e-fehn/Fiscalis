@@ -79,7 +79,8 @@ function toCategoryPositions(holdings: LoadedHolding[]): CategoryPosition[] {
  * The manual holdings among some holdings as top-holding rows, in EUR as
  * the aggregate counts them (lib/netWorth.ts): vault items at the spot
  * mirror and cost, named like the vault pages (custom name, else the
- * catalog name), and manual assets at their latest valuation.
+ * catalog name), manual assets at their latest valuation, and bank depot
+ * securities (derived from bank transactions, no provider row).
  */
 async function toManualHoldings(
   ctx: QueryCtx,
@@ -95,7 +96,9 @@ async function toManualHoldings(
         // None when valued at cost: its P/L is unknown
         costBasis: profitLossCostBase(h),
       });
-      if (h.source === "manualAsset") return [Promise.resolve(row(h.name))];
+      if (h.source === "manualAsset" || h.source === "bankDepot") {
+        return [Promise.resolve(row(h.name))];
+      }
       if (h.source !== "vault") return [];
       return [
         (async () => {

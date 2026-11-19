@@ -45,6 +45,7 @@ import {
   positionBaseFields,
 } from "../../services/finance/currency";
 import { describeError } from "../../services/security/providerError";
+import { parseSecurityTrade } from "../../services/banking/securityTrades";
 
 /**
  * New migrations use the @convex-dev/migrations component (convex.config.ts):
@@ -643,6 +644,22 @@ export const backfillLoanScenarioExtraPerPeriod = migrations.define({
       return;
     }
     return { extraPerPeriod: scenario.extraMonthlyPayment };
+  },
+});
+
+/**
+ * Migration: tag the bank transactions that settle a securities trade with
+ * their ISIN (plaidTransactions.securityIsin), as applyTransactionChanges
+ * now does when it stores one; depot holdings are read from those rows
+ * (lib/netWorth.ts). Idempotent. Dry run first:
+ *   npx convex run migrations:run '{"fn": "migrations:backfillPlaidSecurityIsin", "dryRun": true}'
+ */
+export const backfillPlaidSecurityIsin = migrations.define({
+  table: "plaidTransactions",
+  migrateOne: (_ctx, txn) => {
+    const securityIsin = parseSecurityTrade(txn.name)?.isin;
+    if (securityIsin === txn.securityIsin) return;
+    return { securityIsin };
   },
 });
 

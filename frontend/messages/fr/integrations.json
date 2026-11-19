@@ -133,6 +133,27 @@
       "expiringDescription": "Renouvelle-le avant le {date} pour que tes soldes continuent de se synchroniser.",
       "expiredTitle": "Ton consentement pour cette banque a expiré",
       "expiredDescription": "Renouvelle-le pour synchroniser à nouveau tes soldes."
+    },
+    "depotImport": {
+      "title": "Opérations du dépôt DKB",
+      "description": "Plaid ne transmet pas les écritures du dépôt DKB. Importe l’export CSV de ton compte DKB (Umsatzliste) pour suivre ton dépôt. Seules les opérations du dépôt sont enregistrées, et réimporter la même période ne pose aucun problème.",
+      "import": "Importer le CSV",
+      "importing": "Import en cours…",
+      "tooLarge": "Ce fichier est trop volumineux pour un export de compte.",
+      "notDkb": "Ce n’est pas un export de compte DKB. Exporte tes opérations en CSV depuis la banque en ligne DKB.",
+      "noTrades": "Le fichier contient {rows, plural, one {# écriture} other {# écritures}}, mais aucune opération du dépôt.",
+      "imported": "{trades, plural, one {# opération lue} other {# opérations lues}}, {added} nouvelles.",
+      "buy": "Achat",
+      "sell": "Vente",
+      "remove": "Supprimer {name}",
+      "columns": {
+        "date": "Date",
+        "security": "Titre",
+        "side": "Type",
+        "units": "Parts",
+        "amount": "Montant",
+        "actions": "Actions"
+      }
     }
   },
   "brokers": {

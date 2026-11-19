@@ -183,7 +183,9 @@
     "billingUnavailable": "账单功能暂时不可用。请稍后再试。",
     "billingAlreadySubscribed": "你已经订阅了 Pro。可在“账单”中管理。",
     "billingNoCustomer": "目前还没有可以管理的订阅。",
-    "billingProviderError": "无法连接我们的支付服务商。请过几分钟再试。"
+    "billingProviderError": "无法连接我们的支付服务商。请过几分钟再试。",
+    "depotCsvUnreadable": "无法导入此文件。请使用你的 DKB 账户的 CSV 导出文件。",
+    "depotTradeNotFound": "此交易已不存在。请刷新页面后重试。"
   },
   "a11y": {
     "toggleSidebar": "切换侧边栏",

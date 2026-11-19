@@ -404,6 +404,26 @@ export async function unifiedPositionsView(
         });
         break;
       }
+      case "bankDepot": {
+        const d = h.doc;
+        positions.push({
+          ...base,
+          id: h.id,
+          symbol: d.wkn,
+          quantity: d.quantity,
+          currentPrice: d.price?.price,
+          marketValue: d.price ? d.quantity * d.price.price : d.cost,
+          currency: d.price?.currency ?? d.currency,
+          lastSyncAt: d.price?.fetchedAt ?? Date.parse(d.lastTradeDate),
+          metadata: {
+            isin: d.isin,
+            depot: d.depot,
+            ticker: d.price?.ticker,
+            lastTradeDate: d.lastTradeDate,
+          },
+        });
+        break;
+      }
       case "manualAsset": {
         const asset = h.doc;
         const latest = latestValuation(asset.valuations);

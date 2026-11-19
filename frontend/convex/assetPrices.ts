@@ -43,7 +43,13 @@ const livePriceValidator = v.object({
 async function storePrice(
   ctx: MutationCtx,
   provider: Doc<"assetPrices">["provider"],
-  price: { symbol: string; price: number; currency: string; ticker?: string },
+  price: {
+    symbol: string;
+    price: number;
+    currency: string;
+    ticker?: string;
+    quoteType?: string;
+  },
   now: number,
 ): Promise<void> {
   const existing = await ctx.db
@@ -59,6 +65,7 @@ async function storePrice(
   if (
     existing.price === price.price &&
     existing.currency === price.currency &&
+    existing.ticker === price.ticker &&
     now - existing.fetchedAt < LIVE_PRICE_MAX_AGE_MS / 2
   ) {
     return;
@@ -281,5 +288,54 @@ export const applySnaptradeQuotes = internalMutation({
       repriced++;
     }
     return { repriced };
+  },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Bank depot securities (Yahoo, actions/securityPrices.ts)
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Every ISIN a bank depot trade names (plaidTransactions.securityIsin and
+ * the imported depotTrades), across users: only ISINs leave the
+ * deployment, never who holds them. Reads only the tagged Plaid rows.
+ */
+export const heldSecurityIsins = internalQuery({
+  args: {},
+  handler: async (ctx): Promise<string[]> => {
+    const isins = new Set<string>();
+    const rows = ctx.db
+      .query("plaidTransactions")
+      .withIndex("by_security", (q) => q.gt("securityIsin", ""));
+    for await (const row of rows) {
+      if (row.securityIsin) isins.add(row.securityIsin);
+    }
+    // Imported trades (depotTrades.ts): a few rows per user and trade
+    for await (const trade of ctx.db.query("depotTrades")) {
+      isins.add(trade.isin);
+    }
+    return [...isins].sort();
+  },
+});
+
+/** Store the chosen Yahoo listing price per ISIN (symbol = ISIN). */
+export const storeSecurityPrices = internalMutation({
+  args: {
+    prices: v.array(
+      v.object({
+        isin: v.string(),
+        ticker: v.string(),
+        price: v.number(),
+        currency: v.string(),
+        quoteType: v.string(),
+      }),
+    ),
+  },
+  handler: async (ctx, { prices }) => {
+    const now = Date.now();
+    for (const { isin, ...price } of prices) {
+      await storePrice(ctx, "yahoo", { symbol: isin, ...price }, now);
+    }
+    return { stored: prices.length };
   },
 });

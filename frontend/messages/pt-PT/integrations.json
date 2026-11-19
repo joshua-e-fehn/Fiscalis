@@ -133,6 +133,27 @@
       "expiringDescription": "Renova-o até {date} para que os teus saldos continuem a sincronizar.",
       "expiredTitle": "O teu consentimento para este banco terminou",
       "expiredDescription": "Renova-o para voltares a sincronizar os teus saldos."
+    },
+    "depotImport": {
+      "title": "Operações do depósito DKB",
+      "description": "A Plaid não transmite os movimentos do depósito da DKB. Carrega a exportação CSV da tua conta DKB (Umsatzliste) para acompanhar o depósito. Só são guardadas as operações do depósito, e importar de novo o mesmo período não causa problemas.",
+      "import": "Importar CSV",
+      "importing": "A importar…",
+      "tooLarge": "Este ficheiro é demasiado grande para uma exportação de conta.",
+      "notDkb": "Isto não é uma exportação de conta DKB. Exporta os teus movimentos em CSV no online banking da DKB.",
+      "noTrades": "O ficheiro tem {rows, plural, one {# movimento} other {# movimentos}}, mas nenhuma operação do depósito.",
+      "imported": "{trades, plural, one {# operação lida} other {# operações lidas}}, {added} novas.",
+      "buy": "Compra",
+      "sell": "Venda",
+      "remove": "Remover {name}",
+      "columns": {
+        "date": "Data",
+        "security": "Título",
+        "side": "Tipo",
+        "units": "Unidades",
+        "amount": "Montante",
+        "actions": "Ações"
+      }
     }
   },
   "brokers": {

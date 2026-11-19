@@ -54,6 +54,15 @@ import {
   type ToBaseOn,
   type TradeFlow,
 } from "../../../services/portfolio/flows";
+import {
+  LISTING_MAX_AGE_MS,
+  depotPositionKey,
+  depotPositions,
+  parseSecurityTrade,
+  securitySubcategory,
+  type DepotPosition,
+  type SettledSecurityTrade,
+} from "../../../services/banking/securityTrades";
 
 /**
  * The one loader behind every net-worth figure: it reads each provider table
@@ -102,6 +111,10 @@ import {
  *   (services/pricing/valuationOverride.ts); its cost basis is unchanged.
  *   The override is matched by the holding's sync-stable key and ignored
  *   on cash and liabilities.
+ * - Bank depot securities (a DKB depot, which has no API) are derived from
+ *   the trades settled on the bank account (imported from its CSV export,
+ *   or delivered by Plaid) and valued at the lowest recent
+ *   Yahoo listing of the ISIN (loadDepotHoldings).
  */
 
 type BankAccountDoc = Doc<"plaidAccounts">;
@@ -138,7 +151,16 @@ export type LoadedHolding =
     })
   | (NormalizedHolding & { source: "vault"; doc: Doc<"vaultItems"> })
   | (NormalizedHolding & { source: "loan"; doc: Doc<"loans"> })
-  | (NormalizedHolding & { source: "manualAsset"; doc: Doc<"manualAssets"> });
+  | (NormalizedHolding & { source: "manualAsset"; doc: Doc<"manualAssets"> })
+  | (NormalizedHolding & { source: "bankDepot"; doc: DepotHoldingDoc });
+
+/**
+ * A bank depot holding (derived, not stored) with the price that values
+ * it: none when no fresh Yahoo price exists, and it is counted at cost.
+ */
+export type DepotHoldingDoc = DepotPosition & {
+  price?: { ticker?: string; price: number; currency: string; fetchedAt: number };
+};
 
 /** The spot-price mirror (metalPrices.ts), by metal. */
 export async function loadSpotPrices(
@@ -442,6 +464,120 @@ export async function loadHoldings(
     });
   }
 
+  // 7. Bank depot securities, from the trades settled on bank accounts
+  holdings.push(...(await loadDepotHoldings(ctx, userId, now, toBaseAmount)));
+
+  return holdings;
+}
+
+/**
+ * The securities a bank depot holds, derived from its trades: those
+ * imported from the bank's export (depotTrades.ts), and those Plaid
+ * delivered (plaidTransactions tagged with securityIsin,
+ * services/banking/securityTrades.ts), one per settlement reference. Each is valued at the stored Yahoo
+ * price of its ISIN (actions/securityPrices.ts) and counted at cost,
+ * without P/L, when there is no price from the last LISTING_MAX_AGE_MS.
+ * A trade Plaid lists twice (pending, then posted) counts once, by the
+ * bank's settlement reference.
+ */
+async function loadDepotHoldings(
+  ctx: QueryCtx,
+  userId: string,
+  now: number,
+  toBaseAmount: ToBaseAmount,
+): Promise<LoadedHolding[]> {
+  const [rows, imported] = await Promise.all([
+    ctx.db
+      .query("plaidTransactions")
+      .withIndex("by_user_security", (q) =>
+        q.eq("userId", userId).gt("securityIsin", ""),
+      )
+      .collect(),
+    ctx.db
+      .query("depotTrades")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect(),
+  ]);
+  if (rows.length === 0 && imported.length === 0) return [];
+  // The bank's own export wins over a Plaid row of the same settlement
+  const byReference = new Map<string, SettledSecurityTrade & { pending: boolean }>();
+  for (const trade of imported) {
+    byReference.set(`${trade.depot}:${trade.reference}`, {
+      depot: trade.depot,
+      tradeDate: trade.tradeDate,
+      reference: trade.reference,
+      wkn: trade.wkn,
+      isin: trade.isin,
+      name: trade.name,
+      side: trade.side,
+      quantity: trade.quantity,
+      cash: trade.cash,
+      currency: trade.currency,
+      pending: false,
+    });
+  }
+  for (const row of rows) {
+    const trade = parseSecurityTrade(row.name);
+    if (!trade) continue;
+    const key = `${trade.depot}:${trade.reference}`;
+    const seen = byReference.get(key);
+    if (seen && (row.pending || !seen.pending)) continue;
+    byReference.set(key, {
+      ...trade,
+      cash: Math.abs(row.amount),
+      currency: normalizeCurrency(row.currency ?? BASE_CURRENCY)?.code ?? BASE_CURRENCY,
+      pending: row.pending,
+    });
+  }
+
+  const holdings: LoadedHolding[] = [];
+  for (const position of depotPositions([...byReference.values()])) {
+    const stored = await ctx.db
+      .query("assetPrices")
+      .withIndex("by_provider_symbol", (q) =>
+        q.eq("provider", "yahoo").eq("symbol", position.isin),
+      )
+      .unique();
+    const price =
+      stored && now - stored.fetchedAt <= LISTING_MAX_AGE_MS ? stored : null;
+    const costBase = toBaseAmount(position.cost, position.currency);
+    const marketBase = price
+      ? toBaseAmount(position.quantity * price.price, price.currency)
+      : null;
+    const valuedAtCost = marketBase === null;
+    const doc: DepotHoldingDoc = {
+      ...position,
+      ...(price
+        ? {
+            price: {
+              ticker: price.ticker,
+              price: price.price,
+              currency: price.currency,
+              fetchedAt: price.fetchedAt,
+            },
+          }
+        : {}),
+    };
+    const key = depotPositionKey(position.depot, position.isin);
+    holdings.push({
+      // Derived, not stored: unique per user too, for the team views
+      id: `${userId}:${key}`,
+      key,
+      provider: "plaid",
+      source: "bankDepot",
+      category: "equities",
+      subcategory: securitySubcategory([stored?.quoteType]),
+      name: position.name,
+      valueBase: marketBase ?? costBase ?? 0,
+      costBase,
+      ...(costBase !== null && position.currency !== BASE_CURRENCY
+        ? { costNative: { amount: position.cost, currency: position.currency } }
+        : {}),
+      ...(valuedAtCost && costBase !== null ? { valuedAtCost: true } : {}),
+      pricedAt: price ? price.fetchedAt : null,
+      doc,
+    });
+  }
   return holdings;
 }
 

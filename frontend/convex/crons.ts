@@ -34,6 +34,14 @@ crons.weekly(
   internal.worldbank.syncAllIndicatorsInternal,
 );
 
+// Checks due World Bank indicators against their data so search only
+// offers indicators the map can show (worldbank:checkDueIndicators)
+crons.interval(
+  "check-worldbank-indicators",
+  { minutes: 5 },
+  internal.worldbank.checkDueIndicators,
+);
+
 // ═══════════════════════════════════════════════════════════════
 // Bitpanda Connection Sync
 // Runs every 6 hours to keep Bitpanda holdings fresh

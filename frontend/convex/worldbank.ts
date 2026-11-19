@@ -9,14 +9,26 @@ import {
   mutation,
   internalMutation,
   internalAction,
+  internalQuery,
 } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Doc } from "./_generated/dataModel";
 import { getUserId, requireUserId } from "./lib/auth";
 import { describeError } from "../../services/security/providerError";
+import {
+  assessCoverage,
+  parseSeriesRow,
+  stateAfterCheck,
+  type IndicatorCheck,
+  type SeriesRow,
+  type WorldBankPoint,
+} from "../../services/worldbank/series";
 
 const WORLDBANK_BASE_URL = "https://api.worldbank.org/v2";
 const INDICATORS_PER_PAGE = 1000; // Max allowed by World Bank API
 const FETCH_TIMEOUT_MS = 30000; // 30 second timeout
+/** Most search hits read per query while skipping unusable indicators */
+const SEARCH_SCAN_LIMIT = 600;
 
 // ═══════════════════════════════════════════════════════════════
 // Types
@@ -48,7 +60,6 @@ export const searchIndicators = query({
   args: {
     query: v.string(),
     limit: v.optional(v.number()),
-    includeErrored: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 50;
@@ -67,17 +78,23 @@ export const searchIndicators = query({
 
     // Use Convex's search index for full-text search only
     // This is the most efficient way to search in Convex
-    const results = await ctx.db
+    // Only indicators the map can show: a check found them archived, without
+    // country-year data or too sparse. Unchecked ones stay until checked.
+    // Unusable hits are skipped while reading, so they don't use up the
+    // candidate window (over a quarter of all indicators are unusable).
+    const filtered: Doc<"worldBankIndicators">[] = [];
+    let scanned = 0;
+    for await (const ind of ctx.db
       .query("worldBankIndicators")
       .withSearchIndex("search_indicators", (q) =>
         q.search("nameLower", searchQuery),
-      )
-      .take(limit * 3); // Get more to allow for filtering and scoring
-
-    // Filter out errored indicators unless explicitly included
-    const filtered = args.includeErrored
-      ? results
-      : results.filter((ind) => ind.status !== "error");
+      )) {
+      if (ind.availability !== "unusable") filtered.push(ind);
+      // Enough candidates to score, or a bounded read either way
+      if (filtered.length >= limit * 3 || ++scanned >= SEARCH_SCAN_LIMIT) {
+        break;
+      }
+    }
 
     // Score and sort results
     const scored = filtered.map((ind) => {
@@ -108,9 +125,8 @@ export const searchIndicators = query({
         score *= 1.5;
       }
 
-      // Penalize errored/warning indicators slightly
-      if (ind.status === "error") score *= 0.5;
-      if (ind.status === "warning") score *= 0.8;
+      // Verified indicators first among equals
+      if (ind.availability === "usable") score *= 1.2;
 
       return { ind, score };
     });
@@ -126,8 +142,9 @@ export const searchIndicators = query({
         description: ind.description,
         source: ind.sourceName || "World Bank",
         topics: ind.topics || [],
-        status: ind.status,
-        timeoutCount: ind.timeoutCount,
+        // Set once a check found the indicator usable
+        latestYear: ind.latestYear,
+        countryCount: ind.countryCount,
       }));
 
     return { indicators: sortedResults, totalInDb };
@@ -145,27 +162,11 @@ export const getSyncStatus = query({
       .order("desc")
       .first();
 
-    // Get counts from the last sync status instead of counting all documents
+    // Counts from the last sync status instead of counting all documents
     // This avoids reading all 29,000+ indicators
-    const indicatorCount = status?.indicatorCount ?? 0;
-
-    // Warning and error counts are typically small, but we'll use .take() to limit
-    // This prevents memory issues when all indicators might match (e.g., all have status "ok")
-    const warningIndicators = await ctx.db
-      .query("worldBankIndicators")
-      .withIndex("by_status", (q) => q.eq("status", "warning"))
-      .take(1000);
-
-    const errorIndicators = await ctx.db
-      .query("worldBankIndicators")
-      .withIndex("by_status", (q) => q.eq("status", "error"))
-      .take(1000);
-
     return {
       lastSync: status?.lastFullSync,
-      indicatorCount,
-      warningCount: warningIndicators.length,
-      errorCount: errorIndicators.length,
+      indicatorCount: status?.indicatorCount ?? 0,
       syncStatus: status?.status,
       errorMessage: status?.errorMessage,
     };
@@ -189,12 +190,23 @@ export const getUserFavorites = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
-    return favorites.map((fav) => ({
-      code: fav.indicatorCode,
-      name: fav.indicatorName,
-      description: fav.indicatorDescription,
-      addedAt: fav.addedAt,
-    }));
+    return await Promise.all(
+      favorites.map(async (fav) => {
+        const indicator = await ctx.db
+          .query("worldBankIndicators")
+          .withIndex("by_code", (q) => q.eq("code", fav.indicatorCode))
+          .first();
+        return {
+          code: fav.indicatorCode,
+          name: fav.indicatorName,
+          description: fav.indicatorDescription,
+          addedAt: fav.addedAt,
+          // A favourite the World Bank has since archived stays listed (the
+          // user may want to remove it) but can't be opened
+          available: indicator?.availability !== "unusable",
+        };
+      }),
+    );
   },
 });
 
@@ -349,7 +361,7 @@ export const upsertIndicatorsBatch = internalMutation({
       const topics = ind.topics ?? undefined;
 
       if (existing) {
-        // Update existing - preserve timeout tracking
+        // Update existing - keep its availability check state
         await ctx.db.patch(existing._id, {
           name: ind.name,
           description,
@@ -372,7 +384,6 @@ export const upsertIndicatorsBatch = internalMutation({
           nameLower: ind.name.toLowerCase(),
           codeLower: ind.code.toLowerCase(),
           timeoutCount: 0,
-          status: "ok",
           syncedAt: now,
         });
       }
@@ -629,102 +640,200 @@ export const syncAllIndicatorsInternal = internalAction({
 });
 
 // ═══════════════════════════════════════════════════════════════
-// Timeout Tracking
+// Availability checks
+// Every indicator is asked for its data the way the map asks for it, so
+// search only offers indicators that actually draw a map.
 // ═══════════════════════════════════════════════════════════════
 
+const CHECK_TIMEOUT_MS = 60000;
+/** Parallel World Bank requests per run; it's a free public API */
+const CHECK_CONCURRENCY = 8;
+const CHECK_BATCH_SIZE = 1000;
+/** Stop starting checks after this, so a run ends before the next cron */
+const CHECK_RUN_BUDGET_MS = 4 * 60 * 1000;
+/** A user-requested re-check of the same indicator at most this often */
+const REQUESTED_CHECK_INTERVAL_MS = 10 * 60 * 1000;
+
 /**
- * Record a timeout for an indicator. Internal: indicator status is global,
- * so clients must not be able to flip it.
+ * Asks the World Bank for every country's most recent value, the same
+ * endpoint the map's series request uses, and judges the answer.
  */
-export const recordIndicatorTimeout = internalMutation({
-  args: {
-    code: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const indicator = await ctx.db
-      .query("worldBankIndicators")
-      .withIndex("by_code", (q) => q.eq("code", args.code))
-      .first();
-
-    if (!indicator) {
-      return { updated: false, message: "Indicator not found" };
-    }
-
-    const newTimeoutCount = indicator.timeoutCount + 1;
-    let newStatus: "ok" | "warning" | "error" = "ok";
-
-    if (newTimeoutCount >= 3) {
-      newStatus = "error";
-    } else if (newTimeoutCount >= 1) {
-      newStatus = "warning";
-    }
-
-    await ctx.db.patch(indicator._id, {
-      timeoutCount: newTimeoutCount,
-      status: newStatus,
-      lastTestedAt: Date.now(),
+async function checkAgainstWorldBank(code: string): Promise<IndicatorCheck> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+  try {
+    const url = `${WORLDBANK_BASE_URL}/country/all/indicator/${encodeURIComponent(code)}?format=json&per_page=1000&mrnev=1`;
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
     });
+    // Some databases reject every data request with 400 (an HTML error
+    // page); 404 is an unknown code. Neither is a passing hiccup.
+    if (response.status === 400 || response.status === 404) {
+      return { kind: "notFound" };
+    }
+    if (!response.ok) return { kind: "failed" };
+    const data = await response.json();
+    // An unknown or archived code answers 200 with [{ message: [...] }]
+    if (data?.[0]?.message) return { kind: "notFound" };
+    const points: WorldBankPoint[] = Array.isArray(data?.[1]) ? data[1] : [];
+    const rows = points
+      .map(parseSeriesRow)
+      .filter((row): row is SeriesRow => row !== null);
+    return { kind: "checked", coverage: assessCoverage(rows) };
+  } catch (error) {
+    console.warn(
+      `[WorldBank check] ${code} failed: ${describeError(error)}`,
+    );
+    return { kind: "failed" };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
-    return {
-      updated: true,
-      newStatus,
-      timeoutCount: newTimeoutCount,
-    };
+const checkValidator = v.union(
+  v.object({
+    kind: v.literal("checked"),
+    coverage: v.object({
+      usable: v.boolean(),
+      countryCount: v.number(),
+      latestYear: v.union(v.number(), v.null()),
+    }),
+  }),
+  v.object({ kind: v.literal("notFound") }),
+  v.object({ kind: v.literal("failed") }),
+);
+
+/** Codes due for a check: never checked first, then the oldest. */
+export const dueIndicatorCodes = internalQuery({
+  args: { now: v.number(), limit: v.number() },
+  handler: async (ctx, args) => {
+    // Missing nextCheckAt sorts before every number, so never-checked
+    // indicators come first
+    const due = await ctx.db
+      .query("worldBankIndicators")
+      .withIndex("by_next_check", (q) => q.lte("nextCheckAt", args.now))
+      .take(args.limit);
+    return due.map((ind) => ind.code);
   },
 });
 
-/**
- * Record a successful load for an indicator
- * Resets timeout count (but keeps a memory of past issues)
- */
-export const recordIndicatorSuccess = internalMutation({
-  args: {
-    code: v.string(),
-  },
+/** Stores one check's outcome and when the indicator is due again. */
+export const recordIndicatorCheck = internalMutation({
+  args: { code: v.string(), check: checkValidator },
   handler: async (ctx, args) => {
     const indicator = await ctx.db
       .query("worldBankIndicators")
       .withIndex("by_code", (q) => q.eq("code", args.code))
       .first();
+    if (!indicator) return;
 
-    if (!indicator) {
-      return { updated: false };
-    }
-
-    // Only update if there were previous timeouts
-    if (indicator.timeoutCount > 0) {
-      // Decrement timeout count but don't go below 0
-      const newTimeoutCount = Math.max(0, indicator.timeoutCount - 1);
-      let newStatus: "ok" | "warning" | "error" = "ok";
-
-      if (newTimeoutCount >= 3) {
-        newStatus = "error";
-      } else if (newTimeoutCount >= 1) {
-        newStatus = "warning";
-      }
-
-      await ctx.db.patch(indicator._id, {
-        timeoutCount: newTimeoutCount,
-        status: newStatus,
-        lastTestedAt: Date.now(),
-      });
-    }
-
-    return { updated: true };
+    const now = Date.now();
+    const next = stateAfterCheck(
+      {
+        availability: indicator.availability,
+        failedChecks: indicator.timeoutCount,
+      },
+      args.check,
+    );
+    const coverage =
+      args.check.kind === "checked" ? args.check.coverage : undefined;
+    await ctx.db.patch(indicator._id, {
+      availability: next.availability,
+      timeoutCount: next.failedChecks,
+      nextCheckAt: now + next.recheckAfterMs,
+      lastTestedAt: now,
+      // A failed request leaves the last known coverage in place
+      ...(coverage && {
+        countryCount: coverage.countryCount,
+        latestYear: coverage.latestYear ?? undefined,
+      }),
+      ...(args.check.kind === "notFound" && {
+        countryCount: undefined,
+        latestYear: undefined,
+      }),
+    });
   },
 });
 
 /**
- * Get indicator by code (for checking status before fetching)
+ * Checks the indicators that are due (cron, every few minutes). A full
+ * pass over ~29,000 indicators takes several hours the first time; after
+ * that each indicator is re-checked weekly.
  */
-export const getIndicatorByCode = query({
-  args: {
-    code: v.string(),
+export const checkDueIndicators = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{ checked: number }> => {
+    const started = Date.now();
+    const codes: string[] = await ctx.runQuery(
+      internal.worldbank.dueIndicatorCodes,
+      { now: started, limit: CHECK_BATCH_SIZE },
+    );
+
+    let next = 0;
+    let checked = 0;
+    const worker = async () => {
+      while (
+        next < codes.length &&
+        Date.now() - started < CHECK_RUN_BUDGET_MS
+      ) {
+        const code = codes[next++];
+        const check = await checkAgainstWorldBank(code);
+        await ctx.runMutation(internal.worldbank.recordIndicatorCheck, {
+          code,
+          check,
+        });
+        checked++;
+      }
+    };
+    await Promise.all(Array.from({ length: CHECK_CONCURRENCY }, worker));
+
+    if (codes.length > 0) {
+      console.log(
+        `[WorldBank check] ${checked}/${codes.length} indicators in ${Math.round((Date.now() - started) / 1000)}s`,
+      );
+    }
+    return { checked };
   },
+});
+
+/** Checks one indicator now (see requestIndicatorCheck). */
+export const checkIndicator = internalAction({
+  args: { code: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const check = await checkAgainstWorldBank(args.code);
+    await ctx.runMutation(internal.worldbank.recordIndicatorCheck, {
+      code: args.code,
+      check,
+    });
+  },
+});
+
+/**
+ * The map could not load an indicator (not found or no data): check it
+ * now instead of waiting for its turn, so search stops offering it. The
+ * client only asks; the verdict comes from the server's own request.
+ */
+export const requestIndicatorCheck = mutation({
+  args: { code: v.string() },
+  handler: async (ctx, args) => {
+    await requireUserId(ctx);
+    const indicator = await ctx.db
       .query("worldBankIndicators")
       .withIndex("by_code", (q) => q.eq("code", args.code))
       .first();
+    const now = Date.now();
+    if (
+      !indicator ||
+      (indicator.lastTestedAt !== undefined &&
+        now - indicator.lastTestedAt < REQUESTED_CHECK_INTERVAL_MS)
+    ) {
+      return { scheduled: false };
+    }
+    await ctx.db.patch(indicator._id, { lastTestedAt: now });
+    await ctx.scheduler.runAfter(0, internal.worldbank.checkIndicator, {
+      code: indicator.code,
+    });
+    return { scheduled: true };
   },
 });

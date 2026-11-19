@@ -9,6 +9,7 @@
  */
 
 import { countryHistory, isCountryCode, type HistoryPoint } from "./countryViews";
+import { ISO3_TO_ISO2 } from "./isoCodes";
 
 /** A country or aggregate as listed once in a series. */
 export interface SeriesCountry {
@@ -137,4 +138,129 @@ export function seriesCountryHistory(
     })),
     code,
   );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Upstream rows and whether an indicator can be mapped
+// ═══════════════════════════════════════════════════════════════
+
+/** One data point as the World Bank API returns it (the fields read here). */
+export interface WorldBankPoint {
+  countryiso3code?: string | null;
+  country?: { id?: string | null; value?: string | null } | null;
+  date?: string | null;
+  value?: number | null;
+}
+
+/**
+ * A data point as a series row, or null when the map can't place it: no
+ * value, no country code (subnational databases) or no calendar year
+ * (quarterly and monthly databases date points as "2024Q1" / "2024M01").
+ */
+export function parseSeriesRow(point: WorldBankPoint): SeriesRow | null {
+  // WDI fills countryiso3code; other World Bank sources (e.g. the
+  // Sustainable Energy for All database) leave it empty and put the ISO3
+  // code in country.id instead
+  const code3 =
+    point.countryiso3code ||
+    (point.country?.id?.length === 3 ? point.country.id : "");
+  const date = point.date ?? "";
+  const value = point.value;
+  if (
+    !code3 ||
+    !/^\d{4}$/.test(date) ||
+    typeof value !== "number" ||
+    !Number.isFinite(value)
+  ) {
+    return null;
+  }
+  return {
+    code: ISO3_TO_ISO2[code3] || code3,
+    code3,
+    name: point.country?.value || code3,
+    year: Number(date),
+    value,
+  };
+}
+
+/** Fewer real countries than this make no useful world map. */
+export const MIN_MAP_COUNTRIES = 10;
+
+export interface IndicatorCoverage {
+  usable: boolean;
+  /** Real countries (no aggregates) with at least one value */
+  countryCount: number;
+  latestYear: number | null;
+}
+
+/** Whether parsed rows give a world map: enough real countries with data. */
+export function assessCoverage(rows: readonly SeriesRow[]): IndicatorCoverage {
+  const series = buildSeries(rows);
+  const countryCount = series.countries.filter((c) =>
+    isCountryCode(c.code),
+  ).length;
+  return {
+    usable: countryCount >= MIN_MAP_COUNTRIES,
+    countryCount,
+    latestYear: series.latestYear,
+  };
+}
+
+/** The result of checking one indicator against the World Bank. */
+export type IndicatorCheck =
+  | { kind: "checked"; coverage: IndicatorCoverage }
+  /** The World Bank no longer serves the code (archived or deleted) */
+  | { kind: "notFound" }
+  /** Timeout, network or upstream error: says nothing about the data */
+  | { kind: "failed" };
+
+export type IndicatorAvailability = "usable" | "unusable";
+
+const HOUR_MS = 60 * 60 * 1000;
+/** A settled answer is re-checked weekly, a failed check after a day */
+export const RECHECK_AFTER_MS = 7 * 24 * HOUR_MS;
+export const RETRY_FAILED_AFTER_MS = 24 * HOUR_MS;
+/** Consecutive failed checks after which an indicator counts as unusable */
+export const MAX_FAILED_CHECKS = 3;
+
+export interface IndicatorState {
+  /** Undefined until the first check settles */
+  availability?: IndicatorAvailability;
+  failedChecks: number;
+}
+
+/**
+ * The indicator's state after a check, and when to check it next. A single
+ * failed request keeps what we knew (an upstream hiccup must not hide a
+ * good indicator); repeated failures mean users would hit the same wall.
+ */
+export function stateAfterCheck(
+  previous: IndicatorState,
+  check: IndicatorCheck,
+): IndicatorState & { recheckAfterMs: number } {
+  switch (check.kind) {
+    case "checked":
+      return {
+        availability: check.coverage.usable ? "usable" : "unusable",
+        failedChecks: 0,
+        recheckAfterMs: RECHECK_AFTER_MS,
+      };
+    case "notFound":
+      return {
+        availability: "unusable",
+        failedChecks: 0,
+        recheckAfterMs: RECHECK_AFTER_MS,
+      };
+    case "failed": {
+      const failedChecks = previous.failedChecks + 1;
+      return {
+        availability:
+          failedChecks >= MAX_FAILED_CHECKS
+            ? "unusable"
+            : previous.availability,
+        failedChecks,
+        recheckAfterMs: RETRY_FAILED_AFTER_MS,
+      };
+    }
+  }
 }

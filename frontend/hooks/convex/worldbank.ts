@@ -38,28 +38,17 @@ export function useWorldBankSyncStatus() {
     isLoading: status === undefined,
     lastSync: status?.lastSync,
     indicatorCount: status?.indicatorCount ?? 0,
-    warningCount: status?.warningCount ?? 0,
-    errorCount: status?.errorCount ?? 0,
     syncStatus: status?.syncStatus,
     needsSync: !status?.lastSync || status.indicatorCount === 0,
   };
 }
 
 /**
- * Get indicator by code (for checking status)
+ * Ask the server to re-check an indicator the map could not load, so search
+ * stops offering it if the World Bank no longer serves it.
  */
-export function useIndicatorByCode(code: string) {
-  const indicator = useQuery(
-    api.worldbank.getIndicatorByCode,
-    code ? { code } : "skip",
-  );
-
-  return {
-    data: indicator,
-    isLoading: indicator === undefined && !!code,
-    status: indicator?.status ?? "ok",
-    timeoutCount: indicator?.timeoutCount ?? 0,
-  };
+export function useRequestIndicatorCheck() {
+  return useMutation(api.worldbank.requestIndicatorCheck);
 }
 
 // ═══════════════════════════════════════════════════════════════

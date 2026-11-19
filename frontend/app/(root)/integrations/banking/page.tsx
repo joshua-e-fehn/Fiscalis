@@ -4,6 +4,7 @@ import * as React from "react";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { BanksCard } from "@/components/atomic/organisms/banksCard";
+import { DepotImportCard } from "@/components/atomic/organisms/depotImportCard";
 import { PlaidLinkButton } from "@/components/atomic/atoms/plaidLinkButton";
 import { PageHeader } from "@/components/atomic/molecules/investments";
 import { usePlaidAccounts, useRefreshAccounts } from "@/hooks/convex";
@@ -153,6 +154,9 @@ export default function BankingPage() {
       )}
 
       <BanksCard isSyncing={isSyncing} />
+
+      {/* DKB depot trades, which Plaid does not deliver (ENG-267) */}
+      {hasAccounts && <DepotImportCard />}
     </div>
   );
 }

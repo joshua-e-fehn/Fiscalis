@@ -133,6 +133,27 @@
       "expiringDescription": "Renuévalo antes del {date} para que tus saldos se sigan sincronizando.",
       "expiredTitle": "Tu consentimiento para este banco ha terminado",
       "expiredDescription": "Renuévalo para volver a sincronizar tus saldos."
+    },
+    "depotImport": {
+      "title": "Operaciones del depósito DKB",
+      "description": "Plaid no transmite los movimientos del depósito de DKB. Sube la exportación CSV de tu cuenta DKB (Umsatzliste) para seguir tu depósito. Solo se guardan las operaciones del depósito, y puedes volver a importar el mismo periodo sin problema.",
+      "import": "Importar CSV",
+      "importing": "Importando…",
+      "tooLarge": "Este archivo es demasiado grande para una exportación de cuenta.",
+      "notDkb": "Esto no es una exportación de cuenta DKB. Exporta tus movimientos como CSV en la banca online de DKB.",
+      "noTrades": "El archivo tiene {rows, plural, one {# movimiento} other {# movimientos}}, pero ninguna operación del depósito.",
+      "imported": "{trades, plural, one {# operación leída} other {# operaciones leídas}}, {added} nuevas.",
+      "buy": "Compra",
+      "sell": "Venta",
+      "remove": "Quitar {name}",
+      "columns": {
+        "date": "Fecha",
+        "security": "Valor",
+        "side": "Tipo",
+        "units": "Unidades",
+        "amount": "Importe",
+        "actions": "Acciones"
+      }
     }
   },
   "brokers": {

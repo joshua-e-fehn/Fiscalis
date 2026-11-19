@@ -133,6 +133,27 @@
       "expiringDescription": "Erneuere sie bis zum {date}, damit deine Kontostände weiter synchronisiert werden.",
       "expiredTitle": "Deine Zustimmung für diese Bank ist abgelaufen",
       "expiredDescription": "Erneuere sie, um deine Kontostände wieder zu synchronisieren."
+    },
+    "depotImport": {
+      "title": "Depot-Trades von der DKB",
+      "description": "Plaid gibt die Depotbuchungen der DKB nicht weiter. Lade den CSV-Export deines DKB-Kontos (Umsatzliste) hoch, um dein Depot zu verfolgen. Gespeichert werden nur die Depot-Trades, und denselben Zeitraum erneut zu importieren ist kein Problem.",
+      "import": "CSV importieren",
+      "importing": "Wird importiert…",
+      "tooLarge": "Diese Datei ist zu groß für einen Kontoexport.",
+      "notDkb": "Das ist kein DKB-Kontoexport. Exportiere deine Umsätze im DKB-Banking als CSV.",
+      "noTrades": "Die Datei enthält {rows, plural, one {# Buchung} other {# Buchungen}}, aber keine Depot-Trades.",
+      "imported": "{trades, plural, one {# Depot-Trade} other {# Depot-Trades}} gelesen, {added} neu.",
+      "buy": "Kauf",
+      "sell": "Verkauf",
+      "remove": "{name} entfernen",
+      "columns": {
+        "date": "Datum",
+        "security": "Wertpapier",
+        "side": "Art",
+        "units": "Stück",
+        "amount": "Betrag",
+        "actions": "Aktionen"
+      }
     }
   },
   "brokers": {

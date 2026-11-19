@@ -52,7 +52,7 @@ const TRADE_TEXT =
   /Depot\s+(\d+)\s+Wertp\.?\s*Abrechn\.?\s+(\d{2})\.(\d{2})\.(\d{4})\s+(\d+)\s+WKN\s+([A-Z0-9]{6})\s+Gesch\.?\s*Art\s+([A-Z]{2})\s+St(?:ü|ue|u)ck\s+([\d.]*\d(?:,\d+)?)\s+(.+?)\s+ISIN\s+([A-Z]{2}[A-Z0-9]{9}\d)/i;
 
 /** A German number ("1.234,5000") as a number; NaN when unreadable. */
-function germanNumber(text: string): number {
+export function germanNumber(text: string): number {
   return Number(text.replace(/\./g, "").replace(",", "."));
 }
 
@@ -227,4 +227,28 @@ export function securitySubcategory(
   if (types.has("MUTUALFUND")) return "funds";
   if (types.has("ETF")) return "etfs";
   return "stocks";
+}
+
+/** An ISIN: country, nine characters, a check digit. */
+const ISIN = /^[A-Z]{2}[A-Z0-9]{9}\d$/;
+
+/**
+ * Whether a trade sent by the app can be stored: the shape parseSecurityTrade
+ * produces, with positive units and cash. The import parses in the browser,
+ * so the server checks what it receives.
+ */
+export function isValidSettledTrade(trade: SettledSecurityTrade): boolean {
+  return (
+    /^\d+$/.test(trade.depot) &&
+    /^\d+$/.test(trade.reference) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(trade.tradeDate) &&
+    ISIN.test(trade.isin) &&
+    trade.name.trim().length > 0 &&
+    trade.name.length <= 200 &&
+    Number.isFinite(trade.quantity) &&
+    trade.quantity > 0 &&
+    Number.isFinite(trade.cash) &&
+    trade.cash > 0 &&
+    /^[A-Z]{3}$/.test(trade.currency)
+  );
 }

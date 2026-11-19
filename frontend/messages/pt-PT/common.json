@@ -183,7 +183,9 @@
     "billingUnavailable": "A faturação não está disponível de momento. Tenta novamente mais tarde.",
     "billingAlreadySubscribed": "Já tens uma subscrição Pro. Gere-a em Faturação.",
     "billingNoCustomer": "Ainda não há nenhuma subscrição para gerir.",
-    "billingProviderError": "Não foi possível contactar o nosso fornecedor de pagamentos. Tenta novamente daqui a alguns minutos."
+    "billingProviderError": "Não foi possível contactar o nosso fornecedor de pagamentos. Tenta novamente daqui a alguns minutos.",
+    "depotCsvUnreadable": "Não foi possível importar este ficheiro. Usa a exportação CSV da tua conta DKB.",
+    "depotTradeNotFound": "Esta operação já não existe. Recarrega a página e tenta novamente."
   },
   "a11y": {
     "toggleSidebar": "Mostrar/ocultar barra lateral",

@@ -133,6 +133,27 @@
       "expiringDescription": "Renew it by {date} to keep your balances syncing.",
       "expiredTitle": "Your consent for this bank has ended",
       "expiredDescription": "Renew it to sync your balances again."
+    },
+    "depotImport": {
+      "title": "Depot trades from DKB",
+      "description": "Plaid does not pass DKB's depot bookings on. Upload the CSV export of your DKB account (Umsatzliste) to track your depot. Only the depot trades are saved, and importing the same period again is safe.",
+      "import": "Import CSV",
+      "importing": "Importing…",
+      "tooLarge": "This file is too large for an account export.",
+      "notDkb": "This is not a DKB account export. Export your transactions as CSV in DKB online banking.",
+      "noTrades": "The file has {rows, plural, one {# booking} other {# bookings}} but no depot trades.",
+      "imported": "{trades, plural, one {# depot trade} other {# depot trades}} read, {added} new.",
+      "buy": "Buy",
+      "sell": "Sell",
+      "remove": "Remove {name}",
+      "columns": {
+        "date": "Date",
+        "security": "Security",
+        "side": "Type",
+        "units": "Units",
+        "amount": "Amount",
+        "actions": "Actions"
+      }
     }
   },
   "brokers": {

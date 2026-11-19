@@ -296,9 +296,9 @@ export const applySnaptradeQuotes = internalMutation({
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Every ISIN a bank depot trade names (plaidTransactions.securityIsin),
- * across users: only ISINs leave the deployment, never who holds them.
- * Reads only the tagged rows.
+ * Every ISIN a bank depot trade names (plaidTransactions.securityIsin and
+ * the imported depotTrades), across users: only ISINs leave the
+ * deployment, never who holds them. Reads only the tagged Plaid rows.
  */
 export const heldSecurityIsins = internalQuery({
   args: {},
@@ -309,6 +309,10 @@ export const heldSecurityIsins = internalQuery({
       .withIndex("by_security", (q) => q.gt("securityIsin", ""));
     for await (const row of rows) {
       if (row.securityIsin) isins.add(row.securityIsin);
+    }
+    // Imported trades (depotTrades.ts): a few rows per user and trade
+    for await (const trade of ctx.db.query("depotTrades")) {
+      isins.add(trade.isin);
     }
     return [...isins].sort();
   },

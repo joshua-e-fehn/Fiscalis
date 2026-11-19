@@ -92,3 +92,69 @@ describe("bank depot holdings", () => {
     expect(await depotRows(t, INTRUDER)).toEqual([]);
   });
 });
+
+describe("DKB CSV import", () => {
+  const trade = (
+    reference: string,
+    side: "buy" | "sell",
+    quantity: number,
+    cash: number,
+    tradeDate: string,
+  ) => ({
+    depot: "0511391062",
+    reference,
+    tradeDate,
+    wkn: "A2N812",
+    isin: "DE000A2N8127",
+    name: "BIT GL.TECH.LEAD. R-I",
+    side,
+    quantity,
+    cash,
+    currency: "EUR",
+  });
+  const history = [
+    trade("000007766170500", "buy", 4, 2850, "2025-07-14"),
+    trade("000007725003000", "sell", 4, 3926.17, "2026-09-18"),
+    trade("000002823074800", "buy", 2, 1760.32, "2026-11-16"),
+  ];
+
+  it("derives the holding from imported trades; a re-import adds nothing", async () => {
+    const t = newTest();
+    const owner = t.withIdentity({ subject: OWNER });
+    expect(await owner.mutation(api.depotTrades.importDepotTrades, { trades: history })).toEqual({
+      added: 3,
+      updated: 0,
+    });
+    expect(await owner.mutation(api.depotTrades.importDepotTrades, { trades: history })).toEqual({
+      added: 0,
+      updated: 3,
+    });
+    const [holding, ...rest] = await depotRows(t);
+    expect(rest).toEqual([]);
+    expect(holding).toMatchObject({ quantity: 2, costBasis: 1760.32 });
+    expect(await t.query(internal.assetPrices.heldSecurityIsins, {})).toEqual([
+      "DE000A2N8127",
+    ]);
+  });
+
+  it("counts a trade Plaid also delivered once", async () => {
+    const t = newTest();
+    await sync(t, [txn("t1", BUY, 1760.32)]);
+    await t
+      .withIdentity({ subject: OWNER })
+      .mutation(api.depotTrades.importDepotTrades, { trades: [history[2]] });
+    const [holding] = await depotRows(t);
+    expect(holding).toMatchObject({ quantity: 2, costBasis: 1760.32 });
+  });
+
+  it("refuses a malformed trade", async () => {
+    const t = newTest();
+    await expect(
+      t
+        .withIdentity({ subject: OWNER })
+        .mutation(api.depotTrades.importDepotTrades, {
+          trades: [{ ...history[0], isin: "not-an-isin" }],
+        }),
+    ).rejects.toThrow();
+  });
+});

@@ -112,7 +112,8 @@ import {
  *   The override is matched by the holding's sync-stable key and ignored
  *   on cash and liabilities.
  * - Bank depot securities (a DKB depot, which has no API) are derived from
- *   the trades settled on the bank account and valued at the lowest recent
+ *   the trades settled on the bank account (imported from its CSV export,
+ *   or delivered by Plaid) and valued at the lowest recent
  *   Yahoo listing of the ISIN (loadDepotHoldings).
  */
 
@@ -470,9 +471,10 @@ export async function loadHoldings(
 }
 
 /**
- * The securities a bank depot holds, derived from the trades its bank
- * account settled (plaidTransactions tagged with securityIsin,
- * services/banking/securityTrades.ts). Each is valued at the stored Yahoo
+ * The securities a bank depot holds, derived from its trades: those
+ * imported from the bank's export (depotTrades.ts), and those Plaid
+ * delivered (plaidTransactions tagged with securityIsin,
+ * services/banking/securityTrades.ts), one per settlement reference. Each is valued at the stored Yahoo
  * price of its ISIN (actions/securityPrices.ts) and counted at cost,
  * without P/L, when there is no price from the last LISTING_MAX_AGE_MS.
  * A trade Plaid lists twice (pending, then posted) counts once, by the
@@ -484,14 +486,36 @@ async function loadDepotHoldings(
   now: number,
   toBaseAmount: ToBaseAmount,
 ): Promise<LoadedHolding[]> {
-  const rows = await ctx.db
-    .query("plaidTransactions")
-    .withIndex("by_user_security", (q) =>
-      q.eq("userId", userId).gt("securityIsin", ""),
-    )
-    .collect();
-  if (rows.length === 0) return [];
+  const [rows, imported] = await Promise.all([
+    ctx.db
+      .query("plaidTransactions")
+      .withIndex("by_user_security", (q) =>
+        q.eq("userId", userId).gt("securityIsin", ""),
+      )
+      .collect(),
+    ctx.db
+      .query("depotTrades")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect(),
+  ]);
+  if (rows.length === 0 && imported.length === 0) return [];
+  // The bank's own export wins over a Plaid row of the same settlement
   const byReference = new Map<string, SettledSecurityTrade & { pending: boolean }>();
+  for (const trade of imported) {
+    byReference.set(`${trade.depot}:${trade.reference}`, {
+      depot: trade.depot,
+      tradeDate: trade.tradeDate,
+      reference: trade.reference,
+      wkn: trade.wkn,
+      isin: trade.isin,
+      name: trade.name,
+      side: trade.side,
+      quantity: trade.quantity,
+      cash: trade.cash,
+      currency: trade.currency,
+      pending: false,
+    });
+  }
   for (const row of rows) {
     const trade = parseSecurityTrade(row.name);
     if (!trade) continue;
@@ -536,7 +560,8 @@ async function loadDepotHoldings(
     };
     const key = depotPositionKey(position.depot, position.isin);
     holdings.push({
-      id: key,
+      // Derived, not stored: unique per user too, for the team views
+      id: `${userId}:${key}`,
       key,
       provider: "plaid",
       source: "bankDepot",

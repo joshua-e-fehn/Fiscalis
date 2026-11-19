@@ -133,6 +133,27 @@
       "expiringDescription": "请在 {date} 前续期，以保持余额同步。",
       "expiredTitle": "你对此银行的授权已到期",
       "expiredDescription": "续期后即可重新同步余额。"
+    },
+    "depotImport": {
+      "title": "DKB 证券账户交易",
+      "description": "Plaid 不会传送 DKB 的证券账户记账。上传你的 DKB 账户 CSV 导出文件（Umsatzliste）即可追踪证券账户。只保存证券交易，重复导入同一时间段也不会重复。",
+      "import": "导入 CSV",
+      "importing": "正在导入…",
+      "tooLarge": "此文件对于账户导出来说太大。",
+      "notDkb": "这不是 DKB 账户导出文件。请在 DKB 网上银行中将交易导出为 CSV。",
+      "noTrades": "文件包含 {rows} 条记账，但没有证券交易。",
+      "imported": "已读取 {trades} 笔证券交易，其中 {added} 笔为新交易。",
+      "buy": "买入",
+      "sell": "卖出",
+      "remove": "删除 {name}",
+      "columns": {
+        "date": "日期",
+        "security": "证券",
+        "side": "类型",
+        "units": "数量",
+        "amount": "金额",
+        "actions": "操作"
+      }
     }
   },
   "brokers": {

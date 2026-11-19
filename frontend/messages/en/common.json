@@ -183,7 +183,9 @@
     "billingUnavailable": "Billing isn't available right now. Please try again later.",
     "billingAlreadySubscribed": "You already have a Pro subscription. Manage it under Billing.",
     "billingNoCustomer": "There's no subscription to manage yet.",
-    "billingProviderError": "Our payment provider couldn't be reached. Please try again in a few minutes."
+    "billingProviderError": "Our payment provider couldn't be reached. Please try again in a few minutes.",
+    "depotCsvUnreadable": "This file could not be imported. Use the CSV export of your DKB account.",
+    "depotTradeNotFound": "This trade no longer exists. Reload the page and try again."
   },
   "a11y": {
     "toggleSidebar": "Toggle sidebar",

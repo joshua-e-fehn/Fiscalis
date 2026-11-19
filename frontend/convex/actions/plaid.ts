@@ -126,10 +126,7 @@ export const createLinkToken = action({
 });
 
 /**
- * Create an update link token for re-authentication. Account selection is
- * on, so a reconnect can also share accounts left out at the first link
- * (a DKB Tagesgeldkonto that receives depot sales); the next refresh
- * stores them and their transactions.
+ * Create an update link token for re-authentication
  */
 export const createUpdateLinkToken = action({
   args: { itemId: v.string(), language: linkLanguageArg },
@@ -158,7 +155,6 @@ export const createUpdateLinkToken = action({
       access_token: accessToken,
       country_codes: getCountryCodes(),
       language: plaidLinkLanguage(args.language),
-      update: { account_selection_enabled: true },
     });
 
     return { linkToken: response.data.link_token };

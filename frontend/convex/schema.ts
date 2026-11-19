@@ -168,6 +168,27 @@ export default defineSchema({
 			filterFields: ["userId", "accountId"],
 		}),
 
+	// Securities trades of a bank depot imported from the bank's own export
+	// (a DKB "Umsatzliste" CSV, services/banking/dkbCsv.ts), because Plaid
+	// does not pass DKB's depot bookings on. Merged with any trade read from
+	// plaidTransactions by depot and settlement reference (lib/netWorth.ts).
+	depotTrades: defineTable({
+		userId: v.string(),
+		depot: v.string(),
+		reference: v.string(), // the bank's settlement reference
+		tradeDate: v.string(), // YYYY-MM-DD
+		wkn: v.string(),
+		isin: v.string(),
+		name: v.string(),
+		side: v.union(v.literal("buy"), v.literal("sell")),
+		quantity: v.number(),
+		cash: v.number(), // paid or received, positive, fees included
+		currency: v.string(),
+		importedAt: v.number(),
+	})
+		.index("by_user", ["userId"])
+		.index("by_user_reference", ["userId", "depot", "reference"]),
+
 	// ═══════════════════════════════════════════════════════════════
 	// BROKERS (SnapTrade)
 	// ═══════════════════════════════════════════════════════════════

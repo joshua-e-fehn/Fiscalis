@@ -42,7 +42,9 @@
     "loadDescription": "No hemos podido obtener los datos del Banco Mundial. Inténtalo de nuevo.",
     "retry": "Reintentar",
     "mapTitle": "Error del mapa",
-    "mapDescription": "No se han podido cargar los datos del mapa."
+    "mapDescription": "No se han podido cargar los datos del mapa.",
+    "unavailableTitle": "Indicador ya no disponible",
+    "unavailableDescription": "El Banco Mundial ya no publica este indicador, así que no se puede mostrar en el mapa. Elige otro."
   },
   "map": {
     "fallbackTitle": "Mapa mundial",
@@ -105,12 +107,6 @@
     "searching": "Buscando…",
     "results": "Resultados de búsqueda ({count})",
     "fromTotal": "{count, plural, one {de # indicador} other {de # indicadores}}",
-    "slow": "Lento",
-    "slowTooltip": "{count, plural, one {Este indicador ha superado el tiempo de espera una vez.} other {Este indicador ha superado el tiempo de espera # veces.}}",
-    "slowHint": "Puede ser lento o poco fiable.",
-    "unreliable": "Poco fiable",
-    "unreliableTooltip": "{count, plural, one {Este indicador falla a menudo al cargar (# tiempo de espera agotado).} other {Este indicador falla a menudo al cargar (# tiempos de espera agotados).}}",
-    "unreliableHint": "Puede que los datos no estén disponibles.",
     "addFavorite": "Añadir a favoritos",
     "removeFavorite": "Quitar de favoritos",
     "emptyDatabase": "La base de datos de indicadores está vacía",
@@ -121,7 +117,9 @@
     "featuredIndicators": "Indicadores destacados",
     "selected": "Seleccionado",
     "dataSource": "Fuente de datos: <link>World Bank Open Data</link>",
-    "synced": "Sincronizado: {date}"
+    "synced": "Sincronizado: {date}",
+    "coverage": "Último {year} · {count, plural, one {# país} other {# países}}",
+    "unavailable": "Ya no disponible"
   },
   "categories": {
     "economy": "Economía",

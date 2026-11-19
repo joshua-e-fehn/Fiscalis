@@ -42,7 +42,9 @@
     "loadDescription": "We couldn't fetch the World Bank data. Please try again.",
     "retry": "Retry",
     "mapTitle": "Map error",
-    "mapDescription": "The map data could not be loaded."
+    "mapDescription": "The map data could not be loaded.",
+    "unavailableTitle": "Indicator no longer available",
+    "unavailableDescription": "The World Bank no longer publishes this indicator, so it can't be shown on the map. Please pick another one."
   },
   "map": {
     "fallbackTitle": "World map",
@@ -105,12 +107,6 @@
     "searching": "Searching…",
     "results": "Search results ({count})",
     "fromTotal": "{count, plural, one {from # indicator} other {from # indicators}}",
-    "slow": "Slow",
-    "slowTooltip": "{count, plural, one {This indicator has timed out once.} other {This indicator has timed out # times.}}",
-    "slowHint": "It may be slow or unreliable.",
-    "unreliable": "Unreliable",
-    "unreliableTooltip": "{count, plural, one {This indicator often fails to load (# timeout).} other {This indicator often fails to load (# timeouts).}}",
-    "unreliableHint": "Data may not be available.",
     "addFavorite": "Add to favourites",
     "removeFavorite": "Remove from favourites",
     "emptyDatabase": "The indicator database is empty",
@@ -121,7 +117,9 @@
     "featuredIndicators": "Featured indicators",
     "selected": "Selected",
     "dataSource": "Data source: <link>World Bank Open Data</link>",
-    "synced": "Synced: {date}"
+    "synced": "Synced: {date}",
+    "coverage": "Latest {year} · {count, plural, one {# country} other {# countries}}",
+    "unavailable": "No longer available"
   },
   "categories": {
     "economy": "Economy",

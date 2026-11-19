@@ -42,7 +42,9 @@
     "loadDescription": "Impossible de récupérer les données de la Banque mondiale. Réessaie.",
     "retry": "Réessayer",
     "mapTitle": "Erreur de carte",
-    "mapDescription": "Les données de la carte n’ont pas pu être chargées."
+    "mapDescription": "Les données de la carte n’ont pas pu être chargées.",
+    "unavailableTitle": "Indicateur plus disponible",
+    "unavailableDescription": "La Banque mondiale ne publie plus cet indicateur, il ne peut donc pas être affiché sur la carte. Choisis-en un autre."
   },
   "map": {
     "fallbackTitle": "Carte du monde",
@@ -105,12 +107,6 @@
     "searching": "Recherche…",
     "results": "Résultats de recherche ({count})",
     "fromTotal": "{count, plural, one {sur # indicateur} other {sur # indicateurs}}",
-    "slow": "Lent",
-    "slowTooltip": "{count, plural, one {Cet indicateur a dépassé le délai # fois.} other {Cet indicateur a dépassé le délai # fois.}}",
-    "slowHint": "Il peut être lent ou peu fiable.",
-    "unreliable": "Peu fiable",
-    "unreliableTooltip": "{count, plural, one {Cet indicateur échoue souvent au chargement (# délai dépassé).} other {Cet indicateur échoue souvent au chargement (# délais dépassés).}}",
-    "unreliableHint": "Les données peuvent être indisponibles.",
     "addFavorite": "Ajouter aux favoris",
     "removeFavorite": "Retirer des favoris",
     "emptyDatabase": "La base des indicateurs est vide",
@@ -121,7 +117,9 @@
     "featuredIndicators": "Indicateurs à la une",
     "selected": "Sélectionné",
     "dataSource": "Source des données : <link>World Bank Open Data</link>",
-    "synced": "Synchronisé : {date}"
+    "synced": "Synchronisé : {date}",
+    "coverage": "Dernière année {year} · {count, plural, one {# pays} other {# pays}}",
+    "unavailable": "Plus disponible"
   },
   "categories": {
     "economy": "Économie",

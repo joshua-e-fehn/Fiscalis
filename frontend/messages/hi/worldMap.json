@@ -42,7 +42,9 @@
     "loadDescription": "हम World Bank का डेटा नहीं ला पाए। कृपया फिर से कोशिश करो।",
     "retry": "फिर कोशिश करो",
     "mapTitle": "मानचित्र त्रुटि",
-    "mapDescription": "मानचित्र डेटा लोड नहीं हो सका।"
+    "mapDescription": "मानचित्र डेटा लोड नहीं हो सका।",
+    "unavailableTitle": "संकेतक अब उपलब्ध नहीं",
+    "unavailableDescription": "विश्व बैंक अब यह संकेतक प्रकाशित नहीं करता, इसलिए इसे मानचित्र पर नहीं दिखाया जा सकता। कृपया कोई दूसरा चुनें।"
   },
   "map": {
     "fallbackTitle": "विश्व मानचित्र",
@@ -105,12 +107,6 @@
     "searching": "खोज रहे हैं…",
     "results": "खोज परिणाम ({count})",
     "fromTotal": "{count, plural, one {# संकेतक में से} other {# संकेतकों में से}}",
-    "slow": "धीमा",
-    "slowTooltip": "{count, plural, one {इस संकेतक का समय एक बार ख़त्म हो चुका है।} other {इस संकेतक का समय # बार ख़त्म हो चुका है।}}",
-    "slowHint": "यह धीमा या अविश्वसनीय हो सकता है।",
-    "unreliable": "अविश्वसनीय",
-    "unreliableTooltip": "{count, plural, one {यह संकेतक अक्सर लोड नहीं हो पाता (# टाइमआउट)।} other {यह संकेतक अक्सर लोड नहीं हो पाता (# टाइमआउट)।}}",
-    "unreliableHint": "हो सकता है डेटा उपलब्ध न हो।",
     "addFavorite": "पसंदीदा में जोड़ो",
     "removeFavorite": "पसंदीदा से हटाओ",
     "emptyDatabase": "संकेतक डेटाबेस ख़ाली है",
@@ -121,7 +117,9 @@
     "featuredIndicators": "चुनिंदा संकेतक",
     "selected": "चुना गया",
     "dataSource": "डेटा स्रोत: <link>World Bank Open Data</link>",
-    "synced": "सिंक हुआ: {date}"
+    "synced": "सिंक हुआ: {date}",
+    "coverage": "नवीनतम {year} · {count, plural, one {# देश} other {# देश}}",
+    "unavailable": "अब उपलब्ध नहीं"
   },
   "categories": {
     "economy": "अर्थव्यवस्था",

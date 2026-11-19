@@ -857,25 +857,34 @@ export default defineSchema({
 		nameLower: v.string(), // Lowercase name for search
 		codeLower: v.string(), // Lowercase code for search
 
-		// Reliability tracking
-		timeoutCount: v.number(), // Number of consecutive timeouts when fetching data
-		status: v.union(
-			v.literal("ok"), // Working fine
-			v.literal("warning"), // 1-2 timeouts - may be slow/unreliable
-			v.literal("error"), // 3+ timeouts - consistently failing
+		// Whether the map can show it, from worldbank:checkDueIndicators asking
+		// the World Bank for each indicator's data (services/worldbank/series.ts
+		// stateAfterCheck). Undefined until the first check settles; search
+		// hides "unusable" (archived codes, no country-year data, too few
+		// countries, repeated failures).
+		availability: v.optional(
+			v.union(v.literal("usable"), v.literal("unusable")),
 		),
-		lastTestedAt: v.optional(v.number()), // When we last tested this indicator
+		countryCount: v.optional(v.number()), // Real countries with data
+		latestYear: v.optional(v.number()), // Latest well-covered year
+		timeoutCount: v.number(), // Consecutive failed checks (timeouts, upstream errors)
+		lastTestedAt: v.optional(v.number()), // Last check (or user-requested check)
+		nextCheckAt: v.optional(v.number()), // Due for a check; undefined = never checked
+		// Deprecated, no longer written or read: the old timeout badge state
+		status: v.optional(
+			v.union(v.literal("ok"), v.literal("warning"), v.literal("error")),
+		),
 
 		// Metadata
 		syncedAt: v.number(), // When this indicator was last synced from World Bank
 	})
 		.index("by_code", ["code"])
-		.index("by_status", ["status"])
+		.index("by_next_check", ["nextCheckAt"])
 		.index("by_name_lower", ["nameLower"])
 		.index("by_code_lower", ["codeLower"])
 		.searchIndex("search_indicators", {
 			searchField: "nameLower",
-			filterFields: ["status", "sourceId"],
+			filterFields: ["sourceId"],
 		}),
 
 	// Sync metadata - tracks when indicators were last synced

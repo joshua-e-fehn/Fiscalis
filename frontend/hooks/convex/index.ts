@@ -102,7 +102,7 @@ export {
 export {
   useConvexIndicatorSearch,
   useWorldBankSyncStatus,
-  useIndicatorByCode,
+  useRequestIndicatorCheck,
   useUserFavorites,
   useIsIndicatorFavorited,
   useToggleFavorite,

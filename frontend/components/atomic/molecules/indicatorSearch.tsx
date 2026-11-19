@@ -9,8 +9,6 @@ import {
   X,
   Loader2,
   ExternalLink,
-  AlertTriangle,
-  AlertCircle,
   RefreshCw,
   Database,
   Heart,
@@ -54,7 +52,6 @@ export interface SelectedIndicator {
   description?: string;
   isDynamic: boolean; // true = searched indicator, false = featured
   unit?: string;
-  status?: "ok" | "warning" | "error"; // Reliability status from Convex
 }
 
 // Convex search result type
@@ -64,8 +61,9 @@ interface ConvexSearchedIndicator {
   description?: string;
   source: string;
   topics: string[];
-  status: "ok" | "warning" | "error";
-  timeoutCount: number;
+  /** Set once the server's check found the indicator usable */
+  latestYear?: number;
+  countryCount?: number;
 }
 
 interface IndicatorSearchProps {
@@ -173,7 +171,6 @@ export function IndicatorSearch({
         name: indicator.name,
         description: indicator.description,
         isDynamic: true,
-        status: indicator.status,
       });
       setOpen(false);
       setSearchQuery("");
@@ -296,61 +293,6 @@ export function IndicatorSearch({
                             <span className="font-medium truncate">
                               {indicator.name}
                             </span>
-                            {/* Status badges */}
-                            {indicator.status === "warning" && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge
-                                      variant="outline"
-                                      className="flex-shrink-0 gap-1 text-amber-600 border-amber-500/50 bg-amber-500/10 py-0 px-1.5"
-                                    >
-                                      <AlertTriangle className="h-3 w-3" />
-                                      <span className="text-xs">
-                                        {t("search.slow")}
-                                      </span>
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      {t("search.slowTooltip", {
-                                        count: indicator.timeoutCount,
-                                      })}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {t("search.slowHint")}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {indicator.status === "error" && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge
-                                      variant="outline"
-                                      className="flex-shrink-0 gap-1 text-red-600 border-red-500/50 bg-red-500/10 py-0 px-1.5"
-                                    >
-                                      <AlertCircle className="h-3 w-3" />
-                                      <span className="text-xs">
-                                        {t("search.unreliable")}
-                                      </span>
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      {t("search.unreliableTooltip", {
-                                        count: indicator.timeoutCount,
-                                      })}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {t("search.unreliableHint")}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
                           </div>
                           <div className="text-xs text-muted-foreground truncate">
                             {indicator.code}
